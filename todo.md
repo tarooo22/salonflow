@@ -36,6 +36,7 @@
 - [x] Add a responsive, paginated reporting booking-history table with appointment reference, date/time, status, and integer-tetri total display.
 - [ ] Add robust server and interface tests for permissions, availability, payments, historical data, and public booking.
 - [ ] Verify accessibility, responsiveness, error states, and operational workflows through rendered interface review.
+- [x] Correct the protected workspace loading shell so mobile viewports use a compact header rather than a fixed desktop sidebar.
 - [x] Provide an implementation handoff, configuration checklist, and deployment readiness summary.
 - [x] Build a protected organization-and-first-location setup flow with Georgian validation, IANA timezone defaults, opaque public location slugs, and post-create workspace routing.
 - [x] Add a protected additional-location form with opaque public slug and Asia/Tbilisi defaults for multi-location organizations.
