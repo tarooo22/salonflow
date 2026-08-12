@@ -57,3 +57,7 @@ The calendar route now renders a responsive, live team day schedule using the or
 The reports route now consumes the protected revenue summary for a rolling 30-day view and presents collected revenue, outstanding balances, expenses, payment-method totals, and a browser download action for the server-generated CSV export. Type checking, all seventeen unit assertions, and the production build pass.
 
 The team route now renders a protected live workspace with organization-scoped active staff profiles, role labels, public-booking visibility, active-location counts, and resilient no-workspace, loading, unavailable, and empty states. Type checking, all seventeen unit assertions, and the production build pass.
+
+The services route now renders a protected active catalog with category labels, duration, price, buffer, and online-booking visibility details, plus robust loading, unavailable, empty, and no-workspace states. Type checking, all seventeen unit assertions, and the production build pass.
+
+The client route now renders a protected CRM workspace with server-paginated active records, debounced-safe stable search inputs, total counts, normalized contact display, record source, and robust loading, unavailable, empty, and no-workspace states. Type checking, all seventeen unit assertions, and the production build pass.

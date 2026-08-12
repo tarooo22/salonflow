@@ -10,6 +10,8 @@ import BookingFlow from "./pages/BookingFlow";
 import Calendar from "./pages/Calendar";
 import Reports from "./pages/Reports";
 import Staff from "./pages/Staff";
+import Services from "./pages/Services";
+import Clients from "./pages/Clients";
 import Today from "./pages/Today";
 import WorkspacePlaceholder from "./pages/WorkspacePlaceholder";
 
@@ -22,8 +24,8 @@ function Router() {
       <Route path={"/book/:slug"} component={BookingFlow} />
       <Route path={"/app/today"} component={Today} />
       <Route path={"/app/calendar"} component={Calendar} />
-      <Route path={"/app/clients"}><WorkspacePlaceholder title="კლიენტები" description="კლიენტების დაცული რეესტრი, ისტორია და თანხმობები." /></Route>
-      <Route path={"/app/services"}><WorkspacePlaceholder title="სერვისები" description="სერვისები, კატეგორიები, ხანგრძლივობა და სპეციალისტების დაშვებები." /></Route>
+      <Route path={"/app/clients"} component={Clients} />
+      <Route path={"/app/services"} component={Services} />
       <Route path={"/app/staff"} component={Staff} />
       <Route path={"/app/reports"} component={Reports} />
       <Route path={"/404"} component={NotFound} />
