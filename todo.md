@@ -10,8 +10,9 @@
 - [ ] Implement staff profiles, staff roles, working hours, schedule exceptions, time-off requests, and staff-location assignments.
 - [ ] Implement service categories, services, price and duration management, staff eligibility, and safe archival snapshots.
 - [ ] Implement client CRM profiles, normalized lookup, consent tracking, booking history, and duplicate merge workflows.
-- [ ] Complete public booking commit flow; database-backed slug availability retrieval, overlap, locking, status, and slot-generation rules are implemented and tested.
-- [ ] Complete public availability and booking commit endpoints; location-slug catalog resolution and the four-step booking interface are implemented without exposing sequential identifiers.
+- [x] Complete public booking commit flow with client resolution, consent capture, idempotency, server-side slot revalidation, schedule locks, immutable snapshots, and opaque confirmation tokens.
+- [ ] Add database-backed public booking commit tests for first submission, idempotent retry, and concurrent duplicate-slot protection after database connectivity is restored.
+- [ ] Wire the public booking commit endpoint into the final client-side confirmation form; location-slug catalog resolution and the four-step booking interface are implemented without exposing sequential identifiers.
 - [x] Implement public location discovery through non-sequential slugs and a responsive Georgian booking entry route.
 - [ ] Build responsive team calendar, staff calendar, today dashboard, and admin calendar summary views.
 - [x] Wire the Today dashboard to organization-scoped appointment status and outstanding-balance metrics with loading, empty, and failure states.

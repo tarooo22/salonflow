@@ -41,3 +41,7 @@ Finance integrity was further strengthened with an active-location ownership che
 The public booking router now includes an opaque-slug availability endpoint that validates active locations, online services, specialist eligibility, advance-notice windows, buffer intervals, and conflicting appointment states entirely server-side. Type checking, seventeen assertions, and a production build pass after the update.
 
 The authenticated Today dashboard now reads the organization-scoped appointments dashboard and presents real booking totals, pending confirmations, and bookings with an outstanding balance. It retains localized loading, empty, and unavailable states instead of rendering placeholder metrics.
+
+The public router now commits anonymous bookings transactionally. It validates the booking window and service eligibility again, serializes the specialist’s affected schedule dates, detects conflicts, resolves or creates a normalized client, records booking-terms consent, stores immutable appointment-service snapshots and status history, and returns an opaque confirmation token rather than a sequential record identifier. Type checking, seventeen tests, and a production build pass.
+
+The confirmation token is derived with an HMAC from the persisted opaque appointment identifier and server secret. Consequently, a retry with the same idempotency key, including a concurrent duplicate submission, returns the same confirmation token rather than an unpersisted value or a missing reference.
