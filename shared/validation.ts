@@ -116,8 +116,21 @@ export const workingHourRuleCreateSchema = z.object({
   locationId: opaqueIdSchema,
   weekday: z.number().int().min(0).max(6),
   startLocalTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/),
-  endLocalTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/),
+  endLocalTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
 });
+
+export const scheduleExceptionCreateSchema = z.object({
+  organizationId: opaqueIdSchema,
+  staffProfileId: opaqueIdSchema.optional(),
+  locationId: opaqueIdSchema.optional(),
+  type: z.enum(["BREAK", "VACATION", "SICK_LEAVE", "CUSTOM_BLOCK", "EXTENDED_WORKING_TIME", "CLOSURE"]),
+  startsAt: z.coerce.date(),
+  endsAt: z.coerce.date(),
+  fullDay: z.boolean().default(false),
+  reason: z.string().trim().max(255).optional(),
+  notes: z.string().trim().max(5_000).optional(),
+}).refine(input => input.staffProfileId || input.locationId, "A staff profile or location is required")
+  .refine(input => input.startsAt < input.endsAt, "Exception end must follow start");
 
 export const appointmentCreateSchema = z.object({
   organizationId: opaqueIdSchema,

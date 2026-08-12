@@ -89,3 +89,17 @@ describe("staff.addWorkingHours", () => {
     expect(db.insert).not.toHaveBeenCalled();
   });
 });
+
+describe("staff.addScheduleException", () => {
+  it("rejects a schedule exception whose end precedes its start", async () => {
+    mocked.requireOrganizationRole.mockResolvedValue({ role: "OWNER" });
+    await expect(staffRouter.createCaller({ user } as never).addScheduleException({
+      organizationId: "organization_001",
+      staffProfileId: "staff_profile_00001",
+      type: "VACATION",
+      startsAt: new Date("2026-08-15T12:00:00.000Z"),
+      endsAt: new Date("2026-08-15T09:00:00.000Z"),
+      fullDay: false,
+    })).rejects.toThrow();
+  });
+});
