@@ -1,10 +1,10 @@
-import { and, asc, count, eq, like } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, like } from "drizzle-orm";
 import { nanoid } from "nanoid";
-import { clientConsents, clients } from "../../drizzle/schema";
+import { appointmentServices, appointments, clientConsents, clients } from "../../drizzle/schema";
 import { requireOrganizationRole } from "../access";
 import { requireDb } from "../db";
 import { cleanSearch, normalizeEmail, normalizeGeorgianPhone } from "../lib/normalization";
-import { clientCreateSchema, clientListSchema } from "../../shared/validation";
+import { clientBookingHistorySchema, clientCreateSchema, clientListSchema } from "../../shared/validation";
 import { protectedProcedure, router } from "../_core/trpc";
 
 export const clientsRouter = router({
@@ -51,5 +51,22 @@ export const clientsRouter = router({
       ]);
     });
     return { id };
+  }),
+
+  bookingHistory: protectedProcedure.input(clientBookingHistorySchema).query(async ({ ctx, input }) => {
+    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER", "RECEPTIONIST"]);
+    const db = await requireDb();
+    const appointmentRows = await db.select().from(appointments).where(and(
+      eq(appointments.organizationId, input.organizationId),
+      eq(appointments.clientId, input.clientId),
+    )).orderBy(desc(appointments.startsAt)).limit(input.limit);
+    const appointmentIds = appointmentRows.map(appointment => appointment.id);
+    const serviceRows = appointmentIds.length ? await db.select().from(appointmentServices).where(
+      inArray(appointmentServices.appointmentId, appointmentIds),
+    ) : [];
+    return appointmentRows.map(appointment => ({
+      appointment,
+      services: serviceRows.filter(service => service.appointmentId === appointment.id),
+    }));
   }),
 });

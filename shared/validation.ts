@@ -88,6 +88,11 @@ export const clientListSchema = paginationSchema.extend({
   status: z.enum(["ACTIVE", "MERGED", "ARCHIVED"]).optional(),
 });
 
+export const clientBookingHistorySchema = organizationScopeSchema.extend({
+  clientId: opaqueIdSchema,
+  limit: z.number().int().min(1).max(100).default(25),
+});
+
 export const staffProfileCreateSchema = z.object({
   organizationId: opaqueIdSchema,
   membershipId: opaqueIdSchema,
@@ -129,6 +134,14 @@ export const appointmentStatusUpdateSchema = z.object({
   nextStatus: z.enum(["PENDING", "CONFIRMED", "CHECKED_IN", "IN_SERVICE", "COMPLETED", "CANCELLED", "NO_SHOW"]),
   reason: z.string().trim().max(255).optional(),
 });
+
+export const calendarRangeSchema = z.object({
+  organizationId: opaqueIdSchema,
+  startsAt: z.coerce.date(),
+  endsAt: z.coerce.date(),
+  staffProfileId: opaqueIdSchema.optional(),
+}).refine(input => input.startsAt <= input.endsAt, "Start date must not follow end date")
+  .refine(input => input.endsAt.getTime() - input.startsAt.getTime() <= 14 * 24 * 60 * 60 * 1000, "Calendar range must be 14 days or fewer");
 
 export const paymentCreateSchema = z.object({
   organizationId: opaqueIdSchema,

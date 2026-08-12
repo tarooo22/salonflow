@@ -17,11 +17,12 @@ The current production build succeeds and the full automated test suite passes. 
 | Initial workspace | Atomic organization, OWNER membership, and first-location setup with `Asia/Tbilisi` default and opaque public slug | Implemented |
 | Public booking | Service, eligible specialist, availability, contact/consent, idempotent commit, HMAC confirmation token | Implemented |
 | Daily operations | Today dashboard and team day calendar with protected live queries | Implemented |
-| Staff | Active profile list and owner/manager self-profile creation across selected locations | Partially implemented |
-| Services | Protected category and service creation, catalog, online-visibility status | Partially implemented |
-| Clients | Searchable CRM and internal client creation with booking-terms consent record | Partially implemented |
-| Reporting | Revenue summary, payment-method breakdown, injection-safe CSV, paginated booking-history table | Partially implemented |
-| Finance | Integer-tetri expense and commission server procedures with duplicate and scope safeguards | Server layer implemented; UI pending |
+| Staff | Active profile list, owner/manager self-profile creation, and active-location working-hours entry | Partially implemented |
+| Services | Protected category/service creation, archive action, and staff-service public-booking eligibility management | Partially implemented |
+| Clients | Searchable CRM, consented internal client creation, and protected client booking-history dialog | Partially implemented |
+| Reporting | Revenue summary, payment-method breakdown, injection-safe CSV, paginated booking history, and commission analytics | Partially implemented |
+| Finance | Integer-tetri expense entry UI, expense list, commission safeguards, and commission analytics | Partially implemented |
+| Calendar | Protected daily/weekly calendar, date navigation, and specialist-specific filtering | Implemented |
 | Database migrations | Three reviewed SQL migrations exist | Pending remote connectivity |
 
 > **Money rule:** All persisted monetary values are integers in tetri. Browser-facing GEL input is converted to integer tetri without retaining a floating-point amount.
@@ -32,7 +33,7 @@ The following commands were run successfully on 13 August 2026.
 
 | Command | Result |
 |---|---|
-| `pnpm test` | 11 test files, 27 assertions passing |
+| `pnpm test` | 12 test files, 31 assertions passing |
 | `pnpm check` | TypeScript validation passed with zero errors |
 | `pnpm build` | Production client and server bundle completed successfully |
 | TiDB TCP connectivity check | Unreachable at `gateway03.us-east-1.prod.aws.tidbcloud.com:4000` |
@@ -81,7 +82,7 @@ The managed project injects the required system values. They must not be committ
 
 The first authenticated user can use **Today → “სამუშაო სივრცის შექმნა”** to create an organization, an active OWNER membership, and the first location atomically. The setup page requires human-readable names and opaque, lowercase Latin slugs. The public location slug is used by the public booking route and does not expose sequential database identifiers.
 
-The team page supports an initial self-profile for the current owner or manager. Adding another person requires a separate invitation and membership-management flow, which is not yet present. The services page supports category creation and service creation, while editing, archive controls, and staff-service eligibility controls remain follow-up work. The clients page records mandatory booking-terms consent for internal client creation; consent editing and duplicate merging are not yet exposed in the interface.
+The team page supports an initial self-profile for the current owner or manager and protected working-hours entry only for locations where that specialist is assigned. Adding another person still requires a separate invitation and membership-management flow. The services page supports category creation, service creation, history-preserving archive controls, and specialist eligibility settings for public booking. The clients page records mandatory booking-terms consent for internal client creation and presents a protected booking-history dialog; consent editing and duplicate merging remain follow-up work.
 
 ## Remaining Work
 
@@ -89,10 +90,10 @@ The team page supports an initial self-profile for the current owner or manager.
 |---|---|---|
 | High | Restore database connectivity and apply the three reviewed migrations | Required before real persisted data can be used |
 | High | Add membership invitation and staff-assignment workflows | Required for onboarding team members other than the current owner/manager |
-| High | Build expense and commission-entry user interfaces | Server guards exist, but operational finance entry is not yet exposed |
-| Medium | Add staff working-hours, exceptions, weekly calendar, and staff-specific calendar views | Completes scheduling administration |
-| Medium | Add service editing, archival, and eligibility controls | Completes catalog governance |
-| Medium | Add client history, consent management, and duplicate merge workflows | Completes CRM lifecycle management |
+| High | Build commission-rule and commission-entry user interfaces | Expense entry and analytics are available; creating commission entries still has no workspace UI |
+| Medium | Add schedule exceptions and time-off workflows | Weekly and staff-specific calendar views plus baseline hours are available |
+| Medium | Add service editing controls | Archive and specialist eligibility controls are available |
+| Medium | Add consent management and duplicate merge workflows | Client history is available |
 | Medium | Add database-backed public booking concurrency tests once TiDB is reachable | Validates transaction and lock behavior end-to-end |
 | Medium | Add browser/interface coverage for public booking filtering, availability gating, and confirmation | Covers client-facing flow at the rendered-interface layer |
 | Low | Split the main client bundle into route-level chunks | Addresses the non-blocking bundle advisory |

@@ -11,7 +11,7 @@ import {
 import { requireOrganizationAction, requireOrganizationRole } from "../access";
 import { requireDb } from "../db";
 import { appointmentBlocksInterval, canTransitionAppointment, deriveAppointmentBalance, intervalsOverlap } from "../lib/appointments";
-import { appointmentCreateSchema, appointmentStatusUpdateSchema, organizationScopeSchema } from "../../shared/validation";
+import { appointmentCreateSchema, appointmentStatusUpdateSchema, calendarRangeSchema, organizationScopeSchema } from "../../shared/validation";
 import { protectedProcedure, router } from "../_core/trpc";
 
 function enumerateUtcDates(start: Date, end: Date) {
@@ -48,6 +48,25 @@ export const appointmentsRouter = router({
         );
 
     return db.select().from(appointments).where(where).orderBy(asc(appointments.startsAt));
+  }),
+
+  listRange: protectedProcedure.input(calendarRangeSchema).query(async ({ ctx, input }) => {
+    const membership = await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"]);
+    const db = await requireDb();
+    const conditions = [
+      eq(appointments.organizationId, input.organizationId),
+      sql`${appointments.startsAt} >= ${input.startsAt}`,
+      sql`${appointments.startsAt} < ${input.endsAt}`,
+    ];
+    if (membership.role === "STAFF") {
+      const profiles = await db.select({ id: staffProfiles.id }).from(staffProfiles).where(eq(staffProfiles.membershipId, membership.id));
+      const profileIds = profiles.map(profile => profile.id);
+      if (!profileIds.length) return [];
+      conditions.push(inArray(appointments.staffProfileId, profileIds));
+    } else if (input.staffProfileId) {
+      conditions.push(eq(appointments.staffProfileId, input.staffProfileId));
+    }
+    return db.select().from(appointments).where(and(...conditions)).orderBy(asc(appointments.startsAt));
   }),
 
   create: protectedProcedure.input(appointmentCreateSchema).mutation(async ({ ctx, input }) => {

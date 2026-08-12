@@ -82,3 +82,36 @@ describe("clients.create", () => {
     expect(db.transaction).not.toHaveBeenCalled();
   });
 });
+
+describe("clients.bookingHistory", () => {
+  it("returns the selected client’s organization-scoped appointments with their service snapshots", async () => {
+    const appointment = {
+      id: "appointment_0001",
+      organizationId: "organization_001",
+      clientId: "client_history_001",
+      startsAt: new Date("2026-08-13T09:00:00.000Z"),
+      totalTetri: 7_500,
+      status: "COMPLETED",
+    };
+    const service = { id: "appointment_service_01", appointmentId: appointment.id, serviceNameSnapshot: "თმის შეჭრა" };
+    let selectCall = 0;
+    const db = {
+      select: vi.fn(() => {
+        selectCall += 1;
+        if (selectCall === 1) {
+          return { from: () => ({ where: () => ({ orderBy: () => ({ limit: vi.fn(async () => [appointment]) }) }) }) };
+        }
+        return { from: () => ({ where: vi.fn(async () => [service]) }) };
+      }),
+    };
+    mocked.db = db;
+    mocked.requireOrganizationRole.mockResolvedValue({ role: "RECEPTIONIST" });
+
+    await expect(clientsRouter.createCaller({ user } as never).bookingHistory({
+      organizationId: "organization_001",
+      clientId: "client_history_001",
+      limit: 25,
+    })).resolves.toEqual([{ appointment, services: [service] }]);
+    expect(mocked.requireOrganizationRole).toHaveBeenCalledWith(user, "organization_001", ["OWNER", "MANAGER", "RECEPTIONIST"]);
+  });
+});

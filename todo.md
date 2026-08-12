@@ -9,23 +9,29 @@
 - [x] Implement organization-scoped role checks, normalization safeguards, and the secure Manus OAuth workspace entry point.
 - [ ] Complete staff profile editing, working hours, schedule exceptions, time-off requests, and staff-location assignment management; a live protected team workspace is implemented.
 - [x] Add owner or manager self-profile creation with selected active locations as the first specialist setup step.
+- [x] Add protected weekly working-hours entry for an active staff profile and selected location.
 - [ ] Complete service and category creation/editing, staff eligibility management, and archival controls; a live protected service catalog workspace is implemented.
 - [x] Add protected category and service creation dialogs with organization-scoped categories, 5–720-minute validation, and safe GEL-to-integer-tetri conversion.
+- [x] Add a protected service archive control that preserves historical appointment and reporting records.
+- [x] Add protected staff-service eligibility management for public booking specialists.
 - [ ] Complete client creation, consent editing, booking history, and duplicate merge workflows; a protected searchable active-client CRM workspace is implemented.
 - [x] Add a protected internal client creation dialog with a required booking-terms consent record and normalized contact details.
+- [x] Add a protected client booking-history dialog with organization-scoped appointment and service snapshots.
 - [x] Complete public booking commit flow with client resolution, consent capture, idempotency, server-side slot revalidation, schedule locks, immutable snapshots, and opaque confirmation tokens.
 - [ ] Add database-backed public booking commit tests for first submission, idempotent retry, and concurrent duplicate-slot protection after database connectivity is restored.
 - [x] Wire the public booking commit endpoint into the final client-side confirmation form with service, specialist, time, contact, consent, availability, error, and confirmation states.
 - [ ] Add interface tests for public booking specialist filtering, empty eligibility states, availability gating, and successful confirmation rendering.
 - [x] Implement public location discovery through non-sequential slugs and a responsive Georgian booking entry route.
-- [ ] Build staff-specific and weekly calendar views; the responsive live team day calendar and Today summary are implemented.
+- [x] Build staff-specific and weekly calendar views; the responsive live team day calendar and Today summary are implemented.
 - [x] Wire the Today dashboard to organization-scoped appointment status and outstanding-balance metrics with loading, empty, and failure states.
 - [ ] Complete persisted commission-entry and protected expense workflows with integer-tetri payment, balance, and commission-calculation safeguards.
+- [x] Add a protected expense-entry interface with active-location selection and integer-tetri amount conversion.
 - [x] Validate that commission rules apply to the appointment service, specialist, and location before creating entries.
 - [ ] Apply the generated unique database constraint for duplicate commission prevention once managed database connectivity is restored; transaction-safe duplicate checks are implemented.
 - [x] Validate that every recorded expense location belongs to the provided organization.
 - [x] Add workflow-level finance mutation tests for successful, duplicate, invalid-scope, and cross-organization cases.
 - [ ] Complete commission analytics and a detailed booking-history table; protected reporting data, revenue metrics, payment-method breakdowns, and injection-safe CSV export are available in the workspace.
+- [x] Add protected commission analytics with period totals and per-specialist paid-versus-accrued commission visibility.
 - [x] Add a responsive, paginated reporting booking-history table with appointment reference, date/time, status, and integer-tetri total display.
 - [ ] Add robust server and interface tests for permissions, availability, payments, historical data, and public booking.
 - [ ] Verify accessibility, responsiveness, error states, and operational workflows through rendered interface review.

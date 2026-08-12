@@ -1,5 +1,5 @@
 import { and, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
-import { appointments, expenses, payments } from "../../drizzle/schema";
+import { appointments, commissionEntries, expenses, payments, staffProfiles } from "../../drizzle/schema";
 import { bookingHistorySchema, reportingRangeSchema } from "../../shared/validation";
 import { requireOrganizationAction } from "../access";
 import { requireDb } from "../db";
@@ -46,6 +46,38 @@ export const reportingRouter = router({
     await requireOrganizationAction(ctx.user, input.organizationId, "reports:view");
     const { appointmentRows, paymentRows, expenseRows } = await reportRows(input.organizationId, input.startsAt, input.endsAt);
     return { summary: summarizeRevenue(appointmentRows, paymentRows, expenseRows), paymentMethods: summarizePaymentMethods(paymentRows) };
+  }),
+
+  commissionSummary: protectedProcedure.input(reportingRangeSchema).query(async ({ ctx, input }) => {
+    await requireOrganizationAction(ctx.user, input.organizationId, "finance:view");
+    const db = await requireDb();
+    const rows = await db.select({
+      staffProfileId: commissionEntries.staffProfileId,
+      publicDisplayName: staffProfiles.publicDisplayName,
+      amountTetri: commissionEntries.amountTetri,
+      paidAt: commissionEntries.paidAt,
+    }).from(commissionEntries)
+      .innerJoin(appointments, eq(commissionEntries.appointmentId, appointments.id))
+      .innerJoin(staffProfiles, eq(commissionEntries.staffProfileId, staffProfiles.id))
+      .where(and(
+        eq(appointments.organizationId, input.organizationId),
+        gte(commissionEntries.createdAt, input.startsAt),
+        lte(commissionEntries.createdAt, input.endsAt),
+      ));
+    const byStaff = new Map<string, { staffProfileId: string; publicDisplayName: string; amountTetri: number; entryCount: number; paidTetri: number }>();
+    for (const row of rows) {
+      const current = byStaff.get(row.staffProfileId) ?? { staffProfileId: row.staffProfileId, publicDisplayName: row.publicDisplayName, amountTetri: 0, entryCount: 0, paidTetri: 0 };
+      current.amountTetri += row.amountTetri;
+      current.entryCount += 1;
+      if (row.paidAt) current.paidTetri += row.amountTetri;
+      byStaff.set(row.staffProfileId, current);
+    }
+    const specialists = Array.from(byStaff.values()).sort((left, right) => right.amountTetri - left.amountTetri);
+    return {
+      totalTetri: specialists.reduce((sum, specialist) => sum + specialist.amountTetri, 0),
+      paidTetri: specialists.reduce((sum, specialist) => sum + specialist.paidTetri, 0),
+      specialists,
+    };
   }),
 
   exportCsv: protectedProcedure.input(reportingRangeSchema).query(async ({ ctx, input }) => {

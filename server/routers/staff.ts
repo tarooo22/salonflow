@@ -1,6 +1,6 @@
 import { and, asc, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
-import { organizationMemberships, staffLocations, staffProfiles, workingHourRules } from "../../drizzle/schema";
+import { locations, organizationMemberships, staffLocations, staffProfiles, workingHourRules } from "../../drizzle/schema";
 import { requireOrganizationRole } from "../access";
 import { requireDb } from "../db";
 import { locationScopeSchema, staffProfileCreateSchema, workingHourRuleCreateSchema } from "../../shared/validation";
@@ -45,6 +45,19 @@ export const staffRouter = router({
     await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER"]);
     if (input.startLocalTime >= input.endLocalTime) throw new Error("Working hours must end after they start");
     const db = await requireDb();
+    const [assignment] = await db.select({ staffProfileId: staffLocations.staffProfileId }).from(staffLocations)
+      .innerJoin(staffProfiles, eq(staffLocations.staffProfileId, staffProfiles.id))
+      .innerJoin(organizationMemberships, eq(staffProfiles.membershipId, organizationMemberships.id))
+      .innerJoin(locations, eq(staffLocations.locationId, locations.id))
+      .where(and(
+        eq(staffLocations.staffProfileId, input.staffProfileId),
+        eq(staffLocations.locationId, input.locationId),
+        eq(organizationMemberships.organizationId, input.organizationId),
+        eq(locations.organizationId, input.organizationId),
+        eq(organizationMemberships.status, "ACTIVE"),
+        eq(locations.status, "ACTIVE"),
+      )).limit(1);
+    if (!assignment) throw new Error("Staff profile is not assigned to this active location");
     const id = nanoid(21);
     await db.insert(workingHourRules).values({
       id,

@@ -1,6 +1,6 @@
 import { and, asc, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
-import { serviceCategories, services, staffServices } from "../../drizzle/schema";
+import { organizationMemberships, serviceCategories, services, staffProfiles, staffServices } from "../../drizzle/schema";
 import { requireOrganizationRole } from "../access";
 import { requireDb } from "../db";
 import { locationScopeSchema, opaqueIdSchema, organizationScopeSchema, serviceCategoryCreateSchema, serviceCreateSchema } from "../../shared/validation";
@@ -54,9 +54,36 @@ export const servicesRouter = router({
     return { success: true };
   }),
 
+  listStaffEligibility: protectedProcedure.input(organizationScopeSchema.extend({ serviceId: opaqueIdSchema })).query(async ({ ctx, input }) => {
+    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER"]);
+    const db = await requireDb();
+    const [service] = await db.select({ id: services.id }).from(services).where(and(
+      eq(services.id, input.serviceId),
+      eq(services.organizationId, input.organizationId),
+    )).limit(1);
+    if (!service) throw new Error("Service is not available in this organization");
+    return db.select({ staffProfileId: staffServices.staffProfileId, canPerform: staffServices.canPerform })
+      .from(staffServices).where(eq(staffServices.serviceId, input.serviceId));
+  }),
+
   setStaffEligibility: protectedProcedure.input(organizationScopeSchema.extend({ staffProfileId: opaqueIdSchema, serviceId: opaqueIdSchema, canPerform: serviceCreateSchema.shape.onlineBookingEnabled })).mutation(async ({ ctx, input }) => {
     await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER"]);
     const db = await requireDb();
+    const [service] = await db.select({ id: services.id }).from(services).where(and(
+      eq(services.id, input.serviceId),
+      eq(services.organizationId, input.organizationId),
+      eq(services.status, "ACTIVE"),
+    )).limit(1);
+    if (!service) throw new Error("Service is not available in this organization");
+    const [profile] = await db.select({ id: staffProfiles.id }).from(staffProfiles)
+      .innerJoin(organizationMemberships, eq(staffProfiles.membershipId, organizationMemberships.id))
+      .where(and(
+        eq(staffProfiles.id, input.staffProfileId),
+        eq(organizationMemberships.organizationId, input.organizationId),
+        eq(organizationMemberships.status, "ACTIVE"),
+        eq(staffProfiles.status, "ACTIVE"),
+      )).limit(1);
+    if (!profile) throw new Error("Staff profile is not active in this organization");
     await db.insert(staffServices).values({ staffProfileId: input.staffProfileId, serviceId: input.serviceId, canPerform: input.canPerform }).onDuplicateKeyUpdate({ set: { canPerform: input.canPerform } });
     return { success: true };
   }),

@@ -63,3 +63,29 @@ describe("staff.createProfile", () => {
     ]);
   });
 });
+
+describe("staff.addWorkingHours", () => {
+  it("rejects an hours rule when the specialist is not assigned to the selected active location", async () => {
+    const chain = {
+      from: () => chain,
+      innerJoin: () => chain,
+      where: () => ({ limit: vi.fn(async () => []) }),
+    };
+    const db = {
+      select: vi.fn(() => chain),
+      insert: vi.fn(),
+    };
+    mocked.db = db;
+    mocked.requireOrganizationRole.mockResolvedValue({ role: "OWNER" });
+
+    await expect(staffRouter.createCaller({ user } as never).addWorkingHours({
+      organizationId: "organization_001",
+      staffProfileId: "staff_profile_00001",
+      locationId: "location_0001",
+      weekday: 0,
+      startLocalTime: "09:00",
+      endLocalTime: "18:00",
+    })).rejects.toThrow("Staff profile is not assigned to this active location");
+    expect(db.insert).not.toHaveBeenCalled();
+  });
+});
