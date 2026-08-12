@@ -12,7 +12,8 @@
 - [ ] Implement client CRM profiles, normalized lookup, consent tracking, booking history, and duplicate merge workflows.
 - [x] Complete public booking commit flow with client resolution, consent capture, idempotency, server-side slot revalidation, schedule locks, immutable snapshots, and opaque confirmation tokens.
 - [ ] Add database-backed public booking commit tests for first submission, idempotent retry, and concurrent duplicate-slot protection after database connectivity is restored.
-- [ ] Wire the public booking commit endpoint into the final client-side confirmation form; location-slug catalog resolution and the four-step booking interface are implemented without exposing sequential identifiers.
+- [x] Wire the public booking commit endpoint into the final client-side confirmation form with service, specialist, time, contact, consent, availability, error, and confirmation states.
+- [ ] Add interface tests for public booking specialist filtering, empty eligibility states, availability gating, and successful confirmation rendering.
 - [x] Implement public location discovery through non-sequential slugs and a responsive Georgian booking entry route.
 - [ ] Build responsive team calendar, staff calendar, today dashboard, and admin calendar summary views.
 - [x] Wire the Today dashboard to organization-scoped appointment status and outstanding-balance metrics with loading, empty, and failure states.

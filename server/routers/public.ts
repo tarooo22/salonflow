@@ -53,10 +53,17 @@ export const publicRouter = router({
       .innerJoin(serviceCategories, eq(services.categoryId, serviceCategories.id))
       .where(and(eq(services.organizationId, location.organizationId), eq(services.status, "ACTIVE"), eq(services.onlineBookingEnabled, true)))
       .orderBy(asc(serviceCategories.sortOrder), asc(services.sortOrder));
-    const team = await db.select({ id: staffProfiles.id, name: staffProfiles.publicDisplayName, specialty: staffProfiles.specialty, bio: staffProfiles.publicBio }).from(staffProfiles)
+    const teamRows = await db.select({ id: staffProfiles.id, name: staffProfiles.publicDisplayName, specialty: staffProfiles.specialty, bio: staffProfiles.publicBio, serviceId: staffServices.serviceId }).from(staffProfiles)
       .innerJoin(staffLocations, eq(staffProfiles.id, staffLocations.staffProfileId))
-      .where(and(eq(staffLocations.locationId, location.id), eq(staffProfiles.status, "ACTIVE"), eq(staffProfiles.onlineBookingVisible, true)))
+      .innerJoin(staffServices, eq(staffProfiles.id, staffServices.staffProfileId))
+      .where(and(eq(staffLocations.locationId, location.id), eq(staffProfiles.status, "ACTIVE"), eq(staffProfiles.onlineBookingVisible, true), eq(staffServices.canPerform, true)))
       .orderBy(asc(staffProfiles.sortOrder));
+    const team = Array.from(teamRows.reduce((acc, row) => {
+      const existing = acc.get(row.id);
+      if (existing) existing.eligibleServiceIds.push(row.serviceId);
+      else acc.set(row.id, { id: row.id, name: row.name, specialty: row.specialty, bio: row.bio, eligibleServiceIds: [row.serviceId] });
+      return acc;
+    }, new Map<string, { id: string; name: string; specialty: string | null; bio: string | null; eligibleServiceIds: string[] }>()).values());
     return { location: { publicSlug: location.publicSlug, name: location.name, timezone: location.timezone, address: location.address }, catalog, team };
   }),
 
