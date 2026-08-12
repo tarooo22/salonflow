@@ -38,7 +38,7 @@ export default function Today() {
             <CardHeader><CardTitle>მზად არის თქვენი სალონის სამუშაო სივრცე</CardTitle></CardHeader>
             <CardContent className="space-y-4 text-sm text-muted-foreground">
               <p>დაიწყეთ ორგანიზაციისა და პირველი ფილიალის შექმნით. შემდეგ შეძლებთ დაამატოთ გუნდი, სერვისები და სამუშაო საათები.</p>
-              <Button asChild><Link href="/app/staff">გუნდის მართვაზე გადასვლა</Link></Button>
+              <Button asChild><Link href="/app/setup">სამუშაო სივრცის შექმნა</Link></Button>
             </CardContent>
           </Card>
         ) : null}

@@ -13,6 +13,7 @@ import Staff from "./pages/Staff";
 import Services from "./pages/Services";
 import Clients from "./pages/Clients";
 import Today from "./pages/Today";
+import WorkspaceSetup from "./pages/WorkspaceSetup";
 import WorkspacePlaceholder from "./pages/WorkspacePlaceholder";
 
 function Router() {
@@ -28,6 +29,7 @@ function Router() {
       <Route path={"/app/services"} component={Services} />
       <Route path={"/app/staff"} component={Staff} />
       <Route path={"/app/reports"} component={Reports} />
+      <Route path={"/app/setup"} component={WorkspaceSetup} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

@@ -1,8 +1,13 @@
 import DashboardLayout from "@/components/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
-import { BriefcaseBusiness, MapPin, UsersRound } from "lucide-react";
+import { BriefcaseBusiness, MapPin, Plus, UsersRound } from "lucide-react";
+import { FormEvent, useState } from "react";
 
 const roleLabel: Record<string, string> = {
   OWNER: "მფლობელი",
@@ -12,17 +17,65 @@ const roleLabel: Record<string, string> = {
 };
 
 export default function Staff() {
+  const utils = trpc.useUtils();
   const organizations = trpc.organizations.listMine.useQuery();
-  const organization = organizations.data?.[0]?.organization;
+  const organizationEntry = organizations.data?.[0];
+  const organization = organizationEntry?.organization;
   const staff = trpc.staff.list.useQuery({ organizationId: organization?.id ?? "" }, { enabled: Boolean(organization?.id) });
   const locations = trpc.organizations.listLocations.useQuery({ organizationId: organization?.id ?? "" }, { enabled: Boolean(organization?.id) });
+  const canManage = ["OWNER", "MANAGER"].includes(organizationEntry?.membership.role ?? "");
+  const hasOwnProfile = Boolean(staff.data?.some(item => item.membership.id === organizationEntry?.membership.id));
+  const [createOpen, setCreateOpen] = useState(false);
+  const [displayName, setDisplayName] = useState("");
+  const [jobTitle, setJobTitle] = useState("");
+  const [selectedLocationIds, setSelectedLocationIds] = useState<string[]>([]);
+  const [formError, setFormError] = useState("");
+  const createProfile = trpc.staff.createProfile.useMutation({
+    onSuccess: async () => {
+      await utils.staff.list.invalidate();
+      setDisplayName("");
+      setJobTitle("");
+      setSelectedLocationIds([]);
+      setFormError("");
+      setCreateOpen(false);
+    },
+  });
 
-  return <DashboardLayout><div className="mx-auto w-full max-w-7xl space-y-6"><header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-sm font-medium text-primary">გუნდის სამუშაო სივრცე</p><h1 className="mt-1 text-3xl font-semibold tracking-tight">გუნდი</h1><p className="mt-2 text-sm text-muted-foreground">სპეციალისტების როლები, საჯარო პროფილები და ფილიალების აქტიური ქსელი.</p></div><Badge variant="outline" className="w-fit border-primary/30 bg-primary/5 px-3 py-1 text-primary">{organization?.name ?? "სამუშაო სივრცე"}</Badge></header>
-    {organizations.isLoading ? <StateCard text="გუნდის სამუშაო სივრცე იტვირთება…" /> : null}
-    {organizations.isError ? <StateCard text="სამუშაო სივრცის მონაცემები დროებით მიუწვდომელია." error /> : null}
-    {!organizations.isLoading && !organizations.isError && !organization ? <StateCard text="გუნდის გვერდის სანახავად ჯერ შექმენით სამუშაო სივრცე." /> : null}
-    {organization ? <><div className="grid gap-4 md:grid-cols-3"><Metric icon={UsersRound} label="აქტიური პროფილები" value={staff.isLoading ? "…" : String(staff.data?.length ?? 0)} hint="ორგანიზაციის აქტიური თანამშრომლები" /><Metric icon={MapPin} label="აქტიური ფილიალები" value={locations.isLoading ? "…" : String(locations.data?.length ?? 0)} hint="ფილიალები, სადაც გუნდი განთავსდება" /><Metric icon={BriefcaseBusiness} label="ონლაინ პროფილები" value={staff.isLoading ? "…" : String(staff.data?.filter(item => item.profile.onlineBookingVisible).length ?? 0)} hint="საჯარო ჩაწერაში ხილული სპეციალისტები" /></div><Card><CardHeader><CardTitle>აქტიური გუნდი</CardTitle></CardHeader><CardContent><div className="grid gap-4 lg:grid-cols-2">{staff.isLoading ? <p className="text-sm text-muted-foreground">გუნდის პროფილები იტვირთება…</p> : null}{staff.isError ? <p className="text-sm text-destructive">გუნდის მონაცემების ჩატვირთვა ვერ მოხერხდა.</p> : null}{!staff.isLoading && !staff.isError && staff.data?.length === 0 ? <p className="rounded-xl border border-dashed p-6 text-sm leading-6 text-muted-foreground">აქ გამოჩნდება გუნდის პროფილები, როგორც კი ფილიალში პირველი სპეციალისტი დაემატება.</p> : null}{staff.data?.map(item => <div key={item.profile.id} className="rounded-2xl border bg-card p-5 shadow-sm"><div className="flex items-start justify-between gap-3"><div><h2 className="text-lg font-semibold tracking-tight">{item.profile.publicDisplayName}</h2><p className="mt-1 text-sm text-muted-foreground">{item.profile.jobTitle || item.profile.specialty || "როლი და სპეციალიზაცია დაემატება აქ"}</p></div><Badge variant="outline" className="border-primary/20 bg-primary/5 text-primary">{roleLabel[item.membership.role] ?? item.membership.role}</Badge></div><div className="mt-4 space-y-2 text-sm text-muted-foreground"><p>საჯარო პროფილი: {item.profile.onlineBookingVisible ? "აქტიურია" : "დამალულია"}</p><p>წევრობის სტატუსი: {item.membership.status}</p><p>ფერი: <span className="font-medium text-foreground">{item.profile.color}</span></p></div></div>)}</div></CardContent></Card></> : null}
-  </div></DashboardLayout>;
+  const toggleLocation = (locationId: string) => {
+    setSelectedLocationIds(current => current.includes(locationId) ? current.filter(id => id !== locationId) : [...current, locationId]);
+  };
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!organization || !organizationEntry) return;
+    if (!selectedLocationIds.length) {
+      setFormError("აირჩიეთ მინიმუმ ერთი აქტიური ფილიალი.");
+      return;
+    }
+    setFormError("");
+    createProfile.mutate({
+      organizationId: organization.id,
+      membershipId: organizationEntry.membership.id,
+      publicDisplayName: displayName,
+      jobTitle: jobTitle || undefined,
+      onlineBookingVisible: true,
+      color: "#17826A",
+      locationIds: selectedLocationIds,
+    });
+  };
+
+  return (
+    <DashboardLayout>
+      <div className="mx-auto w-full max-w-7xl space-y-6">
+        <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-sm font-medium text-primary">გუნდის სამუშაო სივრცე</p><h1 className="mt-1 text-3xl font-semibold tracking-tight">გუნდი</h1><p className="mt-2 text-sm text-muted-foreground">სპეციალისტების როლები, საჯარო პროფილები და ფილიალების აქტიური ქსელი.</p></div><div className="flex flex-wrap items-center gap-2"><Badge variant="outline" className="w-fit border-primary/30 bg-primary/5 px-3 py-1 text-primary">{organization?.name ?? "სამუშაო სივრცე"}</Badge>{organization && canManage && !hasOwnProfile ? <Button onClick={() => { setFormError(""); setCreateOpen(true); }}><Plus className="mr-2 h-4 w-4" />ჩემი პროფილის დამატება</Button> : null}</div></header>
+        {organizations.isLoading ? <StateCard text="გუნდის სამუშაო სივრცე იტვირთება…" /> : null}
+        {organizations.isError ? <StateCard text="სამუშაო სივრცის მონაცემები დროებით მიუწვდომელია." error /> : null}
+        {!organizations.isLoading && !organizations.isError && !organization ? <StateCard text="გუნდის გვერდის სანახავად ჯერ შექმენით სამუშაო სივრცე." /> : null}
+        {organization ? <><div className="grid gap-4 md:grid-cols-3"><Metric icon={UsersRound} label="აქტიური პროფილები" value={staff.isLoading ? "…" : String(staff.data?.length ?? 0)} hint="ორგანიზაციის აქტიური თანამშრომლები" /><Metric icon={MapPin} label="აქტიური ფილიალები" value={locations.isLoading ? "…" : String(locations.data?.length ?? 0)} hint="ფილიალები, სადაც გუნდი განთავსდება" /><Metric icon={BriefcaseBusiness} label="ონლაინ პროფილები" value={staff.isLoading ? "…" : String(staff.data?.filter(item => item.profile.onlineBookingVisible).length ?? 0)} hint="საჯარო ჩაწერაში ხილული სპეციალისტები" /></div><Card><CardHeader><CardTitle>აქტიური გუნდი</CardTitle></CardHeader><CardContent><div className="grid gap-4 lg:grid-cols-2">{staff.isLoading ? <p className="text-sm text-muted-foreground">გუნდის პროფილები იტვირთება…</p> : null}{staff.isError ? <p className="text-sm text-destructive">გუნდის მონაცემების ჩატვირთვა ვერ მოხერხდა.</p> : null}{!staff.isLoading && !staff.isError && staff.data?.length === 0 ? <div className="rounded-xl border border-dashed p-6 text-sm leading-6 text-muted-foreground"><p>აქ გამოჩნდება გუნდის პროფილები, როგორც კი ფილიალში პირველი სპეციალისტი დაემატება.</p>{canManage ? <Button variant="outline" size="sm" className="mt-4" onClick={() => setCreateOpen(true)}><Plus className="mr-1.5 h-4 w-4" />პირველი პროფილის დამატება</Button> : null}</div> : null}{staff.data?.map(item => <div key={item.profile.id} className="rounded-2xl border bg-card p-5 shadow-sm"><div className="flex items-start justify-between gap-3"><div><h2 className="text-lg font-semibold tracking-tight">{item.profile.publicDisplayName}</h2><p className="mt-1 text-sm text-muted-foreground">{item.profile.jobTitle || item.profile.specialty || "როლი და სპეციალიზაცია დაემატება აქ"}</p></div><Badge variant="outline" className="border-primary/20 bg-primary/5 text-primary">{roleLabel[item.membership.role] ?? item.membership.role}</Badge></div><div className="mt-4 space-y-2 text-sm text-muted-foreground"><p>საჯარო პროფილი: {item.profile.onlineBookingVisible ? "აქტიურია" : "დამალულია"}</p><p>წევრობის სტატუსი: {item.membership.status}</p><p>ფერი: <span className="font-medium text-foreground">{item.profile.color}</span></p></div></div>)}</div></CardContent></Card></> : null}
+      </div>
+
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}><DialogContent><DialogHeader><DialogTitle>ჩემი სპეციალისტის პროფილი</DialogTitle><DialogDescription>პროფილი უკავშირდება თქვენს მიმდინარე წევრობას. დამატებითი თანამშრომლებისთვის ჯერ საჭიროა მათი მოწვევა და აქტიური წევრობის შექმნა.</DialogDescription></DialogHeader><form onSubmit={submit} className="space-y-4"><div className="space-y-2"><Label htmlFor="staff-display-name">საჯარო სახელი</Label><Input id="staff-display-name" value={displayName} onChange={event => setDisplayName(event.target.value)} placeholder="მაგ. ლელა ბერიძე" minLength={2} maxLength={160} required /></div><div className="space-y-2"><Label htmlFor="staff-title">როლი ან სპეციალიზაცია <span className="text-muted-foreground">(არასავალდებულო)</span></Label><Input id="staff-title" value={jobTitle} onChange={event => setJobTitle(event.target.value)} placeholder="მაგ. თმის სტილისტი" maxLength={160} /></div><fieldset className="space-y-2"><legend className="text-sm font-medium">ფილიალები</legend>{locations.isLoading ? <p className="text-sm text-muted-foreground">ფილიალები იტვირთება…</p> : null}{!locations.isLoading && !locations.data?.length ? <p className="rounded-xl border border-dashed p-3 text-sm text-muted-foreground">პროფილის დამატებამდე საჭიროა მინიმუმ ერთი აქტიური ფილიალი.</p> : null}{locations.data?.map(location => <label key={location.id} className="flex cursor-pointer items-center gap-3 rounded-xl border p-3 text-sm"><input type="checkbox" checked={selectedLocationIds.includes(location.id)} onChange={() => toggleLocation(location.id)} className="h-4 w-4 accent-primary" /><span>{location.name}</span></label>)}</fieldset>{formError ? <p className="text-sm text-destructive">{formError}</p> : null}{createProfile.error ? <p className="text-sm text-destructive">პროფილის დამატება ვერ მოხერხდა. სცადეთ ხელახლა.</p> : null}<DialogFooter><Button type="submit" disabled={createProfile.isPending || !locations.data?.length}>{createProfile.isPending ? "ინახება…" : "პროფილის შენახვა"}</Button></DialogFooter></form></DialogContent></Dialog>
+    </DashboardLayout>
+  );
 }
 
 function Metric({ icon: Icon, label, value, hint }: { icon: typeof UsersRound; label: string; value: string; hint: string }) {

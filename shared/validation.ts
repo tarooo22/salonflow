@@ -38,6 +38,11 @@ export const locationCreateSchema = z.object({
   cancellationCutoffMinutes: z.number().int().min(0).max(10_080).default(120),
 });
 
+export const workspaceSetupSchema = z.object({
+  organization: organizationCreateSchema,
+  location: locationCreateSchema.omit({ organizationId: true }),
+});
+
 export const organizationScopeSchema = z.object({ organizationId: opaqueIdSchema });
 export const locationScopeSchema = z.object({ organizationId: opaqueIdSchema, locationId: opaqueIdSchema.optional() });
 

@@ -4,7 +4,7 @@ import { locations, organizationMemberships, organizations } from "../../drizzle
 import { requireOrganizationRole } from "../access";
 import { requireDb } from "../db";
 import { normalizeEmail, normalizeGeorgianPhone } from "../lib/normalization";
-import { locationCreateSchema, organizationCreateSchema, organizationScopeSchema } from "../../shared/validation";
+import { locationCreateSchema, organizationCreateSchema, organizationScopeSchema, workspaceSetupSchema } from "../../shared/validation";
 import { protectedProcedure, router } from "../_core/trpc";
 
 export const organizationRouter = router({
@@ -44,6 +44,49 @@ export const organizationRouter = router({
       });
     });
     return { id: organizationId, membershipId };
+  }),
+
+  createWorkspace: protectedProcedure.input(workspaceSetupSchema).mutation(async ({ ctx, input }) => {
+    const db = await requireDb();
+    const organizationId = nanoid(21);
+    const membershipId = nanoid(21);
+    const locationId = nanoid(21);
+    await db.transaction(async tx => {
+      await tx.insert(organizations).values({
+        id: organizationId,
+        name: input.organization.name,
+        slug: input.organization.slug,
+        defaultTimezone: input.organization.timezone,
+        contactPhone: normalizeGeorgianPhone(input.organization.contactPhone),
+        contactEmail: normalizeEmail(input.organization.contactEmail),
+      });
+      await tx.insert(organizationMemberships).values({
+        id: membershipId,
+        organizationId,
+        userId: ctx.user.id,
+        role: "OWNER",
+        status: "ACTIVE",
+        invitedByUserId: ctx.user.id,
+        invitedAt: new Date(),
+        activatedAt: new Date(),
+      });
+      await tx.insert(locations).values({
+        id: locationId,
+        organizationId,
+        name: input.location.name,
+        publicSlug: input.location.publicSlug,
+        timezone: input.location.timezone,
+        address: input.location.address,
+        phone: normalizeGeorgianPhone(input.location.phone),
+        email: normalizeEmail(input.location.email),
+        bookingEnabled: input.location.bookingEnabled,
+        slotIntervalMinutes: input.location.slotIntervalMinutes,
+        minimumNoticeMinutes: input.location.minimumNoticeMinutes,
+        maximumAdvanceDays: input.location.maximumAdvanceDays,
+        cancellationCutoffMinutes: input.location.cancellationCutoffMinutes,
+      });
+    });
+    return { organizationId, membershipId, locationId };
   }),
 
   createLocation: protectedProcedure.input(locationCreateSchema).mutation(async ({ ctx, input }) => {

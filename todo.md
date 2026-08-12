@@ -8,8 +8,11 @@
 - [ ] Implement secure account registration, login, verification-code flows, password reset, invite links, and role-based access.
 - [x] Implement organization-scoped role checks, normalization safeguards, and the secure Manus OAuth workspace entry point.
 - [ ] Complete staff profile editing, working hours, schedule exceptions, time-off requests, and staff-location assignment management; a live protected team workspace is implemented.
+- [x] Add owner or manager self-profile creation with selected active locations as the first specialist setup step.
 - [ ] Complete service and category creation/editing, staff eligibility management, and archival controls; a live protected service catalog workspace is implemented.
+- [x] Add protected category and service creation dialogs with organization-scoped categories, 5–720-minute validation, and safe GEL-to-integer-tetri conversion.
 - [ ] Complete client creation, consent editing, booking history, and duplicate merge workflows; a protected searchable active-client CRM workspace is implemented.
+- [x] Add a protected internal client creation dialog with a required booking-terms consent record and normalized contact details.
 - [x] Complete public booking commit flow with client resolution, consent capture, idempotency, server-side slot revalidation, schedule locks, immutable snapshots, and opaque confirmation tokens.
 - [ ] Add database-backed public booking commit tests for first submission, idempotent retry, and concurrent duplicate-slot protection after database connectivity is restored.
 - [x] Wire the public booking commit endpoint into the final client-side confirmation form with service, specialist, time, contact, consent, availability, error, and confirmation states.
@@ -21,8 +24,10 @@
 - [x] Validate that commission rules apply to the appointment service, specialist, and location before creating entries.
 - [ ] Apply the generated unique database constraint for duplicate commission prevention once managed database connectivity is restored; transaction-safe duplicate checks are implemented.
 - [x] Validate that every recorded expense location belongs to the provided organization.
-- [ ] Add workflow-level finance mutation tests for successful, duplicate, invalid-scope, and cross-organization cases.
+- [x] Add workflow-level finance mutation tests for successful, duplicate, invalid-scope, and cross-organization cases.
 - [ ] Complete commission analytics and a detailed booking-history table; protected reporting data, revenue metrics, payment-method breakdowns, and injection-safe CSV export are available in the workspace.
+- [x] Add a responsive, paginated reporting booking-history table with appointment reference, date/time, status, and integer-tetri total display.
 - [ ] Add robust server and interface tests for permissions, availability, payments, historical data, and public booking.
 - [ ] Verify accessibility, responsiveness, error states, and operational workflows through rendered interface review.
-- [ ] Provide an implementation handoff, configuration checklist, and deployment readiness summary.
+- [x] Provide an implementation handoff, configuration checklist, and deployment readiness summary.
+- [x] Build a protected organization-and-first-location setup flow with Georgian validation, IANA timezone defaults, opaque public location slugs, and post-create workspace routing.
