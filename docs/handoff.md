@@ -19,7 +19,7 @@ The current production build succeeds and the full automated test suite passes. 
 | Daily operations | Today dashboard and team day calendar with protected live queries | Implemented |
 | Staff | Active profile list, owner/manager self-profile creation, and active-location working-hours entry | Partially implemented |
 | Services | Protected category/service creation, archive action, and staff-service public-booking eligibility management | Partially implemented |
-| Clients | Searchable CRM, consented internal client creation, and protected client booking-history dialog | Partially implemented |
+| Clients | Searchable CRM, consented internal client creation, protected booking history, and immutable marketing-consent management | Partially implemented |
 | Reporting | Revenue summary, payment-method breakdown, injection-safe CSV, paginated booking history, and commission analytics | Partially implemented |
 | Finance | Integer-tetri expense entry UI, expense list, commission safeguards, and commission analytics | Partially implemented |
 | Calendar | Protected daily/weekly calendar, date navigation, and specialist-specific filtering | Implemented |
@@ -33,7 +33,7 @@ The following commands were run successfully on 13 August 2026.
 
 | Command | Result |
 |---|---|
-| `pnpm test` | 12 test files, 31 assertions passing |
+| `pnpm test` | 12 test files, 32 assertions passing |
 | `pnpm check` | TypeScript validation passed with zero errors |
 | `pnpm build` | Production client and server bundle completed successfully |
 | TiDB TCP connectivity check | Unreachable at `gateway03.us-east-1.prod.aws.tidbcloud.com:4000` |
@@ -80,9 +80,9 @@ The managed project injects the required system values. They must not be committ
 
 ## Operational Notes
 
-The first authenticated user can use **Today → “სამუშაო სივრცის შექმნა”** to create an organization, an active OWNER membership, and the first location atomically. The setup page requires human-readable names and opaque, lowercase Latin slugs. The public location slug is used by the public booking route and does not expose sequential database identifiers.
+The first authenticated user can use **Today → “სამუშაო სივრცის შექმნა”** to create an organization, an active OWNER membership, and the first location atomically. Owners and managers can subsequently add active locations directly from **Today**. Setup requires human-readable names and opaque, lowercase Latin slugs. The public location slug is used by the public booking route and does not expose sequential database identifiers.
 
-The team page supports an initial self-profile for the current owner or manager and protected working-hours entry only for locations where that specialist is assigned. Adding another person still requires a separate invitation and membership-management flow. The services page supports category creation, service creation, history-preserving archive controls, and specialist eligibility settings for public booking. The clients page records mandatory booking-terms consent for internal client creation and presents a protected booking-history dialog; consent editing and duplicate merging remain follow-up work.
+The team page supports an initial self-profile for the current owner or manager and protected working-hours entry only for locations where that specialist is assigned. Adding another person still requires a separate invitation and membership-management flow. The services page supports category creation, service creation, history-preserving archive controls, and specialist eligibility settings for public booking. The clients page records mandatory booking-terms consent for internal client creation, presents a protected booking-history dialog, and appends immutable marketing-consent audit records; duplicate merging remains follow-up work.
 
 ## Remaining Work
 

@@ -115,3 +115,31 @@ describe("clients.bookingHistory", () => {
     expect(mocked.requireOrganizationRole).toHaveBeenCalledWith(user, "organization_001", ["OWNER", "MANAGER", "RECEPTIONIST"]);
   });
 });
+
+describe("clients.setConsent", () => {
+  it("appends a withdrawal audit record only after confirming the client belongs to the organization", async () => {
+    const values = vi.fn(async () => undefined);
+    const db = {
+      select: vi.fn(() => ({ from: () => ({ where: () => ({ limit: vi.fn(async () => [{ id: "client_history_001" }]) }) }) })),
+      insert: vi.fn(() => ({ values })),
+    };
+    mocked.db = db;
+    mocked.requireOrganizationRole.mockResolvedValue({ role: "RECEPTIONIST" });
+    mocked.nanoid.mockReturnValueOnce("consent_withdrawal_1");
+
+    await expect(clientsRouter.createCaller({ user } as never).setConsent({
+      organizationId: "organization_001",
+      clientId: "client_history_001",
+      consentType: "MARKETING_EMAIL",
+      granted: false,
+    })).resolves.toEqual({ success: true });
+    expect(values).toHaveBeenCalledWith(expect.objectContaining({
+      id: "consent_withdrawal_1",
+      clientId: "client_history_001",
+      consentType: "MARKETING_EMAIL",
+      granted: false,
+      source: "INTERNAL",
+      withdrawnAt: expect.any(Date),
+    }));
+  });
+});

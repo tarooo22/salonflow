@@ -93,6 +93,12 @@ export const clientBookingHistorySchema = organizationScopeSchema.extend({
   limit: z.number().int().min(1).max(100).default(25),
 });
 
+export const clientConsentSchema = organizationScopeSchema.extend({
+  clientId: opaqueIdSchema,
+  consentType: z.enum(["MARKETING_SMS", "MARKETING_EMAIL", "BOOKING_TERMS"]),
+  granted: z.boolean(),
+});
+
 export const staffProfileCreateSchema = z.object({
   organizationId: opaqueIdSchema,
   membershipId: opaqueIdSchema,

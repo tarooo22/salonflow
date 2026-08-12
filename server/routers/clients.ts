@@ -4,7 +4,7 @@ import { appointmentServices, appointments, clientConsents, clients } from "../.
 import { requireOrganizationRole } from "../access";
 import { requireDb } from "../db";
 import { cleanSearch, normalizeEmail, normalizeGeorgianPhone } from "../lib/normalization";
-import { clientBookingHistorySchema, clientCreateSchema, clientListSchema } from "../../shared/validation";
+import { clientBookingHistorySchema, clientConsentSchema, clientCreateSchema, clientListSchema } from "../../shared/validation";
 import { protectedProcedure, router } from "../_core/trpc";
 
 export const clientsRouter = router({
@@ -68,5 +68,37 @@ export const clientsRouter = router({
       appointment,
       services: serviceRows.filter(service => service.appointmentId === appointment.id),
     }));
+  }),
+
+  listConsents: protectedProcedure.input(clientConsentSchema.pick({ organizationId: true, clientId: true })).query(async ({ ctx, input }) => {
+    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER", "RECEPTIONIST"]);
+    const db = await requireDb();
+    const [client] = await db.select({ id: clients.id }).from(clients).where(and(
+      eq(clients.id, input.clientId),
+      eq(clients.organizationId, input.organizationId),
+    )).limit(1);
+    if (!client) throw new Error("Client is not available in this organization");
+    return db.select().from(clientConsents).where(eq(clientConsents.clientId, input.clientId)).orderBy(desc(clientConsents.grantedAt));
+  }),
+
+  setConsent: protectedProcedure.input(clientConsentSchema).mutation(async ({ ctx, input }) => {
+    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER", "RECEPTIONIST"]);
+    const db = await requireDb();
+    const [client] = await db.select({ id: clients.id }).from(clients).where(and(
+      eq(clients.id, input.clientId),
+      eq(clients.organizationId, input.organizationId),
+    )).limit(1);
+    if (!client) throw new Error("Client is not available in this organization");
+    const now = new Date();
+    await db.insert(clientConsents).values({
+      id: nanoid(21),
+      clientId: input.clientId,
+      consentType: input.consentType,
+      granted: input.granted,
+      source: "INTERNAL",
+      grantedAt: now,
+      withdrawnAt: input.granted ? null : now,
+    });
+    return { success: true };
   }),
 });
