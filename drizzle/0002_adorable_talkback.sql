@@ -1,0 +1,1 @@
+ALTER TABLE `commission_entries` ADD CONSTRAINT `commission_entries_appointment_service_uq` UNIQUE(`appointmentServiceId`);

@@ -1,0 +1,26 @@
+# Project TODO
+
+- [x] Audit the supplied prototype, screenshots, and handoff specification for reusable UI patterns and production gaps.
+- [x] Confirm the visual direction before implementing product screens.
+- [x] Establish the shared domain vocabulary, permission matrix, appointment transitions, and data integrity rules.
+- [ ] Apply the reviewed initial database migration once managed database connectivity is restored.
+- [ ] Create a multi-location schema for organizations, locations, memberships, roles, permissions, and scoped settings.
+- [ ] Implement secure account registration, login, verification-code flows, password reset, invite links, and role-based access.
+- [x] Implement organization-scoped role checks, normalization safeguards, and the secure Manus OAuth workspace entry point.
+- [ ] Implement staff profiles, staff roles, working hours, schedule exceptions, time-off requests, and staff-location assignments.
+- [ ] Implement service categories, services, price and duration management, staff eligibility, and safe archival snapshots.
+- [ ] Implement client CRM profiles, normalized lookup, consent tracking, booking history, and duplicate merge workflows.
+- [ ] Complete public booking commit flow; database-backed slug availability retrieval, overlap, locking, status, and slot-generation rules are implemented and tested.
+- [ ] Complete public availability and booking commit endpoints; location-slug catalog resolution and the four-step booking interface are implemented without exposing sequential identifiers.
+- [x] Implement public location discovery through non-sequential slugs and a responsive Georgian booking entry route.
+- [ ] Build responsive team calendar, staff calendar, today dashboard, and admin calendar summary views.
+- [x] Wire the Today dashboard to organization-scoped appointment status and outstanding-balance metrics with loading, empty, and failure states.
+- [ ] Complete persisted commission-entry and protected expense workflows with integer-tetri payment, balance, and commission-calculation safeguards.
+- [x] Validate that commission rules apply to the appointment service, specialist, and location before creating entries.
+- [ ] Apply the generated unique database constraint for duplicate commission prevention once managed database connectivity is restored; transaction-safe duplicate checks are implemented.
+- [x] Validate that every recorded expense location belongs to the provided organization.
+- [ ] Add workflow-level finance mutation tests for successful, duplicate, invalid-scope, and cross-organization cases.
+- [ ] Complete database-backed reporting, booking history filters, server pagination, and commission analytics; locally verified revenue aggregation and CSV injection protection are implemented.
+- [ ] Add robust server and interface tests for permissions, availability, payments, historical data, and public booking.
+- [ ] Verify accessibility, responsiveness, error states, and operational workflows through rendered interface review.
+- [ ] Provide an implementation handoff, configuration checklist, and deployment readiness summary.

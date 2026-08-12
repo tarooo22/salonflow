@@ -1,0 +1,1 @@
+ALTER TABLE `payments` ADD `refundedTetri` int DEFAULT 0 NOT NULL;

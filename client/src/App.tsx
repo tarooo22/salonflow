@@ -5,12 +5,24 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
+import Book from "./pages/Book";
+import BookingFlow from "./pages/BookingFlow";
+import Today from "./pages/Today";
+import WorkspacePlaceholder from "./pages/WorkspacePlaceholder";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
       <Route path={"/"} component={Home} />
+      <Route path={"/book"} component={Book} />
+      <Route path={"/book/:slug"} component={BookingFlow} />
+      <Route path={"/app/today"} component={Today} />
+      <Route path={"/app/calendar"}><WorkspacePlaceholder title="კალენდარი" description="გუნდის კალენდარი აქტიურდება რეალურ ჯავშნებთან ერთად." /></Route>
+      <Route path={"/app/clients"}><WorkspacePlaceholder title="კლიენტები" description="კლიენტების დაცული რეესტრი, ისტორია და თანხმობები." /></Route>
+      <Route path={"/app/services"}><WorkspacePlaceholder title="სერვისები" description="სერვისები, კატეგორიები, ხანგრძლივობა და სპეციალისტების დაშვებები." /></Route>
+      <Route path={"/app/staff"}><WorkspacePlaceholder title="გუნდი" description="გუნდის პროფილები, სამუშაო საათები და დასწრების გამონაკლისები." /></Route>
+      <Route path={"/app/reports"}><WorkspacePlaceholder title="ანგარიშები" description="შემოსავლები, გადახდები, კომისიები და ექსპორტები." /></Route>
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
