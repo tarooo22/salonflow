@@ -169,3 +169,14 @@ export const publicBookingCommitSchema = publicAvailabilityCheckSchema.extend({
   bookingTermsConsent: z.literal(true),
   idempotencyKey: z.string().trim().min(16).max(128).regex(/^[A-Za-z0-9_-]+$/),
 });
+
+export const reportingRangeSchema = z.object({
+  organizationId: opaqueIdSchema,
+  startsAt: z.coerce.date(),
+  endsAt: z.coerce.date(),
+}).refine(input => input.startsAt <= input.endsAt, "Start date must not follow end date");
+
+export const bookingHistorySchema = reportingRangeSchema.merge(paginationSchema).extend({
+  locationId: opaqueIdSchema.optional(),
+  status: z.enum(["PENDING", "CONFIRMED", "CHECKED_IN", "IN_SERVICE", "COMPLETED", "CANCELLED", "NO_SHOW"]).optional(),
+});

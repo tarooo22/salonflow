@@ -7,6 +7,8 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import Book from "./pages/Book";
 import BookingFlow from "./pages/BookingFlow";
+import Calendar from "./pages/Calendar";
+import Reports from "./pages/Reports";
 import Today from "./pages/Today";
 import WorkspacePlaceholder from "./pages/WorkspacePlaceholder";
 
@@ -18,11 +20,11 @@ function Router() {
       <Route path={"/book"} component={Book} />
       <Route path={"/book/:slug"} component={BookingFlow} />
       <Route path={"/app/today"} component={Today} />
-      <Route path={"/app/calendar"}><WorkspacePlaceholder title="კალენდარი" description="გუნდის კალენდარი აქტიურდება რეალურ ჯავშნებთან ერთად." /></Route>
+      <Route path={"/app/calendar"} component={Calendar} />
       <Route path={"/app/clients"}><WorkspacePlaceholder title="კლიენტები" description="კლიენტების დაცული რეესტრი, ისტორია და თანხმობები." /></Route>
       <Route path={"/app/services"}><WorkspacePlaceholder title="სერვისები" description="სერვისები, კატეგორიები, ხანგრძლივობა და სპეციალისტების დაშვებები." /></Route>
       <Route path={"/app/staff"}><WorkspacePlaceholder title="გუნდი" description="გუნდის პროფილები, სამუშაო საათები და დასწრების გამონაკლისები." /></Route>
-      <Route path={"/app/reports"}><WorkspacePlaceholder title="ანგარიშები" description="შემოსავლები, გადახდები, კომისიები და ექსპორტები." /></Route>
+      <Route path={"/app/reports"} component={Reports} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

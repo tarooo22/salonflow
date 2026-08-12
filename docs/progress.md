@@ -49,3 +49,9 @@ The confirmation token is derived with an HMAC from the persisted opaque appoint
 The Georgian public booking route now renders the complete four-step interaction: service selection, specialist selection, date/time availability check, and contact-and-consent confirmation. The final submit uses a browser-generated idempotency key, preserves the server’s authoritative availability decision, shows localized failures, and displays only the opaque confirmation token on success. Type checking, all seventeen existing unit assertions, and the production build pass.
 
 The booking catalog now reduces staff/service eligibility rows into a service-qualified specialist list. The client filters the specialist step before a time is selected and shows a localized empty state when no active online specialist can deliver the selected service.
+
+The protected reporting router now enforces the organization reporting permission before exposing paginated booking history, scoped date/location/status filters, server-derived revenue and payment-method summaries, and a CSV export built through the formula-injection-safe CSV utility. Type checking, all seventeen unit assertions, and the production build pass.
+
+The calendar route now renders a responsive, live team day schedule using the organization-scoped appointment list. It presents translated status chips, time ranges, loading, unavailable, empty, and no-workspace states rather than the earlier structural placeholder. Type checking, all seventeen unit assertions, and the production build pass.
+
+The reports route now consumes the protected revenue summary for a rolling 30-day view and presents collected revenue, outstanding balances, expenses, payment-method totals, and a browser download action for the server-generated CSV export. Type checking, all seventeen unit assertions, and the production build pass.

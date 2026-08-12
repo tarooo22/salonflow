@@ -8,6 +8,7 @@ import { financeRouter } from "./routers/finance";
 import { organizationRouter } from "./routers/organizations";
 import { paymentsRouter } from "./routers/payments";
 import { publicRouter } from "./routers/public";
+import { reportingRouter } from "./routers/reporting";
 import { servicesRouter } from "./routers/services";
 import { staffRouter } from "./routers/staff";
 
@@ -31,6 +32,7 @@ export const appRouter = router({
   appointments: appointmentsRouter,
   payments: paymentsRouter,
   finance: financeRouter,
+  reporting: reportingRouter,
   public: publicRouter,
 });
 

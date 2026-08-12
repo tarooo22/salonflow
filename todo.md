@@ -15,14 +15,14 @@
 - [x] Wire the public booking commit endpoint into the final client-side confirmation form with service, specialist, time, contact, consent, availability, error, and confirmation states.
 - [ ] Add interface tests for public booking specialist filtering, empty eligibility states, availability gating, and successful confirmation rendering.
 - [x] Implement public location discovery through non-sequential slugs and a responsive Georgian booking entry route.
-- [ ] Build responsive team calendar, staff calendar, today dashboard, and admin calendar summary views.
+- [ ] Build staff-specific and weekly calendar views; the responsive live team day calendar and Today summary are implemented.
 - [x] Wire the Today dashboard to organization-scoped appointment status and outstanding-balance metrics with loading, empty, and failure states.
 - [ ] Complete persisted commission-entry and protected expense workflows with integer-tetri payment, balance, and commission-calculation safeguards.
 - [x] Validate that commission rules apply to the appointment service, specialist, and location before creating entries.
 - [ ] Apply the generated unique database constraint for duplicate commission prevention once managed database connectivity is restored; transaction-safe duplicate checks are implemented.
 - [x] Validate that every recorded expense location belongs to the provided organization.
 - [ ] Add workflow-level finance mutation tests for successful, duplicate, invalid-scope, and cross-organization cases.
-- [ ] Complete database-backed reporting, booking history filters, server pagination, and commission analytics; locally verified revenue aggregation and CSV injection protection are implemented.
+- [ ] Complete commission analytics and a detailed booking-history table; protected reporting data, revenue metrics, payment-method breakdowns, and injection-safe CSV export are available in the workspace.
 - [ ] Add robust server and interface tests for permissions, availability, payments, historical data, and public booking.
 - [ ] Verify accessibility, responsiveness, error states, and operational workflows through rendered interface review.
 - [ ] Provide an implementation handoff, configuration checklist, and deployment readiness summary.
