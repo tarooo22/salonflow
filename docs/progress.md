@@ -55,3 +55,5 @@ The protected reporting router now enforces the organization reporting permissio
 The calendar route now renders a responsive, live team day schedule using the organization-scoped appointment list. It presents translated status chips, time ranges, loading, unavailable, empty, and no-workspace states rather than the earlier structural placeholder. Type checking, all seventeen unit assertions, and the production build pass.
 
 The reports route now consumes the protected revenue summary for a rolling 30-day view and presents collected revenue, outstanding balances, expenses, payment-method totals, and a browser download action for the server-generated CSV export. Type checking, all seventeen unit assertions, and the production build pass.
+
+The team route now renders a protected live workspace with organization-scoped active staff profiles, role labels, public-booking visibility, active-location counts, and resilient no-workspace, loading, unavailable, and empty states. Type checking, all seventeen unit assertions, and the production build pass.

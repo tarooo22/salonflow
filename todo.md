@@ -7,7 +7,7 @@
 - [ ] Create a multi-location schema for organizations, locations, memberships, roles, permissions, and scoped settings.
 - [ ] Implement secure account registration, login, verification-code flows, password reset, invite links, and role-based access.
 - [x] Implement organization-scoped role checks, normalization safeguards, and the secure Manus OAuth workspace entry point.
-- [ ] Implement staff profiles, staff roles, working hours, schedule exceptions, time-off requests, and staff-location assignments.
+- [ ] Complete staff profile editing, working hours, schedule exceptions, time-off requests, and staff-location assignment management; a live protected team workspace is implemented.
 - [ ] Implement service categories, services, price and duration management, staff eligibility, and safe archival snapshots.
 - [ ] Implement client CRM profiles, normalized lookup, consent tracking, booking history, and duplicate merge workflows.
 - [x] Complete public booking commit flow with client resolution, consent capture, idempotency, server-side slot revalidation, schedule locks, immutable snapshots, and opaque confirmation tokens.
