@@ -3,7 +3,7 @@ import { nanoid } from "nanoid";
 import { organizationMemberships, serviceCategories, services, staffProfiles, staffServices } from "../../drizzle/schema";
 import { requireOrganizationRole } from "../access";
 import { requireDb } from "../db";
-import { locationScopeSchema, opaqueIdSchema, organizationScopeSchema, serviceCategoryCreateSchema, serviceCreateSchema } from "../../shared/validation";
+import { locationScopeSchema, opaqueIdSchema, organizationScopeSchema, serviceCategoryCreateSchema, serviceCreateSchema, serviceUpdateSchema } from "../../shared/validation";
 import { protectedProcedure, router } from "../_core/trpc";
 
 export const servicesRouter = router({
@@ -45,6 +45,18 @@ export const servicesRouter = router({
     const id = nanoid(21);
     await db.insert(services).values({ id, ...input });
     return { id };
+  }),
+
+  update: protectedProcedure.input(serviceUpdateSchema).mutation(async ({ ctx, input }) => {
+    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER"]);
+    const db = await requireDb();
+    const { organizationId, serviceId, ...changes } = input;
+    if (changes.categoryId) {
+      const [category] = await db.select({ id: serviceCategories.id }).from(serviceCategories).where(and(eq(serviceCategories.id, changes.categoryId), eq(serviceCategories.organizationId, organizationId), eq(serviceCategories.status, "ACTIVE"))).limit(1);
+      if (!category) throw new Error("Service category is not available in this organization");
+    }
+    await db.update(services).set(changes).where(and(eq(services.id, serviceId), eq(services.organizationId, organizationId), eq(services.status, "ACTIVE")));
+    return { success: true };
   }),
 
   archive: protectedProcedure.input(organizationScopeSchema.extend({ serviceId: opaqueIdSchema })).mutation(async ({ ctx, input }) => {

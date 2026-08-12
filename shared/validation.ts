@@ -69,6 +69,11 @@ export const serviceCreateSchema = z.object({
   sortOrder: z.number().int().min(0).max(10_000).default(0),
 });
 
+export const serviceUpdateSchema = serviceCreateSchema.omit({ organizationId: true }).partial().extend({
+  organizationId: opaqueIdSchema,
+  serviceId: opaqueIdSchema,
+}).refine(input => Object.keys(input).some(key => !["organizationId", "serviceId"].includes(key)), "At least one service field is required");
+
 export const clientCreateSchema = z.object({
   organizationId: opaqueIdSchema,
   firstName: z.string().trim().min(1).max(100),
