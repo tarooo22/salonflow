@@ -20,6 +20,7 @@
 - [x] Add a protected internal client creation dialog with a required booking-terms consent record and normalized contact details.
 - [x] Add a protected client booking-history dialog with organization-scoped appointment and service snapshots.
 - [x] Add immutable, organization-scoped marketing consent history and preference controls in the client workspace.
+- [x] Add a transaction-safe client merge mutation that reassigns organization appointments and preserves a merge audit record.
 - [x] Complete public booking commit flow with client resolution, consent capture, idempotency, server-side slot revalidation, schedule locks, immutable snapshots, and opaque confirmation tokens.
 - [ ] Add database-backed public booking commit tests for first submission, idempotent retry, and concurrent duplicate-slot protection after database connectivity is restored.
 - [x] Wire the public booking commit endpoint into the final client-side confirmation form with service, specialist, time, contact, consent, availability, error, and confirmation states.

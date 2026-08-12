@@ -104,6 +104,12 @@ export const clientConsentSchema = organizationScopeSchema.extend({
   granted: z.boolean(),
 });
 
+export const clientMergeSchema = organizationScopeSchema.extend({
+  sourceClientId: opaqueIdSchema,
+  targetClientId: opaqueIdSchema,
+  reason: z.string().trim().max(255).optional(),
+}).refine(input => input.sourceClientId !== input.targetClientId, "Source and target clients must differ");
+
 export const staffProfileCreateSchema = z.object({
   organizationId: opaqueIdSchema,
   membershipId: opaqueIdSchema,

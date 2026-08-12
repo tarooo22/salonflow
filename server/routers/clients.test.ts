@@ -143,3 +143,29 @@ describe("clients.setConsent", () => {
     }));
   });
 });
+
+describe("clients.merge", () => {
+  it("merges two active organization clients by reassigning appointments and creating an audit record", async () => {
+    const values = vi.fn(async () => undefined);
+    const source = { id: "client_source_001", organizationId: "organization_001", status: "ACTIVE" };
+    const target = { id: "client_target_001", organizationId: "organization_001", status: "ACTIVE" };
+    const tx = {
+      select: vi.fn(() => ({ from: () => ({ where: vi.fn(async () => [source, target]) }) })),
+      update: vi.fn(() => ({ set: vi.fn(() => ({ where: vi.fn(async () => undefined) })) })),
+      insert: vi.fn(() => ({ values })),
+    };
+    const db = { transaction: vi.fn(async (callback: (transaction: typeof tx) => Promise<unknown>) => callback(tx)) };
+    mocked.db = db;
+    mocked.requireOrganizationRole.mockResolvedValue({ role: "MANAGER" });
+    mocked.nanoid.mockReturnValueOnce("client_merge_000001");
+
+    await expect(clientsRouter.createCaller({ user } as never).merge({
+      organizationId: "organization_001",
+      sourceClientId: source.id,
+      targetClientId: target.id,
+      reason: "დუბლიკატი ჩანაწერი",
+    })).resolves.toEqual({ id: "client_merge_000001" });
+    expect(tx.update).toHaveBeenCalledTimes(2);
+    expect(values).toHaveBeenCalledWith(expect.objectContaining({ sourceClientId: source.id, targetClientId: target.id, mergedByUserId: user.id }));
+  });
+});
