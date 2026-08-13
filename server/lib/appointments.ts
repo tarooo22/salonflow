@@ -40,3 +40,43 @@ export function deriveAppointmentBalance(totalTetri: number, payments: Array<{ a
     overpaymentTetri: Math.max(0, collectedTetri - totalTetri),
   };
 }
+
+export type OperationalAppointment = {
+  id: string;
+  status: AppointmentStatus;
+  startsAt: Date;
+  totalTetri: number;
+};
+
+export type OperationalPayment = {
+  appointmentId: string;
+  amountTetri: number;
+  refundedTetri: number;
+  status: "PENDING" | "PAID" | "PARTIALLY_REFUNDED" | "REFUNDED" | "FAILED";
+};
+
+/** Produces day-queue totals from persisted appointments and server-side payment state. */
+export function summarizeOperationalAppointments(appointmentRows: OperationalAppointment[], paymentRows: OperationalPayment[]) {
+  const balances = appointmentRows.map(appointment => ({
+    appointmentId: appointment.id,
+    status: appointment.status,
+    startsAt: appointment.startsAt,
+    totals: deriveAppointmentBalance(appointment.totalTetri, paymentRows.filter(payment => payment.appointmentId === appointment.id)),
+  }));
+  const balanceByAppointment = new Map(balances.map(balance => [balance.appointmentId, balance]));
+  const counts = appointmentRows.reduce<Record<string, number>>((acc, appointment) => {
+    acc[appointment.status] = (acc[appointment.status] ?? 0) + 1;
+    return acc;
+  }, {});
+  const metrics = appointmentRows.reduce((metrics, appointment) => {
+    if (appointment.status === "CANCELLED") return metrics;
+    const balance = balanceByAppointment.get(appointment.id)?.totals;
+    return {
+      scheduledTetri: metrics.scheduledTetri + appointment.totalTetri,
+      collectedTetri: metrics.collectedTetri + (balance?.collectedTetri ?? 0),
+      outstandingTetri: metrics.outstandingTetri + (balance?.balanceTetri ?? appointment.totalTetri),
+    };
+  }, { scheduledTetri: 0, collectedTetri: 0, outstandingTetri: 0 });
+
+  return { balances, counts, metrics };
+}

@@ -172,11 +172,16 @@ export const appointmentStatusUpdateSchema = z.object({
 
 export const calendarRangeSchema = z.object({
   organizationId: opaqueIdSchema,
+  locationId: opaqueIdSchema.optional(),
   startsAt: z.coerce.date(),
   endsAt: z.coerce.date(),
   staffProfileId: opaqueIdSchema.optional(),
 }).refine(input => input.startsAt <= input.endsAt, "Start date must not follow end date")
   .refine(input => input.endsAt.getTime() - input.startsAt.getTime() <= 14 * 24 * 60 * 60 * 1000, "Calendar range must be 14 days or fewer");
+
+export const todayDashboardSchema = organizationScopeSchema.extend({
+  locationId: opaqueIdSchema.optional(),
+});
 
 export const paymentCreateSchema = z.object({
   organizationId: opaqueIdSchema,

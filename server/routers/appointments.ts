@@ -2,7 +2,10 @@ import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import {
   appointmentStatusHistory,
+  appointmentServices,
   appointments,
+  clients,
+  locations,
   organizationMemberships,
   payments,
   scheduleLocks,
@@ -10,9 +13,10 @@ import {
 } from "../../drizzle/schema";
 import { requireOrganizationAction, requireOrganizationRole } from "../access";
 import { requireDb } from "../db";
-import { appointmentBlocksInterval, canTransitionAppointment, deriveAppointmentBalance, intervalsOverlap } from "../lib/appointments";
-import { appointmentCreateSchema, appointmentStatusUpdateSchema, calendarRangeSchema, organizationScopeSchema } from "../../shared/validation";
+import { appointmentBlocksInterval, canTransitionAppointment, intervalsOverlap, summarizeOperationalAppointments } from "../lib/appointments";
+import { appointmentCreateSchema, appointmentStatusUpdateSchema, calendarRangeSchema, organizationScopeSchema, todayDashboardSchema } from "../../shared/validation";
 import { protectedProcedure, router } from "../_core/trpc";
+import { businessDayRange } from "@shared/timezones";
 
 function enumerateUtcDates(start: Date, end: Date) {
   const dates: string[] = [];
@@ -58,6 +62,7 @@ export const appointmentsRouter = router({
       sql`${appointments.startsAt} >= ${input.startsAt}`,
       sql`${appointments.startsAt} < ${input.endsAt}`,
     ];
+    if (input.locationId) conditions.push(eq(appointments.locationId, input.locationId));
     if (membership.role === "STAFF") {
       const profiles = await db.select({ id: staffProfiles.id }).from(staffProfiles).where(eq(staffProfiles.membershipId, membership.id));
       const profileIds = profiles.map(profile => profile.id);
@@ -66,7 +71,33 @@ export const appointmentsRouter = router({
     } else if (input.staffProfileId) {
       conditions.push(eq(appointments.staffProfileId, input.staffProfileId));
     }
-    return db.select().from(appointments).where(and(...conditions)).orderBy(asc(appointments.startsAt));
+    const rows = await db.select({
+      appointment: appointments,
+      clientFirstName: clients.firstName,
+      clientLastName: clients.lastName,
+      staffName: staffProfiles.publicDisplayName,
+      staffColor: staffProfiles.color,
+    }).from(appointments)
+      .leftJoin(clients, eq(appointments.clientId, clients.id))
+      .innerJoin(staffProfiles, eq(appointments.staffProfileId, staffProfiles.id))
+      .where(and(...conditions))
+      .orderBy(asc(appointments.startsAt));
+    const appointmentIds = rows.map(row => row.appointment.id);
+    const serviceRows = appointmentIds.length
+      ? await db.select().from(appointmentServices).where(inArray(appointmentServices.appointmentId, appointmentIds)).orderBy(asc(appointmentServices.sortOrder))
+      : [];
+
+    return rows.map(row => ({
+      ...row.appointment,
+      client: row.clientFirstName ? { firstName: row.clientFirstName, lastName: row.clientLastName } : null,
+      staff: { id: row.appointment.staffProfileId, publicDisplayName: row.staffName, color: row.staffColor },
+      services: serviceRows.filter(service => service.appointmentId === row.appointment.id).map(service => ({
+        id: service.id,
+        serviceNameSnapshot: service.serviceNameSnapshot,
+        durationMinutesSnapshot: service.durationMinutesSnapshot,
+        priceTetriSnapshot: service.priceTetriSnapshot,
+      })),
+    }));
   }),
 
   create: protectedProcedure.input(appointmentCreateSchema).mutation(async ({ ctx, input }) => {
@@ -158,40 +189,93 @@ export const appointmentsRouter = router({
     return { success: true };
   }),
 
-  dashboard: protectedProcedure.input(organizationScopeSchema).query(async ({ ctx, input }) => {
-    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"]);
+  dashboard: protectedProcedure.input(todayDashboardSchema).query(async ({ ctx, input }) => {
+    const membership = await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"]);
     const db = await requireDb();
-    const todaysAppointments = await db.select().from(appointments)
-      .where(eq(appointments.organizationId, input.organizationId))
-      .orderBy(desc(appointments.startsAt))
-      .limit(20);
+    const activeLocations = await db.select().from(locations).where(and(
+      eq(locations.organizationId, input.organizationId),
+      eq(locations.status, "ACTIVE"),
+    )).orderBy(asc(locations.name));
+    const location = input.locationId
+      ? activeLocations.find(item => item.id === input.locationId)
+      : activeLocations[0];
+    if (input.locationId && !location) throw new Error("Selected location does not belong to this organization");
+    if (!location) return {
+      location: null,
+      dateKey: null,
+      appointments: [],
+      balances: [],
+      counts: {},
+      metrics: { scheduledTetri: 0, collectedTetri: 0, outstandingTetri: 0 },
+    };
 
-    const appointmentIds = todaysAppointments.map(item => item.id);
+    const { startsAt, endsAt, dateKey } = businessDayRange(location.timezone);
+    const conditions = [
+      eq(appointments.organizationId, input.organizationId),
+      eq(appointments.locationId, location.id),
+      sql`${appointments.startsAt} >= ${startsAt}`,
+      sql`${appointments.startsAt} < ${endsAt}`,
+    ];
+    if (membership.role === "STAFF") {
+      const profiles = await db.select({ id: staffProfiles.id }).from(staffProfiles).where(eq(staffProfiles.membershipId, membership.id));
+      if (!profiles.length) return {
+        location: { id: location.id, name: location.name, timezone: location.timezone },
+        dateKey,
+        appointments: [],
+        balances: [],
+        counts: {},
+        metrics: { scheduledTetri: 0, collectedTetri: 0, outstandingTetri: 0 },
+      };
+      conditions.push(inArray(appointments.staffProfileId, profiles.map(profile => profile.id)));
+    }
+
+    const appointmentRows = await db.select({
+      appointment: appointments,
+      clientFirstName: clients.firstName,
+      clientLastName: clients.lastName,
+      staffName: staffProfiles.publicDisplayName,
+      staffColor: staffProfiles.color,
+    }).from(appointments)
+      .leftJoin(clients, eq(appointments.clientId, clients.id))
+      .innerJoin(staffProfiles, eq(appointments.staffProfileId, staffProfiles.id))
+      .where(and(...conditions))
+      .orderBy(asc(appointments.startsAt));
+
+    const appointmentIds = appointmentRows.map(item => item.appointment.id);
     const paymentRows = appointmentIds.length
       ? await db.select().from(payments).where(inArray(payments.appointmentId, appointmentIds))
       : [];
+    const serviceRows = appointmentIds.length
+      ? await db.select().from(appointmentServices).where(inArray(appointmentServices.appointmentId, appointmentIds)).orderBy(asc(appointmentServices.sortOrder))
+      : [];
 
-    const balances = todaysAppointments.map(appointment => ({
-      appointmentId: appointment.id,
-      status: appointment.status,
-      startsAt: appointment.startsAt,
-      totals: deriveAppointmentBalance(
-        appointment.totalTetri,
-        paymentRows.filter(payment => payment.appointmentId === appointment.id).map(payment => ({
-          amountTetri: payment.amountTetri,
-          refundedTetri: payment.refundedTetri,
-          status: payment.status,
-        })),
-      ),
-    }));
+    const summary = summarizeOperationalAppointments(
+      appointmentRows.map(row => row.appointment),
+      paymentRows.map(payment => ({
+        appointmentId: payment.appointmentId,
+        amountTetri: payment.amountTetri,
+        refundedTetri: payment.refundedTetri,
+        status: payment.status,
+      })),
+    );
 
     return {
-      appointments: todaysAppointments,
-      balances,
-      counts: todaysAppointments.reduce<Record<string, number>>((acc, item) => {
-        acc[item.status] = (acc[item.status] ?? 0) + 1;
-        return acc;
-      }, {}),
+      location: { id: location.id, name: location.name, timezone: location.timezone },
+      dateKey,
+      appointments: appointmentRows.map(row => ({
+        ...row.appointment,
+        client: row.clientFirstName ? { firstName: row.clientFirstName, lastName: row.clientLastName } : null,
+        staff: { id: row.appointment.staffProfileId, publicDisplayName: row.staffName, color: row.staffColor },
+        services: serviceRows.filter(service => service.appointmentId === row.appointment.id).map(service => ({
+          id: service.id,
+          serviceNameSnapshot: service.serviceNameSnapshot,
+          durationMinutesSnapshot: service.durationMinutesSnapshot,
+          priceTetriSnapshot: service.priceTetriSnapshot,
+        })),
+      })),
+      balances: summary.balances,
+      counts: summary.counts,
+      metrics: summary.metrics,
     };
   }),
 });

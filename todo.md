@@ -54,3 +54,20 @@
 - [x] Include pure client-side public booking helper tests in the default Vitest suite without requiring a browser runtime.
 - [x] Re-run browser keyboard validation on the updated public booking flow for Tab order, visible focus on service/specialist cards, and the primary continuation CTA.
 - [x] Run and document the synced codebase's existing public booking automated test suite, or restore focused public router coverage for catalog, eligibility, availability, and commit safeguards.
+- [x] Document user-provided MySalon and Visage reference workflows, including public booking, calendar, client, staff, finance, notification, and reporting capabilities.
+- [x] Audit the current SalonFlow implementation against the reference workflow matrix and add a prioritized, code-verifiable completion roadmap.
+- [ ] Complete prioritized production capabilities across booking, calendar, CRM, staff, finance, analytics, and notifications while maintaining Georgian accessibility, role scope, integer-tetri money, and historical-data integrity.
+- [ ] Perform end-to-end responsive, keyboard, server-safety, and operational validation for each released completion milestone.
+- [x] M1: Replace the date-card calendar with a protected, timezone-aware daily/weekly time grid that has staff resource columns, genuine appointment context, role-scoped quick actions, responsive fallback, and focused server/client tests.
+- [x] M1: Correct Today data to use the active location timezone and current business-day boundaries; add a real appointment queue, permitted status transitions, genuine revenue/balance metrics, loading/error/empty states, and test coverage.
+- [x] M1 follow-up: Add role-scoped appointment quick actions to Calendar cards and focused tests for Today metrics, Calendar location/range context, and queue action visibility.
+- [x] M1 hardening: Add focused appointment router tests for active-location business-day scope, staff scoping, balances, and joined Calendar range context.
+- [x] M1 hardening: Add rendered UI coverage that verifies Today and Calendar quick-action visibility is gated by the appointment-management role policy.
+- [x] M1 evidence: Assert active-location timezone/day invocation and location-range query filtering in appointment router tests.
+- [x] M1 evidence: Use the same rendered, role-gated action component in Today and Calendar, with test coverage for both contexts.
+- [x] M1 evidence: Capture and assert appointment dashboard and calendar query conditions for locationId plus timezone-derived start/end bounds.
+- [ ] M2: Add a protected client-detail workflow with validated editing of existing notes, preferences, and sensitivity fields plus ordered appointment/service history; preserve organization scope and immutable historical service snapshots.
+- [ ] M2: Complete staff operations by exposing maintained working-hour and schedule-exception records, role-authorized edit/removal flows, and genuine staff performance signals.
+- [ ] M3: Enrich public location discovery and booking context with active database-backed categories, opening hours, contact data, and service information without adding fabricated ratings, reviews, VIP labels, promotions, or availability claims.
+- [ ] M4: Add adjustable report periods and live integer-tetri analytics for revenue trend, service/category mix, staff performance, expense pressure, and protected CSV regression coverage.
+- [ ] M5: Keep customer notification sending deferred until a verified sender domain and provider credentials are supplied; then implement consent-respecting, provider-backed, idempotent scheduled reminder delivery through Heartbeat rather than in-process timers.

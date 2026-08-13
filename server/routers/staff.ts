@@ -10,10 +10,13 @@ export const staffRouter = router({
   list: protectedProcedure.input(locationScopeSchema).query(async ({ ctx, input }) => {
     await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"]);
     const db = await requireDb();
-    return db.select({ profile: staffProfiles, membership: organizationMemberships }).from(staffProfiles)
+    const conditions = [eq(organizationMemberships.organizationId, input.organizationId), eq(staffProfiles.status, "ACTIVE")];
+    if (input.locationId) conditions.push(eq(staffLocations.locationId, input.locationId));
+    const query = db.select({ profile: staffProfiles, membership: organizationMemberships }).from(staffProfiles)
       .innerJoin(organizationMemberships, eq(staffProfiles.membershipId, organizationMemberships.id))
-      .where(and(eq(organizationMemberships.organizationId, input.organizationId), eq(staffProfiles.status, "ACTIVE")))
-      .orderBy(asc(staffProfiles.sortOrder), asc(staffProfiles.publicDisplayName));
+      .$dynamic();
+    if (input.locationId) query.innerJoin(staffLocations, eq(staffLocations.staffProfileId, staffProfiles.id));
+    return query.where(and(...conditions)).orderBy(asc(staffProfiles.sortOrder), asc(staffProfiles.publicDisplayName));
   }),
 
   createProfile: protectedProcedure.input(staffProfileCreateSchema).mutation(async ({ ctx, input }) => {
