@@ -16,6 +16,7 @@ import Today from "./pages/Today";
 import WorkspaceSetup from "./pages/WorkspaceSetup";
 import WorkspacePlaceholder from "./pages/WorkspacePlaceholder";
 import LocalAuth from "./pages/LocalAuth";
+import DemoPreview from "./pages/DemoPreview";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -27,6 +28,7 @@ function Router() {
       <Route path={"/login"}>{() => <LocalAuth mode="login" />}</Route>
       <Route path={"/register"}>{() => <LocalAuth mode="register" />}</Route>
       <Route path={"/claim-account"}>{() => <LocalAuth mode="claim" />}</Route>
+      {import.meta.env.DEV ? <Route path={"/preview-demo"} component={DemoPreview} /> : null}
       <Route path={"/app/today"} component={Today} />
       <Route path={"/app/calendar"} component={Calendar} />
       <Route path={"/app/clients"} component={Clients} />
@@ -51,7 +53,7 @@ function App() {
     <ErrorBoundary>
       <ThemeProvider
         defaultTheme="light"
-        // switchable
+        switchable
       >
         <TooltipProvider>
           <Toaster />

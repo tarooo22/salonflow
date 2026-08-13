@@ -1,6 +1,6 @@
 import { chromium, type Page } from "playwright";
-import { and, eq } from "drizzle-orm";
-import { locations, organizationMemberships, organizations, users } from "../drizzle/schema";
+import { and, eq, inArray, or } from "drizzle-orm";
+import { locationOpeningHours, locations, organizationMemberships, organizations, serviceCategories, services, staffLocations, staffProfiles, staffServices, users, workingHourRules } from "../drizzle/schema";
 import { requireDb } from "../server/db";
 
 const baseUrl = "http://127.0.0.1:3000";
@@ -105,6 +105,26 @@ async function cleanup() {
     : await db.select().from(users).where(eq(users.normalizedEmail, email)).limit(1);
   const [organization] = await db.select().from(organizations).where(eq(organizations.slug, organizationSlug)).limit(1);
   if (organization) {
+    const staffRows = await db.select({ id: staffProfiles.id }).from(staffProfiles)
+      .innerJoin(organizationMemberships, eq(staffProfiles.membershipId, organizationMemberships.id))
+      .where(eq(organizationMemberships.organizationId, organization.id));
+    const serviceRows = await db.select({ id: services.id }).from(services).where(eq(services.organizationId, organization.id));
+    const staffIds = staffRows.map(row => row.id);
+    const serviceIds = serviceRows.map(row => row.id);
+    if (staffIds.length && serviceIds.length) await db.delete(staffServices).where(or(inArray(staffServices.staffProfileId, staffIds), inArray(staffServices.serviceId, serviceIds)));
+    else if (staffIds.length) await db.delete(staffServices).where(inArray(staffServices.staffProfileId, staffIds));
+    else if (serviceIds.length) await db.delete(staffServices).where(inArray(staffServices.serviceId, serviceIds));
+    if (staffIds.length) await db.delete(workingHourRules).where(inArray(workingHourRules.staffProfileId, staffIds));
+    await db.delete(locationOpeningHours).where(inArray(locationOpeningHours.locationId, [organization.id]));
+    const locationRows = await db.select({ id: locations.id }).from(locations).where(eq(locations.organizationId, organization.id));
+    const locationIds = locationRows.map(row => row.id);
+    if (locationIds.length) {
+      await db.delete(locationOpeningHours).where(inArray(locationOpeningHours.locationId, locationIds));
+      await db.delete(staffLocations).where(inArray(staffLocations.locationId, locationIds));
+    }
+    if (staffIds.length) await db.delete(staffProfiles).where(inArray(staffProfiles.id, staffIds));
+    if (serviceIds.length) await db.delete(services).where(inArray(services.id, serviceIds));
+    await db.delete(serviceCategories).where(eq(serviceCategories.organizationId, organization.id));
     await db.delete(locations).where(eq(locations.organizationId, organization.id));
     await db.delete(organizationMemberships).where(eq(organizationMemberships.organizationId, organization.id));
     await db.delete(organizations).where(eq(organizations.id, organization.id));
@@ -138,9 +158,21 @@ try {
   await page.locator("#organization-slug").fill(organizationSlug);
   await page.locator("#location-name").fill("Validation Branch");
   await page.locator("#public-slug").fill(publicSlug);
-  await page.getByRole("button", { name: "სამუშაო სივრცის შექმნა" }).click();
-  await page.waitForURL(`${baseUrl}/app/today`);
+  await page.getByRole("button", { name: "გაგრძელება" }).click();
+  await page.getByText("სამუშაო საათები და გამონაკლისები", { exact: true }).waitFor({ state: "visible" });
+  await page.getByRole("button", { name: "გაგრძელება" }).click();
+  await page.getByText("პირველი სერვისი და ფასი", { exact: true }).waitFor({ state: "visible" });
+  await page.locator("#service-name").fill("Validation Styling");
+  await page.locator("#price").fill("75.00");
+  await page.getByRole("button", { name: "გაგრძელება" }).click();
+  await page.getByText("მფლობელი და გაშვება", { exact: true }).waitFor({ state: "visible" });
+  await page.locator("#owner-name").fill("Validation Owner");
+  const submitButton = page.locator("form button[type=submit]");
+  await submitButton.waitFor({ state: "visible" });
+  await submitButton.evaluate(element => (element as HTMLButtonElement).click());
+  await page.waitForURL(url => new URL(url).pathname === "/app/today");
   await page.getByRole("heading", { name: "დღეს", exact: true }).waitFor({ state: "visible" });
+  await page.getByText("თქვენი SalonFlow მზად არის დასაწყებად", { exact: true }).waitFor({ state: "visible" });
 
   await verifyKeyboardNavigation(page);
   await verifyWorkspaceSurfaces(page, { width: 1280, height: 720 });

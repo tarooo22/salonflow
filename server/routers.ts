@@ -5,6 +5,7 @@ import { clientsRouter } from "./routers/clients";
 import { appointmentsRouter } from "./routers/appointments";
 import { financeRouter } from "./routers/finance";
 import { organizationRouter } from "./routers/organizations";
+import { onboardingRouter } from "./routers/onboarding";
 import { paymentsRouter } from "./routers/payments";
 import { publicRouter } from "./routers/public";
 import { reportingRouter } from "./routers/reporting";
@@ -16,6 +17,7 @@ export const appRouter = router({
   system: systemRouter,
   auth: authRouter,
   organizations: organizationRouter,
+  onboarding: onboardingRouter,
   staff: staffRouter,
   services: servicesRouter,
   clients: clientsRouter,

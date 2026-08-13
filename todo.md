@@ -92,3 +92,12 @@
 - [x] Provide the user with a concise Georgian implementation summary and current desktop/mobile website screenshots.
 - [x] Capture and deliver current internal workspace screenshots for Today, Calendar, Clients, Staff, and Reports using disposable self-cleaning validation data.
 - [x] Review ui-ux-pro-max-skill.com guidance and apply compatible, tested design refinements to SalonFlow without altering Georgian workflows, access control, or booking security.
+- [x] Validate and install the official UI/UX Pro Max skill into the local skill registry without executing bundled third-party code.
+- [x] Master Plan P0: Audit current routes, schema, API, local auth/session security, deep links, role scopes, static-versus-live surfaces, and error states before changing workflows.
+- [x] Master Plan P0: Re-read and verify the finalized audit record’s deep-link, error-state, and static-versus-live classifications before the next checkpoint.
+- [x] Master Plan P0: Resolve and verify the stale development-server `createLocalUser` import crash so local auth requests no longer fail at runtime.
+- [x] Master Plan P0: Run a post-restart browser auth smoke test that submits a real local registration or login mutation and confirms the authenticated request succeeds without import or fetch failures.
+- [x] Master Plan P0: Document five scripted usability journeys, five keyboard/accessibility scenarios, and responsive acceptance criteria without presenting a QA plan as fabricated user research.
+- [x] Master Plan P0: Establish documented shared SalonFlow design tokens, component boundaries, WCAG/touch/focus rules, and Light/Dark/System settings requirements.
+- [x] Master Plan P0: Build a guided organization onboarding/checklist and a development-only idempotent, clearly labelled demo-data path after the audit confirms data boundaries.
+- [ ] Master Plan P0: Extend public booking with a server-resolved “ნებისმიერი თავისუფალი სპეციალისტი” path, preserving eligibility, final conflict re-check, idempotency, and clear Georgian outcome feedback.

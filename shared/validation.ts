@@ -60,6 +60,33 @@ export const workspaceSetupSchema = z.object({
   location: locationCreateSchema.omit({ organizationId: true }),
 });
 
+const onboardingHoursSchema = z.object({
+  weekday: z.number().int().min(0).max(6),
+  enabled: z.boolean(),
+  startLocalTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+  endLocalTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+}).refine(value => !value.enabled || value.startLocalTime < value.endLocalTime, "Working-hours end must follow start");
+
+const onboardingServiceSchema = z.object({
+  categoryNameKa: z.string().trim().min(2).max(160),
+  nameKa: z.string().trim().min(2).max(160),
+  defaultDurationMinutes: z.number().int().min(5).max(720),
+  priceTetri: z.number().int().min(0).max(10_000_000),
+  onlineBookingEnabled: z.boolean().default(true),
+});
+
+export const guidedOnboardingSchema = z.object({
+  organization: organizationCreateSchema,
+  location: locationCreateSchema.omit({ organizationId: true }),
+  openingHours: z.array(onboardingHoursSchema).length(7).refine(hours => hours.some(hour => hour.enabled), "At least one open day is required"),
+  owner: z.object({
+    publicDisplayName: z.string().trim().min(2).max(160),
+    jobTitle: z.string().trim().max(160).optional(),
+    onlineBookingVisible: z.boolean().default(false),
+  }),
+  services: z.array(onboardingServiceSchema).min(1).max(12),
+});
+
 export const organizationScopeSchema = z.object({ organizationId: opaqueIdSchema });
 export const locationScopeSchema = z.object({ organizationId: opaqueIdSchema, locationId: opaqueIdSchema.optional() });
 
