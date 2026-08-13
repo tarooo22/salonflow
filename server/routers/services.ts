@@ -3,7 +3,7 @@ import { nanoid } from "nanoid";
 import { organizationMemberships, serviceCategories, services, staffProfiles, staffServices } from "../../drizzle/schema";
 import { requireOrganizationRole } from "../access";
 import { requireDb } from "../db";
-import { locationScopeSchema, opaqueIdSchema, organizationScopeSchema, serviceCategoryCreateSchema, serviceCreateSchema, serviceUpdateSchema } from "../../shared/validation";
+import { locationScopeSchema, opaqueIdSchema, organizationScopeSchema, serviceCategoryCreateSchema, serviceCategoryUpdateSchema, serviceCreateSchema, serviceUpdateSchema } from "../../shared/validation";
 import { protectedProcedure, router } from "../_core/trpc";
 
 export const servicesRouter = router({
@@ -22,6 +22,18 @@ export const servicesRouter = router({
     const id = nanoid(21);
     await db.insert(serviceCategories).values({ id, ...input });
     return { id };
+  }),
+
+  updateCategory: protectedProcedure.input(serviceCategoryUpdateSchema).mutation(async ({ ctx, input }) => {
+    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER"]);
+    const db = await requireDb();
+    const { organizationId, categoryId, ...changes } = input;
+    await db.update(serviceCategories).set(changes).where(and(
+      eq(serviceCategories.id, categoryId),
+      eq(serviceCategories.organizationId, organizationId),
+      eq(serviceCategories.status, "ACTIVE"),
+    ));
+    return { success: true };
   }),
 
   list: protectedProcedure.input(locationScopeSchema).query(async ({ ctx, input }) => {

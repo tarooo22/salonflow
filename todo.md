@@ -18,6 +18,7 @@
 - [x] Add protected staff-service eligibility management for public booking specialists.
 - [x] Add a protected active-service update mutation that preserves historical records and validates category scope.
 - [x] Expose an accessible active-service editing dialog with integer-tetri price conversion and category reassignment safeguards.
+- [x] Add protected category editing with organization-scoped validation for the active service catalog.
 - [ ] Complete client creation, consent editing, booking history, and duplicate merge workflows; a protected searchable active-client CRM workspace is implemented.
 - [x] Add a protected internal client creation dialog with a required booking-terms consent record and normalized contact details.
 - [x] Add a protected client booking-history dialog with organization-scoped appointment and service snapshots.

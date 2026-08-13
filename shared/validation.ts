@@ -55,6 +55,11 @@ export const serviceCategoryCreateSchema = z.object({
   sortOrder: z.number().int().min(0).max(10_000).default(0),
 });
 
+export const serviceCategoryUpdateSchema = serviceCategoryCreateSchema.omit({ organizationId: true }).partial().extend({
+  organizationId: opaqueIdSchema,
+  categoryId: opaqueIdSchema,
+}).refine(input => Object.keys(input).some(key => !["organizationId", "categoryId"].includes(key)), "At least one category field is required");
+
 export const serviceCreateSchema = z.object({
   organizationId: opaqueIdSchema,
   categoryId: opaqueIdSchema,
