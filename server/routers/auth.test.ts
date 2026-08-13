@@ -15,7 +15,7 @@ vi.mock("../db", () => ({
   requireDb: mocks.requireDb,
 }));
 vi.mock("../lib/localSessions", () => ({ createLocalSessionToken: mocks.createLocalSessionToken }));
-vi.mock("../_core/cookies", () => ({ getSessionCookieOptions: () => ({ httpOnly: true, path: "/", sameSite: "none", secure: false }) }));
+vi.mock("../_core/cookies", () => ({ getSessionCookieOptions: () => ({ httpOnly: true, path: "/", sameSite: "lax", secure: false }) }));
 vi.mock("../lib/passwords", () => ({ hashPassword: mocks.hashPassword, verifyPassword: mocks.verifyPassword }));
 
 import { authRouter } from "./auth";
@@ -42,7 +42,7 @@ describe("local auth router", () => {
 
     await expect(authRouter.createCaller(ctx).register({ name: "თამარი", email: "tamari@example.com", password: "ძლიერი-პაროლი-123" })).resolves.toEqual({ id: 44, openId: "local_test_user_00001", name: "თამარი", email: "tamari@example.com" });
     expect(mocks.createLocalUser).toHaveBeenCalledWith(expect.objectContaining({ name: "თამარი", email: "tamari@example.com", passwordHash: "scrypt$hashed" }));
-    expect(cookie).toHaveBeenCalledWith("app_session_id", "signed-local-session", expect.objectContaining({ httpOnly: true, sameSite: "none" }));
+    expect(cookie).toHaveBeenCalledWith("app_session_id", "signed-local-session", expect.objectContaining({ httpOnly: true, sameSite: "lax" }));
   });
 
   it("rejects an invalid local login without issuing a session", async () => {

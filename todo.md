@@ -5,7 +5,7 @@
 - [x] Establish the shared domain vocabulary, permission matrix, appointment transitions, and data integrity rules.
 - [x] Apply the reviewed initial database migration once managed database connectivity is restored.
 - [x] Create a multi-location schema for organizations, locations, memberships, roles, permissions, and scoped settings.
-- [ ] Implement secure account registration, login, verification-code flows, password reset, invite links, and role-based access; credential-independent security foundations are complete, while transactional verification delivery remains deferred to M5.
+- [x] Implement secure account registration, login, verification-code flows, password reset, invite links, and role-based access; credential-independent security foundations are complete, while transactional verification delivery remains deferred to M5.
 - [x] Fix the Manus OAuth callback failure so users return to SalonFlow with a valid authenticated session instead of a raw error response.
 - [x] Restore the missing organization workspace tables so authenticated users see the setup state instead of a blank workspace.
 - [x] Implement organization-scoped role checks, normalization safeguards, and the secure Manus OAuth workspace entry point.
@@ -43,7 +43,7 @@
 - [x] Add protected commission analytics with period totals and per-specialist paid-versus-accrued commission visibility.
 - [x] Add a responsive, paginated reporting booking-history table with appointment reference, date/time, status, and integer-tetri total display.
 - [x] Add robust server and interface tests for permissions, availability, payments, historical data, and public booking.
-- [ ] Verify accessibility, responsiveness, error states, and operational workflows through rendered interface review.
+- [x] Verify accessibility, responsiveness, error states, and operational workflows through rendered interface review.
 - [x] Correct the protected workspace loading shell so mobile viewports use a compact header rather than a fixed desktop sidebar.
 - [x] Provide an implementation handoff, configuration checklist, and deployment readiness summary.
 - [x] Build a protected organization-and-first-location setup flow with Georgian validation, IANA timezone defaults, opaque public location slugs, and post-create workspace routing.
@@ -57,7 +57,7 @@
 - [x] Document user-provided MySalon and Visage reference workflows, including public booking, calendar, client, staff, finance, notification, and reporting capabilities.
 - [x] Audit the current SalonFlow implementation against the reference workflow matrix and add a prioritized, code-verifiable completion roadmap.
 - [x] Complete currently deliverable prioritized production capabilities across booking, calendar, CRM, staff, finance, and analytics while maintaining Georgian accessibility, role scope, integer-tetri money, and historical-data integrity; verified sender-domain notification delivery remains explicitly deferred in M5.
-- [ ] Perform end-to-end responsive, keyboard, server-safety, and operational validation for each released completion milestone.
+- [x] Perform end-to-end responsive, keyboard, server-safety, and operational validation for each released completion milestone.
 - [x] M1: Replace the date-card calendar with a protected, timezone-aware daily/weekly time grid that has staff resource columns, genuine appointment context, role-scoped quick actions, responsive fallback, and focused server/client tests.
 - [x] M1: Correct Today data to use the active location timezone and current business-day boundaries; add a real appointment queue, permitted status transitions, genuine revenue/balance metrics, loading/error/empty states, and test coverage.
 - [x] M1 follow-up: Add role-scoped appointment quick actions to Calendar cards and focused tests for Today metrics, Calendar location/range context, and queue action visibility.
@@ -70,8 +70,8 @@
 - [x] M2: Complete staff operations by exposing maintained working-hour and schedule-exception records, role-authorized edit/removal flows, and genuine staff performance signals.
 - [x] M2 staff hardening: Add role-authorized edit flows for existing working-hour rules and calendar exceptions with active organization/location validation.
 - [x] M2 exception edit evidence: Revalidate active staff/location assignment on update and prove inactive or cross-scope combinations are rejected by focused router tests.
-- [ ] Cross-workspace accessibility evidence: Add keyboard traversal and visible-focus checks for Today, Calendar, Clients, Staff, and Reports operational actions.
-- [ ] Milestone validation evidence: Record focused responsive, keyboard, server-safety, and operational checks for each released M1–M4 surface; keep sender-dependent M5 separate.
+- [x] Cross-workspace accessibility evidence: Add keyboard traversal and visible-focus checks for Today, Calendar, Clients, Staff, and Reports operational actions.
+- [x] Milestone validation evidence: Record focused responsive, keyboard, server-safety, and operational checks for each released M1–M4 surface; keep sender-dependent M5 separate.
 - [x] M2 staff hardening: Add real staff performance signals (completed appointments, service volume, and booked revenue) with server and UI tests.
 - [x] M2 staff performance evidence: Add router tests for organization/range-scoped performance metrics and UI tests for loading, empty, and populated performance panel states.
 - [x] M2 performance query evidence: Assert `staff.performance` applies organizationId and requested startsAt/endsAt predicates so cross-organization and out-of-range appointments cannot contribute.
@@ -86,3 +86,5 @@
 - [x] Remove unused client OAuth launcher and unmount the legacy server OAuth callback route so local email/password is the sole supported SalonFlow user authentication journey.
 - [x] Disable legacy OAuth-backed session acceptance in request authentication, remove unused OAuth server modules/config, and prove only local signed sessions are accepted by focused regression tests.
 - [x] Remove non-executable OAuth residue from shared constants/environment configuration and add context-level protected authentication tests for valid local versus legacy-style session cookies.
+- [x] Fix local session cookie persistence so registration/login establishes an authenticated browser session in development and production, then re-run protected workspace validation.
+- [x] Add rendered browser evidence for user-visible error and recovery states across Today, Calendar, Clients, Staff, Reports, and public booking/discovery surfaces.
