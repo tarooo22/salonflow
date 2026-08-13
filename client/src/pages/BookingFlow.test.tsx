@@ -43,6 +43,7 @@ describe("public booking interface", () => {
     render(<BookingConfirmation confirmationToken="confirm_opaque_123" />);
 
     expect(screen.getByText(/თქვენი მოთხოვნა მიღებულია/i)).toBeTruthy();
+    expect(screen.getByRole("status")).toBeTruthy();
     expect(screen.getByLabelText("ჯავშნის დადასტურების კოდი").textContent).toBe("confirm_opaque_123");
     expect(screen.getByRole("link", { name: /ფილიალების სიაში დაბრუნება/i }).getAttribute("href")).toBe("/book");
   });

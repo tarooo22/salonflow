@@ -54,6 +54,24 @@ describe("public.checkAvailability", () => {
     expect((mocked.db as { select: ReturnType<typeof vi.fn> }).select).toHaveBeenCalledTimes(1);
   });
 
+  it("rejects a service outside the booking location organization before evaluating staff eligibility", async () => {
+    const location = { id: "location_00000001", organizationId: "organization_00001", minimumNoticeMinutes: 0, maximumAdvanceDays: 365, status: "ACTIVE", bookingEnabled: true };
+    const db = {
+      select: vi.fn()
+        .mockReturnValueOnce(chainResult([location]))
+        .mockReturnValueOnce(chainResult([])),
+    };
+    mocked.db = db;
+
+    await expect(publicRouter.createCaller({} as never).checkAvailability({
+      slug: "studio-vake",
+      serviceId: "service_other_organization",
+      staffProfileId: "staff_profile_001",
+      startsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    })).resolves.toEqual({ available: false, reason: "SERVICE_UNAVAILABLE" });
+    expect(db.select).toHaveBeenCalledTimes(2);
+  });
+
   it("rejects a specialist who is neither assigned to the location nor eligible for the selected service", async () => {
     const location = { id: "location_00000001", organizationId: "organization_00001", minimumNoticeMinutes: 0, maximumAdvanceDays: 365, status: "ACTIVE", bookingEnabled: true };
     const service = { id: "service_hair_0001", organizationId: "organization_00001", defaultDurationMinutes: 60, bufferBeforeMinutes: 0, bufferAfterMinutes: 0, status: "ACTIVE", onlineBookingEnabled: true };

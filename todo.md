@@ -58,14 +58,24 @@
 - [x] Add protected commission analytics with period totals and per-specialist paid-versus-accrued commission visibility.
 - [x] Add a protected commission-entry dialog using completed service snapshots and active rule selection, with server-side scope, applicability, and duplicate checks retained.
 - [x] Add a responsive, paginated reporting booking-history table with appointment reference, date/time, status, and integer-tetri total display.
-- [ ] Add robust server and interface tests for permissions, availability, payments, historical data, and public booking.
-- [ ] Verify accessibility, responsiveness, error states, and operational workflows through rendered interface review.
+- [x] Add robust server and interface tests for permissions, availability, payments, historical data, and public booking.
+- [x] Add focused payment-workflow tests for successful recording, invalid scope, refund or status edge cases, and server-side balance effects.
+- [x] Add a protected operations interface test beyond public booking for a core permissions, payments, or historical-data state.
+- [x] Add a protected historical-data interface test for a reporting booking-history table or its empty/error state.
+- [x] Add a protected operational interface test for a non-public empty or error state beyond action-button visibility.
+- [ ] After a verified sender domain and transactional-email API key are available, implement password-reset email delivery and email-verification-code dispatch without exposing recovery tokens to unauthenticated callers.
+- [x] Verify accessibility, responsiveness, error states, and operational workflows through rendered interface review.
+- [x] Complete an authenticated rendered review of first-workspace setup and a core protected operations flow, recording the reached screens and observed states.
+- [x] Verify keyboard navigation, visible focus indicators, and screen-reader status labels across authentication, public booking, and protected workspace flows.
+- [x] Review loading, empty, and error states on the core protected operational screens before closing the rendered-review checklist.
 - [x] Correct the protected workspace loading shell so mobile viewports use a compact header rather than a fixed desktop sidebar.
 - [x] Provide an implementation handoff, configuration checklist, and deployment readiness summary.
 - [x] Build a protected organization-and-first-location setup flow with Georgian validation, IANA timezone defaults, opaque public location slugs, and post-create workspace routing.
 - [x] Add a protected additional-location form with opaque public slug and Asia/Tbilisi defaults for multi-location organizations.
-- [ ] Complete one authenticated browser verification of the first-workspace setup flow after database recovery.
+- [x] Complete one authenticated browser verification of the first-workspace setup flow after database recovery.
 - [x] Apply the remaining schema indexes and complete a live database parity check before closing the initial migration task.
 - [x] Align the protected workspace shell and primary operations views with SalonFlow's warm ink, ivory, terracotta, and jade design system.
 - [x] Apply explicit SalonFlow warm-brand styling to the protected navigation shell, including sidebar, active navigation, profile footer, and mobile top bar.
 - [x] Apply the same visual hierarchy to the first-workspace setup view and re-review the protected workspace at desktop and mobile widths.
+- [x] Render and review a protected operational error state in the browser before closing the full authenticated interface review.
+- [x] Add a development-only Reports error-preview query flag for the protected operational failure-state browser review.

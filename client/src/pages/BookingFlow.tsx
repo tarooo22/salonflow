@@ -90,9 +90,9 @@ function ContactStep({ firstName, lastName, phone, email, customerNote, termsAcc
 }
 
 export function BookingConfirmation({ confirmationToken }: { confirmationToken: string }) {
-  return <Card className="mt-8 border-[#17826A]/30 bg-[#17826A]/5"><CardHeader><CheckCircle2 className="h-7 w-7 text-[#17826A]" /><CardTitle className="mt-3">თქვენი მოთხოვნა მიღებულია</CardTitle></CardHeader><CardContent className="space-y-3 text-sm leading-6 text-[#355747]"><p>ჯავშანი ელოდება სალონის დადასტურებას. საჭიროების შემთხვევაში შეინახეთ ეს დადასტურების კოდი.</p><code aria-label="ჯავშნის დადასტურების კოდი" className="block break-all rounded-lg bg-white px-3 py-2 text-xs text-[#1E2824]">{confirmationToken}</code><Link href="/book" className="inline-flex font-medium text-[#B85C3D]">ფილიალების სიაში დაბრუნება</Link></CardContent></Card>;
+  return <Card role="status" aria-live="polite" className="mt-8 border-[#17826A]/30 bg-[#17826A]/5"><CardHeader><CheckCircle2 className="h-7 w-7 text-[#17826A]" aria-hidden="true" /><CardTitle className="mt-3">თქვენი მოთხოვნა მიღებულია</CardTitle></CardHeader><CardContent className="space-y-3 text-sm leading-6 text-[#355747]"><p>ჯავშანი ელოდება სალონის დადასტურებას. საჭიროების შემთხვევაში შეინახეთ ეს დადასტურების კოდი.</p><code aria-label="ჯავშნის დადასტურების კოდი" className="block break-all rounded-lg bg-white px-3 py-2 text-xs text-[#1E2824]">{confirmationToken}</code><Link href="/book" className="inline-flex font-medium text-[#B85C3D]">ფილიალების სიაში დაბრუნება</Link></CardContent></Card>;
 }
 
 function Alert({ children }: { children: ReactNode }) {
-  return <Card className="mt-8 border-destructive/30 bg-destructive/5"><CardContent className="flex gap-3 p-6 text-sm text-destructive"><CircleAlert className="h-5 w-5 shrink-0" />{children}</CardContent></Card>;
+  return <Card role="alert" aria-live="assertive" className="mt-8 border-destructive/30 bg-destructive/5"><CardContent className="flex gap-3 p-6 text-sm text-destructive"><CircleAlert className="h-5 w-5 shrink-0" aria-hidden="true" />{children}</CardContent></Card>;
 }
