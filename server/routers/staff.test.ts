@@ -35,15 +35,15 @@ function createStaffDb(membershipRows: unknown[]) {
 }
 
 describe("staff.createProfile", () => {
-  it("creates a profile and all selected location assignments for an active organization membership", async () => {
-    const db = createStaffDb([{ id: "membership_0001", status: "ACTIVE" }]);
+  it("allows a manager to create a profile and selected assignments for a different active organization membership", async () => {
+    const db = createStaffDb([{ id: "membership_other_001", status: "ACTIVE" }]);
     mocked.db = db;
-    mocked.requireOrganizationRole.mockResolvedValue({ role: "OWNER" });
+    mocked.requireOrganizationRole.mockResolvedValue({ role: "MANAGER" });
     mocked.nanoid.mockReturnValueOnce("staff_profile_00001");
 
     await expect(staffRouter.createCaller({ user } as never).createProfile({
       organizationId: "organization_001",
-      membershipId: "membership_0001",
+      membershipId: "membership_other_001",
       publicDisplayName: "ლელა ბერიძე",
       jobTitle: "თმის სტილისტი",
       onlineBookingVisible: true,
@@ -53,7 +53,7 @@ describe("staff.createProfile", () => {
 
     expect(db.values).toHaveBeenNthCalledWith(1, expect.objectContaining({
       id: "staff_profile_00001",
-      membershipId: "membership_0001",
+      membershipId: "membership_other_001",
       publicDisplayName: "ლელა ბერიძე",
       onlineBookingVisible: true,
     }));
@@ -61,6 +61,22 @@ describe("staff.createProfile", () => {
       { staffProfileId: "staff_profile_00001", locationId: "location_0001" },
       { staffProfileId: "staff_profile_00001", locationId: "location_0002" },
     ]);
+  });
+});
+
+describe("staff.listUnprofiledMembers", () => {
+  it("returns active organization members that do not yet have a specialist profile", async () => {
+    const rows = [{ membership: { id: "membership_0002", role: "STAFF" }, user: { id: 32, name: "ნინო ქავთარაძე", email: "nino@example.com" } }];
+    const chain = {
+      from: () => chain,
+      innerJoin: () => chain,
+      leftJoin: () => chain,
+      where: () => ({ orderBy: vi.fn(async () => rows) }),
+    };
+    mocked.db = { select: vi.fn(() => chain) };
+    mocked.requireOrganizationRole.mockResolvedValue({ role: "MANAGER" });
+
+    await expect(staffRouter.createCaller({ user } as never).listUnprofiledMembers({ organizationId: "organization_001" })).resolves.toEqual(rows);
   });
 });
 
@@ -87,6 +103,54 @@ describe("staff.addWorkingHours", () => {
       endLocalTime: "18:00",
     })).rejects.toThrow("Staff profile is not assigned to this active location");
     expect(db.insert).not.toHaveBeenCalled();
+  });
+});
+
+describe("staff.updateProfile", () => {
+  it("rejects profile edits when the specialist is not active in the current organization", async () => {
+    const chain = {
+      from: () => chain,
+      innerJoin: () => chain,
+      where: () => ({ limit: vi.fn(async () => []) }),
+    };
+    const db = { select: vi.fn(() => chain), transaction: vi.fn() };
+    mocked.db = db;
+    mocked.requireOrganizationRole.mockResolvedValue({ role: "MANAGER" });
+
+    await expect(staffRouter.createCaller({ user } as never).updateProfile({
+      organizationId: "organization_001",
+      staffProfileId: "staff_profile_00001",
+      publicDisplayName: "ლელა ბერიძე",
+      onlineBookingVisible: true,
+      color: "#17826A",
+      locationIds: ["location_0001"],
+    })).rejects.toThrow("Staff profile is not active in this organization");
+    expect(db.transaction).not.toHaveBeenCalled();
+  });
+
+  it("rejects a location assignment that is not active in the current organization", async () => {
+    const profileChain = {
+      from: () => profileChain,
+      innerJoin: () => profileChain,
+      where: () => ({ limit: vi.fn(async () => [{ id: "staff_profile_00001" }]) }),
+    };
+    const locationChain = {
+      from: () => locationChain,
+      where: vi.fn(async () => []),
+    };
+    const db = { select: vi.fn().mockReturnValueOnce(profileChain).mockReturnValueOnce(locationChain), transaction: vi.fn() };
+    mocked.db = db;
+    mocked.requireOrganizationRole.mockResolvedValue({ role: "MANAGER" });
+
+    await expect(staffRouter.createCaller({ user } as never).updateProfile({
+      organizationId: "organization_001",
+      staffProfileId: "staff_profile_00001",
+      publicDisplayName: "ლელა ბერიძე",
+      onlineBookingVisible: true,
+      color: "#17826A",
+      locationIds: ["location_0001"],
+    })).rejects.toThrow("One or more locations are not active in this organization");
+    expect(db.transaction).not.toHaveBeenCalled();
   });
 });
 

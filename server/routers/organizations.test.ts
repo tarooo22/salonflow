@@ -120,3 +120,44 @@ describe("organizations.createStaffInvite", () => {
     expect(values.mock.calls[0]?.[0].tokenHash).not.toContain(result.inviteUrl.split("/").at(-1));
   });
 });
+
+describe("organizations.acceptStaffInvite", () => {
+  it("creates an active organization membership when the signed-in email matches a pending invite", async () => {
+    const invite = {
+      id: "invite_000000000000001",
+      organizationId: "organization_001",
+      email: "owner@example.com",
+      role: "STAFF" as const,
+      status: "PENDING" as const,
+      expiresAt: new Date("2026-12-31T00:00:00.000Z"),
+      createdAt: new Date("2026-08-13T00:00:00.000Z"),
+      invitedByUserId: 77,
+    };
+    const inviteChain = { from: () => inviteChain, where: () => ({ limit: vi.fn(async () => [invite]) }) };
+    const membershipChain = { from: () => membershipChain, where: () => ({ limit: vi.fn(async () => []) }) };
+    const membershipValues = vi.fn(async () => undefined);
+    const updateWhere = vi.fn(async () => undefined);
+    const tx = {
+      select: vi.fn().mockReturnValueOnce(inviteChain).mockReturnValueOnce(membershipChain),
+      insert: vi.fn(() => ({ values: membershipValues })),
+      update: vi.fn(() => ({ set: () => ({ where: updateWhere }) })),
+    };
+    const db = { transaction: vi.fn(async (callback: (transaction: typeof tx) => Promise<unknown>) => callback(tx)) };
+    mocked.db = db;
+    mocked.nanoid.mockReturnValueOnce("membership_invited_001");
+
+    await expect(organizationRouter.createCaller({ user } as never).acceptStaffInvite({ token: "A".repeat(32) })).resolves.toEqual({
+      organizationId: "organization_001",
+      membershipId: "membership_invited_001",
+      alreadyMember: false,
+    });
+    expect(membershipValues).toHaveBeenCalledWith(expect.objectContaining({
+      id: "membership_invited_001",
+      organizationId: "organization_001",
+      userId: user.id,
+      role: "STAFF",
+      status: "ACTIVE",
+    }));
+    expect(updateWhere).toHaveBeenCalledTimes(1);
+  });
+});

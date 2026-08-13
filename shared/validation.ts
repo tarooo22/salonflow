@@ -126,6 +126,21 @@ export const staffProfileCreateSchema = z.object({
   locationIds: z.array(opaqueIdSchema).min(1).max(20),
 });
 
+export const staffProfileUpdateSchema = z.object({
+  organizationId: opaqueIdSchema,
+  staffProfileId: opaqueIdSchema,
+  publicDisplayName: z.string().trim().min(2).max(160),
+  jobTitle: z.string().trim().max(160).optional(),
+  specialty: z.string().trim().max(255).optional(),
+  onlineBookingVisible: z.boolean(),
+  color: z.string().trim().regex(/^#[0-9A-Fa-f]{6}$/),
+  locationIds: z.array(opaqueIdSchema).min(1).max(20),
+});
+
+export const staffProfileScopeSchema = organizationScopeSchema.extend({
+  staffProfileId: opaqueIdSchema,
+});
+
 export const workingHourRuleCreateSchema = z.object({
   organizationId: opaqueIdSchema,
   staffProfileId: opaqueIdSchema,

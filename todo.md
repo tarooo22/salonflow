@@ -17,14 +17,18 @@
 - [x] Add a protected time-off request form with role-scoped staff selection, active-location validation, pending persistence, and focused server coverage.
 - [x] Add organization-scoped time-off request visibility and owner or manager approval/rejection controls with audit fields.
 - [x] Add manager-created, token-hashed staff invite links with email-bound acceptance, pending OAuth handoff, and immediate expired-link feedback.
-- [ ] Complete service and category creation/editing, staff eligibility management, and archival controls; a live protected service catalog workspace is implemented.
+- [x] Add a manager workflow to create a specialist profile and active-location assignments for another accepted organization member.
+- [ ] Add multi-member staff onboarding coverage for accepted invitations, invalid location scope, and successful manager-created specialist assignment.
+- [ ] Add a focused server test proving a manager can create a specialist profile and selected assignments for a different active organization membership.
+- [ ] Add a workflow test covering invite acceptance through unprofiled membership visibility and manager-created specialist assignment.
+- [x] Complete service and category creation/editing, staff eligibility management, and archival controls; a live protected service catalog workspace is implemented.
 - [x] Add protected category and service creation dialogs with organization-scoped categories, 5–720-minute validation, and safe GEL-to-integer-tetri conversion.
 - [x] Add a protected service archive control that preserves historical appointment and reporting records.
 - [x] Add protected staff-service eligibility management for public booking specialists.
 - [x] Add a protected active-service update mutation that preserves historical records and validates category scope.
 - [x] Expose an accessible active-service editing dialog with integer-tetri price conversion and category reassignment safeguards.
 - [x] Add protected category editing with organization-scoped validation for the active service catalog.
-- [ ] Complete client creation, consent editing, booking history, and duplicate merge workflows; a protected searchable active-client CRM workspace is implemented.
+- [x] Complete client creation, consent editing, booking history, and duplicate merge workflows; a protected searchable active-client CRM workspace is implemented.
 - [x] Add a protected internal client creation dialog with a required booking-terms consent record and normalized contact details.
 - [x] Add a protected client booking-history dialog with organization-scoped appointment and service snapshots.
 - [x] Add immutable, organization-scoped marketing consent history and preference controls in the client workspace.
@@ -33,10 +37,11 @@
 - [ ] Add database-backed public booking commit tests for first submission, idempotent retry, and concurrent duplicate-slot protection after database connectivity is restored.
 - [x] Wire the public booking commit endpoint into the final client-side confirmation form with service, specialist, time, contact, consent, availability, error, and confirmation states.
 - [ ] Add interface tests for public booking specialist filtering, empty eligibility states, availability gating, and successful confirmation rendering.
+- [x] Add public booking router coverage for service-specific specialist eligibility grouping and the unavailable-location availability gate, and review the responsive discovery screen at desktop and mobile widths.
 - [x] Implement public location discovery through non-sequential slugs and a responsive Georgian booking entry route.
 - [x] Build staff-specific and weekly calendar views; the responsive live team day calendar and Today summary are implemented.
 - [x] Wire the Today dashboard to organization-scoped appointment status and outstanding-balance metrics with loading, empty, and failure states.
-- [ ] Complete persisted commission-entry and protected expense workflows with integer-tetri payment, balance, and commission-calculation safeguards.
+- [x] Complete persisted commission-entry and protected expense workflows with integer-tetri payment, balance, and commission-calculation safeguards.
 - [x] Add a protected expense-entry interface with active-location selection and integer-tetri amount conversion.
 - [x] Validate that commission rules apply to the appointment service, specialist, and location before creating entries.
 - [x] Apply the generated unique database constraint for duplicate commission prevention once managed database connectivity is restored; transaction-safe duplicate checks are implemented.
