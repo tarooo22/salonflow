@@ -90,6 +90,49 @@ describe("staff.addWorkingHours", () => {
   });
 });
 
+describe("staff.requestTimeOff", () => {
+  it("rejects a staff member who is not assigned to the requested active location", async () => {
+    const chain = {
+      from: () => chain,
+      innerJoin: () => chain,
+      where: () => ({ limit: vi.fn(async () => []) }),
+    };
+    const db = { select: vi.fn(() => chain), insert: vi.fn() };
+    mocked.db = db;
+    mocked.requireOrganizationRole.mockResolvedValue({ role: "STAFF" });
+
+    await expect(staffRouter.createCaller({ user } as never).requestTimeOff({
+      organizationId: "organization_001",
+      staffProfileId: "staff_profile_00001",
+      locationId: "location_0001",
+      startsAt: new Date("2026-08-15T09:00:00.000Z"),
+      endsAt: new Date("2026-08-15T18:00:00.000Z"),
+      reason: "დასვენება",
+    })).rejects.toThrow("Staff profile is not assigned to this active location");
+    expect(db.insert).not.toHaveBeenCalled();
+  });
+});
+
+describe("staff.reviewTimeOffRequest", () => {
+  it("rejects review of a request outside the active organization", async () => {
+    const chain = {
+      from: () => chain,
+      innerJoin: () => chain,
+      where: () => ({ limit: vi.fn(async () => []) }),
+    };
+    const db = { select: vi.fn(() => chain), update: vi.fn() };
+    mocked.db = db;
+    mocked.requireOrganizationRole.mockResolvedValue({ role: "MANAGER" });
+
+    await expect(staffRouter.createCaller({ user } as never).reviewTimeOffRequest({
+      organizationId: "organization_001",
+      requestId: "time_off_request_001",
+      status: "APPROVED",
+    })).rejects.toThrow("Time-off request was not found in this organization");
+    expect(db.update).not.toHaveBeenCalled();
+  });
+});
+
 describe("staff.addScheduleException", () => {
   it("rejects a schedule exception whose end precedes its start", async () => {
     mocked.requireOrganizationRole.mockResolvedValue({ role: "OWNER" });

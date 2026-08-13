@@ -148,6 +148,35 @@ export const scheduleExceptionCreateSchema = z.object({
 }).refine(input => input.staffProfileId || input.locationId, "A staff profile or location is required")
   .refine(input => input.startsAt < input.endsAt, "Exception end must follow start");
 
+export const timeOffRequestCreateSchema = z.object({
+  organizationId: opaqueIdSchema,
+  staffProfileId: opaqueIdSchema,
+  locationId: opaqueIdSchema,
+  startsAt: z.coerce.date(),
+  endsAt: z.coerce.date(),
+  reason: z.string().trim().max(255).optional(),
+}).refine(input => input.startsAt < input.endsAt, "Time-off request end must follow start");
+
+export const timeOffRequestReviewSchema = organizationScopeSchema.extend({
+  requestId: opaqueIdSchema,
+  status: z.enum(["APPROVED", "REJECTED"]),
+});
+
+export const staffInviteCreateSchema = z.object({
+  organizationId: opaqueIdSchema,
+  locationId: opaqueIdSchema.optional(),
+  email: z.string().trim().email().max(320).optional(),
+  role: z.enum(["MANAGER", "RECEPTIONIST", "STAFF"]),
+  origin: z.string().url().refine(value => {
+    const url = new URL(value);
+    return !url.username && !url.password && (url.protocol === "https:" || url.hostname === "localhost");
+  }, "Invalid invite origin"),
+}).refine(input => Boolean(input.email), "An invite email is required");
+
+export const staffInviteTokenSchema = z.object({
+  token: z.string().trim().min(32).max(128).regex(/^[A-Za-z0-9_-]+$/),
+});
+
 export const appointmentCreateSchema = z.object({
   organizationId: opaqueIdSchema,
   locationId: opaqueIdSchema,

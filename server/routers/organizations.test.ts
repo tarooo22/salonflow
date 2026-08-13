@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 const mocked = vi.hoisted(() => ({
   db: null as unknown,
   nanoid: vi.fn(),
+  requireOrganizationRole: vi.fn(),
 }));
 
 vi.mock("../db", () => ({
@@ -10,6 +11,7 @@ vi.mock("../db", () => ({
 }));
 
 vi.mock("nanoid", () => ({ nanoid: mocked.nanoid }));
+vi.mock("../access", () => ({ requireOrganizationRole: mocked.requireOrganizationRole }));
 
 import { organizationRouter } from "./organizations";
 
@@ -88,5 +90,33 @@ describe("organizations.createWorkspace", () => {
       timezone: "Asia/Tbilisi",
       email: "owner@example.com",
     }));
+  });
+});
+
+describe("organizations.createStaffInvite", () => {
+  it("creates a hashed, expiring invitation for a permitted organization manager", async () => {
+    const values = vi.fn(async () => undefined);
+    mocked.db = { insert: vi.fn(() => ({ values })) };
+    mocked.nanoid.mockReturnValueOnce("invite_000000000000001");
+    mocked.requireOrganizationRole.mockResolvedValue({ role: "OWNER" });
+
+    const result = await organizationRouter.createCaller({ user } as never).createStaffInvite({
+      organizationId: "organization_001",
+      email: "NEW.STAFF@EXAMPLE.COM ",
+      role: "STAFF",
+      origin: "https://salonflow.example",
+    });
+
+    expect(result.id).toBe("invite_000000000000001");
+    expect(result.inviteUrl).toMatch(/^https:\/\/salonflow\.example\/invite\/[A-Za-z0-9_-]{32,}$/);
+    expect(values).toHaveBeenCalledWith(expect.objectContaining({
+      id: "invite_000000000000001",
+      organizationId: "organization_001",
+      email: "new.staff@example.com",
+      role: "STAFF",
+      status: "PENDING",
+      tokenHash: expect.stringMatching(/^[a-f0-9]{64}$/),
+    }));
+    expect(values.mock.calls[0]?.[0].tokenHash).not.toContain(result.inviteUrl.split("/").at(-1));
   });
 });

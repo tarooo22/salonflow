@@ -1,9 +1,9 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
-import { locations, organizationMemberships, scheduleExceptions, staffLocations, staffProfiles, workingHourRules } from "../../drizzle/schema";
+import { locations, organizationMemberships, scheduleExceptions, staffLocations, staffProfiles, timeOffRequests, workingHourRules } from "../../drizzle/schema";
 import { requireOrganizationRole } from "../access";
 import { requireDb } from "../db";
-import { locationScopeSchema, scheduleExceptionCreateSchema, staffProfileCreateSchema, workingHourRuleCreateSchema } from "../../shared/validation";
+import { locationScopeSchema, organizationScopeSchema, scheduleExceptionCreateSchema, staffProfileCreateSchema, timeOffRequestCreateSchema, timeOffRequestReviewSchema, workingHourRuleCreateSchema } from "../../shared/validation";
 import { protectedProcedure, router } from "../_core/trpc";
 
 export const staffRouter = router({
@@ -68,6 +68,67 @@ export const staffRouter = router({
       endLocalTime: input.endLocalTime,
     });
     return { id };
+  }),
+
+  requestTimeOff: protectedProcedure.input(timeOffRequestCreateSchema).mutation(async ({ ctx, input }) => {
+    const membership = await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"]);
+    const db = await requireDb();
+    const [assignment] = await db.select({
+      staffProfileId: staffProfiles.id,
+      memberUserId: organizationMemberships.userId,
+    }).from(staffLocations)
+      .innerJoin(staffProfiles, eq(staffLocations.staffProfileId, staffProfiles.id))
+      .innerJoin(organizationMemberships, eq(staffProfiles.membershipId, organizationMemberships.id))
+      .innerJoin(locations, eq(staffLocations.locationId, locations.id))
+      .where(and(
+        eq(staffLocations.staffProfileId, input.staffProfileId),
+        eq(staffLocations.locationId, input.locationId),
+        eq(organizationMemberships.organizationId, input.organizationId),
+        eq(organizationMemberships.status, "ACTIVE"),
+        eq(staffProfiles.status, "ACTIVE"),
+        eq(locations.organizationId, input.organizationId),
+        eq(locations.status, "ACTIVE"),
+        ...(membership.role === "STAFF" ? [eq(organizationMemberships.userId, ctx.user.id)] : []),
+      )).limit(1);
+    if (!assignment) throw new Error("Staff profile is not assigned to this active location");
+    const id = nanoid(21);
+    await db.insert(timeOffRequests).values({
+      id,
+      staffProfileId: input.staffProfileId,
+      locationId: input.locationId,
+      startsAt: input.startsAt,
+      endsAt: input.endsAt,
+      reason: input.reason,
+    });
+    return { id, status: "PENDING" as const };
+  }),
+
+  listTimeOffRequests: protectedProcedure.input(organizationScopeSchema).query(async ({ ctx, input }) => {
+    const membership = await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"]);
+    const db = await requireDb();
+    return db.select({ request: timeOffRequests, profile: staffProfiles })
+      .from(timeOffRequests)
+      .innerJoin(staffProfiles, eq(timeOffRequests.staffProfileId, staffProfiles.id))
+      .innerJoin(organizationMemberships, eq(staffProfiles.membershipId, organizationMemberships.id))
+      .where(and(
+        eq(organizationMemberships.organizationId, input.organizationId),
+        ...(membership.role === "STAFF" ? [eq(organizationMemberships.userId, ctx.user.id)] : []),
+      ))
+      .orderBy(desc(timeOffRequests.createdAt));
+  }),
+
+  reviewTimeOffRequest: protectedProcedure.input(timeOffRequestReviewSchema).mutation(async ({ ctx, input }) => {
+    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER"]);
+    const db = await requireDb();
+    const [request] = await db.select({ id: timeOffRequests.id }).from(timeOffRequests)
+      .innerJoin(staffProfiles, eq(timeOffRequests.staffProfileId, staffProfiles.id))
+      .innerJoin(organizationMemberships, eq(staffProfiles.membershipId, organizationMemberships.id))
+      .where(and(eq(timeOffRequests.id, input.requestId), eq(organizationMemberships.organizationId, input.organizationId)))
+      .limit(1);
+    if (!request) throw new Error("Time-off request was not found in this organization");
+    await db.update(timeOffRequests).set({ status: input.status, reviewedByUserId: ctx.user.id, reviewedAt: new Date() })
+      .where(eq(timeOffRequests.id, request.id));
+    return { id: request.id, status: input.status };
   }),
 
   addScheduleException: protectedProcedure.input(scheduleExceptionCreateSchema).mutation(async ({ ctx, input }) => {

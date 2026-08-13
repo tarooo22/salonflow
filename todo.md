@@ -14,6 +14,9 @@
 - [x] Add protected weekly working-hours entry for an active staff profile and selected location.
 - [x] Add guarded schedule-exception persistence with active organization staff/location scope validation and time-range checks.
 - [x] Expose a protected staff schedule-exception dialog for time off and operational blocks with active location scope validation.
+- [x] Add a protected time-off request form with role-scoped staff selection, active-location validation, pending persistence, and focused server coverage.
+- [x] Add organization-scoped time-off request visibility and owner or manager approval/rejection controls with audit fields.
+- [x] Add manager-created, token-hashed staff invite links with email-bound acceptance, pending OAuth handoff, and immediate expired-link feedback.
 - [ ] Complete service and category creation/editing, staff eligibility management, and archival controls; a live protected service catalog workspace is implemented.
 - [x] Add protected category and service creation dialogs with organization-scoped categories, 5–720-minute validation, and safe GEL-to-integer-tetri conversion.
 - [x] Add a protected service archive control that preserves historical appointment and reporting records.
@@ -41,6 +44,7 @@
 - [x] Add workflow-level finance mutation tests for successful, duplicate, invalid-scope, and cross-organization cases.
 - [x] Complete commission analytics and a detailed booking-history table; protected reporting data, revenue metrics, payment-method breakdowns, and injection-safe CSV export are available in the workspace.
 - [x] Add protected commission analytics with period totals and per-specialist paid-versus-accrued commission visibility.
+- [x] Add a protected commission-entry dialog using completed service snapshots and active rule selection, with server-side scope, applicability, and duplicate checks retained.
 - [x] Add a responsive, paginated reporting booking-history table with appointment reference, date/time, status, and integer-tetri total display.
 - [ ] Add robust server and interface tests for permissions, availability, payments, historical data, and public booking.
 - [ ] Verify accessibility, responsiveness, error states, and operational workflows through rendered interface review.

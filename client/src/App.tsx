@@ -15,6 +15,21 @@ import Clients from "./pages/Clients";
 import Today from "./pages/Today";
 import WorkspaceSetup from "./pages/WorkspaceSetup";
 import WorkspacePlaceholder from "./pages/WorkspacePlaceholder";
+import InviteAccept, { getPendingInviteToken } from "./pages/InviteAccept";
+import { useAuth } from "./_core/hooks/useAuth";
+import { useEffect } from "react";
+import { useLocation } from "wouter";
+
+function PendingInviteRedirect() {
+  const { isAuthenticated, loading } = useAuth();
+  const [, setLocation] = useLocation();
+  useEffect(() => {
+    if (!isAuthenticated || loading || typeof window === "undefined") return;
+    const token = getPendingInviteToken();
+    if (token && window.location.pathname === "/") setLocation(`/invite/${token}`);
+  }, [isAuthenticated, loading, setLocation]);
+  return null;
+}
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -30,6 +45,7 @@ function Router() {
       <Route path={"/app/staff"} component={Staff} />
       <Route path={"/app/reports"} component={Reports} />
       <Route path={"/app/setup"} component={WorkspaceSetup} />
+      <Route path={"/invite/:token"} component={InviteAccept} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
@@ -49,7 +65,8 @@ function App() {
         defaultTheme="light"
         // switchable
       >
-        <TooltipProvider>
+      <TooltipProvider>
+          <PendingInviteRedirect />
           <Toaster />
           <Router />
         </TooltipProvider>
