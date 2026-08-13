@@ -3,9 +3,11 @@
 - [x] Audit the supplied prototype, screenshots, and handoff specification for reusable UI patterns and production gaps.
 - [x] Confirm the visual direction before implementing product screens.
 - [x] Establish the shared domain vocabulary, permission matrix, appointment transitions, and data integrity rules.
-- [ ] Apply the reviewed initial database migration once managed database connectivity is restored.
+- [x] Apply the reviewed initial database migration once managed database connectivity is restored.
 - [x] Create a multi-location schema for organizations, locations, memberships, roles, permissions, and scoped settings.
 - [ ] Implement secure account registration, login, verification-code flows, password reset, invite links, and role-based access.
+- [x] Fix the Manus OAuth callback failure so users return to SalonFlow with a valid authenticated session instead of a raw error response.
+- [x] Restore the missing organization workspace tables so authenticated users see the setup state instead of a blank workspace.
 - [x] Implement organization-scoped role checks, normalization safeguards, and the secure Manus OAuth workspace entry point.
 - [ ] Complete staff profile editing, working hours, schedule exceptions, time-off requests, and staff-location assignment management; a live protected team workspace is implemented.
 - [x] Add owner or manager self-profile creation with selected active locations as the first specialist setup step.
@@ -34,7 +36,7 @@
 - [ ] Complete persisted commission-entry and protected expense workflows with integer-tetri payment, balance, and commission-calculation safeguards.
 - [x] Add a protected expense-entry interface with active-location selection and integer-tetri amount conversion.
 - [x] Validate that commission rules apply to the appointment service, specialist, and location before creating entries.
-- [ ] Apply the generated unique database constraint for duplicate commission prevention once managed database connectivity is restored; transaction-safe duplicate checks are implemented.
+- [x] Apply the generated unique database constraint for duplicate commission prevention once managed database connectivity is restored; transaction-safe duplicate checks are implemented.
 - [x] Validate that every recorded expense location belongs to the provided organization.
 - [x] Add workflow-level finance mutation tests for successful, duplicate, invalid-scope, and cross-organization cases.
 - [x] Complete commission analytics and a detailed booking-history table; protected reporting data, revenue metrics, payment-method breakdowns, and injection-safe CSV export are available in the workspace.
@@ -46,3 +48,5 @@
 - [x] Provide an implementation handoff, configuration checklist, and deployment readiness summary.
 - [x] Build a protected organization-and-first-location setup flow with Georgian validation, IANA timezone defaults, opaque public location slugs, and post-create workspace routing.
 - [x] Add a protected additional-location form with opaque public slug and Asia/Tbilisi defaults for multi-location organizations.
+- [ ] Complete one authenticated browser verification of the first-workspace setup flow after database recovery.
+- [x] Apply the remaining schema indexes and complete a live database parity check before closing the initial migration task.
