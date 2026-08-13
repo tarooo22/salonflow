@@ -65,6 +65,7 @@
 - [x] Add a protected historical-data interface test for a reporting booking-history table or its empty/error state.
 - [x] Add a protected operational interface test for a non-public empty or error state beyond action-button visibility.
 - [ ] After a verified sender domain and transactional-email API key are available, implement password-reset email delivery and email-verification-code dispatch without exposing recovery tokens to unauthenticated callers.
+- [x] Assess a user-provided Gmail SMTP sender as a temporary password-reset and verification-email delivery option; the user chose not to activate this path and will use a verified custom domain later.
 - [x] Implement hash-only email-verification code primitives with short expiry, bounded attempts, purpose scoping, and single-use consumption without exposing a code through the browser.
 - [x] Add an isolated opt-in database test for verification-code expiry, attempt limits, purpose isolation, and one-time consumption.
 - [x] Implement a server-side password-reset token lifecycle with random opaque tokens, hash-only persistence, expiry, single use, and reset-request non-enumeration; do not expose usable tokens before secure email delivery exists.
