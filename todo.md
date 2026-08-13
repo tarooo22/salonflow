@@ -36,6 +36,10 @@
 - [x] Add a transaction-safe client merge mutation that reassigns organization appointments and preserves a merge audit record.
 - [x] Complete public booking commit flow with client resolution, consent capture, idempotency, server-side slot revalidation, schedule locks, immutable snapshots, and opaque confirmation tokens.
 - [ ] Add database-backed public booking commit tests for first submission, idempotent retry, and concurrent duplicate-slot protection after database connectivity is restored.
+- [x] Add protected public-booking replay coverage proving a repeated idempotency key returns the prior confirmation without entering a second transaction.
+- [x] Add public availability coverage rejecting specialists that are not both active at the location and eligible for the selected service.
+- [x] Review the live `/book/gldani-beauty` service-selection and no-specialist guidance state at desktop and mobile widths.
+- [x] Prevent malformed invitation URLs from issuing an invalid API preview request, and verify the immediate Georgian unavailable-link state on mobile.
 - [x] Wire the public booking commit endpoint into the final client-side confirmation form with service, specialist, time, contact, consent, availability, error, and confirmation states.
 - [ ] Add interface tests for public booking specialist filtering, empty eligibility states, availability gating, and successful confirmation rendering.
 - [x] Add public booking router coverage for service-specific specialist eligibility grouping and the unavailable-location availability gate, and review the responsive discovery screen at desktop and mobile widths.

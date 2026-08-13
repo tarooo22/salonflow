@@ -53,4 +53,48 @@ describe("public.checkAvailability", () => {
     })).resolves.toEqual({ available: false, reason: "LOCATION_UNAVAILABLE" });
     expect((mocked.db as { select: ReturnType<typeof vi.fn> }).select).toHaveBeenCalledTimes(1);
   });
+
+  it("rejects a specialist who is neither assigned to the location nor eligible for the selected service", async () => {
+    const location = { id: "location_00000001", organizationId: "organization_00001", minimumNoticeMinutes: 0, maximumAdvanceDays: 365, status: "ACTIVE", bookingEnabled: true };
+    const service = { id: "service_hair_0001", organizationId: "organization_00001", defaultDurationMinutes: 60, bufferBeforeMinutes: 0, bufferAfterMinutes: 0, status: "ACTIVE", onlineBookingEnabled: true };
+    const db = {
+      select: vi.fn()
+        .mockReturnValueOnce(chainResult([location]))
+        .mockReturnValueOnce(chainResult([service]))
+        .mockReturnValueOnce(chainResult([]))
+        .mockReturnValueOnce(chainResult([]))
+        .mockReturnValueOnce(chainResult([])),
+    };
+    mocked.db = db;
+
+    await expect(publicRouter.createCaller({} as never).checkAvailability({
+      slug: "studio-vake",
+      serviceId: "service_hair_0001",
+      staffProfileId: "staff_profile_001",
+      startsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    })).resolves.toEqual({ available: false, reason: "STAFF_UNAVAILABLE" });
+    expect(db.select).toHaveBeenCalledTimes(5);
+  });
+});
+
+describe("public.commitBooking", () => {
+  it("returns the original confirmation without starting a transaction when the idempotency key already exists", async () => {
+    const db = {
+      select: vi.fn(() => chainResult([{ id: "appointment_00001" }])),
+      transaction: vi.fn(),
+    };
+    mocked.db = db;
+
+    await expect(publicRouter.createCaller({} as never).commitBooking({
+      slug: "studio-vake",
+      serviceId: "service_hair_0001",
+      staffProfileId: "staff_profile_001",
+      startsAt: new Date("2026-09-01T09:00:00.000Z"),
+      firstName: "ლელა",
+      phone: "+995555123456",
+      bookingTermsConsent: true,
+      idempotencyKey: "booking_retry_key_0001",
+    })).resolves.toEqual(expect.objectContaining({ confirmed: true, replayed: true, confirmationToken: expect.any(String) }));
+    expect(db.transaction).not.toHaveBeenCalled();
+  });
 });
