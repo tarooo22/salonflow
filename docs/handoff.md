@@ -91,9 +91,9 @@ The team page supports an initial self-profile for the current owner or manager 
 | High | Restore database connectivity and apply the three reviewed migrations | Required before real persisted data can be used |
 | High | Add membership invitation and staff-assignment workflows | Required for onboarding team members other than the current owner/manager |
 | High | Build commission-rule and commission-entry user interfaces | Expense entry and analytics are available; creating commission entries still has no workspace UI |
-| Medium | Add schedule exceptions and time-off workflows | Weekly and staff-specific calendar views plus baseline hours are available |
-| Medium | Add service editing controls | Archive and specialist eligibility controls are available |
-| Medium | Add consent management and duplicate merge workflows | Client history is available |
+| Medium | Add staff profile editing and additional staff assignment workflows | Schedule exceptions, time-off controls, and baseline hours are available |
+| Medium | Add category-editing and richer service configuration controls | Service editing, archive, and specialist eligibility controls are available |
+| Medium | Add deeper client lifecycle controls | Consent history, booking history, and duplicate merging are available |
 | Medium | Add database-backed public booking concurrency tests once TiDB is reachable | Validates transaction and lock behavior end-to-end |
 | Medium | Add browser/interface coverage for public booking filtering, availability gating, and confirmation | Covers client-facing flow at the rendered-interface layer |
 | Low | Split the main client bundle into route-level chunks | Addresses the non-blocking bundle advisory |
