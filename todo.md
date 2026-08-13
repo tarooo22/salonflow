@@ -10,7 +10,7 @@
 - [x] Fix the Manus OAuth callback failure so users return to SalonFlow with a valid authenticated session instead of a raw error response.
 - [x] Restore the missing organization workspace tables so authenticated users see the setup state instead of a blank workspace.
 - [x] Implement organization-scoped role checks, normalization safeguards, and the secure Manus OAuth workspace entry point.
-- [ ] Complete staff profile editing, working hours, schedule exceptions, time-off requests, and staff-location assignment management; a live protected team workspace is implemented.
+- [x] Complete staff profile editing, working hours, schedule exceptions, time-off requests, and staff-location assignment management; a live protected team workspace is implemented.
 - [x] Add owner or manager self-profile creation with selected active locations as the first specialist setup step.
 - [x] Add protected weekly working-hours entry for an active staff profile and selected location.
 - [x] Add guarded schedule-exception persistence with active organization staff/location scope validation and time-range checks.
@@ -19,9 +19,9 @@
 - [x] Add organization-scoped time-off request visibility and owner or manager approval/rejection controls with audit fields.
 - [x] Add manager-created, token-hashed staff invite links with email-bound acceptance, pending OAuth handoff, and immediate expired-link feedback.
 - [x] Add a manager workflow to create a specialist profile and active-location assignments for another accepted organization member.
-- [ ] Add multi-member staff onboarding coverage for accepted invitations, invalid location scope, and successful manager-created specialist assignment.
-- [ ] Add a focused server test proving a manager can create a specialist profile and selected assignments for a different active organization membership.
-- [ ] Add a workflow test covering invite acceptance through unprofiled membership visibility and manager-created specialist assignment.
+- [x] Add multi-member staff onboarding coverage for accepted invitations, invalid location scope, and successful manager-created specialist assignment.
+- [x] Add a focused server test proving a manager can create a specialist profile and selected assignments for a different active organization membership.
+- [x] Add a workflow test covering invite acceptance through unprofiled membership visibility and manager-created specialist assignment.
 - [x] Complete service and category creation/editing, staff eligibility management, and archival controls; a live protected service catalog workspace is implemented.
 - [x] Add protected category and service creation dialogs with organization-scoped categories, 5–720-minute validation, and safe GEL-to-integer-tetri conversion.
 - [x] Add a protected service archive control that preserves historical appointment and reporting records.
