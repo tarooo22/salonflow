@@ -56,6 +56,37 @@ export async function getUserByOpenId(openId: string) {
   return result[0];
 }
 
+export async function getUserByNormalizedEmail(email: string) {
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) return undefined;
+  const db = await requireDb();
+  const result = await db.select().from(users).where(eq(users.normalizedEmail, normalizedEmail)).limit(1);
+  return result[0];
+}
+
+export async function createLocalUser(input: {
+  openId: string;
+  name: string;
+  email: string;
+  passwordHash: string;
+}) {
+  const normalizedEmail = normalizeEmail(input.email);
+  if (!normalizedEmail) throw new Error("A valid email address is required");
+  const db = await requireDb();
+  await db.insert(users).values({
+    openId: input.openId,
+    name: input.name,
+    email: input.email.trim(),
+    normalizedEmail,
+    passwordHash: input.passwordHash,
+    loginMethod: "password",
+    role: input.openId === ENV.ownerOpenId ? "admin" : "user",
+    accountStatus: "ACTIVE",
+    lastSignedIn: new Date(),
+  });
+  return getUserByOpenId(input.openId);
+}
+
 export async function getActiveMembership(userId: number, organizationId: string) {
   const db = await requireDb();
   const result = await db.select().from(organizationMemberships).where(and(

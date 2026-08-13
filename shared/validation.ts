@@ -267,6 +267,17 @@ export const publicBookingCommitSchema = publicAvailabilityCheckSchema.extend({
   idempotencyKey: z.string().trim().min(16).max(128).regex(/^[A-Za-z0-9_-]+$/),
 });
 
+export const localRegistrationSchema = z.object({
+  name: z.string().trim().min(2).max(120),
+  email: z.string().trim().email().max(320),
+  password: z.string().min(12).max(128),
+});
+
+export const localLoginSchema = z.object({
+  email: z.string().trim().email().max(320),
+  password: z.string().min(1).max(128),
+});
+
 export const reportingRangeSchema = z.object({
   organizationId: opaqueIdSchema,
   startsAt: z.coerce.date(),

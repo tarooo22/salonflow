@@ -19,11 +19,10 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { startLogin } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
 import { BarChart3, CalendarDays, LayoutDashboard, LogOut, PanelLeft, Scissors, Users } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 
@@ -62,7 +61,7 @@ export default function DashboardLayout({
 
   if (!user) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex min-h-screen items-center justify-center bg-[#F7F4EF] px-4">
         <div className="flex flex-col items-center gap-8 p-8 max-w-md w-full">
           <div className="flex flex-col items-center gap-6">
             <h1 className="text-2xl font-semibold tracking-tight text-center">
@@ -72,13 +71,14 @@ export default function DashboardLayout({
               SalonFlow-ის სამუშაო სივრცე დაცულია. გასაგრძელებლად გაიარეთ ავტორიზაცია.
             </p>
           </div>
-          <Button
-            onClick={() => startLogin()}
-            size="lg"
-            className="w-full shadow-lg hover:shadow-xl transition-all"
-          >
-            შესვლა
-          </Button>
+          <div className="grid w-full gap-3 sm:grid-cols-2">
+            <Button asChild size="lg" className="bg-[#B85C3D] shadow-lg hover:bg-[#9D4C31]">
+              <Link href="/register">რეგისტრაცია</Link>
+            </Button>
+            <Button asChild size="lg" variant="outline" className="border-[#1E2824]/20">
+              <Link href="/login">ელფოსტით შესვლა</Link>
+            </Button>
+          </div>
         </div>
       </div>
     );
