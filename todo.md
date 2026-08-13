@@ -89,3 +89,6 @@
 - [x] Fix local session cookie persistence so registration/login establishes an authenticated browser session in development and production, then re-run protected workspace validation.
 - [x] Add rendered browser evidence for user-visible error and recovery states across Today, Calendar, Clients, Staff, Reports, and public booking/discovery surfaces.
 - [x] Diagnose and repair legacy local-account login failures caused by missing normalized email or local-login metadata, without weakening password verification or exposing credentials.
+- [x] Provide the user with a concise Georgian implementation summary and current desktop/mobile website screenshots.
+- [x] Capture and deliver current internal workspace screenshots for Today, Calendar, Clients, Staff, and Reports using disposable self-cleaning validation data.
+- [x] Review ui-ux-pro-max-skill.com guidance and apply compatible, tested design refinements to SalonFlow without altering Georgian workflows, access control, or booking security.
