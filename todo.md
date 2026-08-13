@@ -66,8 +66,13 @@
 - [x] M1 evidence: Assert active-location timezone/day invocation and location-range query filtering in appointment router tests.
 - [x] M1 evidence: Use the same rendered, role-gated action component in Today and Calendar, with test coverage for both contexts.
 - [x] M1 evidence: Capture and assert appointment dashboard and calendar query conditions for locationId plus timezone-derived start/end bounds.
-- [ ] M2: Add a protected client-detail workflow with validated editing of existing notes, preferences, and sensitivity fields plus ordered appointment/service history; preserve organization scope and immutable historical service snapshots.
-- [ ] M2: Complete staff operations by exposing maintained working-hour and schedule-exception records, role-authorized edit/removal flows, and genuine staff performance signals.
-- [ ] M3: Enrich public location discovery and booking context with active database-backed categories, opening hours, contact data, and service information without adding fabricated ratings, reviews, VIP labels, promotions, or availability claims.
-- [ ] M4: Add adjustable report periods and live integer-tetri analytics for revenue trend, service/category mix, staff performance, expense pressure, and protected CSV regression coverage.
+- [x] M2: Add a protected client-detail workflow with validated editing of existing notes, preferences, and sensitivity fields plus ordered appointment/service history; preserve organization scope and immutable historical service snapshots.
+- [x] M2: Complete staff operations by exposing maintained working-hour and schedule-exception records, role-authorized edit/removal flows, and genuine staff performance signals.
+- [ ] M2 staff hardening: Add role-authorized edit flows for existing working-hour rules and calendar exceptions with active organization/location validation.
+- [ ] M2 staff hardening: Add real staff performance signals (completed appointments, service volume, and booked revenue) with server and UI tests.
+- [x] M3: Enrich public location discovery and booking context with active database-backed categories, opening hours, contact data, and service information without adding fabricated ratings, reviews, VIP labels, promotions, or availability claims.
+- [ ] M3 hardening: Add focused public catalog/router and rendered category-filter tests; document specialist availability hours distinctly until true location opening-hours configuration is introduced.
+- [x] M4: Add adjustable report periods and live integer-tetri analytics for revenue trend, service/category mix, staff performance, expense pressure, and protected CSV regression coverage.
+- [x] M4 hardening: Add focused protected CSV export regression coverage for organization scope, selected range, and injection-safe output after analytics changes.
+- [x] M4 evidence: Assert exportCsv appointment query conditions contain requested organization and start/end range bounds.
 - [ ] M5: Keep customer notification sending deferred until a verified sender domain and provider credentials are supplied; then implement consent-respecting, provider-backed, idempotent scheduled reminder delivery through Heartbeat rather than in-process timers.

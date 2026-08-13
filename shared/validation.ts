@@ -103,6 +103,16 @@ export const clientBookingHistorySchema = organizationScopeSchema.extend({
   limit: z.number().int().min(1).max(100).default(25),
 });
 
+export const clientDetailSchema = organizationScopeSchema.extend({
+  clientId: opaqueIdSchema,
+});
+
+export const clientCareUpdateSchema = clientDetailSchema.extend({
+  notes: z.string().trim().max(5_000).optional(),
+  preferences: z.string().trim().max(5_000).optional(),
+  sensitivityNote: z.string().trim().max(5_000).optional(),
+}).refine(input => input.notes !== undefined || input.preferences !== undefined || input.sensitivityNote !== undefined, "At least one client-care field is required");
+
 export const clientConsentSchema = organizationScopeSchema.extend({
   clientId: opaqueIdSchema,
   consentType: z.enum(["MARKETING_SMS", "MARKETING_EMAIL", "BOOKING_TERMS"]),
@@ -135,6 +145,25 @@ export const workingHourRuleCreateSchema = z.object({
   endLocalTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
 });
 
+export const staffScheduleListSchema = organizationScopeSchema.extend({
+  staffProfileId: opaqueIdSchema.optional(),
+  locationId: opaqueIdSchema.optional(),
+});
+
+export const staffScheduleRecordDeleteSchema = organizationScopeSchema.extend({
+  id: opaqueIdSchema,
+});
+
+export const workingHourRuleUpdateSchema = workingHourRuleCreateSchema.extend({
+  id: opaqueIdSchema,
+});
+
+export const staffPerformanceSchema = organizationScopeSchema.extend({
+  locationId: opaqueIdSchema.optional(),
+  startsAt: z.coerce.date(),
+  endsAt: z.coerce.date(),
+}).refine(input => input.startsAt <= input.endsAt, "Start date must not follow end date");
+
 export const scheduleExceptionCreateSchema = z.object({
   organizationId: opaqueIdSchema,
   staffProfileId: opaqueIdSchema.optional(),
@@ -147,6 +176,10 @@ export const scheduleExceptionCreateSchema = z.object({
   notes: z.string().trim().max(5_000).optional(),
 }).refine(input => input.staffProfileId || input.locationId, "A staff profile or location is required")
   .refine(input => input.startsAt < input.endsAt, "Exception end must follow start");
+
+export const scheduleExceptionUpdateSchema = scheduleExceptionCreateSchema.safeExtend({
+  id: opaqueIdSchema,
+});
 
 export const appointmentCreateSchema = z.object({
   organizationId: opaqueIdSchema,

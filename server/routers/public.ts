@@ -1,7 +1,7 @@
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { createHash, createHmac } from "node:crypto";
 import { nanoid } from "nanoid";
-import { appointmentServices, appointments, appointmentStatusHistory, clientConsents, clients, locations, scheduleLocks, serviceCategories, services, staffLocations, staffProfiles, staffServices } from "../../drizzle/schema";
+import { appointmentServices, appointments, appointmentStatusHistory, clientConsents, clients, locations, scheduleLocks, serviceCategories, services, staffLocations, staffProfiles, staffServices, workingHourRules } from "../../drizzle/schema";
 import { requireDb } from "../db";
 import { publicAvailabilityCheckSchema, publicBookingCommitSchema, slugSchema } from "../../shared/validation";
 import { appointmentBlocksInterval, intervalsOverlap } from "../lib/appointments";
@@ -32,13 +32,21 @@ function confirmationTokenForAppointment(appointmentId: string) {
 export const publicRouter = router({
   locations: publicProcedure.query(async () => {
     const db = await requireDb();
-    return db.select({
+    const locationRows = await db.select({
+      organizationId: locations.organizationId,
       publicSlug: locations.publicSlug,
       name: locations.name,
       publicDescription: locations.publicDescription,
       timezone: locations.timezone,
       address: locations.address,
     }).from(locations).where(and(eq(locations.status, "ACTIVE"), eq(locations.bookingEnabled, true))).orderBy(asc(locations.name));
+    const organizationIds = Array.from(new Set(locationRows.map(location => location.organizationId)));
+    const categoryRows = organizationIds.length ? await db.select({ organizationId: services.organizationId, nameKa: serviceCategories.nameKa }).from(services)
+      .innerJoin(serviceCategories, eq(services.categoryId, serviceCategories.id))
+      .where(and(inArray(services.organizationId, organizationIds), eq(services.status, "ACTIVE"), eq(services.onlineBookingEnabled, true))) : [];
+    const categoriesByOrganization = new Map<string, string[]>();
+    for (const category of categoryRows) categoriesByOrganization.set(category.organizationId, Array.from(new Set([...(categoriesByOrganization.get(category.organizationId) ?? []), category.nameKa])));
+    return locationRows.map(({ organizationId, ...location }) => ({ ...location, categories: categoriesByOrganization.get(organizationId) ?? [] }));
   }),
 
   bookingCatalog: publicProcedure.input(slugSchema).query(async ({ input: slug }) => {
@@ -64,7 +72,16 @@ export const publicRouter = router({
       else acc.set(row.id, { id: row.id, name: row.name, specialty: row.specialty, bio: row.bio, eligibleServiceIds: [row.serviceId] });
       return acc;
     }, new Map<string, { id: string; name: string; specialty: string | null; bio: string | null; eligibleServiceIds: string[] }>()).values());
-    return { location: { publicSlug: location.publicSlug, name: location.name, timezone: location.timezone, address: location.address }, catalog, team };
+    const hourRows = await db.select({ weekday: workingHourRules.weekday, startLocalTime: workingHourRules.startLocalTime, endLocalTime: workingHourRules.endLocalTime }).from(workingHourRules)
+      .innerJoin(staffProfiles, eq(workingHourRules.staffProfileId, staffProfiles.id))
+      .where(and(eq(workingHourRules.locationId, location.id), eq(staffProfiles.status, "ACTIVE")));
+    const workingHours = Array.from(hourRows.reduce((hours, rule) => {
+      const existing = hours.get(rule.weekday);
+      if (!existing) hours.set(rule.weekday, { weekday: rule.weekday, startLocalTime: rule.startLocalTime, endLocalTime: rule.endLocalTime });
+      else hours.set(rule.weekday, { weekday: rule.weekday, startLocalTime: existing.startLocalTime < rule.startLocalTime ? existing.startLocalTime : rule.startLocalTime, endLocalTime: existing.endLocalTime > rule.endLocalTime ? existing.endLocalTime : rule.endLocalTime });
+      return hours;
+    }, new Map<number, { weekday: number; startLocalTime: string; endLocalTime: string }>()).values()).sort((a, b) => a.weekday - b.weekday);
+    return { location: { publicSlug: location.publicSlug, name: location.name, timezone: location.timezone, address: location.address, phone: location.phone, email: location.email, publicDescription: location.publicDescription, workingHours }, catalog, team };
   }),
 
   checkAvailability: publicProcedure.input(publicAvailabilityCheckSchema).query(async ({ input }) => {

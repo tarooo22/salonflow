@@ -37,6 +37,21 @@ function queuedDb(queryRows: unknown[][]) {
   return { select };
 }
 
+function publicCatalogDb(queryRows: unknown[][]) {
+  const select = vi.fn(() => {
+    const rows = queryRows.shift() ?? [];
+    const chain = {
+      from: () => chain,
+      innerJoin: () => chain,
+      where: () => chain,
+      orderBy: async () => rows,
+      then: <TResult1 = unknown[], TResult2 = never>(onfulfilled?: ((value: unknown[]) => TResult1 | PromiseLike<TResult1>) | null, onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null) => Promise.resolve(rows).then(onfulfilled, onrejected),
+    };
+    return chain;
+  });
+  return { select };
+}
+
 const activeLocation = { id: ids.locationId, organizationId: ids.organizationId, minimumNoticeMinutes: 0, maximumAdvanceDays: 365 };
 const activeService = { id: ids.serviceId, organizationId: ids.organizationId, defaultDurationMinutes: 60, bufferBeforeMinutes: 0, bufferAfterMinutes: 0 };
 
@@ -45,6 +60,17 @@ function availabilityInput() {
 }
 
 describe("public booking router safeguards", () => {
+  it("exposes only active booking locations with database-backed service categories", async () => {
+    mocked.db = publicCatalogDb([
+      [{ organizationId: ids.organizationId, publicSlug: "gldani-beauty", name: "გლდანი", publicDescription: "მზრუნველი მომსახურება", timezone: "Asia/Tbilisi", address: "გლდანი" }],
+      [{ organizationId: ids.organizationId, nameKa: "თმის მოვლა" }, { organizationId: ids.organizationId, nameKa: "მანიკიური" }, { organizationId: ids.organizationId, nameKa: "თმის მოვლა" }],
+    ]);
+
+    await expect(caller().locations()).resolves.toEqual([{
+      publicSlug: "gldani-beauty", name: "გლდანი", publicDescription: "მზრუნველი მომსახურება", timezone: "Asia/Tbilisi", address: "გლდანი", categories: ["თმის მოვლა", "მანიკიური"],
+    }]);
+  });
+
   it("keeps availability closed when the public location link is inactive", async () => {
     mocked.db = queuedDb([[]]);
     await expect(caller().checkAvailability(availabilityInput())).resolves.toEqual({ available: false, reason: "LOCATION_UNAVAILABLE" });

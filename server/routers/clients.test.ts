@@ -144,6 +144,27 @@ describe("clients.setConsent", () => {
   });
 });
 
+describe("clients.updateCare", () => {
+  it("updates care notes only for the selected active client in the organization", async () => {
+    const where = vi.fn(async () => [{ affectedRows: 1 }]);
+    const set = vi.fn(() => ({ where }));
+    const db = { update: vi.fn(() => ({ set })) };
+    mocked.db = db;
+    mocked.requireOrganizationRole.mockResolvedValue({ role: "RECEPTIONIST" });
+
+    await expect(clientsRouter.createCaller({ user } as never).updateCare({
+      organizationId: "organization_001",
+      clientId: "client_history_001",
+      notes: "კლიენტს ურჩევნია მშვიდი ვიზიტი",
+      preferences: "დილის დრო",
+      sensitivityNote: "თავის კანის მგრძნობელობა",
+    })).resolves.toEqual({ success: true });
+
+    expect(set).toHaveBeenCalledWith({ notes: "კლიენტს ურჩევნია მშვიდი ვიზიტი", preferences: "დილის დრო", sensitivityNote: "თავის კანის მგრძნობელობა" });
+    expect(where).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("clients.merge", () => {
   it("merges two active organization clients by reassigning appointments and creating an audit record", async () => {
     const values = vi.fn(async () => undefined);

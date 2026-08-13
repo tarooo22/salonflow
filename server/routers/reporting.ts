@@ -1,10 +1,11 @@
 import { and, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
-import { appointments, commissionEntries, expenses, payments, staffProfiles } from "../../drizzle/schema";
+import { appointmentServices, appointments, commissionEntries, expenses, payments, staffProfiles } from "../../drizzle/schema";
 import { bookingHistorySchema, reportingRangeSchema } from "../../shared/validation";
 import { requireOrganizationAction } from "../access";
 import { requireDb } from "../db";
 import { buildCsv } from "../lib/csv";
 import { summarizePaymentMethods, summarizeRevenue } from "../lib/reporting";
+import { expensePressureBasisPoints, summarizeReportingAnalytics } from "../lib/reportingAnalytics";
 import { protectedProcedure, router } from "../_core/trpc";
 
 async function reportRows(organizationId: string, startsAt: Date, endsAt: Date) {
@@ -46,6 +47,20 @@ export const reportingRouter = router({
     await requireOrganizationAction(ctx.user, input.organizationId, "reports:view");
     const { appointmentRows, paymentRows, expenseRows } = await reportRows(input.organizationId, input.startsAt, input.endsAt);
     return { summary: summarizeRevenue(appointmentRows, paymentRows, expenseRows), paymentMethods: summarizePaymentMethods(paymentRows) };
+  }),
+
+  analytics: protectedProcedure.input(reportingRangeSchema).query(async ({ ctx, input }) => {
+    await requireOrganizationAction(ctx.user, input.organizationId, "reports:view");
+    const { appointmentRows, expenseRows } = await reportRows(input.organizationId, input.startsAt, input.endsAt);
+    const db = await requireDb();
+    const appointmentIds = appointmentRows.map(appointment => appointment.id);
+    const staffIds = Array.from(new Set(appointmentRows.map(appointment => appointment.staffProfileId)));
+    const serviceRows = appointmentIds.length ? await db.select({ appointmentId: appointmentServices.appointmentId, serviceNameSnapshot: appointmentServices.serviceNameSnapshot, priceTetriSnapshot: appointmentServices.priceTetriSnapshot }).from(appointmentServices).where(inArray(appointmentServices.appointmentId, appointmentIds)) : [];
+    const staffRows = staffIds.length ? await db.select({ id: staffProfiles.id, publicDisplayName: staffProfiles.publicDisplayName }).from(staffProfiles).where(inArray(staffProfiles.id, staffIds)) : [];
+    const analytics = summarizeReportingAnalytics(appointmentRows, serviceRows, staffRows);
+    const bookedRevenueTetri = analytics.staffMetrics.reduce((total, metric) => total + metric.bookedRevenueTetri, 0);
+    const expensesTetri = expenseRows.reduce((total, expense) => total + expense.amountTetri, 0);
+    return { ...analytics, bookedRevenueTetri, expensesTetri, expensePressureBasisPoints: expensePressureBasisPoints(expensesTetri, bookedRevenueTetri) };
   }),
 
   commissionSummary: protectedProcedure.input(reportingRangeSchema).query(async ({ ctx, input }) => {

@@ -4,7 +4,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
-import { Check, CheckCircle2, ChevronLeft, CircleAlert, Clock3, MapPin, ShieldCheck, Sparkles, UserRound } from "lucide-react";
+import { CalendarClock, Check, CheckCircle2, ChevronLeft, CircleAlert, Clock3, Mail, MapPin, Phone, ShieldCheck, Sparkles, UserRound } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 import { Link, useRoute } from "wouter";
 
@@ -12,6 +12,7 @@ const steps = ["სერვისი", "სპეციალისტი", "�
 
 export type BookingTeamMember = { id: string; name: string; specialty: string | null; bio: string | null; eligibleServiceIds: string[] };
 type BookingService = { id: string; nameKa: string; defaultDurationMinutes: number; priceTetri: number };
+type BookingLocation = { name: string; timezone: string; address: string | null; phone: string | null; email: string | null; publicDescription: string | null; workingHours: Array<{ weekday: number; startLocalTime: string; endLocalTime: string }> };
 
 export function getEligibleTeam(team: BookingTeamMember[], serviceId?: string) {
   return team.filter(member => member.eligibleServiceIds.includes(serviceId ?? ""));
@@ -60,7 +61,7 @@ export default function BookingFlow() {
     {catalog.data === null ? <Card className="mt-8 border-[#1E2824]/10"><CardHeader><CardTitle>ეს ჩაწერის ბმული აღარ არის აქტიური</CardTitle></CardHeader><CardContent className="text-sm leading-6 text-muted-foreground">ფილიალი შესაძლოა გათიშულია ან ბმული არასწორია. დაბრუნდით ფილიალების სიაში და აირჩიეთ აქტიური ფილიალი.</CardContent></Card> : null}
     {catalog.data && confirmationToken ? <BookingConfirmation confirmationToken={confirmationToken} /> : null}
     {catalog.data && !confirmationToken ? <div className="mt-7 grid gap-5 lg:grid-cols-[minmax(0,1fr)_21rem]"><section className="space-y-4">
-      <Card className="border-[#1E2824]/10 bg-white/80"><CardHeader className="pb-3"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#B85C3D]">ფილიალი</p><CardTitle className="mt-2">{catalog.data.location.name}</CardTitle></CardHeader><CardContent className="flex items-center gap-2 text-sm text-muted-foreground"><MapPin className="h-4 w-4 text-[#B85C3D]" aria-hidden="true" />{catalog.data.location.address || catalog.data.location.timezone}</CardContent></Card>
+      <LocationContext location={catalog.data.location} />
       {step === 0 ? <ServiceStep catalog={catalog.data.catalog} selectedId={serviceId} onSelect={setServiceId} /> : null}
       {step === 1 ? <StaffStep team={eligibleTeam} selectedId={staffProfileId} onSelect={setStaffProfileId} /> : null}
       {step === 2 ? <TimeStep dateTime={dateTime} onChange={setDateTime} availability={availability} /> : null}
@@ -68,6 +69,11 @@ export default function BookingFlow() {
     </section><aside className="lg:sticky lg:top-6 lg:self-start"><BookingSummary step={step} service={selectedService} staff={selectedStaff} startsAt={startsAt} available={availability.data?.available === true} onBack={() => setStep(current => Math.max(0, current - 1))} onContinue={() => step < 3 ? setStep(current => Math.min(current + 1, 3)) : submitBooking()} disabled={!canContinue} submitting={commitBooking.isPending} error={commitBooking.isError ? commitBooking.error.message : undefined} /></aside></div> : null}
   </div></main>;
 }
+
+function LocationContext({ location }: { location: BookingLocation }) {
+  return <Card className="border-[#1E2824]/10 bg-white/80"><CardHeader className="pb-3"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#B85C3D]">ფილიალი</p><CardTitle className="mt-2">{location.name}</CardTitle>{location.publicDescription ? <p className="mt-2 text-sm leading-6 text-muted-foreground">{location.publicDescription}</p> : null}</CardHeader><CardContent className="space-y-3 text-sm text-muted-foreground"><p className="flex items-center gap-2"><MapPin className="h-4 w-4 shrink-0 text-[#B85C3D]" aria-hidden="true" />{location.address || location.timezone}</p>{location.workingHours.length ? <div className="rounded-xl bg-[#F7F4EF] p-3"><p className="flex items-center gap-2 font-medium text-[#1E2824]"><CalendarClock className="h-4 w-4 text-[#B85C3D]" aria-hidden="true" />ხელმისაწვდომი სპეციალისტების საათები</p><div className="mt-2 grid gap-1 text-xs">{location.workingHours.map(rule => <p key={rule.weekday}>{weekdayName(rule.weekday)} · {rule.startLocalTime}–{rule.endLocalTime}</p>)}</div></div> : <p className="rounded-xl border border-dashed p-3 text-xs leading-5">სამუშაო საათები ჯერ არ არის მითითებული. დროის არჩევისას ხელმისაწვდომობა მაინც ავტომატურად შემოწმდება.</p>}{location.phone ? <a href={`tel:${location.phone}`} className="flex items-center gap-2 font-medium text-[#1E2824] hover:text-[#B85C3D]"><Phone className="h-4 w-4 text-[#B85C3D]" aria-hidden="true" />{location.phone}</a> : null}{location.email ? <a href={`mailto:${location.email}`} className="flex items-center gap-2 font-medium text-[#1E2824] hover:text-[#B85C3D]"><Mail className="h-4 w-4 text-[#B85C3D]" aria-hidden="true" />{location.email}</a> : null}</CardContent></Card>;
+}
+function weekdayName(day: number) { return ["ორშაბათი", "სამშაბათი", "ოთხშაბათი", "ხუთშაბათი", "პარასკევი", "შაბათი", "კვირა"][day] ?? "დღე"; }
 
 function ServiceStep({ catalog, selectedId, onSelect }: { catalog: Array<{ service: BookingService; category: { nameKa: string } }>; selectedId?: string; onSelect: (id: string) => void }) {
   return <Card className="border-[#1E2824]/10"><CardHeader><p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#B85C3D]">ნაბიჯი 01</p><CardTitle className="mt-2">აირჩიეთ სერვისი</CardTitle><p className="mt-1 text-sm leading-6 text-muted-foreground">გამოიყენეთ მომსახურების ხანგრძლივობა და ფასი თქვენი დროის შესარჩევად.</p></CardHeader><CardContent className="space-y-3">{catalog.length ? catalog.map(({ service, category }) => <button key={service.id} type="button" aria-pressed={service.id === selectedId} onClick={() => onSelect(service.id)} className={`w-full rounded-2xl border p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B85C3D] ${service.id === selectedId ? "border-[#B85C3D] bg-[#B85C3D]/5 shadow-sm" : "border-[#1E2824]/10 bg-white hover:border-[#B85C3D]/60 hover:shadow-sm"}`}><div className="flex items-start justify-between gap-4"><div><p className="text-xs font-semibold text-[#B85C3D]">{category.nameKa}</p><p className="mt-1 text-base font-semibold">{service.nameKa}</p></div>{service.id === selectedId ? <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#B85C3D] text-white"><Check className="h-3.5 w-3.5" aria-hidden="true" /></span> : null}</div><div className="mt-4 flex flex-wrap gap-2 text-xs font-medium text-[#516159]"><span className="rounded-full bg-[#F2EEE7] px-2.5 py-1"><Clock3 className="mr-1 inline h-3.5 w-3.5 text-[#B85C3D]" aria-hidden="true" />{service.defaultDurationMinutes} წუთი</span><span className="rounded-full bg-[#F2EEE7] px-2.5 py-1">{formatGel(service.priceTetri)}</span></div></button>) : <p className="rounded-xl border border-dashed border-[#1E2824]/15 bg-white/60 p-4 text-sm leading-6 text-muted-foreground">ამ ფილიალისთვის ჯერ არ არის ხელმისაწვდომი ონლაინ სერვისები.</p>}</CardContent></Card>;

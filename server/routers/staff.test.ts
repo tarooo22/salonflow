@@ -103,3 +103,34 @@ describe("staff.addScheduleException", () => {
     })).rejects.toThrow();
   });
 });
+
+describe("staff schedule management", () => {
+  it("removes a working-hours rule only after organization-scoped ownership lookup", async () => {
+    const deleteWhere = vi.fn(async () => undefined);
+    const chain = {
+      from: () => chain,
+      innerJoin: () => chain,
+      where: () => ({ limit: vi.fn(async () => [{ id: "hours_rule_00001" }]) }),
+    };
+    const db = {
+      select: vi.fn(() => chain),
+      delete: vi.fn(() => ({ where: deleteWhere })),
+    };
+    mocked.db = db;
+    mocked.requireOrganizationRole.mockResolvedValue({ role: "MANAGER" });
+
+    await expect(staffRouter.createCaller({ user } as never).deleteWorkingHours({ organizationId: "organization_001", id: "hours_rule_00001" })).resolves.toEqual({ success: true });
+    expect(db.delete).toHaveBeenCalledTimes(1);
+    expect(deleteWhere).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not delete an exception that is outside the organization scope", async () => {
+    const chain = { from: () => chain, where: () => ({ limit: vi.fn(async () => []) }) };
+    const db = { select: vi.fn(() => chain), delete: vi.fn() };
+    mocked.db = db;
+    mocked.requireOrganizationRole.mockResolvedValue({ role: "OWNER" });
+
+    await expect(staffRouter.createCaller({ user } as never).deleteScheduleException({ organizationId: "organization_001", id: "exception_00001" })).rejects.toThrow("Schedule exception is not available in this organization");
+    expect(db.delete).not.toHaveBeenCalled();
+  });
+});

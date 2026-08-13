@@ -4,7 +4,7 @@ import { appointmentServices, appointments, clientConsents, clientMerges, client
 import { requireOrganizationRole } from "../access";
 import { requireDb } from "../db";
 import { cleanSearch, normalizeEmail, normalizeGeorgianPhone } from "../lib/normalization";
-import { clientBookingHistorySchema, clientConsentSchema, clientCreateSchema, clientListSchema, clientMergeSchema } from "../../shared/validation";
+import { clientBookingHistorySchema, clientCareUpdateSchema, clientConsentSchema, clientCreateSchema, clientDetailSchema, clientListSchema, clientMergeSchema } from "../../shared/validation";
 import { protectedProcedure, router } from "../_core/trpc";
 
 export const clientsRouter = router({
@@ -51,6 +51,35 @@ export const clientsRouter = router({
       ]);
     });
     return { id };
+  }),
+
+  detail: protectedProcedure.input(clientDetailSchema).query(async ({ ctx, input }) => {
+    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER", "RECEPTIONIST"]);
+    const db = await requireDb();
+    const [client] = await db.select().from(clients).where(and(
+      eq(clients.id, input.clientId),
+      eq(clients.organizationId, input.organizationId),
+      eq(clients.status, "ACTIVE"),
+    )).limit(1);
+    if (!client) throw new Error("Client is not available in this organization");
+    return client;
+  }),
+
+  updateCare: protectedProcedure.input(clientCareUpdateSchema).mutation(async ({ ctx, input }) => {
+    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER", "RECEPTIONIST"]);
+    const db = await requireDb();
+    const update = {
+      ...(input.notes !== undefined ? { notes: input.notes || null } : {}),
+      ...(input.preferences !== undefined ? { preferences: input.preferences || null } : {}),
+      ...(input.sensitivityNote !== undefined ? { sensitivityNote: input.sensitivityNote || null } : {}),
+    };
+    const result = await db.update(clients).set(update).where(and(
+      eq(clients.id, input.clientId),
+      eq(clients.organizationId, input.organizationId),
+      eq(clients.status, "ACTIVE"),
+    ));
+    if (!result[0]?.affectedRows) throw new Error("Client is not available in this organization");
+    return { success: true };
   }),
 
   bookingHistory: protectedProcedure.input(clientBookingHistorySchema).query(async ({ ctx, input }) => {
