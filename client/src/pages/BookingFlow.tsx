@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SalonFlowBrand } from "@/components/SalonFlowBrand";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -56,9 +57,9 @@ export default function BookingFlow() {
   };
 
   return <main className="min-h-screen bg-[#F7F4EF] px-5 py-8 text-[#1E2824] sm:px-8"><div className="mx-auto max-w-3xl">
-    <Link href="/book" className="inline-flex items-center gap-2 text-sm font-medium text-[#516159]"><ChevronLeft className="h-4 w-4" /> ფილიალების სია</Link>
-    <header className="mt-10"><p className="text-sm font-semibold text-[#B85C3D]">ონლაინ ჩაწერა · 4 ნაბიჯი</p><h1 className="mt-3 font-serif text-4xl font-semibold tracking-tight">დაჯავშნეთ სასურველი დრო</h1>{catalog.data ? <p className="mt-2 text-sm text-[#516159]">{catalog.data.location.name} · {catalog.data.location.timezone}</p> : null}</header>
-    <ol className="mt-8 grid gap-2 sm:grid-cols-4">{steps.map((label, index) => <li key={label} className={`rounded-xl border px-3 py-3 text-sm ${index === step ? "border-[#B85C3D] bg-[#B85C3D]/10 font-semibold text-[#743A27]" : index < step ? "border-[#17826A]/20 bg-[#17826A]/5 text-[#216451]" : "border-[#1E2824]/10 bg-white text-[#69756e]"}`}><span className="mr-2 text-xs">0{index + 1}</span>{label}</li>)}</ol>
+    <div className="flex items-center justify-between gap-4"><Link href="/book" className="inline-flex items-center gap-2 text-sm font-medium text-[#516159]"><ChevronLeft className="h-4 w-4" /> ფილიალების სია</Link><Link href="/" aria-label="SalonFlow — მთავარი გვერდი"><SalonFlowBrand /></Link></div>
+    <header className="mt-8 overflow-hidden rounded-[1.75rem] bg-[#1E2824] px-6 py-7 text-[#F7F4EF] shadow-xl shadow-[#1E2824]/10 sm:px-8"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#E7B49E]">ონლაინ ჩაწერა · 4 ნაბიჯი</p><h1 className="mt-3 font-serif text-4xl font-semibold tracking-tight">დაჯავშნეთ თქვენი დღის მშვიდი დრო</h1>{catalog.data ? <p className="mt-3 text-sm text-[#D3DDD6]">{catalog.data.location.name} · {catalog.data.location.timezone}</p> : null}</header>
+    <ol className="mt-5 grid gap-2 sm:grid-cols-4">{steps.map((label, index) => <li key={label} aria-current={index === step ? "step" : undefined} className={`rounded-xl border px-3 py-3 text-sm ${index === step ? "border-[#B85C3D] bg-[#B85C3D]/10 font-semibold text-[#743A27]" : index < step ? "border-[#17826A]/20 bg-[#17826A]/5 text-[#216451]" : "border-[#1E2824]/10 bg-white text-[#69756e]"}`}><span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full border border-current/25 text-[0.65rem]">0{index + 1}</span>{label}</li>)}</ol>
     {catalog.isLoading ? <Card className="mt-8 border-[#1E2824]/10"><CardContent className="p-6 text-sm text-muted-foreground">ჩაწერის კატალოგი იტვირთება…</CardContent></Card> : null}
     {catalog.isError ? <Alert>ჩაწერის მონაცემები დროებით მიუწვდომელია. სცადეთ მოგვიანებით.</Alert> : null}
     {catalog.data === null ? <Card className="mt-8 border-[#1E2824]/10"><CardHeader><CardTitle>ეს ჩაწერის ბმული აღარ არის აქტიური</CardTitle></CardHeader><CardContent className="text-sm leading-6 text-muted-foreground">ფილიალი შესაძლოა გათიშულია ან ბმული არასწორია. დაბრუნდით ფილიალების სიაში და აირჩიეთ აქტიური ფილიალი.</CardContent></Card> : null}

@@ -69,6 +69,11 @@
 - [x] Bound un-delivered password-reset records per account so repeated generic recovery requests do not accumulate active unused reset tokens before email dispatch is enabled.
 - [x] Add route-level lazy loading for non-initial SalonFlow screens with an accessible Georgian loading fallback.
 - [x] Compare production bundle output before and after route splitting, then regression-test the main public, local-auth, and protected routes.
+- [x] Clone and review the user-requested nextlevelbuilder/ui-ux-pro-max-skill guidance before applying it to SalonFlow.
+- [x] Assess SalonFlow's current public, authentication, and protected workspace visual hierarchy against the reviewed UI/UX guidance.
+- [x] Implement and validate targeted Georgian-accessible design refinements without changing established booking, authentication, or role workflows.
+- [x] Add a reusable SalonFlow brand mark and a salon-specific booking-rhythm motif across the public header, authentication shell, booking flow, and protected navigation.
+- [x] Strengthen editorial hierarchy and deep-ink brand anchors on the public and booking screens while preserving existing CTA destinations and responsive accessibility.
 - [x] Implement hash-only email-verification code primitives with short expiry, bounded attempts, purpose scoping, and single-use consumption without exposing a code through the browser.
 - [x] Add an isolated opt-in database test for verification-code expiry, attempt limits, purpose isolation, and one-time consumption.
 - [x] Implement a server-side password-reset token lifecycle with random opaque tokens, hash-only persistence, expiry, single use, and reset-request non-enumeration; do not expose usable tokens before secure email delivery exists.

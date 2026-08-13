@@ -24,6 +24,7 @@ import { BarChart3, CalendarDays, LayoutDashboard, LogOut, PanelLeft, Scissors, 
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
+import { SalonFlowBrand } from "./SalonFlowBrand";
 import { Button } from "./ui/button";
 
 const menuItems = [
@@ -170,13 +171,7 @@ function DashboardLayoutContent({
               >
                 <PanelLeft className="h-4 w-4" />
               </button>
-              {!isCollapsed ? (
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="font-serif font-semibold tracking-tight text-sidebar-foreground truncate">
-                    SalonFlow
-                  </span>
-                </div>
-              ) : null}
+              <SalonFlowBrand compact={isCollapsed} inverted={!isCollapsed} />
             </div>
           </SidebarHeader>
 
