@@ -1,6 +1,6 @@
-import { and, eq, gt, isNull } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, lt, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, organizationMemberships, passwordResetTokens, users } from "../drizzle/schema";
+import { InsertUser, organizationMemberships, passwordResetTokens, users, verificationCodes } from "../drizzle/schema";
 import { normalizeEmail } from "./lib/normalization";
 import { ENV } from "./_core/env";
 
@@ -111,6 +111,42 @@ export async function consumePasswordResetAndUpdatePassword(input: { tokenHash: 
     if (consumed.affectedRows !== 1) return false;
     await tx.update(users).set({ passwordHash: input.passwordHash, loginMethod: "password", lastSignedIn: now }).where(eq(users.id, token.userId));
     return true;
+  });
+}
+
+export async function createVerificationCode(input: { id: string; destination: string; purpose: "PUBLIC_BOOKING" | "EMAIL_VERIFICATION" | "PHONE_VERIFICATION" | "PASSWORD_RESET"; codeHash: string; expiresAt: Date }) {
+  const db = await requireDb();
+  await db.insert(verificationCodes).values(input);
+}
+
+export async function consumeVerificationCode(input: { destination: string; purpose: "PUBLIC_BOOKING" | "EMAIL_VERIFICATION" | "PHONE_VERIFICATION" | "PASSWORD_RESET"; codeHash: string; maxAttempts: number; now?: Date }) {
+  const db = await requireDb();
+  const now = input.now ?? new Date();
+  return db.transaction(async tx => {
+    const [record] = await tx.select().from(verificationCodes).where(and(
+      eq(verificationCodes.destination, input.destination),
+      eq(verificationCodes.purpose, input.purpose),
+      isNull(verificationCodes.consumedAt),
+      gt(verificationCodes.expiresAt, now),
+    )).orderBy(desc(verificationCodes.createdAt)).limit(1);
+    if (!record || record.attemptCount >= input.maxAttempts) return false;
+
+    if (record.codeHash !== input.codeHash) {
+      await tx.update(verificationCodes).set({ attemptCount: sql`${verificationCodes.attemptCount} + 1` }).where(and(
+        eq(verificationCodes.id, record.id),
+        lt(verificationCodes.attemptCount, input.maxAttempts),
+        isNull(verificationCodes.consumedAt),
+      ));
+      return false;
+    }
+
+    const [consumed] = await tx.update(verificationCodes).set({ consumedAt: now }).where(and(
+      eq(verificationCodes.id, record.id),
+      isNull(verificationCodes.consumedAt),
+      lt(verificationCodes.attemptCount, input.maxAttempts),
+      gt(verificationCodes.expiresAt, now),
+    ));
+    return consumed.affectedRows === 1;
   });
 }
 

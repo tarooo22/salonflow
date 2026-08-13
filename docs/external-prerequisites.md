@@ -7,3 +7,5 @@ Password-reset and email-verification delivery remain intentionally disabled unt
 No reset token or verification code may be returned to an unauthenticated browser as a substitute for email delivery. This preserves account-recovery security until the required sender domain is available.
 
 The application now creates only hash-only, expiring reset-token records for eligible local accounts and offers a generic request response regardless of account existence. The raw token is discarded until a verified sender can deliver it. An opt-in live database test verifies reset-token persistence, expiry rejection, single-use consumption, and password replacement against an isolated temporary user.
+
+Email-verification codes are also prepared as hash-only six-digit values, bound to a destination and purpose, expiring after ten minutes, limited to five failed attempts, and consumed at most once. They are not generated for an end user or returned via a browser until secure email delivery is activated.
