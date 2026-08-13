@@ -43,7 +43,7 @@
 - [x] Review the live `/book/gldani-beauty` service-selection and no-specialist guidance state at desktop and mobile widths.
 - [x] Prevent malformed invitation URLs from issuing an invalid API preview request, and verify the immediate Georgian unavailable-link state on mobile.
 - [x] Wire the public booking commit endpoint into the final client-side confirmation form with service, specialist, time, contact, consent, availability, error, and confirmation states.
-- [ ] Add interface tests for public booking specialist filtering, empty eligibility states, availability gating, and successful confirmation rendering.
+- [x] Add interface tests for public booking specialist filtering, empty eligibility states, availability gating, and successful confirmation rendering.
 - [x] Add public booking router coverage for service-specific specialist eligibility grouping and the unavailable-location availability gate, and review the responsive discovery screen at desktop and mobile widths.
 - [x] Implement public location discovery through non-sequential slugs and a responsive Georgian booking entry route.
 - [x] Build staff-specific and weekly calendar views; the responsive live team day calendar and Today summary are implemented.
@@ -66,3 +66,6 @@
 - [x] Add a protected additional-location form with opaque public slug and Asia/Tbilisi defaults for multi-location organizations.
 - [ ] Complete one authenticated browser verification of the first-workspace setup flow after database recovery.
 - [x] Apply the remaining schema indexes and complete a live database parity check before closing the initial migration task.
+- [x] Align the protected workspace shell and primary operations views with SalonFlow's warm ink, ivory, terracotta, and jade design system.
+- [x] Apply explicit SalonFlow warm-brand styling to the protected navigation shell, including sidebar, active navigation, profile footer, and mobile top bar.
+- [x] Apply the same visual hierarchy to the first-workspace setup view and re-review the protected workspace at desktop and mobile widths.

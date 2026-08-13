@@ -65,12 +65,12 @@ export default function WorkspaceSetup() {
       <div className="mx-auto w-full max-w-4xl space-y-6 py-2 sm:py-8">
         <header className="max-w-2xl">
           <p className="text-sm font-medium text-primary">პირველი ნაბიჯი</p>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight">შექმენით თქვენი სამუშაო სივრცე</h1>
+          <h1 className="mt-1 font-serif text-4xl font-semibold tracking-tight">შექმენით თქვენი სამუშაო სივრცე</h1>
           <p className="mt-3 text-sm leading-6 text-muted-foreground">ერთი ფორმით იქმნება სალონის ორგანიზაცია, თქვენი მფლობელის წვდომა და პირველი ფილიალი. ფილიალის მისამართი გამოყენებული იქნება საჯარო დაჯავშნის უსაფრთხო ბმულში.</p>
         </header>
 
         <form onSubmit={submit} className="space-y-6">
-          <Card>
+          <Card className="border-border/80 bg-card shadow-sm">
             <CardHeader>
               <div className="flex items-center gap-3"><div className="rounded-xl bg-primary/10 p-2 text-primary"><Building2 className="h-5 w-5" /></div><div><CardTitle>ორგანიზაცია</CardTitle><CardDescription>ეს სახელწოდება გამოჩნდება თქვენს დაცულ სამუშაო სივრცეში.</CardDescription></div></div>
             </CardHeader>
@@ -81,7 +81,7 @@ export default function WorkspaceSetup() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-border/80 bg-card shadow-sm">
             <CardHeader>
               <div className="flex items-center gap-3"><div className="rounded-xl bg-primary/10 p-2 text-primary"><MapPin className="h-5 w-5" /></div><div><CardTitle>პირველი ფილიალი</CardTitle><CardDescription>ფილიალის სახელწოდება და საჯარო ბმული გამოიყენება ონლაინ ჩაწერისთვის.</CardDescription></div></div>
             </CardHeader>
