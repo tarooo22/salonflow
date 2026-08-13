@@ -16,37 +16,6 @@ export const financeRouter = router({
       .orderBy(desc(expenses.expenseDate), desc(expenses.createdAt));
   }),
 
-  listCommissionRules: protectedProcedure.input(organizationScopeSchema).query(async ({ ctx, input }) => {
-    await requireOrganizationAction(ctx.user, input.organizationId, "finance:manage");
-    const db = await requireDb();
-    return db.select().from(commissionRules).where(and(
-      eq(commissionRules.organizationId, input.organizationId),
-      eq(commissionRules.status, "ACTIVE"),
-    )).orderBy(desc(commissionRules.createdAt));
-  }),
-
-  listCommissionCandidates: protectedProcedure.input(organizationScopeSchema).query(async ({ ctx, input }) => {
-    await requireOrganizationAction(ctx.user, input.organizationId, "finance:manage");
-    const db = await requireDb();
-    return db.select({
-      appointmentId: appointments.id,
-      appointmentServiceId: appointmentServices.id,
-      startsAt: appointments.startsAt,
-      locationId: appointments.locationId,
-      staffProfileId: appointmentServices.staffProfileId,
-      serviceId: appointmentServices.serviceId,
-      serviceNameKa: appointmentServices.serviceNameSnapshot,
-      priceTetri: appointmentServices.priceTetriSnapshot,
-    }).from(appointmentServices)
-      .innerJoin(appointments, eq(appointmentServices.appointmentId, appointments.id))
-      .where(and(
-        eq(appointments.organizationId, input.organizationId),
-        eq(appointments.status, "COMPLETED"),
-      ))
-      .orderBy(desc(appointments.startsAt))
-      .limit(100);
-  }),
-
   createExpense: protectedProcedure.input(expenseCreateSchema).mutation(async ({ ctx, input }) => {
     await requireOrganizationAction(ctx.user, input.organizationId, "finance:manage");
     const db = await requireDb();

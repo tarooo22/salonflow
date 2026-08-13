@@ -2,117 +2,77 @@ import { describe, expect, it, vi } from "vitest";
 
 const mocked = vi.hoisted(() => ({ db: null as unknown }));
 
-vi.mock("../db", () => ({ requireDb: vi.fn(async () => mocked.db) }));
+vi.mock("../db", () => ({
+  requireDb: vi.fn(async () => mocked.db),
+}));
 
 import { publicRouter } from "./public";
 
-function chainResult<T>(value: T[]) {
-  const chain = {
-    from: () => chain,
-    innerJoin: () => chain,
-    where: () => chain,
-    orderBy: async () => value,
-    limit: async () => value,
-  };
-  return chain;
+const ids = {
+  organizationId: "organization_0001",
+  locationId: "location_00000001",
+  serviceId: "service_000000001",
+  staffProfileId: "staff_profile_001",
+};
+
+function caller() {
+  return publicRouter.createCaller({} as never);
 }
 
-describe("public.bookingCatalog", () => {
-  it("groups a visible specialist’s eligible services without exposing unrelated service eligibility", async () => {
-    const location = { id: "location_00000001", organizationId: "organization_00001", publicSlug: "studio-vake", name: "ვაკის ფილიალი", timezone: "Asia/Tbilisi", address: null };
-    const teamRows = [
-      { id: "staff_profile_001", name: "ლელა ბერიძე", specialty: "თმის სტილისტი", bio: null, serviceId: "service_hair_0001" },
-      { id: "staff_profile_001", name: "ლელა ბერიძე", specialty: "თმის სტილისტი", bio: null, serviceId: "service_color_001" },
-      { id: "staff_profile_002", name: "ნინო ქავთარაძე", specialty: null, bio: null, serviceId: "service_nails_001" },
-    ];
-    mocked.db = {
-      select: vi.fn()
-        .mockReturnValueOnce(chainResult([location]))
-        .mockReturnValueOnce(chainResult([]))
-        .mockReturnValueOnce(chainResult(teamRows)),
-    };
+function queuedDb(queryRows: unknown[][]) {
+  const select = vi.fn(() => ({
+    from: vi.fn(() => ({
+      where: vi.fn(() => {
+        const rows = queryRows.shift() ?? [];
+        return {
+          limit: vi.fn(async () => rows),
+          then: <TResult1 = unknown[], TResult2 = never>(
+            onfulfilled?: ((value: unknown[]) => TResult1 | PromiseLike<TResult1>) | null,
+            onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
+          ) => Promise.resolve(rows).then(onfulfilled, onrejected),
+        };
+      }),
+    })),
+  }));
+  return { select };
+}
 
-    const result = await publicRouter.createCaller({} as never).bookingCatalog("studio-vake");
+const activeLocation = { id: ids.locationId, organizationId: ids.organizationId, minimumNoticeMinutes: 0, maximumAdvanceDays: 365 };
+const activeService = { id: ids.serviceId, organizationId: ids.organizationId, defaultDurationMinutes: 60, bufferBeforeMinutes: 0, bufferAfterMinutes: 0 };
 
-    expect(result?.team).toEqual([
-      { id: "staff_profile_001", name: "ლელა ბერიძე", specialty: "თმის სტილისტი", bio: null, eligibleServiceIds: ["service_hair_0001", "service_color_001"] },
-      { id: "staff_profile_002", name: "ნინო ქავთარაძე", specialty: null, bio: null, eligibleServiceIds: ["service_nails_001"] },
-    ]);
-  });
-});
+function availabilityInput() {
+  return { slug: "gldani-beauty", serviceId: ids.serviceId, staffProfileId: ids.staffProfileId, startsAt: new Date(Date.now() + 7_200_000) };
+}
 
-describe("public.checkAvailability", () => {
-  it("returns a location-unavailable gate before evaluating services, staff, or appointments", async () => {
-    mocked.db = { select: vi.fn(() => chainResult([])) };
-
-    await expect(publicRouter.createCaller({} as never).checkAvailability({
-      slug: "studio-vake",
-      serviceId: "service_hair_0001",
-      staffProfileId: "staff_profile_001",
-      startsAt: new Date("2026-09-01T09:00:00.000Z"),
-    })).resolves.toEqual({ available: false, reason: "LOCATION_UNAVAILABLE" });
-    expect((mocked.db as { select: ReturnType<typeof vi.fn> }).select).toHaveBeenCalledTimes(1);
+describe("public booking router safeguards", () => {
+  it("keeps availability closed when the public location link is inactive", async () => {
+    mocked.db = queuedDb([[]]);
+    await expect(caller().checkAvailability(availabilityInput())).resolves.toEqual({ available: false, reason: "LOCATION_UNAVAILABLE" });
   });
 
-  it("rejects a service outside the booking location organization before evaluating staff eligibility", async () => {
-    const location = { id: "location_00000001", organizationId: "organization_00001", minimumNoticeMinutes: 0, maximumAdvanceDays: 365, status: "ACTIVE", bookingEnabled: true };
-    const db = {
-      select: vi.fn()
-        .mockReturnValueOnce(chainResult([location]))
-        .mockReturnValueOnce(chainResult([])),
-    };
-    mocked.db = db;
-
-    await expect(publicRouter.createCaller({} as never).checkAvailability({
-      slug: "studio-vake",
-      serviceId: "service_other_organization",
-      staffProfileId: "staff_profile_001",
-      startsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    })).resolves.toEqual({ available: false, reason: "SERVICE_UNAVAILABLE" });
-    expect(db.select).toHaveBeenCalledTimes(2);
+  it("does not expose a service unavailable at the public location", async () => {
+    mocked.db = queuedDb([[activeLocation], []]);
+    await expect(caller().checkAvailability(availabilityInput())).resolves.toEqual({ available: false, reason: "SERVICE_UNAVAILABLE" });
   });
 
-  it("rejects a specialist who is neither assigned to the location nor eligible for the selected service", async () => {
-    const location = { id: "location_00000001", organizationId: "organization_00001", minimumNoticeMinutes: 0, maximumAdvanceDays: 365, status: "ACTIVE", bookingEnabled: true };
-    const service = { id: "service_hair_0001", organizationId: "organization_00001", defaultDurationMinutes: 60, bufferBeforeMinutes: 0, bufferAfterMinutes: 0, status: "ACTIVE", onlineBookingEnabled: true };
-    const db = {
-      select: vi.fn()
-        .mockReturnValueOnce(chainResult([location]))
-        .mockReturnValueOnce(chainResult([service]))
-        .mockReturnValueOnce(chainResult([]))
-        .mockReturnValueOnce(chainResult([]))
-        .mockReturnValueOnce(chainResult([])),
-    };
-    mocked.db = db;
-
-    await expect(publicRouter.createCaller({} as never).checkAvailability({
-      slug: "studio-vake",
-      serviceId: "service_hair_0001",
-      staffProfileId: "staff_profile_001",
-      startsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    })).resolves.toEqual({ available: false, reason: "STAFF_UNAVAILABLE" });
-    expect(db.select).toHaveBeenCalledTimes(5);
+  it("rejects a specialist who is not eligible for the selected service", async () => {
+    mocked.db = queuedDb([[activeLocation], [activeService], [], [], []]);
+    await expect(caller().checkAvailability(availabilityInput())).resolves.toEqual({ available: false, reason: "STAFF_UNAVAILABLE" });
   });
-});
 
-describe("public.commitBooking", () => {
-  it("returns the original confirmation without starting a transaction when the idempotency key already exists", async () => {
-    const db = {
-      select: vi.fn(() => chainResult([{ id: "appointment_00001" }])),
-      transaction: vi.fn(),
-    };
-    mocked.db = db;
+  it("returns a free slot only after location, service, staff and eligibility checks pass", async () => {
+    mocked.db = queuedDb([[activeLocation], [activeService], [{ id: "staff-location" }], [{ id: ids.staffProfileId }], [{ id: "eligibility", durationOverrideMinutes: null }], []]);
+    await expect(caller().checkAvailability(availabilityInput())).resolves.toMatchObject({ available: true });
+  });
 
-    await expect(publicRouter.createCaller({} as never).commitBooking({
-      slug: "studio-vake",
-      serviceId: "service_hair_0001",
-      staffProfileId: "staff_profile_001",
-      startsAt: new Date("2026-09-01T09:00:00.000Z"),
-      firstName: "ლელა",
-      phone: "+995555123456",
+  it("rejects invalid public phone input before touching the booking transaction", async () => {
+    mocked.db = {};
+    await expect(caller().commitBooking({
+      ...availabilityInput(),
+      firstName: "თამარი",
+      phone: "abcdef",
       bookingTermsConsent: true,
-      idempotencyKey: "booking_retry_key_0001",
-    })).resolves.toEqual(expect.objectContaining({ confirmed: true, replayed: true, confirmationToken: expect.any(String) }));
-    expect(db.transaction).not.toHaveBeenCalled();
+      idempotencyKey: "booking_idempotency_001",
+    })).rejects.toThrow("A valid Georgian mobile phone number is required");
   });
 });

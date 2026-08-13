@@ -1,9 +1,9 @@
-import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
-import { locations, organizationMemberships, scheduleExceptions, staffLocations, staffProfiles, timeOffRequests, users, workingHourRules } from "../../drizzle/schema";
+import { locations, organizationMemberships, scheduleExceptions, staffLocations, staffProfiles, workingHourRules } from "../../drizzle/schema";
 import { requireOrganizationRole } from "../access";
 import { requireDb } from "../db";
-import { locationScopeSchema, organizationScopeSchema, scheduleExceptionCreateSchema, staffProfileCreateSchema, staffProfileScopeSchema, staffProfileUpdateSchema, timeOffRequestCreateSchema, timeOffRequestReviewSchema, workingHourRuleCreateSchema } from "../../shared/validation";
+import { locationScopeSchema, scheduleExceptionCreateSchema, staffProfileCreateSchema, workingHourRuleCreateSchema } from "../../shared/validation";
 import { protectedProcedure, router } from "../_core/trpc";
 
 export const staffRouter = router({
@@ -14,20 +14,6 @@ export const staffRouter = router({
       .innerJoin(organizationMemberships, eq(staffProfiles.membershipId, organizationMemberships.id))
       .where(and(eq(organizationMemberships.organizationId, input.organizationId), eq(staffProfiles.status, "ACTIVE")))
       .orderBy(asc(staffProfiles.sortOrder), asc(staffProfiles.publicDisplayName));
-  }),
-
-  listUnprofiledMembers: protectedProcedure.input(organizationScopeSchema).query(async ({ ctx, input }) => {
-    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER"]);
-    const db = await requireDb();
-    return db.select({ membership: organizationMemberships, user: users }).from(organizationMemberships)
-      .innerJoin(users, eq(organizationMemberships.userId, users.id))
-      .leftJoin(staffProfiles, eq(staffProfiles.membershipId, organizationMemberships.id))
-      .where(and(
-        eq(organizationMemberships.organizationId, input.organizationId),
-        eq(organizationMemberships.status, "ACTIVE"),
-        isNull(staffProfiles.id),
-      ))
-      .orderBy(asc(users.name), asc(users.email));
   }),
 
   createProfile: protectedProcedure.input(staffProfileCreateSchema).mutation(async ({ ctx, input }) => {
@@ -53,55 +39,6 @@ export const staffRouter = router({
       await tx.insert(staffLocations).values(input.locationIds.map(locationId => ({ staffProfileId, locationId })));
     });
     return { id: staffProfileId };
-  }),
-
-  updateProfile: protectedProcedure.input(staffProfileUpdateSchema).mutation(async ({ ctx, input }) => {
-    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER"]);
-    const db = await requireDb();
-    const [profile] = await db.select({ id: staffProfiles.id }).from(staffProfiles)
-      .innerJoin(organizationMemberships, eq(staffProfiles.membershipId, organizationMemberships.id))
-      .where(and(
-        eq(staffProfiles.id, input.staffProfileId),
-        eq(organizationMemberships.organizationId, input.organizationId),
-        eq(organizationMemberships.status, "ACTIVE"),
-        eq(staffProfiles.status, "ACTIVE"),
-      )).limit(1);
-    if (!profile) throw new Error("Staff profile is not active in this organization");
-    const uniqueLocationIds = Array.from(new Set(input.locationIds));
-    const activeLocations = await db.select({ id: locations.id }).from(locations).where(and(
-      eq(locations.organizationId, input.organizationId),
-      eq(locations.status, "ACTIVE"),
-      inArray(locations.id, uniqueLocationIds),
-    ));
-    if (activeLocations.length !== uniqueLocationIds.length) throw new Error("One or more locations are not active in this organization");
-    await db.transaction(async tx => {
-      await tx.update(staffProfiles).set({
-        publicDisplayName: input.publicDisplayName,
-        jobTitle: input.jobTitle,
-        specialty: input.specialty,
-        onlineBookingVisible: input.onlineBookingVisible,
-        color: input.color,
-      }).where(eq(staffProfiles.id, profile.id));
-      await tx.delete(staffLocations).where(eq(staffLocations.staffProfileId, profile.id));
-      await tx.insert(staffLocations).values(uniqueLocationIds.map(locationId => ({ staffProfileId: profile.id, locationId })));
-    });
-    return { id: profile.id };
-  }),
-
-  listProfileLocations: protectedProcedure.input(staffProfileScopeSchema).query(async ({ ctx, input }) => {
-    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"]);
-    const db = await requireDb();
-    return db.select({ id: locations.id, name: locations.name }).from(staffLocations)
-      .innerJoin(staffProfiles, eq(staffLocations.staffProfileId, staffProfiles.id))
-      .innerJoin(organizationMemberships, eq(staffProfiles.membershipId, organizationMemberships.id))
-      .innerJoin(locations, eq(staffLocations.locationId, locations.id))
-      .where(and(
-        eq(staffProfiles.id, input.staffProfileId),
-        eq(organizationMemberships.organizationId, input.organizationId),
-        eq(organizationMemberships.status, "ACTIVE"),
-        eq(locations.organizationId, input.organizationId),
-        eq(locations.status, "ACTIVE"),
-      ));
   }),
 
   addWorkingHours: protectedProcedure.input(workingHourRuleCreateSchema).mutation(async ({ ctx, input }) => {
@@ -131,67 +68,6 @@ export const staffRouter = router({
       endLocalTime: input.endLocalTime,
     });
     return { id };
-  }),
-
-  requestTimeOff: protectedProcedure.input(timeOffRequestCreateSchema).mutation(async ({ ctx, input }) => {
-    const membership = await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"]);
-    const db = await requireDb();
-    const [assignment] = await db.select({
-      staffProfileId: staffProfiles.id,
-      memberUserId: organizationMemberships.userId,
-    }).from(staffLocations)
-      .innerJoin(staffProfiles, eq(staffLocations.staffProfileId, staffProfiles.id))
-      .innerJoin(organizationMemberships, eq(staffProfiles.membershipId, organizationMemberships.id))
-      .innerJoin(locations, eq(staffLocations.locationId, locations.id))
-      .where(and(
-        eq(staffLocations.staffProfileId, input.staffProfileId),
-        eq(staffLocations.locationId, input.locationId),
-        eq(organizationMemberships.organizationId, input.organizationId),
-        eq(organizationMemberships.status, "ACTIVE"),
-        eq(staffProfiles.status, "ACTIVE"),
-        eq(locations.organizationId, input.organizationId),
-        eq(locations.status, "ACTIVE"),
-        ...(membership.role === "STAFF" ? [eq(organizationMemberships.userId, ctx.user.id)] : []),
-      )).limit(1);
-    if (!assignment) throw new Error("Staff profile is not assigned to this active location");
-    const id = nanoid(21);
-    await db.insert(timeOffRequests).values({
-      id,
-      staffProfileId: input.staffProfileId,
-      locationId: input.locationId,
-      startsAt: input.startsAt,
-      endsAt: input.endsAt,
-      reason: input.reason,
-    });
-    return { id, status: "PENDING" as const };
-  }),
-
-  listTimeOffRequests: protectedProcedure.input(organizationScopeSchema).query(async ({ ctx, input }) => {
-    const membership = await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"]);
-    const db = await requireDb();
-    return db.select({ request: timeOffRequests, profile: staffProfiles })
-      .from(timeOffRequests)
-      .innerJoin(staffProfiles, eq(timeOffRequests.staffProfileId, staffProfiles.id))
-      .innerJoin(organizationMemberships, eq(staffProfiles.membershipId, organizationMemberships.id))
-      .where(and(
-        eq(organizationMemberships.organizationId, input.organizationId),
-        ...(membership.role === "STAFF" ? [eq(organizationMemberships.userId, ctx.user.id)] : []),
-      ))
-      .orderBy(desc(timeOffRequests.createdAt));
-  }),
-
-  reviewTimeOffRequest: protectedProcedure.input(timeOffRequestReviewSchema).mutation(async ({ ctx, input }) => {
-    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER"]);
-    const db = await requireDb();
-    const [request] = await db.select({ id: timeOffRequests.id }).from(timeOffRequests)
-      .innerJoin(staffProfiles, eq(timeOffRequests.staffProfileId, staffProfiles.id))
-      .innerJoin(organizationMemberships, eq(staffProfiles.membershipId, organizationMemberships.id))
-      .where(and(eq(timeOffRequests.id, input.requestId), eq(organizationMemberships.organizationId, input.organizationId)))
-      .limit(1);
-    if (!request) throw new Error("Time-off request was not found in this organization");
-    await db.update(timeOffRequests).set({ status: input.status, reviewedByUserId: ctx.user.id, reviewedAt: new Date() })
-      .where(eq(timeOffRequests.id, request.id));
-    return { id: request.id, status: input.status };
   }),
 
   addScheduleException: protectedProcedure.input(scheduleExceptionCreateSchema).mutation(async ({ ctx, input }) => {

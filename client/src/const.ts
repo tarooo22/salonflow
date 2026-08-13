@@ -21,10 +21,11 @@ export const startLogin = () => {
   document.cookie = `${OAUTH_STATE_COOKIE}=${nonce}; Path=/; Max-Age=600; SameSite=None; Secure`;
   const state = encodeOAuthState({ redirectUri, nonce });
 
-  const url = new URL("login", `${oauthPortalUrl.replace(/\/$/, "")}/`);
-  url.searchParams.set("app_id", appId);
-  url.searchParams.set("redirect_url", redirectUri);
+  const url = new URL(`${oauthPortalUrl}/app-auth`);
+  url.searchParams.set("appId", appId);
+  url.searchParams.set("redirectUri", redirectUri);
   url.searchParams.set("state", state);
+  url.searchParams.set("type", "signIn");
 
   window.location.href = url.toString();
 };

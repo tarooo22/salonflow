@@ -5,44 +5,20 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
-import { getPendingInviteToken } from "./lib/pendingInvite";
-import { useAuth } from "./_core/hooks/useAuth";
-import React, { lazy, Suspense, useEffect } from "react";
-import { useLocation } from "wouter";
-import { Loader2 } from "lucide-react";
-
-const Book = lazy(() => import("./pages/Book"));
-const BookingFlow = lazy(() => import("./pages/BookingFlow"));
-const Calendar = lazy(() => import("./pages/Calendar"));
-const Reports = lazy(() => import("./pages/Reports"));
-const Staff = lazy(() => import("./pages/Staff"));
-const Services = lazy(() => import("./pages/Services"));
-const Clients = lazy(() => import("./pages/Clients"));
-const Today = lazy(() => import("./pages/Today"));
-const WorkspaceSetup = lazy(() => import("./pages/WorkspaceSetup"));
-const InviteAccept = lazy(() => import("./pages/InviteAccept"));
-const Auth = lazy(() => import("./pages/Auth"));
-const PasswordRecovery = lazy(() => import("./pages/PasswordRecovery"));
-
-export function RouteLoadingFallback() {
-  return <main className="flex min-h-screen items-center justify-center bg-[#F7F4EF] px-6" role="status" aria-live="polite" aria-busy="true"><div className="flex items-center gap-3 rounded-2xl border border-[#1E2824]/10 bg-white px-5 py-4 text-sm font-medium text-[#1E2824] shadow-lg shadow-[#1E2824]/5"><Loader2 className="h-5 w-5 animate-spin text-[#B85C3D]" aria-hidden="true" />SalonFlow იტვირთება…</div></main>;
-}
-
-function PendingInviteRedirect() {
-  const { isAuthenticated, loading } = useAuth();
-  const [, setLocation] = useLocation();
-  useEffect(() => {
-    if (!isAuthenticated || loading || typeof window === "undefined") return;
-    const token = getPendingInviteToken();
-    if (token && window.location.pathname === "/") setLocation(`/invite/${token}`);
-  }, [isAuthenticated, loading, setLocation]);
-  return null;
-}
+import Book from "./pages/Book";
+import BookingFlow from "./pages/BookingFlow";
+import Calendar from "./pages/Calendar";
+import Reports from "./pages/Reports";
+import Staff from "./pages/Staff";
+import Services from "./pages/Services";
+import Clients from "./pages/Clients";
+import Today from "./pages/Today";
+import WorkspaceSetup from "./pages/WorkspaceSetup";
+import WorkspacePlaceholder from "./pages/WorkspacePlaceholder";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
-    <Suspense fallback={<RouteLoadingFallback />}>
     <Switch>
       <Route path={"/"} component={Home} />
       <Route path={"/book"} component={Book} />
@@ -54,16 +30,10 @@ function Router() {
       <Route path={"/app/staff"} component={Staff} />
       <Route path={"/app/reports"} component={Reports} />
       <Route path={"/app/setup"} component={WorkspaceSetup} />
-      <Route path={"/register"}>{() => <Auth mode="register" />}</Route>
-      <Route path={"/login"}>{() => <Auth mode="login" />}</Route>
-      <Route path={"/forgot-password"}>{() => <PasswordRecovery mode="request" />}</Route>
-      <Route path={"/reset-password"}>{() => <PasswordRecovery mode="reset" />}</Route>
-      <Route path={"/invite/:token"} component={InviteAccept} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
     </Switch>
-    </Suspense>
   );
 }
 
@@ -79,8 +49,7 @@ function App() {
         defaultTheme="light"
         // switchable
       >
-      <TooltipProvider>
-          <PendingInviteRedirect />
+        <TooltipProvider>
           <Toaster />
           <Router />
         </TooltipProvider>

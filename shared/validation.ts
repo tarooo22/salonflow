@@ -126,21 +126,6 @@ export const staffProfileCreateSchema = z.object({
   locationIds: z.array(opaqueIdSchema).min(1).max(20),
 });
 
-export const staffProfileUpdateSchema = z.object({
-  organizationId: opaqueIdSchema,
-  staffProfileId: opaqueIdSchema,
-  publicDisplayName: z.string().trim().min(2).max(160),
-  jobTitle: z.string().trim().max(160).optional(),
-  specialty: z.string().trim().max(255).optional(),
-  onlineBookingVisible: z.boolean(),
-  color: z.string().trim().regex(/^#[0-9A-Fa-f]{6}$/),
-  locationIds: z.array(opaqueIdSchema).min(1).max(20),
-});
-
-export const staffProfileScopeSchema = organizationScopeSchema.extend({
-  staffProfileId: opaqueIdSchema,
-});
-
 export const workingHourRuleCreateSchema = z.object({
   organizationId: opaqueIdSchema,
   staffProfileId: opaqueIdSchema,
@@ -162,35 +147,6 @@ export const scheduleExceptionCreateSchema = z.object({
   notes: z.string().trim().max(5_000).optional(),
 }).refine(input => input.staffProfileId || input.locationId, "A staff profile or location is required")
   .refine(input => input.startsAt < input.endsAt, "Exception end must follow start");
-
-export const timeOffRequestCreateSchema = z.object({
-  organizationId: opaqueIdSchema,
-  staffProfileId: opaqueIdSchema,
-  locationId: opaqueIdSchema,
-  startsAt: z.coerce.date(),
-  endsAt: z.coerce.date(),
-  reason: z.string().trim().max(255).optional(),
-}).refine(input => input.startsAt < input.endsAt, "Time-off request end must follow start");
-
-export const timeOffRequestReviewSchema = organizationScopeSchema.extend({
-  requestId: opaqueIdSchema,
-  status: z.enum(["APPROVED", "REJECTED"]),
-});
-
-export const staffInviteCreateSchema = z.object({
-  organizationId: opaqueIdSchema,
-  locationId: opaqueIdSchema.optional(),
-  email: z.string().trim().email().max(320).optional(),
-  role: z.enum(["MANAGER", "RECEPTIONIST", "STAFF"]),
-  origin: z.string().url().refine(value => {
-    const url = new URL(value);
-    return !url.username && !url.password && (url.protocol === "https:" || url.hostname === "localhost");
-  }, "Invalid invite origin"),
-}).refine(input => Boolean(input.email), "An invite email is required");
-
-export const staffInviteTokenSchema = z.object({
-  token: z.string().trim().min(32).max(128).regex(/^[A-Za-z0-9_-]+$/),
-});
 
 export const appointmentCreateSchema = z.object({
   organizationId: opaqueIdSchema,
@@ -265,26 +221,6 @@ export const publicBookingCommitSchema = publicAvailabilityCheckSchema.extend({
   customerNote: z.string().trim().max(2_000).optional(),
   bookingTermsConsent: z.literal(true),
   idempotencyKey: z.string().trim().min(16).max(128).regex(/^[A-Za-z0-9_-]+$/),
-});
-
-export const localRegistrationSchema = z.object({
-  name: z.string().trim().min(2).max(120),
-  email: z.string().trim().email().max(320),
-  password: z.string().min(12).max(128),
-});
-
-export const localLoginSchema = z.object({
-  email: z.string().trim().email().max(320),
-  password: z.string().min(1).max(128),
-});
-
-export const passwordResetRequestSchema = z.object({
-  email: z.string().trim().email().max(320),
-});
-
-export const passwordResetSchema = z.object({
-  token: z.string().regex(/^[A-Za-z0-9_-]{32,128}$/),
-  password: z.string().min(12).max(128),
 });
 
 export const reportingRangeSchema = z.object({

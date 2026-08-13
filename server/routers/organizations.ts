@@ -1,14 +1,11 @@
 import { and, asc, eq } from "drizzle-orm";
-import { createHash, randomBytes } from "node:crypto";
 import { nanoid } from "nanoid";
-import { locations, organizationMemberships, organizations, staffInvites } from "../../drizzle/schema";
+import { locations, organizationMemberships, organizations } from "../../drizzle/schema";
 import { requireOrganizationRole } from "../access";
 import { requireDb } from "../db";
 import { normalizeEmail, normalizeGeorgianPhone } from "../lib/normalization";
-import { locationCreateSchema, organizationCreateSchema, organizationScopeSchema, staffInviteCreateSchema, staffInviteTokenSchema, workspaceSetupSchema } from "../../shared/validation";
-import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
-
-const hashInviteToken = (token: string) => createHash("sha256").update(token).digest("hex");
+import { locationCreateSchema, organizationCreateSchema, organizationScopeSchema, workspaceSetupSchema } from "../../shared/validation";
+import { protectedProcedure, router } from "../_core/trpc";
 
 export const organizationRouter = router({
   listMine: protectedProcedure.query(async ({ ctx }) => {
@@ -112,90 +109,6 @@ export const organizationRouter = router({
       cancellationCutoffMinutes: input.cancellationCutoffMinutes,
     });
     return { id: locationId };
-  }),
-
-  createStaffInvite: protectedProcedure.input(staffInviteCreateSchema).mutation(async ({ ctx, input }) => {
-    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER"]);
-    const db = await requireDb();
-    if (input.locationId) {
-      const [location] = await db.select({ id: locations.id }).from(locations).where(and(
-        eq(locations.id, input.locationId),
-        eq(locations.organizationId, input.organizationId),
-        eq(locations.status, "ACTIVE"),
-      )).limit(1);
-      if (!location) throw new Error("Active location not found in this organization");
-    }
-    const token = randomBytes(32).toString("base64url");
-    const id = nanoid(21);
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-    await db.insert(staffInvites).values({
-      id,
-      organizationId: input.organizationId,
-      locationId: input.locationId,
-      email: normalizeEmail(input.email),
-      role: input.role,
-      tokenHash: hashInviteToken(token),
-      status: "PENDING",
-      expiresAt,
-      invitedByUserId: ctx.user.id,
-    });
-    const inviteUrl = `${input.origin.replace(/\/$/, "")}/invite/${token}`;
-    return { id, inviteUrl, expiresAt };
-  }),
-
-  previewStaffInvite: publicProcedure.input(staffInviteTokenSchema).query(async ({ input }) => {
-    const db = await requireDb();
-    const [invite] = await db.select({
-      organizationName: organizations.name,
-      role: staffInvites.role,
-      status: staffInvites.status,
-      expiresAt: staffInvites.expiresAt,
-    }).from(staffInvites).innerJoin(organizations, eq(staffInvites.organizationId, organizations.id))
-      .where(eq(staffInvites.tokenHash, hashInviteToken(input.token))).limit(1);
-    if (!invite || invite.status !== "PENDING" || invite.expiresAt <= new Date()) {
-      throw new Error("Invite is unavailable or expired");
-    }
-    return invite;
-  }),
-
-  acceptStaffInvite: protectedProcedure.input(staffInviteTokenSchema).mutation(async ({ ctx, input }) => {
-    const db = await requireDb();
-    return db.transaction(async tx => {
-      const [invite] = await tx.select().from(staffInvites)
-        .where(eq(staffInvites.tokenHash, hashInviteToken(input.token))).limit(1);
-      if (!invite || invite.status !== "PENDING" || invite.expiresAt <= new Date()) {
-        throw new Error("Invite is unavailable or expired");
-      }
-      const userEmail = normalizeEmail(ctx.user.email ?? undefined);
-      if (!invite.email || !userEmail || invite.email !== userEmail) {
-        throw new Error("Invite email does not match the signed-in account");
-      }
-      const [existingMembership] = await tx.select().from(organizationMemberships).where(and(
-        eq(organizationMemberships.organizationId, invite.organizationId),
-        eq(organizationMemberships.userId, ctx.user.id),
-      )).limit(1);
-      if (existingMembership?.status === "ACTIVE") {
-        await tx.update(staffInvites).set({ status: "ACCEPTED", acceptedByUserId: ctx.user.id, acceptedAt: new Date() }).where(eq(staffInvites.id, invite.id));
-        return { organizationId: invite.organizationId, membershipId: existingMembership.id, alreadyMember: true };
-      }
-      const membershipId = existingMembership?.id ?? nanoid(21);
-      if (existingMembership) {
-        await tx.update(organizationMemberships).set({ role: invite.role, status: "ACTIVE", invitedByUserId: invite.invitedByUserId, invitedAt: invite.createdAt, activatedAt: new Date() }).where(eq(organizationMemberships.id, membershipId));
-      } else {
-        await tx.insert(organizationMemberships).values({
-          id: membershipId,
-          organizationId: invite.organizationId,
-          userId: ctx.user.id,
-          role: invite.role,
-          status: "ACTIVE",
-          invitedByUserId: invite.invitedByUserId,
-          invitedAt: invite.createdAt,
-          activatedAt: new Date(),
-        });
-      }
-      await tx.update(staffInvites).set({ status: "ACCEPTED", acceptedByUserId: ctx.user.id, acceptedAt: new Date() }).where(eq(staffInvites.id, invite.id));
-      return { organizationId: invite.organizationId, membershipId, alreadyMember: false };
-    });
   }),
 
   listLocations: protectedProcedure.input(organizationScopeSchema).query(async ({ ctx, input }) => {

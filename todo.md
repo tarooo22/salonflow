@@ -3,53 +3,37 @@
 - [x] Audit the supplied prototype, screenshots, and handoff specification for reusable UI patterns and production gaps.
 - [x] Confirm the visual direction before implementing product screens.
 - [x] Establish the shared domain vocabulary, permission matrix, appointment transitions, and data integrity rules.
-- [x] Apply the reviewed initial database migration once managed database connectivity is restored.
+- [ ] Apply the reviewed initial database migration once managed database connectivity is restored.
 - [x] Create a multi-location schema for organizations, locations, memberships, roles, permissions, and scoped settings.
-- [x] Implement secure local account registration, password login, invite links, and organization-scoped role-based access; password reset and verification-code email delivery are tracked separately pending a verified sender domain.
-- [x] Retire the reported `api.manus.im` permission-denied OAuth handoff from the supported user journey at the user's request; local email/password authentication is the required access path.
-- [x] Restore the self-service registration entry and prevent an unauthenticated user from being forced directly into the Manus OAuth screen before choosing a sign-in or registration path.
-- [x] Verify and restore the published `/register` route after the current public deployment returned the prior generic 404 screen.
+- [ ] Implement secure account registration, login, verification-code flows, password reset, invite links, and role-based access.
 - [x] Fix the Manus OAuth callback failure so users return to SalonFlow with a valid authenticated session instead of a raw error response.
 - [x] Restore the missing organization workspace tables so authenticated users see the setup state instead of a blank workspace.
 - [x] Implement organization-scoped role checks, normalization safeguards, and the secure Manus OAuth workspace entry point.
-- [x] Complete staff profile editing, working hours, schedule exceptions, time-off requests, and staff-location assignment management; a live protected team workspace is implemented.
+- [ ] Complete staff profile editing, working hours, schedule exceptions, time-off requests, and staff-location assignment management; a live protected team workspace is implemented.
 - [x] Add owner or manager self-profile creation with selected active locations as the first specialist setup step.
 - [x] Add protected weekly working-hours entry for an active staff profile and selected location.
 - [x] Add guarded schedule-exception persistence with active organization staff/location scope validation and time-range checks.
 - [x] Expose a protected staff schedule-exception dialog for time off and operational blocks with active location scope validation.
-- [x] Add a protected time-off request form with role-scoped staff selection, active-location validation, pending persistence, and focused server coverage.
-- [x] Add organization-scoped time-off request visibility and owner or manager approval/rejection controls with audit fields.
-- [x] Add manager-created, token-hashed staff invite links with email-bound acceptance, pending OAuth handoff, and immediate expired-link feedback.
-- [x] Add a manager workflow to create a specialist profile and active-location assignments for another accepted organization member.
-- [x] Add multi-member staff onboarding coverage for accepted invitations, invalid location scope, and successful manager-created specialist assignment.
-- [x] Add a focused server test proving a manager can create a specialist profile and selected assignments for a different active organization membership.
-- [x] Add a workflow test covering invite acceptance through unprofiled membership visibility and manager-created specialist assignment.
-- [x] Complete service and category creation/editing, staff eligibility management, and archival controls; a live protected service catalog workspace is implemented.
+- [ ] Complete service and category creation/editing, staff eligibility management, and archival controls; a live protected service catalog workspace is implemented.
 - [x] Add protected category and service creation dialogs with organization-scoped categories, 5–720-minute validation, and safe GEL-to-integer-tetri conversion.
 - [x] Add a protected service archive control that preserves historical appointment and reporting records.
 - [x] Add protected staff-service eligibility management for public booking specialists.
 - [x] Add a protected active-service update mutation that preserves historical records and validates category scope.
 - [x] Expose an accessible active-service editing dialog with integer-tetri price conversion and category reassignment safeguards.
 - [x] Add protected category editing with organization-scoped validation for the active service catalog.
-- [x] Complete client creation, consent editing, booking history, and duplicate merge workflows; a protected searchable active-client CRM workspace is implemented.
+- [ ] Complete client creation, consent editing, booking history, and duplicate merge workflows; a protected searchable active-client CRM workspace is implemented.
 - [x] Add a protected internal client creation dialog with a required booking-terms consent record and normalized contact details.
 - [x] Add a protected client booking-history dialog with organization-scoped appointment and service snapshots.
 - [x] Add immutable, organization-scoped marketing consent history and preference controls in the client workspace.
 - [x] Add a transaction-safe client merge mutation that reassigns organization appointments and preserves a merge audit record.
 - [x] Complete public booking commit flow with client resolution, consent capture, idempotency, server-side slot revalidation, schedule locks, immutable snapshots, and opaque confirmation tokens.
-- [x] Add database-backed public booking commit tests for first submission, idempotent retry, and concurrent duplicate-slot protection after database connectivity is restored.
-- [x] Create the user-authorized isolated live booking fixture and retain a verification record for first commit, idempotent retry, and competing concurrent-slot submissions.
-- [x] Add protected public-booking replay coverage proving a repeated idempotency key returns the prior confirmation without entering a second transaction.
-- [x] Add public availability coverage rejecting specialists that are not both active at the location and eligible for the selected service.
-- [x] Review the live `/book/gldani-beauty` service-selection and no-specialist guidance state at desktop and mobile widths.
-- [x] Prevent malformed invitation URLs from issuing an invalid API preview request, and verify the immediate Georgian unavailable-link state on mobile.
+- [ ] Add database-backed public booking commit tests for first submission, idempotent retry, and concurrent duplicate-slot protection after database connectivity is restored.
 - [x] Wire the public booking commit endpoint into the final client-side confirmation form with service, specialist, time, contact, consent, availability, error, and confirmation states.
-- [x] Add interface tests for public booking specialist filtering, empty eligibility states, availability gating, and successful confirmation rendering.
-- [x] Add public booking router coverage for service-specific specialist eligibility grouping and the unavailable-location availability gate, and review the responsive discovery screen at desktop and mobile widths.
+- [ ] Add interface tests for public booking specialist filtering, empty eligibility states, availability gating, and successful confirmation rendering.
 - [x] Implement public location discovery through non-sequential slugs and a responsive Georgian booking entry route.
 - [x] Build staff-specific and weekly calendar views; the responsive live team day calendar and Today summary are implemented.
 - [x] Wire the Today dashboard to organization-scoped appointment status and outstanding-balance metrics with loading, empty, and failure states.
-- [x] Complete persisted commission-entry and protected expense workflows with integer-tetri payment, balance, and commission-calculation safeguards.
+- [ ] Complete persisted commission-entry and protected expense workflows with integer-tetri payment, balance, and commission-calculation safeguards.
 - [x] Add a protected expense-entry interface with active-location selection and integer-tetri amount conversion.
 - [x] Validate that commission rules apply to the appointment service, specialist, and location before creating entries.
 - [x] Apply the generated unique database constraint for duplicate commission prevention once managed database connectivity is restored; transaction-safe duplicate checks are implemented.
@@ -57,43 +41,16 @@
 - [x] Add workflow-level finance mutation tests for successful, duplicate, invalid-scope, and cross-organization cases.
 - [x] Complete commission analytics and a detailed booking-history table; protected reporting data, revenue metrics, payment-method breakdowns, and injection-safe CSV export are available in the workspace.
 - [x] Add protected commission analytics with period totals and per-specialist paid-versus-accrued commission visibility.
-- [x] Add a protected commission-entry dialog using completed service snapshots and active rule selection, with server-side scope, applicability, and duplicate checks retained.
 - [x] Add a responsive, paginated reporting booking-history table with appointment reference, date/time, status, and integer-tetri total display.
-- [x] Add robust server and interface tests for permissions, availability, payments, historical data, and public booking.
-- [x] Add focused payment-workflow tests for successful recording, invalid scope, refund or status edge cases, and server-side balance effects.
-- [x] Add a protected operations interface test beyond public booking for a core permissions, payments, or historical-data state.
-- [x] Add a protected historical-data interface test for a reporting booking-history table or its empty/error state.
-- [x] Add a protected operational interface test for a non-public empty or error state beyond action-button visibility.
-- [ ] After a verified sender domain and transactional-email API key are available, implement password-reset email delivery and email-verification-code dispatch without exposing recovery tokens to unauthenticated callers.
-- [x] Assess a user-provided Gmail SMTP sender as a temporary password-reset and verification-email delivery option; the user chose not to activate this path and will use a verified custom domain later.
-- [x] Bound un-delivered password-reset records per account so repeated generic recovery requests do not accumulate active unused reset tokens before email dispatch is enabled.
-- [x] Add route-level lazy loading for non-initial SalonFlow screens with an accessible Georgian loading fallback.
-- [x] Compare production bundle output before and after route splitting, then regression-test the main public, local-auth, and protected routes.
-- [x] Clone and review the user-requested nextlevelbuilder/ui-ux-pro-max-skill guidance before applying it to SalonFlow.
-- [x] Assess SalonFlow's current public, authentication, and protected workspace visual hierarchy against the reviewed UI/UX guidance.
-- [x] Implement and validate targeted Georgian-accessible design refinements without changing established booking, authentication, or role workflows.
-- [x] Add a reusable SalonFlow brand mark and a salon-specific booking-rhythm motif across the public header, authentication shell, booking flow, and protected navigation.
-- [x] Strengthen editorial hierarchy and deep-ink brand anchors on the public and booking screens while preserving existing CTA destinations and responsive accessibility.
-- [x] Implement hash-only email-verification code primitives with short expiry, bounded attempts, purpose scoping, and single-use consumption without exposing a code through the browser.
-- [x] Add an isolated opt-in database test for verification-code expiry, attempt limits, purpose isolation, and one-time consumption.
-- [x] Implement a server-side password-reset token lifecycle with random opaque tokens, hash-only persistence, expiry, single use, and reset-request non-enumeration; do not expose usable tokens before secure email delivery exists.
-- [x] Add a Georgian password-recovery interface that confirms requests generically and accepts only a valid token from an eventual email link.
-- [x] Add automated coverage for reset-token hashing, expiry, single-use behavior, non-enumerating requests, and password replacement.
-- [x] Persist a hashed reset-token record with a 30-minute expiry for an existing active password account while returning the same request response for unknown addresses and never returning the raw token through the public API.
-- [x] Exercise token expiry, single-use rejection, and persisted password replacement against the password_reset_tokens table using an isolated opt-in database test fixture.
-- [x] Verify accessibility, responsiveness, error states, and operational workflows through rendered interface review.
-- [x] Complete an authenticated rendered review of first-workspace setup and a core protected operations flow, recording the reached screens and observed states.
-- [x] Verify keyboard navigation, visible focus indicators, and screen-reader status labels across authentication, public booking, and protected workspace flows.
-- [x] Review loading, empty, and error states on the core protected operational screens before closing the rendered-review checklist.
+- [ ] Add robust server and interface tests for permissions, availability, payments, historical data, and public booking.
+- [ ] Verify accessibility, responsiveness, error states, and operational workflows through rendered interface review.
 - [x] Correct the protected workspace loading shell so mobile viewports use a compact header rather than a fixed desktop sidebar.
 - [x] Provide an implementation handoff, configuration checklist, and deployment readiness summary.
 - [x] Build a protected organization-and-first-location setup flow with Georgian validation, IANA timezone defaults, opaque public location slugs, and post-create workspace routing.
 - [x] Add a protected additional-location form with opaque public slug and Asia/Tbilisi defaults for multi-location organizations.
-- [x] Complete one authenticated browser verification of the first-workspace setup flow after database recovery.
-- [x] Apply the remaining schema indexes and complete a live database parity check before closing the initial migration task.
-- [x] Align the protected workspace shell and primary operations views with SalonFlow's warm ink, ivory, terracotta, and jade design system.
-- [x] Apply explicit SalonFlow warm-brand styling to the protected navigation shell, including sidebar, active navigation, profile footer, and mobile top bar.
-- [x] Apply the same visual hierarchy to the first-workspace setup view and re-review the protected workspace at desktop and mobile widths.
-- [x] Render and review a protected operational error state in the browser before closing the full authenticated interface review.
-- [x] Add a development-only Reports error-preview query flag for the protected operational failure-state browser review.
-- [x] Replace staff-invite OAuth handoff actions with Georgian local registration and email-sign-in choices, while retaining invite email-bound acceptance validation.
+- [x] Review the four-step public booking flow for conversion friction, selection clarity, customer trust cues, and mobile continuation visibility.
+- [x] Add decision-ready service and specialist selection cards, a concise trust panel, and a live booking summary without modifying server-side eligibility, availability, or idempotency rules.
+- [x] Validate the enhanced booking flow’s desktop/mobile responsive states, keyboard behavior, and existing public booking tests.
+- [x] Include pure client-side public booking helper tests in the default Vitest suite without requiring a browser runtime.
+- [x] Re-run browser keyboard validation on the updated public booking flow for Tab order, visible focus on service/specialist cards, and the primary continuation CTA.
+- [x] Run and document the synced codebase's existing public booking automated test suite, or restore focused public router coverage for catalog, eligibility, availability, and commit safeguards.

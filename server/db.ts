@@ -1,6 +1,6 @@
-import { and, desc, eq, gt, isNull, lt, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, organizationMemberships, passwordResetTokens, users, verificationCodes } from "../drizzle/schema";
+import { InsertUser, organizationMemberships, users } from "../drizzle/schema";
 import { normalizeEmail } from "./lib/normalization";
 import { ENV } from "./_core/env";
 
@@ -54,108 +54,6 @@ export async function getUserByOpenId(openId: string) {
   if (!db) return undefined;
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
   return result[0];
-}
-
-export async function getUserByNormalizedEmail(email: string) {
-  const normalizedEmail = normalizeEmail(email);
-  if (!normalizedEmail) return undefined;
-  const db = await requireDb();
-  const result = await db.select().from(users).where(eq(users.normalizedEmail, normalizedEmail)).limit(1);
-  return result[0];
-}
-
-export async function createLocalUser(input: {
-  openId: string;
-  name: string;
-  email: string;
-  passwordHash: string;
-}) {
-  const normalizedEmail = normalizeEmail(input.email);
-  if (!normalizedEmail) throw new Error("A valid email address is required");
-  const db = await requireDb();
-  await db.insert(users).values({
-    openId: input.openId,
-    name: input.name,
-    email: input.email.trim(),
-    normalizedEmail,
-    passwordHash: input.passwordHash,
-    loginMethod: "password",
-    role: input.openId === ENV.ownerOpenId ? "admin" : "user",
-    accountStatus: "ACTIVE",
-    lastSignedIn: new Date(),
-  });
-  return getUserByOpenId(input.openId);
-}
-
-export async function createPasswordResetToken(input: { id: string; userId: number; tokenHash: string; expiresAt: Date }) {
-  const db = await requireDb();
-  await db.insert(passwordResetTokens).values(input);
-}
-
-export async function supersedeActivePasswordResetTokens(userId: number, now = new Date()) {
-  const db = await requireDb();
-  await db.update(passwordResetTokens).set({ consumedAt: now }).where(and(
-    eq(passwordResetTokens.userId, userId),
-    isNull(passwordResetTokens.consumedAt),
-  ));
-}
-
-export async function consumePasswordResetAndUpdatePassword(input: { tokenHash: string; passwordHash: string; now?: Date }) {
-  const db = await requireDb();
-  const now = input.now ?? new Date();
-  return db.transaction(async tx => {
-    const [token] = await tx.select().from(passwordResetTokens).where(and(
-      eq(passwordResetTokens.tokenHash, input.tokenHash),
-      isNull(passwordResetTokens.consumedAt),
-      gt(passwordResetTokens.expiresAt, now),
-    )).limit(1);
-    if (!token) return false;
-
-    const [consumed] = await tx.update(passwordResetTokens).set({ consumedAt: now }).where(and(
-      eq(passwordResetTokens.id, token.id),
-      isNull(passwordResetTokens.consumedAt),
-      gt(passwordResetTokens.expiresAt, now),
-    ));
-    if (consumed.affectedRows !== 1) return false;
-    await tx.update(users).set({ passwordHash: input.passwordHash, loginMethod: "password", lastSignedIn: now }).where(eq(users.id, token.userId));
-    return true;
-  });
-}
-
-export async function createVerificationCode(input: { id: string; destination: string; purpose: "PUBLIC_BOOKING" | "EMAIL_VERIFICATION" | "PHONE_VERIFICATION" | "PASSWORD_RESET"; codeHash: string; expiresAt: Date }) {
-  const db = await requireDb();
-  await db.insert(verificationCodes).values(input);
-}
-
-export async function consumeVerificationCode(input: { destination: string; purpose: "PUBLIC_BOOKING" | "EMAIL_VERIFICATION" | "PHONE_VERIFICATION" | "PASSWORD_RESET"; codeHash: string; maxAttempts: number; now?: Date }) {
-  const db = await requireDb();
-  const now = input.now ?? new Date();
-  return db.transaction(async tx => {
-    const [record] = await tx.select().from(verificationCodes).where(and(
-      eq(verificationCodes.destination, input.destination),
-      eq(verificationCodes.purpose, input.purpose),
-      isNull(verificationCodes.consumedAt),
-      gt(verificationCodes.expiresAt, now),
-    )).orderBy(desc(verificationCodes.createdAt)).limit(1);
-    if (!record || record.attemptCount >= input.maxAttempts) return false;
-
-    if (record.codeHash !== input.codeHash) {
-      await tx.update(verificationCodes).set({ attemptCount: sql`${verificationCodes.attemptCount} + 1` }).where(and(
-        eq(verificationCodes.id, record.id),
-        lt(verificationCodes.attemptCount, input.maxAttempts),
-        isNull(verificationCodes.consumedAt),
-      ));
-      return false;
-    }
-
-    const [consumed] = await tx.update(verificationCodes).set({ consumedAt: now }).where(and(
-      eq(verificationCodes.id, record.id),
-      isNull(verificationCodes.consumedAt),
-      lt(verificationCodes.attemptCount, input.maxAttempts),
-      gt(verificationCodes.expiresAt, now),
-    ));
-    return consumed.affectedRows === 1;
-  });
 }
 
 export async function getActiveMembership(userId: number, organizationId: string) {
