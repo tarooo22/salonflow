@@ -278,6 +278,15 @@ export const localLoginSchema = z.object({
   password: z.string().min(1).max(128),
 });
 
+export const passwordResetRequestSchema = z.object({
+  email: z.string().trim().email().max(320),
+});
+
+export const passwordResetSchema = z.object({
+  token: z.string().regex(/^[A-Za-z0-9_-]{32,128}$/),
+  password: z.string().min(12).max(128),
+});
+
 export const reportingRangeSchema = z.object({
   organizationId: opaqueIdSchema,
   startsAt: z.coerce.date(),

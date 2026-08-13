@@ -1,6 +1,6 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, gt, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, organizationMemberships, users } from "../drizzle/schema";
+import { InsertUser, organizationMemberships, passwordResetTokens, users } from "../drizzle/schema";
 import { normalizeEmail } from "./lib/normalization";
 import { ENV } from "./_core/env";
 
@@ -85,6 +85,33 @@ export async function createLocalUser(input: {
     lastSignedIn: new Date(),
   });
   return getUserByOpenId(input.openId);
+}
+
+export async function createPasswordResetToken(input: { id: string; userId: number; tokenHash: string; expiresAt: Date }) {
+  const db = await requireDb();
+  await db.insert(passwordResetTokens).values(input);
+}
+
+export async function consumePasswordResetAndUpdatePassword(input: { tokenHash: string; passwordHash: string; now?: Date }) {
+  const db = await requireDb();
+  const now = input.now ?? new Date();
+  return db.transaction(async tx => {
+    const [token] = await tx.select().from(passwordResetTokens).where(and(
+      eq(passwordResetTokens.tokenHash, input.tokenHash),
+      isNull(passwordResetTokens.consumedAt),
+      gt(passwordResetTokens.expiresAt, now),
+    )).limit(1);
+    if (!token) return false;
+
+    const [consumed] = await tx.update(passwordResetTokens).set({ consumedAt: now }).where(and(
+      eq(passwordResetTokens.id, token.id),
+      isNull(passwordResetTokens.consumedAt),
+      gt(passwordResetTokens.expiresAt, now),
+    ));
+    if (consumed.affectedRows !== 1) return false;
+    await tx.update(users).set({ passwordHash: input.passwordHash, loginMethod: "password", lastSignedIn: now }).where(eq(users.id, token.userId));
+    return true;
+  });
 }
 
 export async function getActiveMembership(userId: number, organizationId: string) {

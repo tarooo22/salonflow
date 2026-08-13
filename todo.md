@@ -65,6 +65,11 @@
 - [x] Add a protected historical-data interface test for a reporting booking-history table or its empty/error state.
 - [x] Add a protected operational interface test for a non-public empty or error state beyond action-button visibility.
 - [ ] After a verified sender domain and transactional-email API key are available, implement password-reset email delivery and email-verification-code dispatch without exposing recovery tokens to unauthenticated callers.
+- [x] Implement a server-side password-reset token lifecycle with random opaque tokens, hash-only persistence, expiry, single use, and reset-request non-enumeration; do not expose usable tokens before secure email delivery exists.
+- [x] Add a Georgian password-recovery interface that confirms requests generically and accepts only a valid token from an eventual email link.
+- [x] Add automated coverage for reset-token hashing, expiry, single-use behavior, non-enumerating requests, and password replacement.
+- [x] Persist a hashed reset-token record with a 30-minute expiry for an existing active password account while returning the same request response for unknown addresses and never returning the raw token through the public API.
+- [x] Exercise token expiry, single-use rejection, and persisted password replacement against the password_reset_tokens table using an isolated opt-in database test fixture.
 - [x] Verify accessibility, responsiveness, error states, and operational workflows through rendered interface review.
 - [x] Complete an authenticated rendered review of first-workspace setup and a core protected operations flow, recording the reached screens and observed states.
 - [x] Verify keyboard navigation, visible focus indicators, and screen-reader status labels across authentication, public booking, and protected workspace flows.

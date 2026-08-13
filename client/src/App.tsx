@@ -17,6 +17,7 @@ import WorkspaceSetup from "./pages/WorkspaceSetup";
 import WorkspacePlaceholder from "./pages/WorkspacePlaceholder";
 import InviteAccept, { getPendingInviteToken } from "./pages/InviteAccept";
 import Auth from "./pages/Auth";
+import PasswordRecovery from "./pages/PasswordRecovery";
 import { useAuth } from "./_core/hooks/useAuth";
 import { useEffect } from "react";
 import { useLocation } from "wouter";
@@ -48,6 +49,8 @@ function Router() {
       <Route path={"/app/setup"} component={WorkspaceSetup} />
       <Route path={"/register"}>{() => <Auth mode="register" />}</Route>
       <Route path={"/login"}>{() => <Auth mode="login" />}</Route>
+      <Route path={"/forgot-password"}>{() => <PasswordRecovery mode="request" />}</Route>
+      <Route path={"/reset-password"}>{() => <PasswordRecovery mode="reset" />}</Route>
       <Route path={"/invite/:token"} component={InviteAccept} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}

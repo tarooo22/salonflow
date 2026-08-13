@@ -1,5 +1,5 @@
 import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
-import { localLoginSchema, localRegistrationSchema } from "@shared/validation";
+import { localLoginSchema, localRegistrationSchema, passwordResetRequestSchema, passwordResetSchema } from "@shared/validation";
 import { TRPCError } from "@trpc/server";
 import { nanoid } from "nanoid";
 import { getSessionCookieOptions } from "../_core/cookies";
@@ -8,6 +8,7 @@ import { publicProcedure, router } from "../_core/trpc";
 import * as db from "../db";
 import { normalizeEmail } from "../lib/normalization";
 import { hashPassword, verifyPassword } from "../lib/passwords";
+import { createPasswordResetToken, hashPasswordResetToken, passwordResetExpiresAt } from "../lib/recoveryTokens";
 
 const INVALID_CREDENTIALS_MESSAGE = "ელფოსტა ან პაროლი არასწორია.";
 
@@ -52,5 +53,30 @@ export const authRouter = router({
     if (!valid || !user) throw new TRPCError({ code: "UNAUTHORIZED", message: INVALID_CREDENTIALS_MESSAGE });
     await issueSession(ctx, user);
     return { id: user.id, name: user.name };
+  }),
+  requestPasswordReset: publicProcedure.input(passwordResetRequestSchema).mutation(async ({ input }) => {
+    // Always perform the normalized lookup, but return the same response for every
+    // address so the endpoint cannot disclose whether an account exists.
+    const user = await db.getUserByNormalizedEmail(input.email);
+    if (user?.accountStatus === "ACTIVE" && user.passwordHash) {
+      const token = createPasswordResetToken();
+      await db.createPasswordResetToken({
+        id: nanoid(21),
+        userId: user.id,
+        tokenHash: hashPasswordResetToken(token),
+        expiresAt: passwordResetExpiresAt(),
+      });
+    }
+    // The raw token is intentionally discarded until a verified transactional-email
+    // sender exists. It must never be returned through this public endpoint.
+    return { accepted: true } as const;
+  }),
+  resetPassword: publicProcedure.input(passwordResetSchema).mutation(async ({ input }) => {
+    const consumed = await db.consumePasswordResetAndUpdatePassword({
+      tokenHash: hashPasswordResetToken(input.token),
+      passwordHash: await hashPassword(input.password),
+    });
+    if (!consumed) throw new TRPCError({ code: "BAD_REQUEST", message: "პაროლის აღდგენის ბმული მიუწვდომელია ან ვადაგასულია." });
+    return { success: true } as const;
   }),
 });
