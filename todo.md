@@ -8,6 +8,7 @@
 - [ ] Implement secure account registration, login, verification-code flows, password reset, invite links, and role-based access.
 - [ ] Diagnose and resolve the reported `api.manus.im` permission-denied error during the Manus OAuth sign-in handoff.
 - [x] Restore the self-service registration entry and prevent an unauthenticated user from being forced directly into the Manus OAuth screen before choosing a sign-in or registration path.
+- [x] Verify and restore the published `/register` route after the current public deployment returned the prior generic 404 screen.
 - [x] Fix the Manus OAuth callback failure so users return to SalonFlow with a valid authenticated session instead of a raw error response.
 - [x] Restore the missing organization workspace tables so authenticated users see the setup state instead of a blank workspace.
 - [x] Implement organization-scoped role checks, normalization safeguards, and the secure Manus OAuth workspace entry point.
