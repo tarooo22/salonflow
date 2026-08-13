@@ -3,7 +3,7 @@ import { nanoid } from "nanoid";
 import { appointments, locations, organizationMemberships, scheduleExceptions, staffLocations, staffProfiles, workingHourRules } from "../../drizzle/schema";
 import { requireOrganizationRole } from "../access";
 import { requireDb } from "../db";
-import { locationScopeSchema, scheduleExceptionCreateSchema, staffPerformanceSchema, staffProfileCreateSchema, staffScheduleListSchema, staffScheduleRecordDeleteSchema, workingHourRuleCreateSchema } from "../../shared/validation";
+import { locationScopeSchema, scheduleExceptionCreateSchema, scheduleExceptionUpdateSchema, staffPerformanceSchema, staffProfileCreateSchema, staffScheduleListSchema, staffScheduleRecordDeleteSchema, workingHourRuleCreateSchema, workingHourRuleUpdateSchema } from "../../shared/validation";
 import { protectedProcedure, router } from "../_core/trpc";
 import { summarizeStaffPerformance } from "../lib/staffPerformance";
 
@@ -67,6 +67,18 @@ export const staffRouter = router({
     return { success: true };
   }),
 
+  updateWorkingHours: protectedProcedure.input(workingHourRuleUpdateSchema).mutation(async ({ ctx, input }) => {
+    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER"]);
+    if (input.startLocalTime >= input.endLocalTime) throw new Error("Working hours must end after they start");
+    const db = await requireDb();
+    const [record] = await db.select({ id: workingHourRules.id }).from(workingHourRules)
+      .innerJoin(staffProfiles, eq(workingHourRules.staffProfileId, staffProfiles.id)).innerJoin(organizationMemberships, eq(staffProfiles.membershipId, organizationMemberships.id)).innerJoin(locations, eq(workingHourRules.locationId, locations.id))
+      .where(and(eq(workingHourRules.id, input.id), eq(workingHourRules.staffProfileId, input.staffProfileId), eq(workingHourRules.locationId, input.locationId), eq(organizationMemberships.organizationId, input.organizationId), eq(locations.organizationId, input.organizationId), eq(organizationMemberships.status, "ACTIVE"), eq(locations.status, "ACTIVE"))).limit(1);
+    if (!record) throw new Error("Working hours are not available in this active organization location");
+    await db.update(workingHourRules).set({ weekday: input.weekday, startLocalTime: input.startLocalTime, endLocalTime: input.endLocalTime }).where(eq(workingHourRules.id, input.id));
+    return { success: true };
+  }),
+
   addScheduleException: protectedProcedure.input(scheduleExceptionCreateSchema).mutation(async ({ ctx, input }) => {
     await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER"]);
     const db = await requireDb();
@@ -103,6 +115,19 @@ export const staffRouter = router({
     const [record] = await db.select({ id: scheduleExceptions.id }).from(scheduleExceptions).where(and(eq(scheduleExceptions.id, input.id), eq(scheduleExceptions.organizationId, input.organizationId))).limit(1);
     if (!record) throw new Error("Schedule exception is not available in this organization");
     await db.delete(scheduleExceptions).where(eq(scheduleExceptions.id, input.id));
+    return { success: true };
+  }),
+
+  updateScheduleException: protectedProcedure.input(scheduleExceptionUpdateSchema).mutation(async ({ ctx, input }) => {
+    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER"]);
+    const db = await requireDb();
+    const [record] = await db.select({ id: scheduleExceptions.id, staffProfileId: scheduleExceptions.staffProfileId, locationId: scheduleExceptions.locationId }).from(scheduleExceptions).where(and(eq(scheduleExceptions.id, input.id), eq(scheduleExceptions.organizationId, input.organizationId))).limit(1);
+    if (!record) throw new Error("Schedule exception is not available in this organization");
+    if (record.staffProfileId !== input.staffProfileId || record.locationId !== input.locationId) throw new Error("Schedule exception staff and location cannot be changed");
+    const [assignment] = await db.select({ staffProfileId: staffLocations.staffProfileId }).from(staffLocations).innerJoin(staffProfiles, eq(staffLocations.staffProfileId, staffProfiles.id)).innerJoin(organizationMemberships, eq(staffProfiles.membershipId, organizationMemberships.id)).innerJoin(locations, eq(staffLocations.locationId, locations.id))
+      .where(and(eq(staffLocations.staffProfileId, input.staffProfileId), eq(staffLocations.locationId, input.locationId), eq(organizationMemberships.organizationId, input.organizationId), eq(organizationMemberships.status, "ACTIVE"), eq(staffProfiles.status, "ACTIVE"), eq(locations.organizationId, input.organizationId), eq(locations.status, "ACTIVE"))).limit(1);
+    if (!assignment) throw new Error("Schedule exception staff profile is not assigned to this active location");
+    await db.update(scheduleExceptions).set({ type: input.type, startsAt: input.startsAt, endsAt: input.endsAt, fullDay: input.fullDay, reason: input.reason, notes: input.notes, approvedByUserId: ctx.user.id }).where(eq(scheduleExceptions.id, input.id));
     return { success: true };
   }),
 

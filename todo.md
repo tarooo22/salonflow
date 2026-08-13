@@ -3,37 +3,37 @@
 - [x] Audit the supplied prototype, screenshots, and handoff specification for reusable UI patterns and production gaps.
 - [x] Confirm the visual direction before implementing product screens.
 - [x] Establish the shared domain vocabulary, permission matrix, appointment transitions, and data integrity rules.
-- [ ] Apply the reviewed initial database migration once managed database connectivity is restored.
+- [x] Apply the reviewed initial database migration once managed database connectivity is restored.
 - [x] Create a multi-location schema for organizations, locations, memberships, roles, permissions, and scoped settings.
-- [ ] Implement secure account registration, login, verification-code flows, password reset, invite links, and role-based access.
+- [ ] Implement secure account registration, login, verification-code flows, password reset, invite links, and role-based access; credential-independent security foundations are complete, while transactional verification delivery remains deferred to M5.
 - [x] Fix the Manus OAuth callback failure so users return to SalonFlow with a valid authenticated session instead of a raw error response.
 - [x] Restore the missing organization workspace tables so authenticated users see the setup state instead of a blank workspace.
 - [x] Implement organization-scoped role checks, normalization safeguards, and the secure Manus OAuth workspace entry point.
-- [ ] Complete staff profile editing, working hours, schedule exceptions, time-off requests, and staff-location assignment management; a live protected team workspace is implemented.
+- [x] Complete staff profile editing, working hours, schedule exceptions, time-off requests, and staff-location assignment management; a live protected team workspace is implemented.
 - [x] Add owner or manager self-profile creation with selected active locations as the first specialist setup step.
 - [x] Add protected weekly working-hours entry for an active staff profile and selected location.
 - [x] Add guarded schedule-exception persistence with active organization staff/location scope validation and time-range checks.
 - [x] Expose a protected staff schedule-exception dialog for time off and operational blocks with active location scope validation.
-- [ ] Complete service and category creation/editing, staff eligibility management, and archival controls; a live protected service catalog workspace is implemented.
+- [x] Complete service and category creation/editing, staff eligibility management, and archival controls; a live protected service catalog workspace is implemented.
 - [x] Add protected category and service creation dialogs with organization-scoped categories, 5–720-minute validation, and safe GEL-to-integer-tetri conversion.
 - [x] Add a protected service archive control that preserves historical appointment and reporting records.
 - [x] Add protected staff-service eligibility management for public booking specialists.
 - [x] Add a protected active-service update mutation that preserves historical records and validates category scope.
 - [x] Expose an accessible active-service editing dialog with integer-tetri price conversion and category reassignment safeguards.
 - [x] Add protected category editing with organization-scoped validation for the active service catalog.
-- [ ] Complete client creation, consent editing, booking history, and duplicate merge workflows; a protected searchable active-client CRM workspace is implemented.
+- [x] Complete client creation, consent editing, booking history, and duplicate merge workflows; a protected searchable active-client CRM workspace is implemented.
 - [x] Add a protected internal client creation dialog with a required booking-terms consent record and normalized contact details.
 - [x] Add a protected client booking-history dialog with organization-scoped appointment and service snapshots.
 - [x] Add immutable, organization-scoped marketing consent history and preference controls in the client workspace.
 - [x] Add a transaction-safe client merge mutation that reassigns organization appointments and preserves a merge audit record.
 - [x] Complete public booking commit flow with client resolution, consent capture, idempotency, server-side slot revalidation, schedule locks, immutable snapshots, and opaque confirmation tokens.
-- [ ] Add database-backed public booking commit tests for first submission, idempotent retry, and concurrent duplicate-slot protection after database connectivity is restored.
+- [x] Add database-backed public booking commit tests for first submission, idempotent retry, and concurrent duplicate-slot protection after database connectivity is restored.
 - [x] Wire the public booking commit endpoint into the final client-side confirmation form with service, specialist, time, contact, consent, availability, error, and confirmation states.
-- [ ] Add interface tests for public booking specialist filtering, empty eligibility states, availability gating, and successful confirmation rendering.
+- [x] Add interface tests for public booking specialist filtering, empty eligibility states, availability gating, and successful confirmation rendering.
 - [x] Implement public location discovery through non-sequential slugs and a responsive Georgian booking entry route.
 - [x] Build staff-specific and weekly calendar views; the responsive live team day calendar and Today summary are implemented.
 - [x] Wire the Today dashboard to organization-scoped appointment status and outstanding-balance metrics with loading, empty, and failure states.
-- [ ] Complete persisted commission-entry and protected expense workflows with integer-tetri payment, balance, and commission-calculation safeguards.
+- [x] Complete persisted commission-entry and protected expense workflows with integer-tetri payment, balance, and commission-calculation safeguards.
 - [x] Add a protected expense-entry interface with active-location selection and integer-tetri amount conversion.
 - [x] Validate that commission rules apply to the appointment service, specialist, and location before creating entries.
 - [x] Apply the generated unique database constraint for duplicate commission prevention once managed database connectivity is restored; transaction-safe duplicate checks are implemented.
@@ -42,7 +42,7 @@
 - [x] Complete commission analytics and a detailed booking-history table; protected reporting data, revenue metrics, payment-method breakdowns, and injection-safe CSV export are available in the workspace.
 - [x] Add protected commission analytics with period totals and per-specialist paid-versus-accrued commission visibility.
 - [x] Add a responsive, paginated reporting booking-history table with appointment reference, date/time, status, and integer-tetri total display.
-- [ ] Add robust server and interface tests for permissions, availability, payments, historical data, and public booking.
+- [x] Add robust server and interface tests for permissions, availability, payments, historical data, and public booking.
 - [ ] Verify accessibility, responsiveness, error states, and operational workflows through rendered interface review.
 - [x] Correct the protected workspace loading shell so mobile viewports use a compact header rather than a fixed desktop sidebar.
 - [x] Provide an implementation handoff, configuration checklist, and deployment readiness summary.
@@ -56,7 +56,7 @@
 - [x] Run and document the synced codebase's existing public booking automated test suite, or restore focused public router coverage for catalog, eligibility, availability, and commit safeguards.
 - [x] Document user-provided MySalon and Visage reference workflows, including public booking, calendar, client, staff, finance, notification, and reporting capabilities.
 - [x] Audit the current SalonFlow implementation against the reference workflow matrix and add a prioritized, code-verifiable completion roadmap.
-- [ ] Complete prioritized production capabilities across booking, calendar, CRM, staff, finance, analytics, and notifications while maintaining Georgian accessibility, role scope, integer-tetri money, and historical-data integrity.
+- [x] Complete currently deliverable prioritized production capabilities across booking, calendar, CRM, staff, finance, and analytics while maintaining Georgian accessibility, role scope, integer-tetri money, and historical-data integrity; verified sender-domain notification delivery remains explicitly deferred in M5.
 - [ ] Perform end-to-end responsive, keyboard, server-safety, and operational validation for each released completion milestone.
 - [x] M1: Replace the date-card calendar with a protected, timezone-aware daily/weekly time grid that has staff resource columns, genuine appointment context, role-scoped quick actions, responsive fallback, and focused server/client tests.
 - [x] M1: Correct Today data to use the active location timezone and current business-day boundaries; add a real appointment queue, permitted status transitions, genuine revenue/balance metrics, loading/error/empty states, and test coverage.
@@ -68,10 +68,16 @@
 - [x] M1 evidence: Capture and assert appointment dashboard and calendar query conditions for locationId plus timezone-derived start/end bounds.
 - [x] M2: Add a protected client-detail workflow with validated editing of existing notes, preferences, and sensitivity fields plus ordered appointment/service history; preserve organization scope and immutable historical service snapshots.
 - [x] M2: Complete staff operations by exposing maintained working-hour and schedule-exception records, role-authorized edit/removal flows, and genuine staff performance signals.
-- [ ] M2 staff hardening: Add role-authorized edit flows for existing working-hour rules and calendar exceptions with active organization/location validation.
-- [ ] M2 staff hardening: Add real staff performance signals (completed appointments, service volume, and booked revenue) with server and UI tests.
+- [x] M2 staff hardening: Add role-authorized edit flows for existing working-hour rules and calendar exceptions with active organization/location validation.
+- [x] M2 exception edit evidence: Revalidate active staff/location assignment on update and prove inactive or cross-scope combinations are rejected by focused router tests.
+- [ ] Cross-workspace accessibility evidence: Add keyboard traversal and visible-focus checks for Today, Calendar, Clients, Staff, and Reports operational actions.
+- [ ] Milestone validation evidence: Record focused responsive, keyboard, server-safety, and operational checks for each released M1–M4 surface; keep sender-dependent M5 separate.
+- [x] M2 staff hardening: Add real staff performance signals (completed appointments, service volume, and booked revenue) with server and UI tests.
+- [x] M2 staff performance evidence: Add router tests for organization/range-scoped performance metrics and UI tests for loading, empty, and populated performance panel states.
+- [x] M2 performance query evidence: Assert `staff.performance` applies organizationId and requested startsAt/endsAt predicates so cross-organization and out-of-range appointments cannot contribute.
 - [x] M3: Enrich public location discovery and booking context with active database-backed categories, opening hours, contact data, and service information without adding fabricated ratings, reviews, VIP labels, promotions, or availability claims.
-- [ ] M3 hardening: Add focused public catalog/router and rendered category-filter tests; document specialist availability hours distinctly until true location opening-hours configuration is introduced.
+- [x] M3 hardening: Add focused public catalog/router and rendered category-filter tests; document specialist availability hours distinctly until true location opening-hours configuration is introduced.
+- [x] M3 category UI evidence: Add rendered `/book` tests for category controls, visible filtered cards, and the empty filtered-results state.
 - [x] M4: Add adjustable report periods and live integer-tetri analytics for revenue trend, service/category mix, staff performance, expense pressure, and protected CSV regression coverage.
 - [x] M4 hardening: Add focused protected CSV export regression coverage for organization scope, selected range, and injection-safe output after analytics changes.
 - [x] M4 evidence: Assert exportCsv appointment query conditions contain requested organization and start/end range bounds.
