@@ -17,8 +17,8 @@ The current production build succeeds and the full automated test suite passes. 
 | Initial workspace | Atomic organization, OWNER membership, and first-location setup with `Asia/Tbilisi` default and opaque public slug | Implemented |
 | Public booking | Service, eligible specialist, availability, contact/consent, idempotent commit, HMAC confirmation token | Implemented |
 | Daily operations | Today dashboard and team day calendar with protected live queries | Implemented |
-| Staff | Active profile list, self-profile creation, active-location working-hours entry, and guarded schedule-exception persistence | Partially implemented |
-| Services | Protected category/service creation, active-service update contract, archive action, and public-booking eligibility management | Partially implemented |
+| Staff | Active profile list, self-profile creation, active-location working-hours entry, and protected schedule-exception controls for time off and calendar blocks | Partially implemented |
+| Services | Protected category/service creation, active-service editing, archive action, and public-booking eligibility management | Partially implemented |
 | Clients | Searchable CRM, consented internal client creation, protected booking history, and immutable marketing-consent management | Partially implemented |
 | Reporting | Revenue summary, payment-method breakdown, injection-safe CSV, paginated booking history, and commission analytics | Partially implemented |
 | Finance | Integer-tetri expense entry UI, expense list, commission safeguards, and commission analytics | Partially implemented |
@@ -33,7 +33,7 @@ The following commands were run successfully on 13 August 2026.
 
 | Command | Result |
 |---|---|
-| `pnpm test` | 12 test files, 33 assertions passing |
+| `pnpm test` | 12 test files, 34 assertions passing |
 | `pnpm check` | TypeScript validation passed with zero errors |
 | `pnpm build` | Production client and server bundle completed successfully |
 | TiDB TCP connectivity check | Unreachable at `gateway03.us-east-1.prod.aws.tidbcloud.com:4000` |
