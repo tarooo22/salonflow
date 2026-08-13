@@ -7,6 +7,16 @@ import { FormEvent, useState } from "react";
 import { Link, useLocation } from "wouter";
 
 type AuthMode = "register" | "login";
+const PENDING_INVITE_STORAGE_KEY = "salonflow.pendingInviteToken";
+
+export function pendingInvitePath(): string | null {
+  try {
+    const token = sessionStorage.getItem(PENDING_INVITE_STORAGE_KEY);
+    return token && /^[A-Za-z0-9_-]{32,128}$/.test(token) ? `/invite/${token}` : null;
+  } catch {
+    return null;
+  }
+}
 
 export default function Auth({ mode }: { mode: AuthMode }) {
   const [, setLocation] = useLocation();
@@ -27,7 +37,7 @@ export default function Auth({ mode }: { mode: AuthMode }) {
       if (isRegister) await register.mutateAsync({ name, email, password });
       else await login.mutateAsync({ email, password });
       await utils.auth.me.invalidate();
-      setLocation("/app/today");
+      setLocation(pendingInvitePath() ?? "/app/today");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "ოპერაცია ვერ დასრულდა.");
     }

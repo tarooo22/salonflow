@@ -5,8 +5,8 @@
 - [x] Establish the shared domain vocabulary, permission matrix, appointment transitions, and data integrity rules.
 - [x] Apply the reviewed initial database migration once managed database connectivity is restored.
 - [x] Create a multi-location schema for organizations, locations, memberships, roles, permissions, and scoped settings.
-- [ ] Implement secure account registration, login, verification-code flows, password reset, invite links, and role-based access.
-- [ ] Diagnose and resolve the reported `api.manus.im` permission-denied error during the Manus OAuth sign-in handoff.
+- [x] Implement secure local account registration, password login, invite links, and organization-scoped role-based access; password reset and verification-code email delivery are tracked separately pending a verified sender domain.
+- [x] Retire the reported `api.manus.im` permission-denied OAuth handoff from the supported user journey at the user's request; local email/password authentication is the required access path.
 - [x] Restore the self-service registration entry and prevent an unauthenticated user from being forced directly into the Manus OAuth screen before choosing a sign-in or registration path.
 - [x] Verify and restore the published `/register` route after the current public deployment returned the prior generic 404 screen.
 - [x] Fix the Manus OAuth callback failure so users return to SalonFlow with a valid authenticated session instead of a raw error response.
@@ -37,7 +37,8 @@
 - [x] Add immutable, organization-scoped marketing consent history and preference controls in the client workspace.
 - [x] Add a transaction-safe client merge mutation that reassigns organization appointments and preserves a merge audit record.
 - [x] Complete public booking commit flow with client resolution, consent capture, idempotency, server-side slot revalidation, schedule locks, immutable snapshots, and opaque confirmation tokens.
-- [ ] Add database-backed public booking commit tests for first submission, idempotent retry, and concurrent duplicate-slot protection after database connectivity is restored.
+- [x] Add database-backed public booking commit tests for first submission, idempotent retry, and concurrent duplicate-slot protection after database connectivity is restored.
+- [x] Create the user-authorized isolated live booking fixture and retain a verification record for first commit, idempotent retry, and competing concurrent-slot submissions.
 - [x] Add protected public-booking replay coverage proving a repeated idempotency key returns the prior confirmation without entering a second transaction.
 - [x] Add public availability coverage rejecting specialists that are not both active at the location and eligible for the selected service.
 - [x] Review the live `/book/gldani-beauty` service-selection and no-specialist guidance state at desktop and mobile widths.
@@ -79,3 +80,4 @@
 - [x] Apply the same visual hierarchy to the first-workspace setup view and re-review the protected workspace at desktop and mobile widths.
 - [x] Render and review a protected operational error state in the browser before closing the full authenticated interface review.
 - [x] Add a development-only Reports error-preview query flag for the protected operational failure-state browser review.
+- [x] Replace staff-invite OAuth handoff actions with Georgian local registration and email-sign-in choices, while retaining invite email-bound acceptance validation.
