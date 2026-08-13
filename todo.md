@@ -83,3 +83,6 @@
 - [x] M4 evidence: Assert exportCsv appointment query conditions contain requested organization and start/end range bounds.
 - [ ] M5: Keep customer notification sending deferred until a verified sender domain and provider credentials are supplied; then implement consent-respecting, provider-backed, idempotent scheduled reminder delivery through Heartbeat rather than in-process timers.
 - [x] Fix the reported Manus registration/login redirect regression: remove any remaining OAuth launcher from public and protected unauthenticated entry points, restore local Georgian `/login` and `/register` choices, and add browser regression coverage.
+- [x] Remove unused client OAuth launcher and unmount the legacy server OAuth callback route so local email/password is the sole supported SalonFlow user authentication journey.
+- [x] Disable legacy OAuth-backed session acceptance in request authentication, remove unused OAuth server modules/config, and prove only local signed sessions are accepted by focused regression tests.
+- [x] Remove non-executable OAuth residue from shared constants/environment configuration and add context-level protected authentication tests for valid local versus legacy-style session cookies.

@@ -6,8 +6,8 @@ import { localLoginSchema, localRegistrationSchema } from "../../shared/validati
 import { users } from "../../drizzle/schema";
 import { createLocalUser, getUserByNormalizedEmail, requireDb } from "../db";
 import { getSessionCookieOptions } from "../_core/cookies";
-import { sdk } from "../_core/sdk";
 import { publicProcedure, router } from "../_core/trpc";
+import { createLocalSessionToken } from "../lib/localSessions";
 import { hashPassword, verifyPassword } from "../lib/passwords";
 
 function safeUser(user: { id: number; openId: string; name: string | null; email: string | null }) {
@@ -15,7 +15,7 @@ function safeUser(user: { id: number; openId: string; name: string | null; email
 }
 
 async function issueSession(ctx: { req: any; res: any }, user: { openId: string; name: string | null }) {
-  const token = await sdk.createSessionToken(user.openId, { name: user.name || "SalonFlow User" });
+  const token = await createLocalSessionToken(user.openId, user.name);
   ctx.res.cookie(COOKIE_NAME, token, { ...getSessionCookieOptions(ctx.req), maxAge: ONE_YEAR_MS });
 }
 

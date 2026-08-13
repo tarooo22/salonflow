@@ -4,7 +4,7 @@ const mocks = vi.hoisted(() => ({
   getUserByNormalizedEmail: vi.fn(),
   createLocalUser: vi.fn(),
   requireDb: vi.fn(),
-  createSessionToken: vi.fn(),
+  createLocalSessionToken: vi.fn(),
   hashPassword: vi.fn(),
   verifyPassword: vi.fn(),
 }));
@@ -14,7 +14,7 @@ vi.mock("../db", () => ({
   createLocalUser: mocks.createLocalUser,
   requireDb: mocks.requireDb,
 }));
-vi.mock("../_core/sdk", () => ({ sdk: { createSessionToken: mocks.createSessionToken } }));
+vi.mock("../lib/localSessions", () => ({ createLocalSessionToken: mocks.createLocalSessionToken }));
 vi.mock("../_core/cookies", () => ({ getSessionCookieOptions: () => ({ httpOnly: true, path: "/", sameSite: "none", secure: false }) }));
 vi.mock("../lib/passwords", () => ({ hashPassword: mocks.hashPassword, verifyPassword: mocks.verifyPassword }));
 
@@ -31,7 +31,7 @@ function context() {
 describe("local auth router", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.createSessionToken.mockResolvedValue("signed-local-session");
+    mocks.createLocalSessionToken.mockResolvedValue("signed-local-session");
   });
 
   it("registers a unique local account and issues the existing signed app session cookie", async () => {
