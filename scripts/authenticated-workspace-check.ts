@@ -8,6 +8,7 @@ const runId = `${Date.now()}${Math.floor(Math.random() * 10_000)}`;
 const email = `validation-${runId}@example.test`;
 const organizationSlug = `validation-${runId}`;
 const publicSlug = `validation-booking-${runId}`;
+let validationOpenId: string | null = null;
 const routes = [
   ["/app/today", "დღეს"],
   ["/app/calendar", "კალენდარი"],
@@ -99,14 +100,25 @@ async function verifyErrorStates(page: Page) {
 
 async function cleanup() {
   const db = await requireDb();
-  const [user] = await db.select().from(users).where(eq(users.normalizedEmail, email)).limit(1);
+  const [user] = validationOpenId
+    ? await db.select().from(users).where(eq(users.openId, validationOpenId)).limit(1)
+    : await db.select().from(users).where(eq(users.normalizedEmail, email)).limit(1);
   const [organization] = await db.select().from(organizations).where(eq(organizations.slug, organizationSlug)).limit(1);
   if (organization) {
     await db.delete(locations).where(eq(locations.organizationId, organization.id));
     await db.delete(organizationMemberships).where(eq(organizationMemberships.organizationId, organization.id));
     await db.delete(organizations).where(eq(organizations.id, organization.id));
   }
-  if (user) await db.delete(users).where(and(eq(users.id, user.id), eq(users.normalizedEmail, email)));
+  if (user) await db.delete(users).where(and(eq(users.id, user.id), eq(users.openId, user.openId)));
+}
+
+async function makeValidationAccountLegacy() {
+  const db = await requireDb();
+  const [user] = await db.select().from(users).where(eq(users.normalizedEmail, email)).limit(1);
+  if (!user) throw new Error("Validation user was not created before legacy-account claim verification.");
+  validationOpenId = user.openId;
+  await db.update(users).set({ email: null, normalizedEmail: null, loginMethod: null }).where(eq(users.id, user.id));
+  return user.openId;
 }
 
 const browser = await chromium.launch({ headless: true });
@@ -136,6 +148,17 @@ try {
   const errorPage = await context.newPage();
   await verifyErrorStates(errorPage);
   await errorPage.close();
+  const legacyOpenId = await makeValidationAccountLegacy();
+  const claimContext = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+  const claimPage = await claimContext.newPage();
+  await claimPage.goto(`${baseUrl}/claim-account`, { waitUntil: "networkidle" });
+  await claimPage.locator("#legacy-open-id").fill(legacyOpenId);
+  await claimPage.locator("#auth-email").fill(email);
+  await claimPage.locator("#auth-password").fill("ValidationPassword!2026");
+  await claimPage.getByRole("button", { name: "ანგარიშის აღდგენა" }).click();
+  await claimPage.waitForURL(`${baseUrl}/app/today`);
+  await claimPage.getByRole("heading", { name: "დღეს", exact: true }).waitFor({ state: "visible" });
+  await claimContext.close();
   console.log("Authenticated workspace validation passed: local onboarding, keyboard focus/traversal, and desktop/mobile rendering are healthy.");
 } finally {
   await browser.close();

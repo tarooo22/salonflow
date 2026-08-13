@@ -26,6 +26,12 @@ export const localLoginSchema = z.object({
   password: z.string().min(1).max(128),
 });
 
+export const legacyLocalAccountClaimSchema = z.object({
+  openId: z.string().trim().regex(/^local_[A-Za-z0-9_-]{12,64}$/),
+  email: z.string().trim().email().max(320),
+  password: z.string().min(10).max(128),
+});
+
 export const organizationCreateSchema = z.object({
   name: z.string().trim().min(2).max(160),
   slug: slugSchema,

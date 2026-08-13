@@ -1,12 +1,13 @@
 import { TRPCError } from "@trpc/server";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { COOKIE_NAME, ONE_YEAR_MS } from "../../shared/const";
-import { localLoginSchema, localRegistrationSchema } from "../../shared/validation";
+import { legacyLocalAccountClaimSchema, localLoginSchema, localRegistrationSchema } from "../../shared/validation";
 import { users } from "../../drizzle/schema";
-import { createLocalUser, getUserByNormalizedEmail, requireDb } from "../db";
+import { createLocalUser, getUserByNormalizedEmail, getUserByOpenId, requireDb } from "../db";
 import { getSessionCookieOptions } from "../_core/cookies";
 import { publicProcedure, router } from "../_core/trpc";
+import { normalizeEmail } from "../lib/normalization";
 import { createLocalSessionToken } from "../lib/localSessions";
 import { hashPassword, verifyPassword } from "../lib/passwords";
 
@@ -38,6 +39,43 @@ export const authRouter = router({
     await db.update(users).set({ lastSignedIn: new Date() }).where(eq(users.id, user.id));
     await issueSession(ctx, user);
     return safeUser(user);
+  }),
+  claimLegacyLocal: publicProcedure.input(legacyLocalAccountClaimSchema).mutation(async ({ ctx, input }) => {
+    const user = await getUserByOpenId(input.openId);
+    const canClaim = Boolean(
+      user
+      && user.openId.startsWith("local_")
+      && user.accountStatus === "ACTIVE"
+      && !user.email
+      && !user.normalizedEmail
+      && !user.loginMethod
+      && user.passwordHash,
+    );
+    const passwordMatches = canClaim && user ? await verifyPassword(input.password, user.passwordHash) : false;
+    if (!passwordMatches || !user) throw new TRPCError({ code: "UNAUTHORIZED", message: "ძველი ანგარიშის დადასტურება ვერ მოხერხდა." });
+
+    const existing = await getUserByNormalizedEmail(input.email);
+    if (existing && existing.id !== user.id) throw new TRPCError({ code: "CONFLICT", message: "ამ ელფოსტით ანგარიში უკვე არსებობს. შედით სისტემაში." });
+    const normalizedEmail = normalizeEmail(input.email);
+    if (!normalizedEmail) throw new TRPCError({ code: "BAD_REQUEST", message: "ელფოსტა არასწორია." });
+
+    const db = await requireDb();
+    const result = await db.update(users).set({
+      email: input.email.trim(),
+      normalizedEmail,
+      loginMethod: "local",
+      lastSignedIn: new Date(),
+    }).where(and(
+      eq(users.id, user.id),
+      eq(users.openId, user.openId),
+      isNull(users.email),
+      isNull(users.normalizedEmail),
+      isNull(users.loginMethod),
+    ));
+    if (result[0].affectedRows !== 1) throw new TRPCError({ code: "CONFLICT", message: "ანგარიშის მონაცემები შეიცვალა. სცადეთ სისტემაში შესვლა." });
+    const claimedUser = { ...user, email: input.email.trim(), normalizedEmail, loginMethod: "local" };
+    await issueSession(ctx, claimedUser);
+    return safeUser(claimedUser);
   }),
   logout: publicProcedure.mutation(({ ctx }) => {
     const cookieOptions = getSessionCookieOptions(ctx.req);

@@ -88,3 +88,4 @@
 - [x] Remove non-executable OAuth residue from shared constants/environment configuration and add context-level protected authentication tests for valid local versus legacy-style session cookies.
 - [x] Fix local session cookie persistence so registration/login establishes an authenticated browser session in development and production, then re-run protected workspace validation.
 - [x] Add rendered browser evidence for user-visible error and recovery states across Today, Calendar, Clients, Staff, Reports, and public booking/discovery surfaces.
+- [x] Diagnose and repair legacy local-account login failures caused by missing normalized email or local-login metadata, without weakening password verification or exposing credentials.

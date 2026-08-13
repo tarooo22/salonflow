@@ -26,6 +26,7 @@ function Router() {
       <Route path={"/book/:slug"} component={BookingFlow} />
       <Route path={"/login"}>{() => <LocalAuth mode="login" />}</Route>
       <Route path={"/register"}>{() => <LocalAuth mode="register" />}</Route>
+      <Route path={"/claim-account"}>{() => <LocalAuth mode="claim" />}</Route>
       <Route path={"/app/today"} component={Today} />
       <Route path={"/app/calendar"} component={Calendar} />
       <Route path={"/app/clients"} component={Clients} />
