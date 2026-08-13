@@ -41,6 +41,14 @@ export default function Staff() {
   const [hoursStart, setHoursStart] = useState("09:00");
   const [hoursEnd, setHoursEnd] = useState("18:00");
   const [hoursError, setHoursError] = useState("");
+  const [exceptionOpen, setExceptionOpen] = useState(false);
+  const [exceptionProfileId, setExceptionProfileId] = useState("");
+  const [exceptionLocationId, setExceptionLocationId] = useState("");
+  const [exceptionType, setExceptionType] = useState<"VACATION" | "SICK_LEAVE" | "CUSTOM_BLOCK">("VACATION");
+  const [exceptionStartsAt, setExceptionStartsAt] = useState("");
+  const [exceptionEndsAt, setExceptionEndsAt] = useState("");
+  const [exceptionReason, setExceptionReason] = useState("");
+  const [exceptionError, setExceptionError] = useState("");
   const createProfile = trpc.staff.createProfile.useMutation({
     onSuccess: async () => {
       await utils.staff.list.invalidate();
@@ -58,6 +66,14 @@ export default function Staff() {
       toast.success("სამუშაო საათები დაემატა.");
     },
     onError: () => setHoursError("სამუშაო საათების დამატება ვერ მოხერხდა. შეამოწმეთ ფილიალი და დრო."),
+  });
+  const addScheduleException = trpc.staff.addScheduleException.useMutation({
+    onSuccess: () => {
+      setExceptionOpen(false);
+      setExceptionError("");
+      toast.success("კალენდრის გამონაკლისი დაემატა.");
+    },
+    onError: () => setExceptionError("გამონაკლისის დამატება ვერ მოხერხდა. შეამოწმეთ ფილიალი, დრო და სპეციალისტის მინიჭება."),
   });
 
   const toggleLocation = (locationId: string) => {
@@ -94,11 +110,26 @@ export default function Staff() {
     setHoursError("");
     addWorkingHours.mutate({ organizationId: organization.id, staffProfileId: hoursProfileId, locationId: hoursLocationId, weekday: Number(hoursWeekday), startLocalTime: hoursStart, endLocalTime: hoursEnd });
   };
+  const submitException = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!organization || !exceptionProfileId || !exceptionLocationId || !exceptionStartsAt || !exceptionEndsAt) {
+      setExceptionError("აირჩიეთ სპეციალისტი, ფილიალი და დროის დიაპაზონი.");
+      return;
+    }
+    const startsAt = new Date(exceptionStartsAt);
+    const endsAt = new Date(exceptionEndsAt);
+    if (Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime()) || startsAt >= endsAt) {
+      setExceptionError("დასრულება დაწყებაზე გვიან უნდა იყოს.");
+      return;
+    }
+    setExceptionError("");
+    addScheduleException.mutate({ organizationId: organization.id, staffProfileId: exceptionProfileId, locationId: exceptionLocationId, type: exceptionType, startsAt, endsAt, fullDay: false, reason: exceptionReason || undefined });
+  };
 
   return (
     <DashboardLayout>
       <div className="mx-auto w-full max-w-7xl space-y-6">
-        <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-sm font-medium text-primary">გუნდის სამუშაო სივრცე</p><h1 className="mt-1 text-3xl font-semibold tracking-tight">გუნდი</h1><p className="mt-2 text-sm text-muted-foreground">სპეციალისტების როლები, საჯარო პროფილები და ფილიალების აქტიური ქსელი.</p></div><div className="flex flex-wrap items-center gap-2"><Badge variant="outline" className="w-fit border-primary/30 bg-primary/5 px-3 py-1 text-primary">{organization?.name ?? "სამუშაო სივრცე"}</Badge>{organization && canManage && !hasOwnProfile ? <Button onClick={() => { setFormError(""); setCreateOpen(true); }}><Plus className="mr-2 h-4 w-4" />ჩემი პროფილის დამატება</Button> : null}</div></header>
+        <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-sm font-medium text-primary">გუნდის სამუშაო სივრცე</p><h1 className="mt-1 text-3xl font-semibold tracking-tight">გუნდი</h1><p className="mt-2 text-sm text-muted-foreground">სპეციალისტების როლები, საჯარო პროფილები და ფილიალების აქტიური ქსელი.</p></div><div className="flex flex-wrap items-center gap-2"><Badge variant="outline" className="w-fit border-primary/30 bg-primary/5 px-3 py-1 text-primary">{organization?.name ?? "სამუშაო სივრცე"}</Badge>{organization && canManage && staff.data?.length ? <Button variant="outline" onClick={() => { setExceptionError(""); setExceptionOpen(true); }}>კალენდრის ბლოკი</Button> : null}{organization && canManage && !hasOwnProfile ? <Button onClick={() => { setFormError(""); setCreateOpen(true); }}><Plus className="mr-2 h-4 w-4" />ჩემი პროფილის დამატება</Button> : null}</div></header>
         {organizations.isLoading ? <StateCard text="გუნდის სამუშაო სივრცე იტვირთება…" /> : null}
         {organizations.isError ? <StateCard text="სამუშაო სივრცის მონაცემები დროებით მიუწვდომელია." error /> : null}
         {!organizations.isLoading && !organizations.isError && !organization ? <StateCard text="გუნდის გვერდის სანახავად ჯერ შექმენით სამუშაო სივრცე." /> : null}
@@ -106,6 +137,7 @@ export default function Staff() {
       </div>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}><DialogContent><DialogHeader><DialogTitle>ჩემი სპეციალისტის პროფილი</DialogTitle><DialogDescription>პროფილი უკავშირდება თქვენს მიმდინარე წევრობას. დამატებითი თანამშრომლებისთვის ჯერ საჭიროა მათი მოწვევა და აქტიური წევრობის შექმნა.</DialogDescription></DialogHeader><form onSubmit={submit} className="space-y-4"><div className="space-y-2"><Label htmlFor="staff-display-name">საჯარო სახელი</Label><Input id="staff-display-name" value={displayName} onChange={event => setDisplayName(event.target.value)} placeholder="მაგ. ლელა ბერიძე" minLength={2} maxLength={160} required /></div><div className="space-y-2"><Label htmlFor="staff-title">როლი ან სპეციალიზაცია <span className="text-muted-foreground">(არასავალდებულო)</span></Label><Input id="staff-title" value={jobTitle} onChange={event => setJobTitle(event.target.value)} placeholder="მაგ. თმის სტილისტი" maxLength={160} /></div><fieldset className="space-y-2"><legend className="text-sm font-medium">ფილიალები</legend>{locations.isLoading ? <p className="text-sm text-muted-foreground">ფილიალები იტვირთება…</p> : null}{!locations.isLoading && !locations.data?.length ? <p className="rounded-xl border border-dashed p-3 text-sm text-muted-foreground">პროფილის დამატებამდე საჭიროა მინიმუმ ერთი აქტიური ფილიალი.</p> : null}{locations.data?.map(location => <label key={location.id} className="flex cursor-pointer items-center gap-3 rounded-xl border p-3 text-sm"><input type="checkbox" checked={selectedLocationIds.includes(location.id)} onChange={() => toggleLocation(location.id)} className="h-4 w-4 accent-primary" /><span>{location.name}</span></label>)}</fieldset>{formError ? <p className="text-sm text-destructive">{formError}</p> : null}{createProfile.error ? <p className="text-sm text-destructive">პროფილის დამატება ვერ მოხერხდა. სცადეთ ხელახლა.</p> : null}<DialogFooter><Button type="submit" disabled={createProfile.isPending || !locations.data?.length}>{createProfile.isPending ? "ინახება…" : "პროფილის შენახვა"}</Button></DialogFooter></form></DialogContent></Dialog>
+      <Dialog open={exceptionOpen} onOpenChange={setExceptionOpen}><DialogContent><DialogHeader><DialogTitle>კალენდრის გამონაკლისი</DialogTitle><DialogDescription>ჩაწერეთ შვებულება, ავადმყოფობა ან კონკრეტული სამუშაო ბლოკი მხოლოდ იმ ფილიალისთვის, სადაც სპეციალისტი აქტიურად არის მინიჭებული.</DialogDescription></DialogHeader><form onSubmit={submitException} className="space-y-4"><div className="grid gap-4 sm:grid-cols-2"><div className="space-y-2"><Label htmlFor="exception-staff">სპეციალისტი</Label><Select value={exceptionProfileId} onValueChange={setExceptionProfileId}><SelectTrigger id="exception-staff"><SelectValue placeholder="აირჩიეთ სპეციალისტი" /></SelectTrigger><SelectContent>{staff.data?.map(item => <SelectItem key={item.profile.id} value={item.profile.id}>{item.profile.publicDisplayName}</SelectItem>)}</SelectContent></Select></div><div className="space-y-2"><Label htmlFor="exception-location">ფილიალი</Label><Select value={exceptionLocationId} onValueChange={setExceptionLocationId}><SelectTrigger id="exception-location"><SelectValue placeholder="აირჩიეთ ფილიალი" /></SelectTrigger><SelectContent>{locations.data?.map(location => <SelectItem key={location.id} value={location.id}>{location.name}</SelectItem>)}</SelectContent></Select></div></div><div className="space-y-2"><Label htmlFor="exception-type">ტიპი</Label><Select value={exceptionType} onValueChange={value => setExceptionType(value as "VACATION" | "SICK_LEAVE" | "CUSTOM_BLOCK")}><SelectTrigger id="exception-type"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="VACATION">შვებულება</SelectItem><SelectItem value="SICK_LEAVE">ავადმყოფობა</SelectItem><SelectItem value="CUSTOM_BLOCK">ინდივიდუალური ბლოკი</SelectItem></SelectContent></Select></div><div className="grid gap-4 sm:grid-cols-2"><div className="space-y-2"><Label htmlFor="exception-start">დაწყება</Label><Input id="exception-start" type="datetime-local" value={exceptionStartsAt} onChange={event => setExceptionStartsAt(event.target.value)} required /></div><div className="space-y-2"><Label htmlFor="exception-end">დასრულება</Label><Input id="exception-end" type="datetime-local" value={exceptionEndsAt} onChange={event => setExceptionEndsAt(event.target.value)} required /></div></div><div className="space-y-2"><Label htmlFor="exception-reason">მიზეზი <span className="text-muted-foreground">(არასავალდებულო)</span></Label><Input id="exception-reason" value={exceptionReason} onChange={event => setExceptionReason(event.target.value)} maxLength={255} /></div>{exceptionError ? <p className="text-sm text-destructive">{exceptionError}</p> : null}<DialogFooter><Button type="submit" disabled={addScheduleException.isPending}>{addScheduleException.isPending ? "ინახება…" : "გამონაკლისის შენახვა"}</Button></DialogFooter></form></DialogContent></Dialog>
       <Dialog open={hoursOpen} onOpenChange={setHoursOpen}><DialogContent><DialogHeader><DialogTitle>სამუშაო საათების დამატება</DialogTitle><DialogDescription>საათები დაემატება მხოლოდ იმ აქტიური ფილიალისთვის, სადაც სპეციალისტი უკვე არის მინიჭებული.</DialogDescription></DialogHeader><form onSubmit={submitWorkingHours} className="space-y-4"><div className="space-y-2"><Label htmlFor="hours-location">ფილიალი</Label><Select value={hoursLocationId} onValueChange={setHoursLocationId}><SelectTrigger id="hours-location"><SelectValue placeholder="აირჩიეთ ფილიალი" /></SelectTrigger><SelectContent>{locations.data?.map(location => <SelectItem key={location.id} value={location.id}>{location.name}</SelectItem>)}</SelectContent></Select></div><div className="space-y-2"><Label htmlFor="hours-weekday">დღე</Label><Select value={hoursWeekday} onValueChange={setHoursWeekday}><SelectTrigger id="hours-weekday"><SelectValue /></SelectTrigger><SelectContent>{Object.entries(weekdayLabel).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent></Select></div><div className="grid gap-4 sm:grid-cols-2"><div className="space-y-2"><Label htmlFor="hours-start">დაწყება</Label><Input id="hours-start" type="time" value={hoursStart} onChange={event => setHoursStart(event.target.value)} required /></div><div className="space-y-2"><Label htmlFor="hours-end">დასრულება</Label><Input id="hours-end" type="time" value={hoursEnd} onChange={event => setHoursEnd(event.target.value)} required /></div></div>{hoursError ? <p className="text-sm text-destructive">{hoursError}</p> : null}<DialogFooter><Button type="submit" disabled={addWorkingHours.isPending}>{addWorkingHours.isPending ? "ინახება…" : "საათების შენახვა"}</Button></DialogFooter></form></DialogContent></Dialog>
     </DashboardLayout>
   );

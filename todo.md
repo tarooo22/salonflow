@@ -11,6 +11,7 @@
 - [x] Add owner or manager self-profile creation with selected active locations as the first specialist setup step.
 - [x] Add protected weekly working-hours entry for an active staff profile and selected location.
 - [x] Add guarded schedule-exception persistence with active organization staff/location scope validation and time-range checks.
+- [x] Expose a protected staff schedule-exception dialog for time off and operational blocks with active location scope validation.
 - [ ] Complete service and category creation/editing, staff eligibility management, and archival controls; a live protected service catalog workspace is implemented.
 - [x] Add protected category and service creation dialogs with organization-scoped categories, 5–720-minute validation, and safe GEL-to-integer-tetri conversion.
 - [x] Add a protected service archive control that preserves historical appointment and reporting records.
