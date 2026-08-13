@@ -19,7 +19,6 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { startLogin } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
 import { BarChart3, CalendarDays, LayoutDashboard, LogOut, PanelLeft, Scissors, Users } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
@@ -73,7 +72,7 @@ export default function DashboardLayout({
             </p>
           </div>
           <Button
-            onClick={() => startLogin()}
+            onClick={() => { window.location.assign(`/login?returnTo=${encodeURIComponent(window.location.pathname)}`); }}
             size="lg"
             className="w-full shadow-lg hover:shadow-xl transition-all"
           >

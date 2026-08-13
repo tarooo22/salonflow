@@ -82,3 +82,4 @@
 - [x] M4 hardening: Add focused protected CSV export regression coverage for organization scope, selected range, and injection-safe output after analytics changes.
 - [x] M4 evidence: Assert exportCsv appointment query conditions contain requested organization and start/end range bounds.
 - [ ] M5: Keep customer notification sending deferred until a verified sender domain and provider credentials are supplied; then implement consent-respecting, provider-backed, idempotent scheduled reminder delivery through Heartbeat rather than in-process timers.
+- [x] Fix the reported Manus registration/login redirect regression: remove any remaining OAuth launcher from public and protected unauthenticated entry points, restore local Georgian `/login` and `/register` choices, and add browser regression coverage.

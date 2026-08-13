@@ -15,6 +15,7 @@ import Clients from "./pages/Clients";
 import Today from "./pages/Today";
 import WorkspaceSetup from "./pages/WorkspaceSetup";
 import WorkspacePlaceholder from "./pages/WorkspacePlaceholder";
+import LocalAuth from "./pages/LocalAuth";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -23,6 +24,8 @@ function Router() {
       <Route path={"/"} component={Home} />
       <Route path={"/book"} component={Book} />
       <Route path={"/book/:slug"} component={BookingFlow} />
+      <Route path={"/login"}>{() => <LocalAuth mode="login" />}</Route>
+      <Route path={"/register"}>{() => <LocalAuth mode="register" />}</Route>
       <Route path={"/app/today"} component={Today} />
       <Route path={"/app/calendar"} component={Calendar} />
       <Route path={"/app/clients"} component={Clients} />

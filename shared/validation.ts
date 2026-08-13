@@ -15,6 +15,17 @@ export const paginationSchema = z.object({
   offset: z.number().int().min(0).default(0),
 });
 
+export const localRegistrationSchema = z.object({
+  name: z.string().trim().min(2).max(160),
+  email: z.string().trim().email().max(320),
+  password: z.string().min(10).max(128),
+});
+
+export const localLoginSchema = z.object({
+  email: z.string().trim().email().max(320),
+  password: z.string().min(1).max(128),
+});
+
 export const organizationCreateSchema = z.object({
   name: z.string().trim().min(2).max(160),
   slug: slugSchema,
