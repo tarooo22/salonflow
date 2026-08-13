@@ -5,22 +5,28 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
-import Book from "./pages/Book";
-import BookingFlow from "./pages/BookingFlow";
-import Calendar from "./pages/Calendar";
-import Reports from "./pages/Reports";
-import Staff from "./pages/Staff";
-import Services from "./pages/Services";
-import Clients from "./pages/Clients";
-import Today from "./pages/Today";
-import WorkspaceSetup from "./pages/WorkspaceSetup";
-import WorkspacePlaceholder from "./pages/WorkspacePlaceholder";
-import InviteAccept, { getPendingInviteToken } from "./pages/InviteAccept";
-import Auth from "./pages/Auth";
-import PasswordRecovery from "./pages/PasswordRecovery";
+import { getPendingInviteToken } from "./lib/pendingInvite";
 import { useAuth } from "./_core/hooks/useAuth";
-import { useEffect } from "react";
+import React, { lazy, Suspense, useEffect } from "react";
 import { useLocation } from "wouter";
+import { Loader2 } from "lucide-react";
+
+const Book = lazy(() => import("./pages/Book"));
+const BookingFlow = lazy(() => import("./pages/BookingFlow"));
+const Calendar = lazy(() => import("./pages/Calendar"));
+const Reports = lazy(() => import("./pages/Reports"));
+const Staff = lazy(() => import("./pages/Staff"));
+const Services = lazy(() => import("./pages/Services"));
+const Clients = lazy(() => import("./pages/Clients"));
+const Today = lazy(() => import("./pages/Today"));
+const WorkspaceSetup = lazy(() => import("./pages/WorkspaceSetup"));
+const InviteAccept = lazy(() => import("./pages/InviteAccept"));
+const Auth = lazy(() => import("./pages/Auth"));
+const PasswordRecovery = lazy(() => import("./pages/PasswordRecovery"));
+
+export function RouteLoadingFallback() {
+  return <main className="flex min-h-screen items-center justify-center bg-[#F7F4EF] px-6" role="status" aria-live="polite" aria-busy="true"><div className="flex items-center gap-3 rounded-2xl border border-[#1E2824]/10 bg-white px-5 py-4 text-sm font-medium text-[#1E2824] shadow-lg shadow-[#1E2824]/5"><Loader2 className="h-5 w-5 animate-spin text-[#B85C3D]" aria-hidden="true" />SalonFlow იტვირთება…</div></main>;
+}
 
 function PendingInviteRedirect() {
   const { isAuthenticated, loading } = useAuth();
@@ -36,6 +42,7 @@ function PendingInviteRedirect() {
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
+    <Suspense fallback={<RouteLoadingFallback />}>
     <Switch>
       <Route path={"/"} component={Home} />
       <Route path={"/book"} component={Book} />
@@ -56,6 +63,7 @@ function Router() {
       {/* Final fallback route */}
       <Route component={NotFound} />
     </Switch>
+    </Suspense>
   );
 }
 

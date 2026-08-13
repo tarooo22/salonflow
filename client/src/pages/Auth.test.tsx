@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from "vitest";
-import { pendingInvitePath } from "./Auth";
+import { pendingInvitePath } from "@/lib/pendingInvite";
 
 const pendingInviteStorageKey = "salonflow.pendingInviteToken";
 
