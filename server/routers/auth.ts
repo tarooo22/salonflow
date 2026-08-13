@@ -60,6 +60,7 @@ export const authRouter = router({
     const user = await db.getUserByNormalizedEmail(input.email);
     if (user?.accountStatus === "ACTIVE" && user.passwordHash) {
       const token = createPasswordResetToken();
+      await db.supersedeActivePasswordResetTokens(user.id);
       await db.createPasswordResetToken({
         id: nanoid(21),
         userId: user.id,

@@ -5,6 +5,7 @@ const mocked = vi.hoisted(() => ({
   getUserByNormalizedEmail: vi.fn(),
   createLocalUser: vi.fn(),
   createPasswordResetToken: vi.fn(),
+  supersedeActivePasswordResetTokens: vi.fn(),
   consumePasswordResetAndUpdatePassword: vi.fn(),
   createSessionToken: vi.fn(),
   verifyPassword: vi.fn(),
@@ -19,6 +20,7 @@ vi.mock("../db", () => ({
   getUserByNormalizedEmail: mocked.getUserByNormalizedEmail,
   createLocalUser: mocked.createLocalUser,
   createPasswordResetToken: mocked.createPasswordResetToken,
+  supersedeActivePasswordResetTokens: mocked.supersedeActivePasswordResetTokens,
   consumePasswordResetAndUpdatePassword: mocked.consumePasswordResetAndUpdatePassword,
 }));
 vi.mock("../_core/sdk", () => ({ sdk: { createSessionToken: mocked.createSessionToken } }));
@@ -98,6 +100,7 @@ describe("local auth", () => {
       tokenHash: "stored-reset-token-hash",
       expiresAt: new Date("2026-08-13T12:30:00.000Z"),
     });
+    expect(mocked.supersedeActivePasswordResetTokens).toHaveBeenCalledWith(localUser.id);
   });
 
   it("hashes the supplied reset token and replaces the password only when it is active", async () => {

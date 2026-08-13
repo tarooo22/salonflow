@@ -92,6 +92,14 @@ export async function createPasswordResetToken(input: { id: string; userId: numb
   await db.insert(passwordResetTokens).values(input);
 }
 
+export async function supersedeActivePasswordResetTokens(userId: number, now = new Date()) {
+  const db = await requireDb();
+  await db.update(passwordResetTokens).set({ consumedAt: now }).where(and(
+    eq(passwordResetTokens.userId, userId),
+    isNull(passwordResetTokens.consumedAt),
+  ));
+}
+
 export async function consumePasswordResetAndUpdatePassword(input: { tokenHash: string; passwordHash: string; now?: Date }) {
   const db = await requireDb();
   const now = input.now ?? new Date();

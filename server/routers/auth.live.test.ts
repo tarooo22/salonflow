@@ -41,15 +41,19 @@ describeLive("password recovery live database verification", () => {
   it("persists only a hash for an existing account and keeps the public response generic", async () => {
     const caller = authRouter.createCaller({} as never);
     const existing = await caller.requestPasswordReset({ email: fixtureEmail });
+    const repeated = await caller.requestPasswordReset({ email: fixtureEmail });
     const unknown = await caller.requestPasswordReset({ email: `unknown.${suffix}@salonflow.invalid` });
     const db = await requireDb();
     const rows = await db.select().from(passwordResetTokens).where(eq(passwordResetTokens.userId, fixtureUserId));
 
     expect(existing).toEqual({ accepted: true });
+    expect(repeated).toEqual({ accepted: true });
     expect(unknown).toEqual({ accepted: true });
-    expect(rows).toHaveLength(1);
-    expect(rows[0]?.tokenHash).toMatch(/^[a-f0-9]{64}$/);
-    expect(rows[0]?.expiresAt.getTime()).toBeGreaterThan(Date.now());
+    expect(rows).toHaveLength(2);
+    expect(rows.filter(row => row.consumedAt === null)).toHaveLength(1);
+    expect(rows.filter(row => row.consumedAt !== null)).toHaveLength(1);
+    expect(rows.every(row => /^[a-f0-9]{64}$/.test(row.tokenHash))).toBe(true);
+    expect(rows.every(row => row.expiresAt.getTime() > Date.now())).toBe(true);
   });
 
   it("consumes an active token exactly once, persists the replacement password, and rejects expiry", async () => {
