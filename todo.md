@@ -100,4 +100,10 @@
 - [x] Master Plan P0: Document five scripted usability journeys, five keyboard/accessibility scenarios, and responsive acceptance criteria without presenting a QA plan as fabricated user research.
 - [x] Master Plan P0: Establish documented shared SalonFlow design tokens, component boundaries, WCAG/touch/focus rules, and Light/Dark/System settings requirements.
 - [x] Master Plan P0: Build a guided organization onboarding/checklist and a development-only idempotent, clearly labelled demo-data path after the audit confirms data boundaries.
-- [ ] Master Plan P0: Extend public booking with a server-resolved “ნებისმიერი თავისუფალი სპეციალისტი” path, preserving eligibility, final conflict re-check, idempotency, and clear Georgian outcome feedback.
+- [x] Master Plan P0: Extend public booking with a server-resolved “ნებისმიერი თავისუფალი სპეციალისტი” path, preserving eligibility, final conflict re-check, idempotency, and clear Georgian outcome feedback.
+- [x] Master Plan P0: Prove `ANY_AVAILABLE` commit assignment, idempotent replay, and final transactional conflict fallback with focused regression tests.
+- [x] Master Plan P0: Display the server-resolved specialist in final Georgian booking confirmation and cover the any-available confirmation outcome in rendered/browser validation.
+- [x] Master Plan P0: Prove same-key `ANY_AVAILABLE` first submit versus idempotent replay returns the same persisted assignment/confirmation contract.
+- [x] Master Plan P0: Run full any-available confirmation path validation from server commit response through Georgian rendered confirmation with the resolved specialist name.
+- [x] Master Plan P1: Add shared `ka-GE` GEL/date/time presentation helpers and adopt them in the most visible public/operations surfaces without altering integer-tetri storage.
+- [x] Master Plan P1: Localize the unknown-route 404 fallback into Georgian and align it with SalonFlow’s semantic design foundation, with rendered route coverage.

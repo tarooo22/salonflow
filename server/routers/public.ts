@@ -101,6 +101,29 @@ export const publicRouter = router({
     )).limit(1);
     if (!service) return { available: false, reason: "SERVICE_UNAVAILABLE" as const };
 
+    if (input.staffProfileId === "ANY_AVAILABLE") {
+      const candidates = await db.select({ id: staffProfiles.id, name: staffProfiles.publicDisplayName, durationOverrideMinutes: staffServices.durationOverrideMinutes }).from(staffProfiles)
+        .innerJoin(staffLocations, eq(staffProfiles.id, staffLocations.staffProfileId))
+        .innerJoin(staffServices, eq(staffProfiles.id, staffServices.staffProfileId))
+        .where(and(eq(staffLocations.locationId, location.id), eq(staffServices.serviceId, service.id), eq(staffServices.canPerform, true), eq(staffProfiles.status, "ACTIVE"), eq(staffProfiles.onlineBookingVisible, true)))
+        .orderBy(asc(staffProfiles.sortOrder));
+      if (!candidates.length) return { available: false, reason: "STAFF_UNAVAILABLE" as const };
+      const now = new Date();
+      const minimumStart = new Date(now.getTime() + location.minimumNoticeMinutes * 60_000);
+      const maximumStart = new Date(now.getTime() + location.maximumAdvanceDays * 86_400_000);
+      if (input.startsAt < minimumStart || input.startsAt > maximumStart) return { available: false, reason: "OUTSIDE_BOOKING_WINDOW" as const };
+      for (const candidate of candidates) {
+        const durationMinutes = candidate.durationOverrideMinutes ?? service.defaultDurationMinutes;
+        const endsAt = new Date(input.startsAt.getTime() + durationMinutes * 60_000);
+        const protectedStart = new Date(input.startsAt.getTime() - service.bufferBeforeMinutes * 60_000);
+        const protectedEnd = new Date(endsAt.getTime() + service.bufferAfterMinutes * 60_000);
+        const existing = await db.select().from(appointments).where(and(eq(appointments.staffProfileId, candidate.id), eq(appointments.locationId, location.id)));
+        const conflict = existing.some(appointment => appointmentBlocksInterval(appointment.status) && intervalsOverlap(protectedStart, protectedEnd, new Date(appointment.startsAt.getTime() - appointment.bufferBeforeMinutes * 60_000), new Date(appointment.endsAt.getTime() + appointment.bufferAfterMinutes * 60_000)));
+        if (!conflict) return { available: true, startsAt: input.startsAt, endsAt, staffProfileId: candidate.id, staffName: candidate.name };
+      }
+      return { available: false, reason: "SLOT_UNAVAILABLE" as const };
+    }
+
     const [staffAtLocation] = await db.select().from(staffLocations).where(and(
       eq(staffLocations.staffProfileId, input.staffProfileId),
       eq(staffLocations.locationId, location.id),
@@ -149,7 +172,12 @@ export const publicRouter = router({
 
     const [previousAttempt] = await db.select({ id: appointments.id }).from(appointments)
       .where(eq(appointments.idempotencyKey, input.idempotencyKey)).limit(1);
-    if (previousAttempt) return { confirmed: true, replayed: true, confirmationToken: confirmationTokenForAppointment(previousAttempt.id) };
+    if (previousAttempt) {
+      const [assignment] = await db.select({ name: staffProfiles.publicDisplayName }).from(appointments)
+        .innerJoin(staffProfiles, eq(appointments.staffProfileId, staffProfiles.id))
+        .where(eq(appointments.id, previousAttempt.id)).limit(1);
+      return { confirmed: true, replayed: true, confirmationToken: confirmationTokenForAppointment(previousAttempt.id), assignedStaffName: assignment?.name };
+    }
 
     const [location] = await db.select().from(locations).where(and(
       eq(locations.publicSlug, input.slug),
@@ -166,60 +194,46 @@ export const publicRouter = router({
     )).limit(1);
     if (!service) throw new Error("This service is unavailable for online booking");
 
-    const [staff] = await db.select().from(staffProfiles).where(and(
-      eq(staffProfiles.id, input.staffProfileId),
-      eq(staffProfiles.status, "ACTIVE"),
-      eq(staffProfiles.onlineBookingVisible, true),
-    )).limit(1);
-    const [staffAtLocation] = await db.select().from(staffLocations).where(and(
-      eq(staffLocations.staffProfileId, input.staffProfileId),
-      eq(staffLocations.locationId, location.id),
-    )).limit(1);
-    const [eligibility] = await db.select().from(staffServices).where(and(
-      eq(staffServices.staffProfileId, input.staffProfileId),
-      eq(staffServices.serviceId, service.id),
-      eq(staffServices.canPerform, true),
-    )).limit(1);
-    if (!staff || !staffAtLocation || !eligibility) throw new Error("This specialist is unavailable for the selected service");
+    const candidates = input.staffProfileId === "ANY_AVAILABLE"
+      ? await db.select({ id: staffProfiles.id, name: staffProfiles.publicDisplayName, durationOverrideMinutes: staffServices.durationOverrideMinutes }).from(staffProfiles)
+        .innerJoin(staffLocations, eq(staffProfiles.id, staffLocations.staffProfileId))
+        .innerJoin(staffServices, eq(staffProfiles.id, staffServices.staffProfileId))
+        .where(and(eq(staffLocations.locationId, location.id), eq(staffServices.serviceId, service.id), eq(staffServices.canPerform, true), eq(staffProfiles.status, "ACTIVE"), eq(staffProfiles.onlineBookingVisible, true)))
+        .orderBy(asc(staffProfiles.sortOrder))
+      : await (async () => {
+        const [staff] = await db.select().from(staffProfiles).where(and(eq(staffProfiles.id, input.staffProfileId), eq(staffProfiles.status, "ACTIVE"), eq(staffProfiles.onlineBookingVisible, true))).limit(1);
+        const [staffAtLocation] = await db.select().from(staffLocations).where(and(eq(staffLocations.staffProfileId, input.staffProfileId), eq(staffLocations.locationId, location.id))).limit(1);
+        const [eligibility] = await db.select().from(staffServices).where(and(eq(staffServices.staffProfileId, input.staffProfileId), eq(staffServices.serviceId, service.id), eq(staffServices.canPerform, true))).limit(1);
+        return staff && staffAtLocation && eligibility ? [{ id: staff.id, name: staff.publicDisplayName, durationOverrideMinutes: eligibility.durationOverrideMinutes }] : [];
+      })();
+    if (!candidates.length) throw new Error("This specialist is unavailable for the selected service");
 
     const now = new Date();
     const minimumStart = new Date(now.getTime() + location.minimumNoticeMinutes * 60_000);
     const maximumStart = new Date(now.getTime() + location.maximumAdvanceDays * 86_400_000);
     if (input.startsAt < minimumStart || input.startsAt > maximumStart) throw new Error("The selected time falls outside the booking window");
 
-    const durationMinutes = eligibility.durationOverrideMinutes ?? service.defaultDurationMinutes;
-    const endsAt = new Date(input.startsAt.getTime() + durationMinutes * 60_000);
-    const protectedStart = new Date(input.startsAt.getTime() - service.bufferBeforeMinutes * 60_000);
-    const protectedEnd = new Date(endsAt.getTime() + service.bufferAfterMinutes * 60_000);
     const appointmentId = nanoid(21);
     const confirmationToken = confirmationTokenForAppointment(appointmentId);
     const tokenHash = publicTokenHash(confirmationToken);
 
+    let assigned: { id: string; name: string; durationMinutes: number; endsAt: Date } | undefined;
     await db.transaction(async tx => {
       const [existingIdempotency] = await tx.select({ id: appointments.id }).from(appointments)
         .where(eq(appointments.idempotencyKey, input.idempotencyKey)).limit(1);
       if (existingIdempotency) return;
 
-      for (const dateKey of enumerateUtcDates(protectedStart, protectedEnd)) {
-        await tx.insert(scheduleLocks).values({
-          id: `${staff.id}:${dateKey}`,
-          staffProfileId: staff.id,
-          localDate: new Date(`${dateKey}T00:00:00.000Z`),
-        }).onDuplicateKeyUpdate({ set: { createdAt: new Date() } });
+      for (const candidate of candidates) {
+        const durationMinutes = candidate.durationOverrideMinutes ?? service.defaultDurationMinutes;
+        const endsAt = new Date(input.startsAt.getTime() + durationMinutes * 60_000);
+        const protectedStart = new Date(input.startsAt.getTime() - service.bufferBeforeMinutes * 60_000);
+        const protectedEnd = new Date(endsAt.getTime() + service.bufferAfterMinutes * 60_000);
+        for (const dateKey of enumerateUtcDates(protectedStart, protectedEnd)) await tx.insert(scheduleLocks).values({ id: `${candidate.id}:${dateKey}`, staffProfileId: candidate.id, localDate: new Date(`${dateKey}T00:00:00.000Z`) }).onDuplicateKeyUpdate({ set: { createdAt: new Date() } });
+        const concurrent = await tx.select().from(appointments).where(and(eq(appointments.staffProfileId, candidate.id), eq(appointments.locationId, location.id), inArray(appointments.status, ["PENDING", "CONFIRMED", "CHECKED_IN", "IN_SERVICE", "COMPLETED", "NO_SHOW"])));
+        const conflict = concurrent.some(appointment => intervalsOverlap(protectedStart, protectedEnd, new Date(appointment.startsAt.getTime() - appointment.bufferBeforeMinutes * 60_000), new Date(appointment.endsAt.getTime() + appointment.bufferAfterMinutes * 60_000)));
+        if (!conflict) { assigned = { id: candidate.id, name: candidate.name, durationMinutes, endsAt }; break; }
       }
-
-      const concurrent = await tx.select().from(appointments).where(and(
-        eq(appointments.staffProfileId, staff.id),
-        eq(appointments.locationId, location.id),
-        inArray(appointments.status, ["PENDING", "CONFIRMED", "CHECKED_IN", "IN_SERVICE", "COMPLETED", "NO_SHOW"]),
-      ));
-      const conflict = concurrent.some(appointment => intervalsOverlap(
-        protectedStart,
-        protectedEnd,
-        new Date(appointment.startsAt.getTime() - appointment.bufferBeforeMinutes * 60_000),
-        new Date(appointment.endsAt.getTime() + appointment.bufferAfterMinutes * 60_000),
-      ));
-      if (conflict) throw new Error("The selected time is no longer available");
+      if (!assigned) throw new Error("The selected time is no longer available");
 
       const [matchedClient] = await tx.select().from(clients).where(and(
         eq(clients.organizationId, location.organizationId),
@@ -245,9 +259,9 @@ export const publicRouter = router({
         organizationId: location.organizationId,
         locationId: location.id,
         clientId,
-        staffProfileId: staff.id,
+        staffProfileId: assigned.id,
         startsAt: input.startsAt,
-        endsAt,
+        endsAt: assigned.endsAt,
         bufferBeforeMinutes: service.bufferBeforeMinutes,
         bufferAfterMinutes: service.bufferAfterMinutes,
         source: "PUBLIC_WEB",
@@ -264,9 +278,9 @@ export const publicRouter = router({
         id: nanoid(21),
         appointmentId,
         serviceId: service.id,
-        staffProfileId: staff.id,
+        staffProfileId: assigned.id,
         serviceNameSnapshot: service.nameKa,
-        durationMinutesSnapshot: durationMinutes,
+        durationMinutesSnapshot: assigned.durationMinutes,
         bufferBeforeMinutesSnapshot: service.bufferBeforeMinutes,
         bufferAfterMinutesSnapshot: service.bufferAfterMinutes,
         priceTetriSnapshot: service.priceTetri,
@@ -295,6 +309,7 @@ export const publicRouter = router({
       confirmed: true,
       replayed: persistedAppointment.id !== appointmentId,
       confirmationToken: confirmationTokenForAppointment(persistedAppointment.id),
+      assignedStaffName: assigned?.name,
     };
   }),
 });

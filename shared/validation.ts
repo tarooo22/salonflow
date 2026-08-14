@@ -291,7 +291,7 @@ export const commissionEntryCreateSchema = z.object({
 export const publicAvailabilityCheckSchema = z.object({
   slug: slugSchema,
   serviceId: opaqueIdSchema,
-  staffProfileId: opaqueIdSchema,
+  staffProfileId: z.union([opaqueIdSchema, z.literal("ANY_AVAILABLE")]),
   startsAt: z.coerce.date(),
 });
 

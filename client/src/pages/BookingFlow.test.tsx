@@ -1,7 +1,7 @@
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { formatGel, getEligibleTeam, LocationContext } from "./BookingFlow";
+import { BookingConfirmation, formatGel, getEligibleTeam, LocationContext, StaffStep } from "./BookingFlow";
 
 describe("public booking conversion helpers", () => {
   it("limits specialist choices to the selected service", () => {
@@ -13,7 +13,8 @@ describe("public booking conversion helpers", () => {
   });
 
   it("formats service price from integer tetri for the decision card", () => {
-    expect(formatGel(4050)).toBe("40.50 ₾");
+    expect(formatGel(4050)).toContain("40,50");
+    expect(formatGel(4050)).toContain("₾");
   });
 
   it("renders genuine public contact and clearly labelled specialist availability hours", () => {
@@ -28,5 +29,18 @@ describe("public booking conversion helpers", () => {
   it("does not imply location opening hours when no active specialist rule exists", () => {
     const markup = renderToStaticMarkup(<LocationContext location={{ name: "სივრცე", timezone: "Asia/Tbilisi", address: null, phone: null, email: null, publicDescription: null, workingHours: [] }} />);
     expect(markup).toContain("სამუშაო საათები ჯერ არ არის მითითებული");
+  });
+
+  it("renders a clearly labelled any-available specialist choice alongside eligible staff", () => {
+    const markup = renderToStaticMarkup(<StaffStep team={[{ id: "staff-1", name: "ანა", specialty: "სტილისტი", bio: null, eligibleServiceIds: ["service-a"] }]} selectedId={undefined} onSelect={() => undefined} />);
+    expect(markup).toContain("ნებისმიერი თავისუფალი სპეციალისტი");
+    expect(markup).toContain("ხელმისაწვდომობა საბოლოოდ გადამოწმდება");
+    expect(markup).toContain("ანა");
+  });
+
+  it("shows the server-resolved specialist in the final confirmation", () => {
+    const markup = renderToStaticMarkup(<BookingConfirmation confirmationToken="safe-confirmation" assignedStaffName="ნინო" />);
+    expect(markup).toContain("თქვენი სპეციალისტი:");
+    expect(markup).toContain("ნინო");
   });
 });
