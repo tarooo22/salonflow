@@ -2,11 +2,11 @@ import { TRPCError } from "@trpc/server";
 import { and, eq, isNull } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { COOKIE_NAME, ONE_YEAR_MS } from "../../shared/const";
-import { legacyLocalAccountClaimSchema, localLoginSchema, localRegistrationSchema } from "../../shared/validation";
+import { legacyLocalAccountClaimSchema, localLoginSchema, localRegistrationSchema, userProfileUpdateSchema } from "../../shared/validation";
 import { users } from "../../drizzle/schema";
-import { createLocalUser, getUserByNormalizedEmail, getUserByOpenId, requireDb } from "../db";
+import { createLocalUser, getLegacyLocalUserByRecoveryCode, getUserByNormalizedEmail, requireDb, updateOwnUserProfile } from "../db";
 import { getSessionCookieOptions } from "../_core/cookies";
-import { publicProcedure, router } from "../_core/trpc";
+import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import { normalizeEmail } from "../lib/normalization";
 import { createLocalSessionToken } from "../lib/localSessions";
 import { hashPassword, verifyPassword } from "../lib/passwords";
@@ -22,6 +22,11 @@ async function issueSession(ctx: { req: any; res: any }, user: { openId: string;
 
 export const authRouter = router({
   me: publicProcedure.query(opts => opts.ctx.user),
+  updateProfile: protectedProcedure.input(userProfileUpdateSchema).mutation(async ({ ctx, input }) => {
+    const user = await updateOwnUserProfile(ctx.user.id, input);
+    if (!user) throw new TRPCError({ code: "NOT_FOUND", message: "პროფილის განახლება ვერ მოხერხდა." });
+    return safeUser(user);
+  }),
   register: publicProcedure.input(localRegistrationSchema).mutation(async ({ ctx, input }) => {
     const existing = await getUserByNormalizedEmail(input.email);
     if (existing) throw new TRPCError({ code: "CONFLICT", message: "ამ ელფოსტით ანგარიში უკვე არსებობს. შედით სისტემაში." });
@@ -41,7 +46,7 @@ export const authRouter = router({
     return safeUser(user);
   }),
   claimLegacyLocal: publicProcedure.input(legacyLocalAccountClaimSchema).mutation(async ({ ctx, input }) => {
-    const user = await getUserByOpenId(input.openId);
+    const user = await getLegacyLocalUserByRecoveryCode(input.recoveryCode);
     const canClaim = Boolean(
       user
       && user.openId.startsWith("local_")

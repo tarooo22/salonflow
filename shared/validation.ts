@@ -26,8 +26,14 @@ export const localLoginSchema = z.object({
   password: z.string().min(1).max(128),
 });
 
+export const userProfileUpdateSchema = z.object({
+  name: z.string().trim().min(2).max(160),
+});
+
+export const legacyRecoveryCodeSchema = z.string().trim().toUpperCase().regex(/^SFRC-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}$/);
+
 export const legacyLocalAccountClaimSchema = z.object({
-  openId: z.string().trim().regex(/^local_[A-Za-z0-9_-]{12,64}$/),
+  recoveryCode: legacyRecoveryCodeSchema,
   email: z.string().trim().email().max(320),
   password: z.string().min(10).max(128),
 });

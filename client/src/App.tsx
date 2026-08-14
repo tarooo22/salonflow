@@ -17,6 +17,7 @@ import WorkspaceSetup from "./pages/WorkspaceSetup";
 import WorkspacePlaceholder from "./pages/WorkspacePlaceholder";
 import LocalAuth from "./pages/LocalAuth";
 import DemoPreview from "./pages/DemoPreview";
+import Settings from "./pages/Settings";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -35,6 +36,7 @@ function Router() {
       <Route path={"/app/services"} component={Services} />
       <Route path={"/app/staff"} component={Staff} />
       <Route path={"/app/reports"} component={Reports} />
+      <Route path={"/app/settings"} component={Settings} />
       <Route path={"/app/setup"} component={WorkspaceSetup} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}

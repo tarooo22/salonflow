@@ -1,4 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { useTheme } from "@/contexts/ThemeContext";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -20,7 +21,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
-import { BarChart3, CalendarDays, LayoutDashboard, LogOut, PanelLeft, Scissors, Users } from "lucide-react";
+import { BarChart3, CalendarDays, Check, Laptop, LayoutDashboard, LogOut, Moon, PanelLeft, Scissors, Settings, Sun, Users } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -33,6 +34,7 @@ const menuItems = [
   { icon: Scissors, label: "სერვისები", path: "/app/services" },
   { icon: Users, label: "გუნდი", path: "/app/staff" },
   { icon: BarChart3, label: "ანგარიშები", path: "/app/reports" },
+  { icon: Settings, label: "პარამეტრები", path: "/app/settings" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -108,6 +110,7 @@ function DashboardLayoutContent({
   setSidebarWidth,
 }: DashboardLayoutContentProps) {
   const { user, logout } = useAuth();
+  const { preference, setPreference } = useTheme();
   const [location, setLocation] = useLocation();
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
@@ -203,6 +206,27 @@ function DashboardLayoutContent({
           </SidebarContent>
 
           <SidebarFooter className="p-3">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="mb-2 flex min-h-11 items-center gap-3 rounded-lg px-2 py-1 hover:bg-accent/50 transition-colors w-full text-left group-data-[collapsible=icon]:justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="თემის არჩევა">
+                  <Sun className="h-4 w-4 shrink-0" />
+                  <span className="text-sm font-medium group-data-[collapsible=icon]:hidden">თემა</span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                {([
+                  ["light", "ღია", Sun],
+                  ["dark", "მუქი", Moon],
+                  ["system", "სისტემა", Laptop],
+                ] as const).map(([value, label, Icon]) => (
+                  <DropdownMenuItem key={value} onClick={() => setPreference?.(value)} className="cursor-pointer">
+                    <Icon className="mr-2 h-4 w-4" />
+                    <span>{label}</span>
+                    {preference === value ? <Check className="ml-auto h-4 w-4 text-primary" /> : null}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex min-h-11 items-center gap-3 rounded-lg px-1 py-1 hover:bg-accent/50 transition-colors w-full text-left group-data-[collapsible=icon]:justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">

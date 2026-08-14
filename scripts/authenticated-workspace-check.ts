@@ -1,7 +1,7 @@
 import { chromium, type Page } from "playwright";
 import { and, eq, inArray, or } from "drizzle-orm";
 import { locationOpeningHours, locations, organizationMemberships, organizations, serviceCategories, services, staffLocations, staffProfiles, staffServices, users, workingHourRules } from "../drizzle/schema";
-import { requireDb } from "../server/db";
+import { createLegacyRecoveryCode, requireDb } from "../server/db";
 
 const baseUrl = "http://127.0.0.1:3000";
 const runId = `${Date.now()}${Math.floor(Math.random() * 10_000)}`;
@@ -15,6 +15,7 @@ const routes = [
   ["/app/clients", "კლიენტები"],
   ["/app/staff", "გუნდი"],
   ["/app/reports", "ანგარიშები"],
+  ["/app/settings", "პარამეტრები"],
 ] as const;
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -138,7 +139,7 @@ async function makeValidationAccountLegacy() {
   if (!user) throw new Error("Validation user was not created before legacy-account claim verification.");
   validationOpenId = user.openId;
   await db.update(users).set({ email: null, normalizedEmail: null, loginMethod: null }).where(eq(users.id, user.id));
-  return user.openId;
+  return createLegacyRecoveryCode(user.openId);
 }
 
 const browser = await chromium.launch({ headless: true });
@@ -177,14 +178,23 @@ try {
   await verifyKeyboardNavigation(page);
   await verifyWorkspaceSurfaces(page, { width: 1280, height: 720 });
   await verifyWorkspaceSurfaces(page, { width: 375, height: 812 });
+  await page.goto(`${baseUrl}/app/settings`, { waitUntil: "networkidle" });
+  await page.getByRole("heading", { name: "პარამეტრები", exact: true }).waitFor({ state: "visible" });
+  await page.getByRole("radio", { name: /მუქი/ }).click();
+  assert(await page.evaluate(() => document.documentElement.classList.contains("dark")), "Settings theme choice did not apply the dark root class.");
+  await page.getByLabel("სახელი").fill("Validation Owner Updated");
+  await page.getByRole("button", { name: "პროფილის შენახვა" }).click();
+  await page.getByText("პროფილი განახლდა.", { exact: true }).waitFor({ state: "visible" });
   const errorPage = await context.newPage();
   await verifyErrorStates(errorPage);
   await errorPage.close();
-  const legacyOpenId = await makeValidationAccountLegacy();
+  const legacyRecoveryCode = await makeValidationAccountLegacy();
   const claimContext = await browser.newContext({ viewport: { width: 1280, height: 720 } });
   const claimPage = await claimContext.newPage();
   await claimPage.goto(`${baseUrl}/claim-account`, { waitUntil: "networkidle" });
-  await claimPage.locator("#legacy-open-id").fill(legacyOpenId);
+  await claimPage.getByLabel("აღდგენის კოდი").waitFor({ state: "visible" });
+  assert(!(await claimPage.locator("main").innerText()).includes("local_"), "Claim screen exposes a raw local account identifier.");
+  await claimPage.locator("#recovery-code").fill(legacyRecoveryCode);
   await claimPage.locator("#auth-email").fill(email);
   await claimPage.locator("#auth-password").fill("ValidationPassword!2026");
   await claimPage.getByRole("button", { name: "ანგარიშის აღდგენა" }).click();
