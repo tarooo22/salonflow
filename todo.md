@@ -107,3 +107,4 @@
 - [x] Master Plan P0: Run full any-available confirmation path validation from server commit response through Georgian rendered confirmation with the resolved specialist name.
 - [x] Master Plan P1: Add shared `ka-GE` GEL/date/time presentation helpers and adopt them in the most visible public/operations surfaces without altering integer-tetri storage.
 - [x] Master Plan P1: Localize the unknown-route 404 fallback into Georgian and align it with SalonFlow’s semantic design foundation, with rendered route coverage.
+- [x] Fix the reported post-login redirect loop: a valid local sign-in now uses a Secure SameSite=None session cookie in deployed HTTPS embedded contexts (and Lax in local HTTP), so it persists through the first protected workspace request without returning the user to `/login`; matching logout attributes and regressions are covered.
