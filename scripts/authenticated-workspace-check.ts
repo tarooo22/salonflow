@@ -1,6 +1,6 @@
 import { chromium, type Page } from "playwright";
 import { and, eq, inArray, or } from "drizzle-orm";
-import { locationOpeningHours, locations, organizationMemberships, organizations, serviceCategories, services, staffLocations, staffProfiles, staffServices, users, workingHourRules } from "../drizzle/schema";
+import { appointmentServices, appointmentStatusHistory, appointments, locationOpeningHours, locations, organizationMemberships, organizations, payments, scheduleLocks, serviceCategories, services, staffLocations, staffProfiles, staffServices, users, workingHourRules } from "../drizzle/schema";
 import { createLegacyRecoveryCode, requireDb } from "../server/db";
 
 const baseUrl = "http://127.0.0.1:3000";
@@ -110,12 +110,21 @@ async function cleanup() {
       .innerJoin(organizationMemberships, eq(staffProfiles.membershipId, organizationMemberships.id))
       .where(eq(organizationMemberships.organizationId, organization.id));
     const serviceRows = await db.select({ id: services.id }).from(services).where(eq(services.organizationId, organization.id));
+    const appointmentRows = await db.select({ id: appointments.id }).from(appointments).where(eq(appointments.organizationId, organization.id));
     const staffIds = staffRows.map(row => row.id);
     const serviceIds = serviceRows.map(row => row.id);
+    const appointmentIds = appointmentRows.map(row => row.id);
+    if (appointmentIds.length) {
+      await db.delete(payments).where(inArray(payments.appointmentId, appointmentIds));
+      await db.delete(appointmentStatusHistory).where(inArray(appointmentStatusHistory.appointmentId, appointmentIds));
+      await db.delete(appointmentServices).where(inArray(appointmentServices.appointmentId, appointmentIds));
+      await db.delete(appointments).where(inArray(appointments.id, appointmentIds));
+    }
     if (staffIds.length && serviceIds.length) await db.delete(staffServices).where(or(inArray(staffServices.staffProfileId, staffIds), inArray(staffServices.serviceId, serviceIds)));
     else if (staffIds.length) await db.delete(staffServices).where(inArray(staffServices.staffProfileId, staffIds));
     else if (serviceIds.length) await db.delete(staffServices).where(inArray(staffServices.serviceId, serviceIds));
     if (staffIds.length) await db.delete(workingHourRules).where(inArray(workingHourRules.staffProfileId, staffIds));
+    if (staffIds.length) await db.delete(scheduleLocks).where(inArray(scheduleLocks.staffProfileId, staffIds));
     await db.delete(locationOpeningHours).where(inArray(locationOpeningHours.locationId, [organization.id]));
     const locationRows = await db.select({ id: locations.id }).from(locations).where(eq(locations.organizationId, organization.id));
     const locationIds = locationRows.map(row => row.id);
@@ -174,6 +183,17 @@ try {
   await page.waitForURL(url => new URL(url).pathname === "/app/today");
   await page.getByRole("heading", { name: "დღეს", exact: true }).waitFor({ state: "visible" });
   await page.getByText("თქვენი SalonFlow მზად არის დასაწყებად", { exact: true }).waitFor({ state: "visible" });
+
+  await page.getByRole("button", { name: "შიდა ჩაწერა" }).click();
+  await page.getByLabel("სპეციალისტი").waitFor({ state: "visible" });
+  await page.locator("#walkin-start").fill(new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16));
+  await page.getByRole("button", { name: "ჩაწერის შექმნა" }).click();
+  await page.getByText(/შიდა ჩაწერა შეიქმნა/).waitFor({ state: "visible" });
+  await page.getByText("გადასახდელია", { exact: true }).waitFor({ state: "visible" });
+  await page.getByRole("button", { name: "გადატანა" }).click();
+  await page.getByLabel("ახალი დრო").fill(new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString().slice(0, 16));
+  await page.getByRole("button", { name: "ახალი დროის შენახვა" }).click();
+  await page.getByText("ჯავშნის დრო განახლდა.", { exact: true }).waitFor({ state: "visible" });
 
   await verifyKeyboardNavigation(page);
   await verifyWorkspaceSurfaces(page, { width: 1280, height: 720 });

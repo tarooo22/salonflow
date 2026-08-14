@@ -29,6 +29,7 @@ function query(rows: unknown[]) {
     leftJoin: () => chain,
     innerJoin: () => chain,
     where: vi.fn(() => chain),
+    limit: async () => rows,
     orderBy: async () => rows,
     then: <TResult1 = unknown[], TResult2 = never>(onfulfilled?: ((value: unknown[]) => TResult1 | PromiseLike<TResult1>) | null, onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null) => Promise.resolve(rows).then(onfulfilled, onrejected),
   };
@@ -97,5 +98,27 @@ describe("appointments operational data contracts", () => {
     expect(result.appointments).toEqual([]);
     expect(result.balances).toEqual([]);
     expect(result.metrics).toEqual({ scheduledTetri: 0, collectedTetri: 0, outstandingTetri: 0 });
+  });
+
+  it("requires the existing calendar-management action before a walk-in can query or write operational data", async () => {
+    mocked.requireOrganizationAction.mockRejectedValueOnce(new Error("ამ მოქმედებისთვის წვდომა არ გაქვთ"));
+    mocked.db = { select: vi.fn() };
+
+    await expect(appointmentsRouter.createCaller({ user } as never).createWalkIn({
+      organizationId, locationId, staffProfileId, serviceId: "service_2026_abcdefgh", startsAt: new Date("2026-08-14T10:00:00.000Z"),
+    })).rejects.toThrow("ამ მოქმედებისთვის წვდომა არ გაქვთ");
+    expect((mocked.db as { select: ReturnType<typeof vi.fn> }).select).not.toHaveBeenCalled();
+  });
+
+  it("rejects rescheduling a checked-in appointment before opening a schedule lock transaction", async () => {
+    mocked.requireOrganizationAction.mockResolvedValueOnce(undefined);
+    const checkedIn = { id: appointmentId, organizationId, staffProfileId, startsAt: new Date("2026-08-14T08:00:00.000Z"), endsAt: new Date("2026-08-14T09:00:00.000Z"), status: "CHECKED_IN" as const };
+    const db = { select: vi.fn(() => query([checkedIn])), transaction: vi.fn() };
+    mocked.db = db;
+
+    await expect(appointmentsRouter.createCaller({ user } as never).reschedule({
+      organizationId, appointmentId, startsAt: new Date("2026-08-14T10:00:00.000Z"),
+    })).rejects.toThrow("ამ სტატუსის ჯავშნის გადატანა აღარ შეიძლება");
+    expect(db.transaction).not.toHaveBeenCalled();
   });
 });

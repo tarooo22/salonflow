@@ -111,5 +111,5 @@
 - [x] Reference brief foundation: Publish assumption-labelled UX research, brand foundation, architecture, design-system, UI component, QA checklist, and booking-rule artifacts that map to the existing live product without inventing research or integrations.
 - [x] Reference brief P1: Add a protected, role-appropriate Settings surface with an exposed Light/Dark/System preference and safe profile/preferences states.
 - [x] Reference brief P1: Replace the raw `local_`/openId account-claim input with a human-friendly recovery-code experience while preserving current-password verification and legacy-account safety.
-- [ ] Reference brief P2: Add role-gated receptionist walk-in creation from Today/Calendar with organization/location scope, integer-tetri pricing, conflict-safe slot checks, and focused regression coverage.
-- [ ] Reference brief P2: Add conflict-safe appointment rescheduling plus explicit payment-state context in Today/Calendar, backed by server-side validation and Georgian user feedback.
+- [x] Reference brief P2: Add role-gated receptionist walk-in creation from Today/Calendar with organization/location scope, integer-tetri pricing, conflict-safe slot checks, and focused regression coverage.
+- [x] Reference brief P2: Add conflict-safe appointment rescheduling plus explicit payment-state context in Today/Calendar, backed by server-side validation and Georgian user feedback.
