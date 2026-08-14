@@ -9,19 +9,19 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 hover:shadow-md",
+        default: "bg-primary text-primary-foreground shadow-[0_8px_22px_color-mix(in_srgb,var(--primary)_22%,transparent)] hover:bg-primary/90 hover:-translate-y-0.5 hover:shadow-[0_14px_28px_color-mix(in_srgb,var(--primary)_28%,transparent)]",
         destructive:
           "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
         outline:
-          "border bg-transparent shadow-xs hover:bg-accent dark:bg-transparent dark:border-input dark:hover:bg-input/50",
+          "border bg-transparent shadow-xs hover:bg-accent dark:bg-transparent dark:border-input dark:hover:bg-input/70",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost:
           "hover:bg-accent dark:hover:bg-accent/50",
         link: "text-primary underline-offset-4 hover:underline",
-        public: "bg-[var(--sf-terracotta)] text-white shadow-sm hover:bg-[var(--sf-terracotta-strong)] hover:shadow-md",
-        publicSecondary: "border border-[var(--sf-line)] bg-[var(--sf-surface)] text-[var(--sf-ink)] shadow-sm hover:border-[var(--sf-terracotta)] hover:bg-[var(--sf-canvas)]",
-        publicQuiet: "text-[var(--sf-ink)] hover:bg-[color-mix(in_srgb,var(--sf-ink)_6%,transparent)]",
+        public: "bg-[var(--sf-terracotta)] text-[var(--primary-foreground)] shadow-[0_10px_24px_color-mix(in_srgb,var(--sf-terracotta)_28%,transparent)] hover:-translate-y-0.5 hover:bg-[var(--sf-terracotta-strong)] hover:shadow-[0_16px_32px_color-mix(in_srgb,var(--sf-terracotta)_34%,transparent)]",
+        publicSecondary: "border border-[var(--sf-line)] bg-[var(--sf-surface-raised)] text-[var(--sf-ink)] shadow-sm hover:-translate-y-0.5 hover:border-[var(--sf-terracotta)] hover:bg-[var(--sf-surface-hover)]",
+        publicQuiet: "text-[var(--sf-ink)] hover:bg-[var(--sf-surface-hover)]",
       },
       size: {
         default: "h-9 px-4 py-2 has-[>svg]:px-3",

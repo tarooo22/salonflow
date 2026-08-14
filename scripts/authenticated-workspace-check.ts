@@ -1,7 +1,8 @@
 import { chromium, type Page } from "playwright";
 import { and, eq, inArray, or } from "drizzle-orm";
+import { randomUUID } from "node:crypto";
 import { mkdir } from "node:fs/promises";
-import { locationOpeningHours, locations, organizationMemberships, organizations, serviceCategories, services, staffLocations, staffProfiles, staffServices, users, workingHourRules } from "../drizzle/schema";
+import { appointmentServices, appointments, clients, expenses, locationOpeningHours, locations, organizationMemberships, organizations, payments, serviceCategories, services, staffLocations, staffProfiles, staffServices, users, workingHourRules } from "../drizzle/schema";
 import { requireDb } from "../server/db";
 import { createLegacyRecoveryCode } from "../server/lib/recoveryCodes";
 
@@ -26,6 +27,22 @@ const screenshotRoutes = [
   ["staff", "/app/staff", "გუნდი"],
   ["reports", "/app/reports", "ანგარიშები"],
   ["settings", "/app/settings", "პარამეტრები"],
+] as const;
+const publicScreenshotRoutes = [
+  ["home", "/", "მეტი დრო სტუმრებისთვის. ნაკლები დრო ქაოსისთვის."],
+  ["discovery", "/book", "იპოვეთ თქვენთვის სასურველი ფილიალი."],
+  ["booking", `/book/${publicSlug}`, "დაჯავშნეთ თქვენი მშვიდი დრო."],
+  ["login", "/login", "კეთილი იყოს თქვენი დაბრუნება"],
+  ["register", "/register", "შექმენით თქვენი სამუშაო სივრცის ანგარიში"],
+  ["claim", "/claim-account", "აღადგინეთ ძველი ანგარიში"],
+  ["not-found", "/404", "ეს გვერდი ვერ ვიპოვეთ."],
+  ["demo", "/preview-demo", "SalonFlow-ის სადემონსტრაციო ოპერაციული მონაცემები"],
+] as const;
+const screenshotViewports = [
+  ["mobile", { width: 375, height: 812 }],
+  ["tablet", { width: 768, height: 1024 }],
+  ["laptop", { width: 1024, height: 900 }],
+  ["desktop", { width: 1440, height: 1000 }],
 ] as const;
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -77,16 +94,71 @@ async function verifyWorkspaceSurfaces(page: Page, viewport: { width: number; he
 }
 
 async function captureWorkspaceScreenshots(page: Page) {
-  const output = "/home/ubuntu/workspace-redesign-screenshots";
+  const output = "/home/ubuntu/dark-luxury-screenshots";
   await mkdir(output, { recursive: true });
   for (const [name, route, heading] of screenshotRoutes) {
-    for (const [mode, viewport] of [["desktop", { width: 1440, height: 1000 }], ["mobile", { width: 375, height: 812 }]] as const) {
+    for (const [mode, viewport] of screenshotViewports) {
       await page.setViewportSize(viewport);
       await page.goto(`${baseUrl}${route}`, { waitUntil: "domcontentloaded" });
       await page.getByRole("heading", { name: heading, exact: true }).waitFor({ state: "visible" });
+      await page.waitForTimeout(500);
       await page.screenshot({ path: `${output}/${name}-${mode}.png`, fullPage: true });
     }
   }
+}
+
+async function capturePublicScreenshots(page: Page) {
+  const output = "/home/ubuntu/dark-luxury-screenshots";
+  await mkdir(output, { recursive: true });
+  for (const [name, route, heading] of publicScreenshotRoutes) {
+    for (const [mode, viewport] of screenshotViewports) {
+      await page.setViewportSize(viewport);
+      await page.goto(`${baseUrl}${route}`, { waitUntil: "domcontentloaded" });
+      await page.getByRole("heading", { name: heading, exact: true }).waitFor({ state: "visible" });
+      await page.waitForTimeout(300);
+      await page.screenshot({ path: `${output}/${name}-${mode}.png`, fullPage: true });
+    }
+  }
+}
+
+async function seedValidationOperations() {
+  const db = await requireDb();
+  const [organization] = await db.select().from(organizations).where(eq(organizations.slug, organizationSlug)).limit(1);
+  const [owner] = await db.select().from(users).where(eq(users.normalizedEmail, email)).limit(1);
+  if (!organization || !owner) throw new Error("Validation workspace was not available for populated screenshot data.");
+  const [location] = await db.select().from(locations).where(eq(locations.organizationId, organization.id)).limit(1);
+  const [staff] = await db.select({ id: staffProfiles.id }).from(staffProfiles)
+    .innerJoin(organizationMemberships, eq(staffProfiles.membershipId, organizationMemberships.id))
+    .where(eq(organizationMemberships.organizationId, organization.id)).limit(1);
+  const [service] = await db.select().from(services).where(eq(services.organizationId, organization.id)).limit(1);
+  if (!location || !staff || !service) throw new Error("Validation workspace setup did not create the location, specialist, or service required for evidence.");
+
+  const clientRows = [
+    { id: randomUUID(), organizationId: organization.id, firstName: "ნინო", lastName: "აბაშიძე", normalizedPhone: `+995555${runId.slice(-6)}`, email: `nino-${runId}@example.test`, normalizedEmail: `nino-${runId}@example.test`, source: "INTERNAL", createdByUserId: owner.id },
+    { id: randomUUID(), organizationId: organization.id, firstName: "თამარ", lastName: "ბერიძე", normalizedPhone: `+995556${runId.slice(-6)}`, email: `tamar-${runId}@example.test`, normalizedEmail: `tamar-${runId}@example.test`, source: "INTERNAL", createdByUserId: owner.id },
+    { id: randomUUID(), organizationId: organization.id, firstName: "ანა", lastName: "გელაშვილი", normalizedPhone: `+995557${runId.slice(-6)}`, email: `ana-${runId}@example.test`, normalizedEmail: `ana-${runId}@example.test`, source: "INTERNAL", createdByUserId: owner.id },
+  ];
+  await db.insert(clients).values(clientRows);
+  const now = new Date();
+  const appointmentRows = clientRows.map((client, index) => {
+    const startsAt = new Date(now.getTime() + (index - 1) * 60 * 60 * 1000);
+    const endsAt = new Date(startsAt.getTime() + service.defaultDurationMinutes * 60 * 1000);
+    return {
+      id: randomUUID(), organizationId: organization.id, locationId: location.id, clientId: client.id, staffProfileId: staff.id,
+      startsAt, endsAt, source: "RECEPTION" as const, status: (index === 0 ? "COMPLETED" : index === 1 ? "CONFIRMED" : "PENDING") as const,
+      subtotalTetri: service.priceTetri, totalTetri: service.priceTetri, createdByUserId: owner.id, idempotencyKey: `dark-luxury-${runId}-${index}`,
+    };
+  });
+  await db.insert(appointments).values(appointmentRows);
+  await db.insert(appointmentServices).values(appointmentRows.map((appointment, index) => ({
+    id: randomUUID(), appointmentId: appointment.id, serviceId: service.id, staffProfileId: staff.id, serviceNameSnapshot: service.nameKa,
+    durationMinutesSnapshot: service.defaultDurationMinutes, priceTetriSnapshot: service.priceTetri, sortOrder: index,
+  })));
+  await db.insert(payments).values([
+    { id: randomUUID(), appointmentId: appointmentRows[0].id, amountTetri: service.priceTetri, method: "CARD_TERMINAL", status: "PAID", collectedByUserId: owner.id, collectedAt: now },
+    { id: randomUUID(), appointmentId: appointmentRows[1].id, amountTetri: Math.floor(service.priceTetri / 2), method: "CASH", status: "PAID", collectedByUserId: owner.id, collectedAt: now },
+  ]);
+  await db.insert(expenses).values({ id: randomUUID(), organizationId: organization.id, locationId: location.id, category: "ოპერაციული მარაგი", amountTetri: 1800, expenseDate: now.toISOString().slice(0, 10), description: "Disposable Dark Luxury evidence expense", createdByUserId: owner.id });
 }
 
 async function verifyErrorStates(page: Page) {
@@ -129,6 +201,16 @@ async function cleanup() {
     : await db.select().from(users).where(eq(users.normalizedEmail, email)).limit(1);
   const [organization] = await db.select().from(organizations).where(eq(organizations.slug, organizationSlug)).limit(1);
   if (organization) {
+    const appointmentRows = await db.select({ id: appointments.id, clientId: appointments.clientId }).from(appointments).where(eq(appointments.organizationId, organization.id));
+    const appointmentIds = appointmentRows.map(row => row.id);
+    const clientIds = appointmentRows.flatMap(row => row.clientId ? [row.clientId] : []);
+    if (appointmentIds.length) {
+      await db.delete(payments).where(inArray(payments.appointmentId, appointmentIds));
+      await db.delete(appointmentServices).where(inArray(appointmentServices.appointmentId, appointmentIds));
+      await db.delete(appointments).where(inArray(appointments.id, appointmentIds));
+    }
+    await db.delete(expenses).where(eq(expenses.organizationId, organization.id));
+    if (clientIds.length) await db.delete(clients).where(inArray(clients.id, clientIds));
     const staffRows = await db.select({ id: staffProfiles.id }).from(staffProfiles)
       .innerJoin(organizationMemberships, eq(staffProfiles.membershipId, organizationMemberships.id))
       .where(eq(organizationMemberships.organizationId, organization.id));
@@ -198,13 +280,17 @@ try {
   await page.getByRole("heading", { name: "დღეს", exact: true }).waitFor({ state: "visible" });
   await page.getByText("თქვენი SalonFlow მზად არის დასაწყებად", { exact: true }).waitFor({ state: "visible" });
 
+  await seedValidationOperations();
   await captureWorkspaceScreenshots(page);
+  await capturePublicScreenshots(page);
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto(`${baseUrl}/app/today`, { waitUntil: "domcontentloaded" });
   await page.getByRole("heading", { name: "დღეს", exact: true }).waitFor({ state: "visible" });
   await verifyKeyboardNavigation(page);
   await verifyWorkspaceSurfaces(page, { width: 1280, height: 720 });
   await verifyWorkspaceSurfaces(page, { width: 375, height: 812 });
+  await verifyWorkspaceSurfaces(page, { width: 768, height: 1024 });
+  await verifyWorkspaceSurfaces(page, { width: 1024, height: 900 });
   const errorPage = await context.newPage();
   await verifyErrorStates(errorPage);
   await errorPage.close();
