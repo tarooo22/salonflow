@@ -10,11 +10,14 @@ import {
   payments,
   scheduleLocks,
   staffProfiles,
+  staffLocations,
+  staffServices,
+  services,
 } from "../../drizzle/schema";
 import { requireOrganizationAction, requireOrganizationRole } from "../access";
 import { requireDb } from "../db";
-import { appointmentBlocksInterval, canTransitionAppointment, intervalsOverlap, summarizeOperationalAppointments } from "../lib/appointments";
-import { appointmentCreateSchema, appointmentStatusUpdateSchema, calendarRangeSchema, organizationScopeSchema, todayDashboardSchema } from "../../shared/validation";
+import { appointmentBlocksInterval, canTransitionAppointment, derivePaymentDisplayState, intervalsOverlap, summarizeOperationalAppointments } from "../lib/appointments";
+import { appointmentCreateSchema, appointmentRescheduleSchema, appointmentStatusUpdateSchema, calendarRangeSchema, opaqueIdSchema, organizationScopeSchema, todayDashboardSchema, walkInCreateSchema } from "../../shared/validation";
 import { protectedProcedure, router } from "../_core/trpc";
 import { businessDayRange } from "@shared/timezones";
 
@@ -30,6 +33,27 @@ function enumerateUtcDates(start: Date, end: Date) {
 }
 
 export const appointmentsRouter = router({
+  walkInOptions: protectedProcedure.input(organizationScopeSchema.extend({ locationId: opaqueIdSchema })).query(async ({ ctx, input }) => {
+    await requireOrganizationAction(ctx.user, input.organizationId, "calendar:manage");
+    const db = await requireDb();
+    return db.select({
+      staffProfileId: staffProfiles.id,
+      staffName: staffProfiles.publicDisplayName,
+      serviceId: services.id,
+      serviceName: services.nameKa,
+      durationMinutes: staffServices.durationOverrideMinutes,
+      defaultDurationMinutes: services.defaultDurationMinutes,
+      priceTetri: staffServices.priceOverrideTetri,
+      defaultPriceTetri: services.priceTetri,
+    }).from(staffProfiles)
+      .innerJoin(organizationMemberships, eq(staffProfiles.membershipId, organizationMemberships.id))
+      .innerJoin(staffLocations, and(eq(staffLocations.staffProfileId, staffProfiles.id), eq(staffLocations.locationId, input.locationId)))
+      .innerJoin(staffServices, and(eq(staffServices.staffProfileId, staffProfiles.id), eq(staffServices.canPerform, true)))
+      .innerJoin(services, and(eq(services.id, staffServices.serviceId), eq(services.organizationId, input.organizationId), eq(services.status, "ACTIVE")))
+      .where(and(eq(staffProfiles.status, "ACTIVE"), eq(organizationMemberships.organizationId, input.organizationId), eq(organizationMemberships.status, "ACTIVE")))
+      .orderBy(asc(staffProfiles.publicDisplayName), asc(services.nameKa));
+  }),
+
   listToday: protectedProcedure.input(organizationScopeSchema).query(async ({ ctx, input }) => {
     const membership = await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"]);
     const db = await requireDb();
@@ -86,6 +110,13 @@ export const appointmentsRouter = router({
     const serviceRows = appointmentIds.length
       ? await db.select().from(appointmentServices).where(inArray(appointmentServices.appointmentId, appointmentIds)).orderBy(asc(appointmentServices.sortOrder))
       : [];
+    const paymentRows = appointmentIds.length
+      ? await db.select().from(payments).where(inArray(payments.appointmentId, appointmentIds))
+      : [];
+    const paymentByAppointment = new Map(rows.map(row => [
+      row.appointment.id,
+      derivePaymentDisplayState(row.appointment.totalTetri, paymentRows.filter(payment => payment.appointmentId === row.appointment.id)),
+    ]));
 
     return rows.map(row => ({
       ...row.appointment,
@@ -97,6 +128,7 @@ export const appointmentsRouter = router({
         durationMinutesSnapshot: service.durationMinutesSnapshot,
         priceTetriSnapshot: service.priceTetriSnapshot,
       })),
+      payment: paymentByAppointment.get(row.appointment.id),
     }));
   }),
 
@@ -156,6 +188,96 @@ export const appointmentsRouter = router({
     });
 
     return { id };
+  }),
+
+  createWalkIn: protectedProcedure.input(walkInCreateSchema).mutation(async ({ ctx, input }) => {
+    await requireOrganizationAction(ctx.user, input.organizationId, "calendar:manage");
+    const db = await requireDb();
+    const [location] = await db.select({ id: locations.id }).from(locations).where(and(
+      eq(locations.id, input.locationId),
+      eq(locations.organizationId, input.organizationId),
+      eq(locations.status, "ACTIVE"),
+    )).limit(1);
+    if (!location) throw new Error("არჩეული ფილიალი მიუწვდომელია.");
+    if (input.clientId) {
+      const [client] = await db.select({ id: clients.id }).from(clients).where(and(
+        eq(clients.id, input.clientId),
+        eq(clients.organizationId, input.organizationId),
+        eq(clients.status, "ACTIVE"),
+      )).limit(1);
+      if (!client) throw new Error("არჩეული კლიენტი მიუწვდომელია.");
+    }
+    const [assignment] = await db.select({
+      staffProfileId: staffProfiles.id,
+      serviceId: services.id,
+      serviceName: services.nameKa,
+      serviceDurationMinutes: services.defaultDurationMinutes,
+      serviceBufferBeforeMinutes: services.bufferBeforeMinutes,
+      serviceBufferAfterMinutes: services.bufferAfterMinutes,
+      servicePriceTetri: services.priceTetri,
+      durationOverrideMinutes: staffServices.durationOverrideMinutes,
+      priceOverrideTetri: staffServices.priceOverrideTetri,
+    }).from(staffProfiles)
+      .innerJoin(organizationMemberships, eq(staffProfiles.membershipId, organizationMemberships.id))
+      .innerJoin(staffLocations, and(eq(staffLocations.staffProfileId, staffProfiles.id), eq(staffLocations.locationId, input.locationId)))
+      .innerJoin(staffServices, and(eq(staffServices.staffProfileId, staffProfiles.id), eq(staffServices.serviceId, input.serviceId), eq(staffServices.canPerform, true)))
+      .innerJoin(services, and(eq(services.id, staffServices.serviceId), eq(services.organizationId, input.organizationId), eq(services.status, "ACTIVE")))
+      .where(and(
+        eq(staffProfiles.id, input.staffProfileId),
+        eq(staffProfiles.status, "ACTIVE"),
+        eq(organizationMemberships.organizationId, input.organizationId),
+        eq(organizationMemberships.status, "ACTIVE"),
+      )).limit(1);
+    if (!assignment) throw new Error("არჩეული სპეციალისტი ამ სერვისისთვის ან ფილიალისთვის მიუწვდომელია.");
+    const durationMinutes = assignment.durationOverrideMinutes ?? assignment.serviceDurationMinutes;
+    const priceTetri = assignment.priceOverrideTetri ?? assignment.servicePriceTetri;
+    const startsAt = input.startsAt;
+    const endsAt = new Date(startsAt.getTime() + durationMinutes * 60_000);
+    const id = nanoid(21);
+    await db.transaction(async tx => {
+      for (const dateKey of enumerateUtcDates(startsAt, endsAt)) {
+        await tx.insert(scheduleLocks).values({ id: `${input.staffProfileId}:${dateKey}`, staffProfileId: input.staffProfileId, localDate: new Date(`${dateKey}T00:00:00.000Z`) }).onDuplicateKeyUpdate({ set: { createdAt: new Date() } });
+      }
+      const existing = await tx.select().from(appointments).where(and(eq(appointments.organizationId, input.organizationId), eq(appointments.staffProfileId, input.staffProfileId)));
+      if (existing.some(item => appointmentBlocksInterval(item.status) && intervalsOverlap(startsAt, endsAt, item.startsAt, item.endsAt))) throw new Error("არჩეული დრო უკვე დაკავებულია.");
+      await tx.insert(appointments).values({
+        id, organizationId: input.organizationId, locationId: input.locationId, clientId: input.clientId,
+        staffProfileId: input.staffProfileId, startsAt, endsAt,
+        bufferBeforeMinutes: assignment.serviceBufferBeforeMinutes, bufferAfterMinutes: assignment.serviceBufferAfterMinutes,
+        source: "WALK_IN", internalNote: input.internalNote, subtotalTetri: priceTetri, discountTetri: 0, totalTetri: priceTetri,
+        createdByUserId: ctx.user.id, status: "CONFIRMED",
+      });
+      await tx.insert(appointmentServices).values({
+        id: nanoid(21), appointmentId: id, serviceId: assignment.serviceId, staffProfileId: assignment.staffProfileId,
+        serviceNameSnapshot: assignment.serviceName, durationMinutesSnapshot: durationMinutes,
+        bufferBeforeMinutesSnapshot: assignment.serviceBufferBeforeMinutes, bufferAfterMinutesSnapshot: assignment.serviceBufferAfterMinutes,
+        priceTetriSnapshot: priceTetri, sortOrder: 0,
+      });
+      await tx.insert(appointmentStatusHistory).values({ id: nanoid(21), appointmentId: id, oldStatus: null, newStatus: "CONFIRMED", actorUserId: ctx.user.id, metadata: { source: "WALK_IN" } });
+    });
+    return { id, startsAt, endsAt, totalTetri: priceTetri };
+  }),
+
+  reschedule: protectedProcedure.input(appointmentRescheduleSchema).mutation(async ({ ctx, input }) => {
+    await requireOrganizationAction(ctx.user, input.organizationId, "calendar:manage");
+    const db = await requireDb();
+    const [appointment] = await db.select().from(appointments).where(and(eq(appointments.id, input.appointmentId), eq(appointments.organizationId, input.organizationId))).limit(1);
+    if (!appointment) throw new Error("ჯავშანი ვერ მოიძებნა.");
+    if (!(appointment.status === "PENDING" || appointment.status === "CONFIRMED")) throw new Error("ამ სტატუსის ჯავშნის გადატანა აღარ შეიძლება.");
+    const endsAt = new Date(input.startsAt.getTime() + appointment.endsAt.getTime() - appointment.startsAt.getTime());
+    await db.transaction(async tx => {
+      for (const dateKey of enumerateUtcDates(input.startsAt, endsAt)) {
+        await tx.insert(scheduleLocks).values({ id: `${appointment.staffProfileId}:${dateKey}`, staffProfileId: appointment.staffProfileId, localDate: new Date(`${dateKey}T00:00:00.000Z`) }).onDuplicateKeyUpdate({ set: { createdAt: new Date() } });
+      }
+      const existing = await tx.select().from(appointments).where(and(eq(appointments.organizationId, input.organizationId), eq(appointments.staffProfileId, appointment.staffProfileId)));
+      if (existing.some(item => item.id !== appointment.id && appointmentBlocksInterval(item.status) && intervalsOverlap(input.startsAt, endsAt, item.startsAt, item.endsAt))) throw new Error("არჩეული დრო უკვე დაკავებულია.");
+      await tx.update(appointments).set({ startsAt: input.startsAt, endsAt }).where(eq(appointments.id, appointment.id));
+      await tx.insert(appointmentStatusHistory).values({
+        id: nanoid(21), appointmentId: appointment.id, oldStatus: appointment.status, newStatus: appointment.status, actorUserId: ctx.user.id,
+        reason: input.reason, metadata: { event: "RESCHEDULED", previousStartsAt: appointment.startsAt.toISOString(), previousEndsAt: appointment.endsAt.toISOString(), startsAt: input.startsAt.toISOString(), endsAt: endsAt.toISOString() },
+      });
+    });
+    return { id: appointment.id, startsAt: input.startsAt, endsAt };
   }),
 
   updateStatus: protectedProcedure.input(appointmentStatusUpdateSchema).mutation(async ({ ctx, input }) => {
@@ -258,6 +380,10 @@ export const appointmentsRouter = router({
         status: payment.status,
       })),
     );
+    const paymentByAppointment = new Map(appointmentRows.map(row => [
+      row.appointment.id,
+      derivePaymentDisplayState(row.appointment.totalTetri, paymentRows.filter(payment => payment.appointmentId === row.appointment.id)),
+    ]));
 
     return {
       location: { id: location.id, name: location.name, timezone: location.timezone },
@@ -272,6 +398,7 @@ export const appointmentsRouter = router({
           durationMinutesSnapshot: service.durationMinutesSnapshot,
           priceTetriSnapshot: service.priceTetriSnapshot,
         })),
+        payment: paymentByAppointment.get(row.appointment.id),
       })),
       balances: summary.balances,
       counts: summary.counts,

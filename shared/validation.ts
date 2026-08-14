@@ -247,6 +247,23 @@ export const appointmentCreateSchema = z.object({
   totalTetri: z.number().int().min(0),
 });
 
+export const walkInCreateSchema = z.object({
+  organizationId: opaqueIdSchema,
+  locationId: opaqueIdSchema,
+  clientId: opaqueIdSchema.optional(),
+  staffProfileId: opaqueIdSchema,
+  serviceId: opaqueIdSchema,
+  startsAt: z.coerce.date(),
+  internalNote: z.string().trim().max(2_000).optional(),
+});
+
+export const appointmentRescheduleSchema = z.object({
+  organizationId: opaqueIdSchema,
+  appointmentId: opaqueIdSchema,
+  startsAt: z.coerce.date(),
+  reason: z.string().trim().max(255).optional(),
+});
+
 export const appointmentStatusUpdateSchema = z.object({
   organizationId: opaqueIdSchema,
   appointmentId: opaqueIdSchema,

@@ -1,5 +1,6 @@
 import { chromium, type Page } from "playwright";
 import { and, eq, inArray, or } from "drizzle-orm";
+import { mkdir } from "node:fs/promises";
 import { locationOpeningHours, locations, organizationMemberships, organizations, serviceCategories, services, staffLocations, staffProfiles, staffServices, users, workingHourRules } from "../drizzle/schema";
 import { requireDb } from "../server/db";
 import { createLegacyRecoveryCode } from "../server/lib/recoveryCodes";
@@ -16,6 +17,15 @@ const routes = [
   ["/app/clients", "კლიენტები"],
   ["/app/staff", "გუნდი"],
   ["/app/reports", "ანგარიშები"],
+] as const;
+const screenshotRoutes = [
+  ["today", "/app/today", "დღეს"],
+  ["calendar", "/app/calendar", "კალენდარი"],
+  ["clients", "/app/clients", "კლიენტები"],
+  ["services", "/app/services", "სერვისები"],
+  ["staff", "/app/staff", "გუნდი"],
+  ["reports", "/app/reports", "ანგარიშები"],
+  ["settings", "/app/settings", "პარამეტრები"],
 ] as const;
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -58,7 +68,7 @@ async function verifyKeyboardNavigation(page: Page) {
 async function verifyWorkspaceSurfaces(page: Page, viewport: { width: number; height: number }) {
   await page.setViewportSize(viewport);
   for (const [route, heading] of routes) {
-    await page.goto(`${baseUrl}${route}`, { waitUntil: "networkidle" });
+    await page.goto(`${baseUrl}${route}`, { waitUntil: "domcontentloaded" });
     await page.getByRole("heading", { name: heading, exact: true }).waitFor({ state: "visible" });
     const noHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1);
     assert(noHorizontalOverflow, `${route} overflows horizontally at ${viewport.width}px.`);
@@ -66,13 +76,26 @@ async function verifyWorkspaceSurfaces(page: Page, viewport: { width: number; he
   }
 }
 
+async function captureWorkspaceScreenshots(page: Page) {
+  const output = "/home/ubuntu/workspace-redesign-screenshots";
+  await mkdir(output, { recursive: true });
+  for (const [name, route, heading] of screenshotRoutes) {
+    for (const [mode, viewport] of [["desktop", { width: 1440, height: 1000 }], ["mobile", { width: 375, height: 812 }]] as const) {
+      await page.setViewportSize(viewport);
+      await page.goto(`${baseUrl}${route}`, { waitUntil: "domcontentloaded" });
+      await page.getByRole("heading", { name: heading, exact: true }).waitFor({ state: "visible" });
+      await page.screenshot({ path: `${output}/${name}-${mode}.png`, fullPage: true });
+    }
+  }
+}
+
 async function verifyErrorStates(page: Page) {
   const protectedFailures = [
-    ["/app/today", "დღეს", "appointments.dashboard", "დღის ოპერაციული მონაცემები დროებით ვერ ჩაიტვირთა. გთხოვთ სცადოთ ხელახლა."],
-    ["/app/calendar", "კალენდარი", "appointments.listRange", "კალენდრის მონაცემები ვერ ჩაიტვირთა."],
-    ["/app/clients", "კლიენტები", "clients.list", "კლიენტების ჩატვირთვა ვერ მოხერხდა."],
+    ["/app/today", "დღეს", "appointments.dashboard", "დღის ოპერაციული მონაცემები ვერ ჩაიტვირთა"],
+    ["/app/calendar", "კალენდარი", "appointments.listRange", "კალენდრის მონაცემები ვერ ჩაიტვირთა"],
+    ["/app/clients", "კლიენტები", "clients.list", "კლიენტების ჩატვირთვა ვერ მოხერხდა"],
     ["/app/staff", "გუნდი", "staff.performance", "სპეციალისტების მაჩვენებლები ვერ ჩაიტვირთა."],
-    ["/app/reports", "ანგარიშები", "reporting.revenueSummary", "ანგარიშის მონაცემები დროებით მიუწვდომელია."],
+    ["/app/reports", "ანგარიშები", "reporting.revenueSummary", "ანგარიშის მონაცემები დროებით მიუწვდომელია"],
   ] as const;
   for (const [route, heading, procedure, message] of protectedFailures) {
     const requestPattern = new RegExp(`/api/trpc/.*${procedure.replace(".", "\\.")}`);
@@ -175,6 +198,10 @@ try {
   await page.getByRole("heading", { name: "დღეს", exact: true }).waitFor({ state: "visible" });
   await page.getByText("თქვენი SalonFlow მზად არის დასაწყებად", { exact: true }).waitFor({ state: "visible" });
 
+  await captureWorkspaceScreenshots(page);
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto(`${baseUrl}/app/today`, { waitUntil: "domcontentloaded" });
+  await page.getByRole("heading", { name: "დღეს", exact: true }).waitFor({ state: "visible" });
   await verifyKeyboardNavigation(page);
   await verifyWorkspaceSurfaces(page, { width: 1280, height: 720 });
   await verifyWorkspaceSurfaces(page, { width: 375, height: 812 });

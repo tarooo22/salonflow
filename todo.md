@@ -111,3 +111,9 @@
 - [x] Redesign P1 foundation: Consolidate warm SalonFlow light/dark/system tokens and reusable public/auth form, feedback, navigation, and booking presentation primitives without changing backend contracts.
 - [x] Redesign P1 public/auth: Rebuild the public marketing, discovery, booking, login/register/claim, 404, and clearly-labelled preview surfaces for premium Georgian UX while retaining their routes and live behavior.
 - [x] Redesign P1 QA: Validate 375/768/1024/1440 public/auth surfaces, keyboard/focus/form states, no-horizontal-scroll, local auth and public booking regressions; capture before/after evidence and an explicit deferred-scope list.
+- [x] Redesign P2 audit: Reconcile the reported 104-to-103 assertion discrepancy, identify the exact assertion/file change, and prove functional coverage did not regress.
+- [x] Redesign P2 foundation: Audit protected route/data-state gaps and create reusable dense Workspace shell, page header, metric, filter, table/card, status, and responsive state primitives without changing backend/API contracts.
+- [x] Redesign P2 Today and Calendar: Rebuild operational queue and day/week calendar presentation, including a genuine mobile day/list approach rather than a shrunken desktop grid.
+- [x] Redesign P2 CRM, Services, and Team: Rebuild dense desktop data views and readable mobile cards/detail actions using existing live scoped data and role gates.
+- [x] Redesign P2 Reports and Settings: Localize payment labels and monetary/date presentation, redesign reporting/finance density and responsive export context, and add grouped Settings profile/workspace/security/notifications/appearance/integrations surface using existing safe state.
+- [x] Redesign P2 QA and delivery: Validate protected routes at 375/768/1024/1440, keyboard/focus/light-dark-system/loading-error-empty states, tests/typecheck/build, then capture desktop/mobile screenshots and deliver route-by-route changes plus remaining limitations.

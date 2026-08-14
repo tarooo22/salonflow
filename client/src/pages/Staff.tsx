@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
+import { formatGelTetri } from "@/lib/presentation";
 import { BriefcaseBusiness, CalendarOff, Clock3, MapPin, Pencil, Plus, Trash2, UsersRound } from "lucide-react";
 import { toast } from "sonner";
 
@@ -82,6 +83,6 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function Metric({ icon: Icon, label, value, hint }: { icon: typeof UsersRound; label: string; value: string; hint: string }) { return <Card><CardContent className="p-5"><Icon className="h-5 w-5 text-primary" /><p className="mt-4 text-sm text-muted-foreground">{label}</p><p className="mt-2 text-2xl font-semibold">{value}</p><p className="mt-3 text-xs text-muted-foreground">{hint}</p></CardContent></Card>; }
 function StateCard({ text, error = false }: { text: string; error?: boolean }) { return <Card className={error ? "border-destructive/30 bg-destructive/5" : ""}><CardContent className={`p-8 text-sm ${error ? "text-destructive" : "text-muted-foreground"}`}>{text}</CardContent></Card>; }
 function Signal({ label, value }: { label: string; value: string }) { return <div><p className="text-[10px] leading-3 text-muted-foreground">{label}</p><p className="mt-1 text-xs font-semibold">{value}</p></div>; }
-function formatGEL(tetri: number) { return new Intl.NumberFormat("ka-GE", { style: "currency", currency: "GEL", maximumFractionDigits: 2 }).format(tetri / 100); }
+function formatGEL(tetri: number) { return formatGelTetri(tetri); }
 function formatScheduleDate(value: Date) { return new Intl.DateTimeFormat("ka-GE", { dateStyle: "short", timeStyle: "short" }).format(new Date(value)); }
 function toDateTimeLocal(value: Date) { const date = new Date(value); const offset = date.getTimezoneOffset(); return new Date(date.getTime() - offset * 60_000).toISOString().slice(0, 16); }
