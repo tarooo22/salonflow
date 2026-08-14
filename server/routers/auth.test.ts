@@ -2,9 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   getUserByNormalizedEmail: vi.fn(),
-  getLegacyLocalUserByRecoveryCode: vi.fn(),
+  getUserByOpenId: vi.fn(),
+  getIncompleteLocalUserByRecoveryCode: vi.fn(),
   createLocalUser: vi.fn(),
-  updateOwnUserProfile: vi.fn(),
   requireDb: vi.fn(),
   createLocalSessionToken: vi.fn(),
   hashPassword: vi.fn(),
@@ -13,9 +13,9 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("../db", () => ({
   getUserByNormalizedEmail: mocks.getUserByNormalizedEmail,
-  getLegacyLocalUserByRecoveryCode: mocks.getLegacyLocalUserByRecoveryCode,
+  getUserByOpenId: mocks.getUserByOpenId,
+  getIncompleteLocalUserByRecoveryCode: mocks.getIncompleteLocalUserByRecoveryCode,
   createLocalUser: mocks.createLocalUser,
-  updateOwnUserProfile: mocks.updateOwnUserProfile,
   requireDb: mocks.requireDb,
 }));
 vi.mock("../lib/localSessions", () => ({ createLocalSessionToken: mocks.createLocalSessionToken }));
@@ -25,7 +25,6 @@ vi.mock("../lib/passwords", () => ({ hashPassword: mocks.hashPassword, verifyPas
 import { authRouter } from "./auth";
 
 const localUser = { id: 44, openId: "local_test_user_00001", name: "თამარი", email: "tamari@example.com", passwordHash: "stored-hash", accountStatus: "ACTIVE", loginMethod: "local" };
-const recoveryCode = "SFRC-1234-5678-9ABC-DEF0-1234";
 
 function context() {
   const cookie = vi.fn();
@@ -50,20 +49,6 @@ describe("local auth router", () => {
     expect(cookie).toHaveBeenCalledWith("app_session_id", "signed-local-session", expect.objectContaining({ httpOnly: true, sameSite: "lax" }));
   });
 
-  it("updates only the authenticated user profile through the protected contract", async () => {
-    mocks.updateOwnUserProfile.mockResolvedValue({ ...localUser, name: "ნინო" });
-    const { ctx } = context();
-    ctx.user = localUser;
-
-    await expect(authRouter.createCaller(ctx).updateProfile({ name: "ნინო" })).resolves.toEqual({
-      id: 44,
-      openId: "local_test_user_00001",
-      name: "ნინო",
-      email: "tamari@example.com",
-    });
-    expect(mocks.updateOwnUserProfile).toHaveBeenCalledWith(44, { name: "ნინო" });
-  });
-
   it("rejects an invalid local login without issuing a session", async () => {
     mocks.getUserByNormalizedEmail.mockResolvedValue(localUser);
     mocks.verifyPassword.mockResolvedValue(false);
@@ -73,29 +58,44 @@ describe("local auth router", () => {
     expect(cookie).not.toHaveBeenCalled();
   });
 
-  it("claims an incomplete legacy local record only after its recovery code and current password verify", async () => {
+  it("claims an incomplete legacy local record only after its current password verifies", async () => {
     const legacyUser = { ...localUser, email: null, normalizedEmail: null, loginMethod: null, name: null };
     const where = vi.fn().mockResolvedValue([{ affectedRows: 1 }]);
     const set = vi.fn().mockReturnValue({ where });
-    mocks.getLegacyLocalUserByRecoveryCode.mockResolvedValue(legacyUser);
+    mocks.getUserByOpenId.mockResolvedValue(legacyUser);
     mocks.getUserByNormalizedEmail.mockResolvedValue(undefined);
     mocks.verifyPassword.mockResolvedValue(true);
     mocks.requireDb.mockResolvedValue({ update: vi.fn().mockReturnValue({ set }) });
     const { ctx, cookie } = context();
 
-    await expect(authRouter.createCaller(ctx).claimLegacyLocal({ recoveryCode, email: "legacy@example.com", password: "ძლიერი-პაროლი-123" })).resolves.toEqual({ id: 44, openId: legacyUser.openId, name: null, email: "legacy@example.com" });
-    expect(mocks.getLegacyLocalUserByRecoveryCode).toHaveBeenCalledWith(recoveryCode);
+    await expect(authRouter.createCaller(ctx).claimLegacyLocal({ openId: legacyUser.openId, email: "legacy@example.com", password: "ძლიერი-პაროლი-123" })).resolves.toEqual({ id: 44, openId: legacyUser.openId, name: null, email: "legacy@example.com" });
     expect(where).toHaveBeenCalled();
+    expect(cookie).toHaveBeenCalledWith("app_session_id", "signed-local-session", expect.any(Object));
+  });
+
+  it("claims an incomplete legacy account through a human recovery code without a raw openId input", async () => {
+    const legacyUser = { ...localUser, email: null, normalizedEmail: null, loginMethod: null, name: null };
+    const where = vi.fn().mockResolvedValue([{ affectedRows: 1 }]);
+    const set = vi.fn().mockReturnValue({ where });
+    mocks.getIncompleteLocalUserByRecoveryCode.mockResolvedValue(legacyUser);
+    mocks.getUserByNormalizedEmail.mockResolvedValue(undefined);
+    mocks.verifyPassword.mockResolvedValue(true);
+    mocks.requireDb.mockResolvedValue({ update: vi.fn().mockReturnValue({ set }) });
+    const { ctx, cookie } = context();
+
+    await expect(authRouter.createCaller(ctx).claimLegacyLocal({ recoveryCode: "SF-1234-5678-9ABC", email: "legacy@example.com", password: "ძლიერი-პაროლი-123" })).resolves.toEqual({ id: 44, openId: legacyUser.openId, name: null, email: "legacy@example.com" });
+    expect(mocks.getIncompleteLocalUserByRecoveryCode).toHaveBeenCalledWith("SF-1234-5678-9ABC");
+    expect(mocks.getUserByOpenId).not.toHaveBeenCalled();
     expect(cookie).toHaveBeenCalledWith("app_session_id", "signed-local-session", expect.any(Object));
   });
 
   it("does not bind an email when the legacy account password does not verify", async () => {
     const legacyUser = { ...localUser, email: null, normalizedEmail: null, loginMethod: null };
-    mocks.getLegacyLocalUserByRecoveryCode.mockResolvedValue(legacyUser);
+    mocks.getUserByOpenId.mockResolvedValue(legacyUser);
     mocks.verifyPassword.mockResolvedValue(false);
     const { ctx, cookie } = context();
 
-    await expect(authRouter.createCaller(ctx).claimLegacyLocal({ recoveryCode, email: "legacy@example.com", password: "არასწორი-პაროლი" })).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+    await expect(authRouter.createCaller(ctx).claimLegacyLocal({ openId: legacyUser.openId, email: "legacy@example.com", password: "არასწორი-პაროლი-123" })).rejects.toMatchObject({ code: "UNAUTHORIZED" });
     expect(mocks.requireDb).not.toHaveBeenCalled();
     expect(cookie).not.toHaveBeenCalled();
   });

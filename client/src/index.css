@@ -43,57 +43,91 @@
 }
 
 :root {
-  --sf-paper: #fffdf9;
-  --sf-ivory: #f7f2eb;
-  --sf-ink: #1d2a25;
-  --sf-ink-muted: #66716b;
-  --sf-terracotta: #c4623f;
-  --sf-terracotta-dark: #9f4528;
-  --sf-jade: #15806d;
+  --sf-canvas: #f8f5f0;
+  --sf-surface: #fffdf9;
+  --sf-ink: #1b2923;
+  --sf-muted: #68736c;
+  --sf-line: #e7ded4;
+  --sf-terracotta: #c5603e;
+  --sf-terracotta-strong: #a9492b;
+  --sf-jade: #147c68;
   --sf-jade-soft: #e2f2ed;
-  --sf-violet: #6b5ab5;
-  --sf-line: #e7ddd3;
-  --sf-danger: #b84040;
-  --sf-warning: #b87618;
-  --sf-focus: #6b5ab5;
+  --sf-amber: #b86a15;
+  --sf-danger: #b83c46;
+  --sf-violet: #6c58c7;
+  --sf-paper: var(--sf-surface);
+  --sf-ivory: var(--sf-canvas);
+  --sf-ink-muted: var(--sf-muted);
+  --sf-terracotta-dark: var(--sf-terracotta-strong);
+  --sf-warning: var(--sf-amber);
+  --sf-focus: var(--sf-violet);
+  --sf-font-ui: "Noto Sans Georgian", "Noto Sans", ui-sans-serif, system-ui, sans-serif;
+  --sf-font-display: "DM Serif Display", Georgia, serif;
+  --sf-space-1: 0.25rem;
+  --sf-space-2: 0.5rem;
+  --sf-space-3: 0.75rem;
+  --sf-space-4: 1rem;
+  --sf-space-5: 1.25rem;
+  --sf-space-6: 1.5rem;
+  --sf-space-8: 2rem;
+  --sf-space-10: 2.5rem;
+  --sf-space-12: 3rem;
+  --sf-space-16: 4rem;
+  --sf-radius-control: 0.75rem;
+  --sf-radius-surface: 1.125rem;
+  --sf-radius-hero: 1.5rem;
+  --sf-motion-fast: 160ms cubic-bezier(0.23, 1, 0.32, 1);
+  --sf-motion-standard: 220ms cubic-bezier(0.23, 1, 0.32, 1);
   --sf-shadow-sm: 0 1px 2px rgb(29 42 37 / 0.06);
-  --sf-shadow-md: 0 14px 34px rgb(29 42 37 / 0.10);
-  --radius: 0.85rem;
-  --background: var(--sf-paper);
+  --sf-shadow-md: 0 14px 34px rgb(29 42 37 / 0.1);
+  --radius: var(--sf-radius-control);
+  --background: var(--sf-canvas);
   --foreground: var(--sf-ink);
-  --card: #ffffff;
+  --card: var(--sf-surface);
   --card-foreground: var(--sf-ink);
-  --popover: #ffffff;
+  --popover: var(--sf-surface);
   --popover-foreground: var(--sf-ink);
-  --primary: var(--sf-terracotta-dark);
-  --primary-foreground: var(--sf-paper);
-  --secondary: var(--sf-ivory);
+  --primary: var(--sf-terracotta-strong);
+  --primary-foreground: var(--sf-surface);
+  --secondary: #f1ebe2;
   --secondary-foreground: var(--sf-ink);
-  --muted: var(--sf-ivory);
-  --muted-foreground: var(--sf-ink-muted);
+  --muted: #f1ebe2;
+  --muted-foreground: var(--sf-muted);
   --accent: var(--sf-jade-soft);
   --accent-foreground: #0f594b;
   --destructive: var(--sf-danger);
-  --destructive-foreground: var(--sf-paper);
+  --destructive-foreground: var(--sf-surface);
   --border: var(--sf-line);
   --input: var(--sf-line);
   --ring: var(--sf-focus);
   --chart-1: var(--sf-terracotta);
   --chart-2: var(--sf-jade);
   --chart-3: var(--sf-violet);
-  --chart-4: var(--sf-warning);
+  --chart-4: var(--sf-amber);
   --chart-5: #a96491;
   --sidebar: var(--sf-ink);
-  --sidebar-foreground: var(--sf-paper);
+  --sidebar-foreground: var(--sf-surface);
   --sidebar-primary: var(--sf-terracotta);
-  --sidebar-primary-foreground: var(--sf-paper);
+  --sidebar-primary-foreground: var(--sf-surface);
   --sidebar-accent: #2c3b34;
-  --sidebar-accent-foreground: var(--sf-paper);
+  --sidebar-accent-foreground: var(--sf-surface);
   --sidebar-border: #3b4a43;
   --sidebar-ring: #c6bafc;
 }
 
 .dark {
+  --sf-canvas: #111c18;
+  --sf-surface: #192722;
+  --sf-ink: #f7f2eb;
+  --sf-muted: #bdc8c1;
+  --sf-line: #35463e;
+  --sf-terracotta: #dc7a55;
+  --sf-terracotta-strong: #eb8f6b;
+  --sf-jade: #5bc4ae;
+  --sf-jade-soft: #164f44;
+  --sf-amber: #e0aa57;
+  --sf-danger: #e67b82;
+  --sf-violet: #afa0fa;
   --background: #141f1b;
   --foreground: #f7f2eb;
   --card: #1d2a25;
@@ -129,12 +163,12 @@
 }
 
 @layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
+  * { @apply border-border outline-ring/50; }
   body {
     @apply bg-background text-foreground;
     min-width: 320px;
+    font-family: var(--sf-font-ui);
+    text-rendering: optimizeLegibility;
   }
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
@@ -144,55 +178,29 @@
   a[href],
   select:not(:disabled),
   input[type="checkbox"]:not(:disabled),
-  input[type="radio"]:not(:disabled) {
-    @apply cursor-pointer;
-  }
-
-  :focus-visible {
-    outline: 3px solid var(--sf-focus);
-    outline-offset: 3px;
-  }
+  input[type="radio"]:not(:disabled) { @apply cursor-pointer; }
+  :focus-visible { outline: 3px solid var(--sf-focus); outline-offset: 3px; }
+  ::selection { background: color-mix(in srgb, var(--sf-terracotta) 24%, transparent); color: var(--sf-ink); }
 }
 
 @layer components {
-  /**
-   * Custom container utility that centers content and adds responsive padding.
-   *
-   * This overrides Tailwind's default container behavior to:
-   * - Auto-center content (mx-auto)
-   * - Add responsive horizontal padding
-   * - Set max-width for large screens
-   *
-   * Usage: <div className="container">...</div>
-   *
-   * For custom widths, use max-w-* utilities directly:
-   * <div className="max-w-6xl mx-auto px-4">...</div>
-   */
-  .container {
-    width: 100%;
-    margin-left: auto;
-    margin-right: auto;
-    padding-left: 1rem; /* 16px - mobile padding */
-    padding-right: 1rem;
+  .container { width: 100%; margin-inline: auto; padding-inline: 1rem; }
+  .flex { min-height: 0; min-width: 0; }
+  .sf-public-page {
+    min-height: 100vh;
+    background: radial-gradient(circle at 88% 5%, color-mix(in srgb, var(--sf-terracotta) 9%, transparent), transparent 28rem), radial-gradient(circle at 2% 30%, color-mix(in srgb, var(--sf-jade) 7%, transparent), transparent 30rem), var(--sf-canvas);
+    color: var(--sf-ink);
   }
+  .sf-public-container { width: min(100% - 2rem, 76rem); margin-inline: auto; }
+  .sf-display { font-family: var(--sf-font-display); letter-spacing: -0.035em; }
+  .sf-kicker { color: var(--sf-terracotta); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+  .sf-surface { border: 1px solid var(--sf-line); border-radius: var(--sf-radius-surface); background: var(--sf-surface); box-shadow: var(--sf-shadow-sm); }
+  .sf-interactive { transition: transform var(--sf-motion-fast), background-color var(--sf-motion-fast), border-color var(--sf-motion-fast), color var(--sf-motion-fast), box-shadow var(--sf-motion-fast); }
+  .sf-interactive:active { transform: scale(0.97); }
+  @media (min-width: 640px) { .container { padding-inline: 1.5rem; } }
+  @media (min-width: 1024px) { .container { max-width: 1280px; padding-inline: 2rem; } }
+}
 
-  .flex {
-    min-height: 0;
-    min-width: 0;
-  }
-
-  @media (min-width: 640px) {
-    .container {
-      padding-left: 1.5rem; /* 24px - tablet padding */
-      padding-right: 1.5rem;
-    }
-  }
-
-  @media (min-width: 1024px) {
-    .container {
-      padding-left: 2rem; /* 32px - desktop padding */
-      padding-right: 2rem;
-      max-width: 1280px; /* Standard content width */
-    }
-  }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
 }

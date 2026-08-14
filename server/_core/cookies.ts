@@ -39,17 +39,14 @@ export function getSessionCookieOptions(
   //       ? hostname
   //       : undefined;
 
-  const secure = isSecureRequest(req);
-
   return {
     httpOnly: true,
     path: "/",
-    // Embedded previews run the app in a third-party browsing context. A
-    // Lax cookie can be written by login but is then withheld from the
-    // immediate protected API request, producing a false unauthenticated
-    // state and a loop back to /login. Modern browsers require `Secure` for
-    // `SameSite=None`; retain Lax for local HTTP where Secure is impossible.
-    sameSite: secure ? "none" : "lax",
-    secure,
+    // `SameSite=None` is rejected by modern browsers unless Secure is also
+    // present, which would silently break local HTTP development sessions.
+    // SalonFlow's app/API traffic is same-site, so Lax preserves CSRF
+    // protection while remaining valid on both local HTTP and deployed HTTPS.
+    sameSite: "lax",
+    secure: isSecureRequest(req),
   };
 }

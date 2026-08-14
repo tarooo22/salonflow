@@ -107,10 +107,7 @@
 - [x] Master Plan P0: Run full any-available confirmation path validation from server commit response through Georgian rendered confirmation with the resolved specialist name.
 - [x] Master Plan P1: Add shared `ka-GE` GEL/date/time presentation helpers and adopt them in the most visible public/operations surfaces without altering integer-tetri storage.
 - [x] Master Plan P1: Localize the unknown-route 404 fallback into Georgian and align it with SalonFlow’s semantic design foundation, with rendered route coverage.
-- [x] Fix the reported post-login redirect loop: a valid local sign-in now uses a Secure SameSite=None session cookie in deployed HTTPS embedded contexts (and Lax in local HTTP), so it persists through the first protected workspace request without returning the user to `/login`; matching logout attributes and regressions are covered.
-- [x] Reference brief foundation: Publish assumption-labelled UX research, brand foundation, architecture, design-system, UI component, QA checklist, and booking-rule artifacts that map to the existing live product without inventing research or integrations.
-- [x] Reference brief P1: Add a protected, role-appropriate Settings surface with an exposed Light/Dark/System preference and safe profile/preferences states.
-- [x] Reference brief P1: Replace the raw `local_`/openId account-claim input with a human-friendly recovery-code experience while preserving current-password verification and legacy-account safety.
-- [x] Reference brief P2: Add role-gated receptionist walk-in creation from Today/Calendar with organization/location scope, integer-tetri pricing, conflict-safe slot checks, and focused regression coverage.
-- [x] Reference brief P2: Add conflict-safe appointment rescheduling plus explicit payment-state context in Today/Calendar, backed by server-side validation and Georgian user feedback.
-- [x] Deliver a Georgian final-status report covering completed work, verification evidence, current limitations, and privacy-safe screenshots for every existing public and protected SalonFlow route.
+- [x] Redesign P1 pre-flight: Record baseline tests/typecheck/build, preserved route/API/auth/booking contracts, token source-of-truth, component inventory, and public/auth-only scope in `REDESIGN_AUDIT.md`.
+- [x] Redesign P1 foundation: Consolidate warm SalonFlow light/dark/system tokens and reusable public/auth form, feedback, navigation, and booking presentation primitives without changing backend contracts.
+- [x] Redesign P1 public/auth: Rebuild the public marketing, discovery, booking, login/register/claim, 404, and clearly-labelled preview surfaces for premium Georgian UX while retaining their routes and live behavior.
+- [x] Redesign P1 QA: Validate 375/768/1024/1440 public/auth surfaces, keyboard/focus/form states, no-horizontal-scroll, local auth and public booking regressions; capture before/after evidence and an explicit deferred-scope list.

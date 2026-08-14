@@ -41,18 +41,6 @@ export function deriveAppointmentBalance(totalTetri: number, payments: Array<{ a
   };
 }
 
-export type PaymentDisplayState = "UNPAID" | "PARTIAL" | "PAID" | "REFUNDED" | "OVERPAID";
-
-/** Gives operational UIs a labelled payment state from persisted payment rows and server-derived totals. */
-export function derivePaymentDisplayState(totalTetri: number, payments: Array<{ amountTetri: number; refundedTetri: number; status: "PENDING" | "PAID" | "PARTIALLY_REFUNDED" | "REFUNDED" | "FAILED" }>) {
-  const totals = deriveAppointmentBalance(totalTetri, payments);
-  if (totals.overpaymentTetri > 0) return { state: "OVERPAID" as const, totals };
-  if (totals.balanceTetri === 0) return { state: "PAID" as const, totals };
-  if (totals.collectedTetri > 0) return { state: "PARTIAL" as const, totals };
-  if (payments.some(payment => payment.status === "REFUNDED" || payment.status === "PARTIALLY_REFUNDED")) return { state: "REFUNDED" as const, totals };
-  return { state: "UNPAID" as const, totals };
-}
-
 export type OperationalAppointment = {
   id: string;
   status: AppointmentStatus;

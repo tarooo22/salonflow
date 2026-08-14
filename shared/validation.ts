@@ -26,17 +26,18 @@ export const localLoginSchema = z.object({
   password: z.string().min(1).max(128),
 });
 
-export const userProfileUpdateSchema = z.object({
-  name: z.string().trim().min(2).max(160),
-});
-
-export const legacyRecoveryCodeSchema = z.string().trim().toUpperCase().regex(/^SFRC-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}$/);
-
-export const legacyLocalAccountClaimSchema = z.object({
-  recoveryCode: legacyRecoveryCodeSchema,
-  email: z.string().trim().email().max(320),
-  password: z.string().min(10).max(128),
-});
+export const legacyLocalAccountClaimSchema = z.union([
+  z.object({
+    recoveryCode: z.string().trim().min(10).max(32),
+    email: z.string().trim().email().max(320),
+    password: z.string().min(10).max(128),
+  }),
+  z.object({
+    openId: z.string().trim().regex(/^local_[A-Za-z0-9_-]{12,64}$/),
+    email: z.string().trim().email().max(320),
+    password: z.string().min(10).max(128),
+  }),
+]);
 
 export const organizationCreateSchema = z.object({
   name: z.string().trim().min(2).max(160),
@@ -244,23 +245,6 @@ export const appointmentCreateSchema = z.object({
   subtotalTetri: z.number().int().min(0),
   discountTetri: z.number().int().min(0).default(0),
   totalTetri: z.number().int().min(0),
-});
-
-export const walkInCreateSchema = z.object({
-  organizationId: opaqueIdSchema,
-  locationId: opaqueIdSchema,
-  clientId: opaqueIdSchema.optional(),
-  staffProfileId: opaqueIdSchema,
-  serviceId: opaqueIdSchema,
-  startsAt: z.coerce.date(),
-  internalNote: z.string().trim().max(2_000).optional(),
-});
-
-export const appointmentRescheduleSchema = z.object({
-  organizationId: opaqueIdSchema,
-  appointmentId: opaqueIdSchema,
-  startsAt: z.coerce.date(),
-  reason: z.string().trim().max(255).optional(),
 });
 
 export const appointmentStatusUpdateSchema = z.object({

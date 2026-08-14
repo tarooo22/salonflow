@@ -1,8 +1,8 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { createHmac, timingSafeEqual } from "node:crypto";
 import { InsertUser, organizationMemberships, users } from "../drizzle/schema";
 import { normalizeEmail } from "./lib/normalization";
+import { matchesLegacyRecoveryCode } from "./lib/recoveryCodes";
 import { ENV } from "./_core/env";
 
 let database: ReturnType<typeof drizzle> | null = null;
@@ -66,6 +66,13 @@ export async function getUserByNormalizedEmail(email: string) {
   return result[0];
 }
 
+export async function getIncompleteLocalUserByRecoveryCode(recoveryCode: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const candidates = await db.select().from(users).where(eq(users.accountStatus, "ACTIVE")).limit(200);
+  return candidates.find(candidate => candidate.openId.startsWith("local_") && !candidate.email && !candidate.normalizedEmail && !candidate.loginMethod && Boolean(candidate.passwordHash) && matchesLegacyRecoveryCode(candidate.openId, recoveryCode));
+}
+
 export async function createLocalUser(input: { openId: string; name: string; email: string; passwordHash: string }) {
   const db = await requireDb();
   const normalizedEmail = normalizeEmail(input.email);
@@ -82,41 +89,6 @@ export async function createLocalUser(input: { openId: string; name: string; ema
     lastSignedIn: new Date(),
   });
   return getUserByOpenId(input.openId);
-}
-
-export async function updateOwnUserProfile(userId: number, input: { name: string }) {
-  const db = await requireDb();
-  await db.update(users).set({ name: input.name.trim() }).where(eq(users.id, userId));
-  const result = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-  return result[0];
-}
-
-export function createLegacyRecoveryCode(openId: string) {
-  const digest = createHmac("sha256", ENV.cookieSecret)
-    .update(`salonflow-legacy-recovery-v1:${openId}`)
-    .digest("hex")
-    .toUpperCase();
-  return `SFRC-${digest.slice(0, 4)}-${digest.slice(4, 8)}-${digest.slice(8, 12)}-${digest.slice(12, 16)}-${digest.slice(16, 20)}`;
-}
-
-function safeRecoveryCodeMatch(expected: string, received: string) {
-  const expectedBytes = Buffer.from(expected);
-  const receivedBytes = Buffer.from(received.trim().toUpperCase());
-  return expectedBytes.length === receivedBytes.length && timingSafeEqual(expectedBytes, receivedBytes);
-}
-
-export async function getLegacyLocalUserByRecoveryCode(recoveryCode: string) {
-  const db = await requireDb();
-  const candidates = await db.select().from(users).where(and(
-    isNull(users.email),
-    isNull(users.normalizedEmail),
-    isNull(users.loginMethod),
-  ));
-  return candidates.find(candidate => (
-    candidate.openId.startsWith("local_")
-    && Boolean(candidate.passwordHash)
-    && safeRecoveryCodeMatch(createLegacyRecoveryCode(candidate.openId), recoveryCode)
-  ));
 }
 
 export async function getActiveMembership(userId: number, organizationId: string) {
