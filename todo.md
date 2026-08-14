@@ -113,3 +113,4 @@
 - [x] Reference brief P1: Replace the raw `local_`/openId account-claim input with a human-friendly recovery-code experience while preserving current-password verification and legacy-account safety.
 - [x] Reference brief P2: Add role-gated receptionist walk-in creation from Today/Calendar with organization/location scope, integer-tetri pricing, conflict-safe slot checks, and focused regression coverage.
 - [x] Reference brief P2: Add conflict-safe appointment rescheduling plus explicit payment-state context in Today/Calendar, backed by server-side validation and Georgian user feedback.
+- [x] Deliver a Georgian final-status report covering completed work, verification evidence, current limitations, and privacy-safe screenshots for every existing public and protected SalonFlow route.
