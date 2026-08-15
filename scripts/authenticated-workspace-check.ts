@@ -12,6 +12,7 @@ const email = `validation-${runId}@example.test`;
 const organizationSlug = `validation-${runId}`;
 const publicSlug = `validation-booking-${runId}`;
 let validationOpenId: string | null = null;
+const shouldCaptureScreenshots = process.env.CAPTURE_SCREENSHOTS !== "0";
 const routes = [
   ["/app/today", "დღეს"],
   ["/app/calendar", "კალენდარი"],
@@ -100,6 +101,23 @@ async function verifyWorkspaceSurfaces(page: Page, viewport: { width: number; he
     assert(noHorizontalOverflow, `${route} overflows horizontally at ${viewport.width}px.`);
     await assertVisibleFocus(page, "main button, main input, main [role=combobox]", `${route} operational control`);
   }
+}
+
+async function verifyBookingInteractionFeedback(page: Page) {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto(`${baseUrl}/book/${publicSlug}`, { waitUntil: "domcontentloaded" });
+  await page.getByRole("heading", { name: "დაჯავშნეთ თქვენი მშვიდი დრო.", exact: true }).waitFor({ state: "visible" });
+
+  const continueButton = () => page.locator("div.fixed").getByRole("button", { name: "გაგრძელება", exact: true });
+  await continueButton().click();
+  const errorSummary = page.locator("[data-booking-error]");
+  await errorSummary.getByText("ჯერ აირჩიეთ სერვისი", { exact: true }).waitFor({ state: "visible" });
+  assert(await errorSummary.evaluate(element => document.activeElement === element), "Booking validation error summary did not receive focus.");
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const errorMotion = await errorSummary.evaluate(element => window.getComputedStyle(element).animationDuration);
+  assert(Number.parseFloat(errorMotion) <= 0.001, `Booking reduced-motion animation override was not applied: ${errorMotion}.`);
+  await page.emulateMedia({ reducedMotion: "no-preference" });
 }
 
 async function captureWorkspaceScreenshots(page: Page) {
@@ -196,7 +214,7 @@ async function verifyErrorStates(page: Page) {
   const catalogFailure = /\/api\/trpc\/.*public\.bookingCatalog/;
   await page.route(catalogFailure, route => route.abort("failed"));
   await page.goto(`${baseUrl}/book/${publicSlug}`, { waitUntil: "networkidle" });
-  await page.getByText("ჩაწერის მონაცემები დროებით მიუწვდომელია. სცადეთ მოგვიანებით.", { exact: true }).waitFor({ state: "visible" });
+  await page.getByText("ჩაწერის მონაცემები დროებით მიუწვდომელია. შეამოწმეთ კავშირი და სცადეთ მოგვიანებით.", { exact: true }).waitFor({ state: "visible" });
   await page.unroute(catalogFailure);
 
   await page.goto(`${baseUrl}/book`, { waitUntil: "networkidle" });
@@ -290,8 +308,10 @@ try {
   await page.getByText("თქვენი SalonFlow მზად არის დასაწყებად", { exact: true }).waitFor({ state: "visible" });
 
   await seedValidationOperations();
-  await captureWorkspaceScreenshots(page);
-  await capturePublicScreenshots(page);
+  if (shouldCaptureScreenshots) {
+    await captureWorkspaceScreenshots(page);
+    await capturePublicScreenshots(page);
+  }
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto(`${baseUrl}/app/today`, { waitUntil: "domcontentloaded" });
   await page.getByRole("heading", { name: "დღეს", exact: true }).waitFor({ state: "visible" });
@@ -302,6 +322,7 @@ try {
   await verifyWorkspaceSurfaces(page, { width: 768, height: 1024 });
   await verifyWorkspaceSurfaces(page, { width: 1024, height: 900 });
   await verifyWorkspaceSurfaces(page, { width: 1440, height: 1000 });
+  await verifyBookingInteractionFeedback(page);
   const errorPage = await context.newPage();
   await verifyErrorStates(errorPage);
   await errorPage.close();

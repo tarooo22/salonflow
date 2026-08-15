@@ -129,3 +129,6 @@
 - [x] Master redesign public flows: Polish local authentication, recovery and supported public booking/discovery steps with accessible, mobile-first selection, progress, validation and success states without changing auth or booking APIs.
 - [x] Master redesign workspace: Refine shared shell, Today, Calendar, Clients, Services, Team, Reports and Settings for dense professional operational use, responsive 375/430/768/1024/1280/1440 behavior and existing role/data boundaries.
 - [x] Master redesign quality: Implement route-level lazy loading and performance guards, validate keyboard/focus/reduced-motion/no-overflow/public and protected critical flows, capture populated visual evidence and run Vitest/typecheck/build.
+- [x] Booking interaction polish: Add purposeful selection/progress/loading/submit micro-interactions that animate only transform/opacity and fully respect reduced-motion preferences.
+- [x] Booking error feedback: Replace scattered booking failure copy with accessible, Georgian inline and summary feedback that explains the recovery action without exposing internal API details.
+- [x] Booking interaction QA: Validate service/staff/time error and retry states at mobile/desktop, keyboard focus handoff, reduced-motion behavior, booking regressions, typecheck and production build.
