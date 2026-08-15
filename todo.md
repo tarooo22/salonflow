@@ -132,3 +132,6 @@
 - [x] Handoff package: Prepare a verified Georgian project overview, implemented-scope inventory, current limitations and reference-source index.
 - [x] Handoff evidence: Capture and label user-requested reference-site and SalonFlow screenshots without representing third-party visuals as owned assets.
 - [x] Handoff transfer: Create a Claude Code-ready goal brief and a complete source ZIP archive that excludes dependency caches, secrets and generated build artifacts.
+- [x] Booking interaction polish: Add purposeful selection/progress/loading/submit micro-interactions that animate only transform/opacity and fully respect reduced-motion preferences.
+- [x] Booking error feedback: Replace scattered booking failure copy with accessible, Georgian inline and summary feedback that explains the recovery action without exposing internal API details.
+- [x] Booking interaction QA: Validate service/staff/time error and retry states at mobile/desktop, keyboard focus handoff, reduced-motion behavior, booking regressions, typecheck and production build.

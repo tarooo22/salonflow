@@ -1,7 +1,7 @@
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { BookingConfirmation, formatGel, getEligibleTeam, LocationContext, StaffStep } from "./BookingFlow";
+import { BookingConfirmation, formatGel, getBookingValidationIssue, getEligibleTeam, LocationContext, StaffStep } from "./BookingFlow";
 
 describe("public booking conversion helpers", () => {
   it("limits specialist choices to the selected service", () => {
@@ -42,5 +42,13 @@ describe("public booking conversion helpers", () => {
     const markup = renderToStaticMarkup(<BookingConfirmation confirmationToken="safe-confirmation" assignedStaffName="ნინო" />);
     expect(markup).toContain("თქვენი სპეციალისტი:");
     expect(markup).toContain("ნინო");
+  });
+
+  it("gives a focused, non-technical recovery message when a booking step is incomplete", () => {
+    const timeIssue = getBookingValidationIssue({ step: 2, serviceId: "service-a", staffProfileId: "staff-1", startsAt: null, firstName: "", phone: "", termsAccepted: false });
+    const contactIssue = getBookingValidationIssue({ step: 3, serviceId: "service-a", staffProfileId: "staff-1", startsAt: new Date("2026-08-16T10:00:00Z"), available: true, firstName: "ანა", phone: "", termsAccepted: false });
+    expect(timeIssue).toMatchObject({ kind: "time", title: "დაამატეთ სასურველი თარიღი და დრო" });
+    expect(contactIssue).toMatchObject({ kind: "contact", title: "მიუთითეთ მობილურის ნომერი" });
+    expect(contactIssue?.description).not.toContain("tRPC");
   });
 });
