@@ -129,3 +129,6 @@
 - [x] Master redesign public flows: Polish local authentication, recovery and supported public booking/discovery steps with accessible, mobile-first selection, progress, validation and success states without changing auth or booking APIs.
 - [x] Master redesign workspace: Refine shared shell, Today, Calendar, Clients, Services, Team, Reports and Settings for dense professional operational use, responsive 375/430/768/1024/1280/1440 behavior and existing role/data boundaries.
 - [x] Master redesign quality: Implement route-level lazy loading and performance guards, validate keyboard/focus/reduced-motion/no-overflow/public and protected critical flows, capture populated visual evidence and run Vitest/typecheck/build.
+- [x] Handoff package: Prepare a verified Georgian project overview, implemented-scope inventory, current limitations and reference-source index.
+- [x] Handoff evidence: Capture and label user-requested reference-site and SalonFlow screenshots without representing third-party visuals as owned assets.
+- [x] Handoff transfer: Create a Claude Code-ready goal brief and a complete source ZIP archive that excludes dependency caches, secrets and generated build artifacts.
