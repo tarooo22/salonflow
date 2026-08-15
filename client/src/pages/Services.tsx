@@ -139,7 +139,7 @@ export default function Services() {
 
   return (
     <DashboardLayout>
-      <div className="mx-auto w-full max-w-7xl space-y-5">
+      <div className="sf-workspace-page mx-auto w-full max-w-7xl space-y-5">
         <WorkspacePageHeader eyebrow="კატალოგის მართვა" title="სერვისები" description="აქტიური კატეგორიები, ხანგრძლივობები, ფასები და სპეციალისტის ხელმისაწვდომობა." actions={<>{organization ? <WorkspaceStatusPill tone="info">{organization.name}</WorkspaceStatusPill> : null}{organization && canManage ? <Button onClick={() => { setFormError(""); setServiceOpen(true); }}><Plus className="mr-2 h-4 w-4" />სერვისის დამატება</Button> : null}</>} />
         {organizations.isLoading ? <WorkspaceState kind="loading" title="სერვისების სივრცე იტვირთება…" /> : null}
         {organizations.isError ? <WorkspaceState kind="error" title="სამუშაო სივრცის მონაცემები მიუწვდომელია" /> : null}

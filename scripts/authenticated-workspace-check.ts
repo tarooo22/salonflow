@@ -16,8 +16,10 @@ const routes = [
   ["/app/today", "დღეს"],
   ["/app/calendar", "კალენდარი"],
   ["/app/clients", "კლიენტები"],
+  ["/app/services", "სერვისები"],
   ["/app/staff", "გუნდი"],
   ["/app/reports", "ანგარიშები"],
+  ["/app/settings", "პარამეტრები"],
 ] as const;
 const screenshotRoutes = [
   ["today", "/app/today", "დღეს"],
@@ -30,6 +32,11 @@ const screenshotRoutes = [
 ] as const;
 const publicScreenshotRoutes = [
   ["home", "/", "მეტი დრო სტუმრებისთვის. ნაკლები დრო ქაოსისთვის."],
+  ["features", "/features", "ერთი workflow — ჩაწერებიდან ანგარიშებამდე."],
+  ["pricing", "/pricing", "ფასები უნდა იყოს ისეთივე მკაფიო, როგორც თქვენი ოპერაციები."],
+  ["product-demo", "/demo", "იხილეთ workflow, არა გამოგონილი dashboard."],
+  ["faq", "/faq", "სანამ დაიწყებთ, პასუხები ხელთ გქონდეთ."],
+  ["contact", "/contact", "კონტაქტის არხი უნდა იყოს რეალური, არა დეკორაცია."],
   ["discovery", "/book", "იპოვეთ თქვენთვის სასურველი ფილიალი."],
   ["booking", `/book/${publicSlug}`, "დაჯავშნეთ თქვენი მშვიდი დრო."],
   ["login", "/login", "კეთილი იყოს თქვენი დაბრუნება"],
@@ -40,8 +47,10 @@ const publicScreenshotRoutes = [
 ] as const;
 const screenshotViewports = [
   ["mobile", { width: 375, height: 812 }],
+  ["phone-plus", { width: 430, height: 932 }],
   ["tablet", { width: 768, height: 1024 }],
   ["laptop", { width: 1024, height: 900 }],
+  ["wide", { width: 1280, height: 900 }],
   ["desktop", { width: 1440, height: 1000 }],
 ] as const;
 
@@ -94,7 +103,7 @@ async function verifyWorkspaceSurfaces(page: Page, viewport: { width: number; he
 }
 
 async function captureWorkspaceScreenshots(page: Page) {
-  const output = "/home/ubuntu/dark-luxury-screenshots";
+  const output = "/home/ubuntu/master-redesign-screenshots";
   await mkdir(output, { recursive: true });
   for (const [name, route, heading] of screenshotRoutes) {
     for (const [mode, viewport] of screenshotViewports) {
@@ -108,7 +117,7 @@ async function captureWorkspaceScreenshots(page: Page) {
 }
 
 async function capturePublicScreenshots(page: Page) {
-  const output = "/home/ubuntu/dark-luxury-screenshots";
+  const output = "/home/ubuntu/master-redesign-screenshots";
   await mkdir(output, { recursive: true });
   for (const [name, route, heading] of publicScreenshotRoutes) {
     for (const [mode, viewport] of screenshotViewports) {
@@ -247,7 +256,7 @@ async function makeValidationAccountLegacy() {
   return user.openId;
 }
 
-const browser = await chromium.launch({ headless: true });
+const browser = await chromium.launch({ headless: true, executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE ?? "/usr/bin/chromium" });
 const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
 const page = await context.newPage();
 
@@ -257,7 +266,7 @@ try {
   await page.locator("#auth-email").fill(email);
   await page.locator("#auth-password").fill("ValidationPassword!2026");
   await page.getByRole("button", { name: "ანგარიშის შექმნა" }).click();
-  await page.waitForURL(`${baseUrl}/app/today`);
+  await page.waitForFunction(() => window.location.pathname === "/app/today");
   await page.getByRole("link", { name: "სამუშაო სივრცის შექმნა" }).click();
   await page.waitForURL(`${baseUrl}/app/setup`);
   await page.locator("#organization-name").fill("SalonFlow Validation Workspace");
@@ -289,8 +298,10 @@ try {
   await verifyKeyboardNavigation(page);
   await verifyWorkspaceSurfaces(page, { width: 1280, height: 720 });
   await verifyWorkspaceSurfaces(page, { width: 375, height: 812 });
+  await verifyWorkspaceSurfaces(page, { width: 430, height: 932 });
   await verifyWorkspaceSurfaces(page, { width: 768, height: 1024 });
   await verifyWorkspaceSurfaces(page, { width: 1024, height: 900 });
+  await verifyWorkspaceSurfaces(page, { width: 1440, height: 1000 });
   const errorPage = await context.newPage();
   await verifyErrorStates(errorPage);
   await errorPage.close();
@@ -303,7 +314,7 @@ try {
   await claimPage.locator("#auth-email").fill(email);
   await claimPage.locator("#auth-password").fill("ValidationPassword!2026");
   await claimPage.getByRole("button", { name: "ანგარიშის აღდგენა" }).click();
-  await claimPage.waitForURL(`${baseUrl}/app/today`);
+  await claimPage.waitForFunction(() => window.location.pathname === "/app/today");
   await claimPage.getByRole("heading", { name: "დღეს", exact: true }).waitFor({ state: "visible" });
   await claimContext.close();
   console.log("Authenticated workspace validation passed: local onboarding, keyboard focus/traversal, and desktop/mobile rendering are healthy.");

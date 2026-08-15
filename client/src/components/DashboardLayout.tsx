@@ -160,7 +160,7 @@ function DashboardLayoutContent({
       <div className="relative" ref={sidebarRef}>
         <Sidebar
           collapsible="icon"
-          className="border-r border-sidebar-border/90 bg-sidebar shadow-[18px_0_44px_rgb(0_0_0_/_0.16)]"
+          className="sf-workspace-sidebar border-r border-sidebar-border/90 bg-sidebar shadow-[18px_0_44px_rgb(0_0_0_/_0.16)]"
           disableTransition={isResizing}
         >
           <SidebarHeader className="h-[4.75rem] justify-center border-b border-sidebar-border/90">
@@ -174,7 +174,7 @@ function DashboardLayoutContent({
               </button>
               {!isCollapsed ? (
                 <div className="flex items-center gap-2 min-w-0">
-                  <div className="grid h-8 w-8 place-items-center rounded-lg border border-sidebar-primary/25 bg-sidebar-primary text-xs font-bold text-sidebar-primary-foreground shadow-[0_8px_18px_rgb(0_0_0_/_0.22)]">S</div>
+                  <span className="sf-brand-mark sf-brand-mark--inverted" aria-hidden="true"><i /><i /><i /></span>
                   <div className="min-w-0"><span className="block truncate text-sm font-semibold tracking-tight text-sidebar-foreground">SalonFlow</span><span className="block truncate text-[11px] text-sidebar-foreground/65">სამუშაო სივრცე</span></div>
                 </div>
               ) : null}
@@ -253,13 +253,13 @@ function DashboardLayoutContent({
         />
       </div>
 
-      <SidebarInset>
+      <SidebarInset className="sf-workspace-inset">
         {isMobile && (
           <div className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-border/90 bg-background px-3 shadow-[0_8px_24px_rgb(0_0_0_/_0.08)]">
             <div className="flex items-center gap-2">
               <SidebarTrigger className="h-11 w-11 rounded-xl border border-border/75 bg-card" />
               <div className="flex items-center gap-3">
-                <div className="grid h-8 w-8 place-items-center rounded-lg bg-primary text-xs font-bold text-primary-foreground">S</div>
+                <span className="sf-brand-mark" aria-hidden="true"><i /><i /><i /></span>
                 <div className="flex flex-col gap-0.5">
                   <span className="text-sm font-semibold tracking-tight text-foreground">{activeMenuItem?.label ?? "მენიუ"}</span>
                   <span className="text-[11px] text-muted-foreground">SalonFlow</span>
@@ -268,7 +268,7 @@ function DashboardLayoutContent({
             </div>
           </div>
         )}
-        <main className="sf-motion-enter flex-1 bg-background p-4 sm:p-5 xl:p-6">{children}</main>
+        <main className="sf-motion-enter sf-workspace-main flex-1 p-4 sm:p-5 xl:p-6">{children}</main>
       </SidebarInset>
     </>
   );

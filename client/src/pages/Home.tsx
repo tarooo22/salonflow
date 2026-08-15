@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { PublicEyebrow, PublicFooter, PublicHeader } from "@/components/public/PublicPrimitives";
-import { ArrowRight, CalendarCheck2, CheckCircle2, ChevronRight, Clock3, CreditCard, LockKeyhole, Sparkles, UsersRound } from "lucide-react";
+import { SalonFlowHeroScene } from "@/components/public/SalonFlowHeroScene";
+import { ArrowRight, CalendarCheck2, CheckCircle2, ChevronRight, CreditCard, LockKeyhole, Sparkles, UsersRound } from "lucide-react";
 import { Link } from "wouter";
 
 const featureStories = [
@@ -24,21 +25,7 @@ const faq = [
 ];
 
 function ProductPreview() {
-  return <div className="relative mx-auto max-w-xl lg:ml-auto">
-    <div className="absolute inset-0 rounded-[2rem] bg-[color-mix(in_srgb,var(--sf-terracotta)_12%,transparent)] blur-2xl" aria-hidden="true" />
-    <div className="relative overflow-hidden rounded-[1.75rem] border border-sidebar-border/90 bg-sidebar p-3 text-sidebar-foreground shadow-[var(--sf-shadow-lg)] sm:p-5">
-      <div className="rounded-[1.2rem] bg-[var(--sf-surface)] p-4 text-[var(--sf-ink)] sm:p-5">
-        <div className="flex items-center justify-between gap-3"><div><p className="text-xs font-semibold text-[var(--sf-muted)]">დღის ხედვა</p><p className="mt-1 text-lg font-bold">დღეს · მშვიდი კონტროლი</p></div><span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--sf-jade-soft)] px-3 py-1.5 text-xs font-semibold text-[var(--sf-jade)]"><CheckCircle2 className="size-3.5" aria-hidden="true" /> ორგანიზებულია</span></div>
-        <div className="mt-5 grid grid-cols-3 gap-2"><PreviewMetric label="ჩაწერები" value="დღის queue" /><PreviewMetric label="შემდეგი" value="16:30" /><PreviewMetric label="ფილიალი" value="აქტიური" /></div>
-        <div className="mt-4 rounded-xl border border-[var(--sf-line)] bg-[var(--sf-canvas)] p-3"><div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2"><span className="grid size-8 place-items-center rounded-lg bg-[color-mix(in_srgb,var(--sf-terracotta)_13%,transparent)] text-[var(--sf-terracotta)]"><Clock3 className="size-4" aria-hidden="true" /></span><div><p className="text-sm font-semibold">კალენდარში შემდეგი დრო</p><p className="mt-0.5 text-xs text-[var(--sf-muted)]">სპეციალისტი, სერვისი და სტატუსი ერთ block-ში</p></div></div><ChevronRight className="size-4 text-[var(--sf-muted)]" aria-hidden="true" /></div></div>
-      </div>
-      <div className="mt-3 grid gap-2 sm:grid-cols-2"><div className="rounded-xl border border-sidebar-border/90 bg-sidebar-accent/70 p-3"><p className="text-xs text-sidebar-foreground/60">ონლაინ ჩაწერა</p><p className="mt-1 text-sm font-semibold">სერვისი → დრო → დადასტურება</p></div><div className="rounded-xl border border-sidebar-border/90 bg-sidebar-accent/70 p-3"><p className="text-xs text-sidebar-foreground/60">დაცული მართვა</p><p className="mt-1 text-sm font-semibold">როლები, დრო და სტატუსი ერთ ადგილზე</p></div></div>
-    </div>
-  </div>;
-}
-
-function PreviewMetric({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-xl border border-[var(--sf-line)] bg-[var(--sf-surface)] p-3"><p className="text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-[var(--sf-muted)]">{label}</p><p className="mt-1 text-sm font-bold">{value}</p></div>;
+  return <SalonFlowHeroScene />;
 }
 
 export default function Home() {
@@ -46,7 +33,7 @@ export default function Home() {
     <PublicHeader />
     <main>
       <section className="sf-public-container grid gap-12 pb-20 pt-14 lg:grid-cols-[1.03fr_.97fr] lg:items-center lg:pb-28 lg:pt-24">
-        <div><PublicEyebrow>სალონის ყოველდღიური რიტმისთვის</PublicEyebrow><h1 className="sf-display mt-5 max-w-3xl text-5xl font-semibold leading-[0.98] sm:text-6xl lg:text-7xl">მეტი დრო სტუმრებისთვის. ნაკლები დრო ქაოსისთვის.</h1><p className="mt-7 max-w-xl text-lg leading-8 text-[var(--sf-muted)]">SalonFlow აერთიანებს ონლაინ ჩაწერას, კალენდარს, გუნდს, კლიენტებსა და ოპერაციულ კონტროლს ერთ მშვიდ, ქართულ სამუშაო სივრცეში.</p><div className="mt-9 flex flex-col gap-3 sm:flex-row"><Button asChild variant="public" size="lg"><Link href="/register">დაიწყე უფასოდ <ArrowRight className="size-4" aria-hidden="true" /></Link></Button><Button asChild variant="publicSecondary" size="lg"><a href="#how-it-works">იხილე როგორ მუშაობს</a></Button></div><p className="mt-5 inline-flex items-center gap-2 text-sm text-[var(--sf-muted)]"><LockKeyhole className="size-4 text-[var(--sf-jade)]" aria-hidden="true" /> ადგილობრივი ანგარიში · role-based წვდომა · რეალურ დროზე დაცული შემოწმება</p></div>
+        <div><PublicEyebrow>სალონის ყოველდღიური რიტმისთვის</PublicEyebrow><h1 className="sf-display mt-5 max-w-3xl text-[2.4rem] font-semibold leading-[0.98] sm:text-6xl lg:text-7xl">მეტი დრო სტუმრებისთვის. ნაკლები დრო ქაოსისთვის.</h1><p className="mt-7 max-w-xl text-lg leading-8 text-[var(--sf-muted)]">SalonFlow აერთიანებს ონლაინ ჩაწერას, კალენდარს, გუნდს, კლიენტებსა და ოპერაციულ კონტროლს ერთ მშვიდ, ქართულ სამუშაო სივრცეში.</p><div className="mt-9 flex flex-col gap-3 sm:flex-row"><Button asChild variant="public" size="lg"><Link href="/register">დაიწყე უფასოდ <ArrowRight className="size-4" aria-hidden="true" /></Link></Button><Button asChild variant="publicSecondary" size="lg"><a href="#how-it-works">იხილე როგორ მუშაობს</a></Button></div><p className="mt-5 inline-flex items-center gap-2 text-sm text-[var(--sf-muted)]"><LockKeyhole className="size-4 text-[var(--sf-jade)]" aria-hidden="true" /> ადგილობრივი ანგარიში · role-based წვდომა · რეალურ დროზე დაცული შემოწმება</p></div>
         <ProductPreview />
       </section>
 

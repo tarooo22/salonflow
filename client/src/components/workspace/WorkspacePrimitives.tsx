@@ -12,7 +12,7 @@ type WorkspacePageHeaderProps = {
 
 export function WorkspacePageHeader({ eyebrow, title, description, actions, className }: WorkspacePageHeaderProps) {
   return (
-    <header className={cn("flex flex-col gap-4 border-b border-border/80 pb-5 lg:flex-row lg:items-end lg:justify-between", className)}>
+    <header className={cn("flex flex-col gap-4 border-b border-border/75 pb-5 lg:flex-row lg:items-end lg:justify-between", className)}>
       <div className="min-w-0">
         {eyebrow ? <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">{eyebrow}</p> : null}
         <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">{title}</h1>
@@ -37,7 +37,7 @@ export function WorkspaceMetric({ label, value, helper, icon: Icon, tone = "neut
     violet: "bg-[color-mix(in_srgb,var(--sf-violet)_16%,transparent)] text-[var(--sf-violet)]",
   } as const;
   return (
-    <div className="min-w-0 rounded-[var(--sf-radius-surface)] border border-border/80 bg-card px-4 py-3 shadow-[var(--sf-shadow-sm)]">
+    <div className="min-w-0 rounded-[var(--sf-radius-surface)] border border-border/75 bg-card px-4 py-3 shadow-[var(--sf-shadow-sm)]">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0"><p className="text-xs font-medium text-muted-foreground">{label}</p><p className="mt-1 truncate text-xl font-semibold tracking-tight text-foreground">{value}</p></div>
         {Icon ? <span className={cn("grid h-9 w-9 shrink-0 place-items-center rounded-lg", tones[tone])}><Icon className="h-4 w-4" /></span> : null}
@@ -49,7 +49,7 @@ export function WorkspaceMetric({ label, value, helper, icon: Icon, tone = "neut
 
 export function WorkspaceSection({ title, description, action, children, className }: { title: string; description?: string; action?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <section className={cn("rounded-[var(--sf-radius-surface)] border border-border/80 bg-card shadow-[var(--sf-shadow-sm)]", className)}>
+    <section className={cn("sf-operational-panel", className)}>
       <div className="flex flex-col gap-2 border-b border-border/70 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <div><h2 className="text-sm font-semibold text-foreground">{title}</h2>{description ? <p className="mt-1 text-xs leading-5 text-muted-foreground">{description}</p> : null}</div>
         {action ? <div className="shrink-0">{action}</div> : null}
@@ -85,5 +85,5 @@ export function WorkspaceStatusPill({ children, tone = "neutral" }: { children: 
 }
 
 export function WorkspaceFilterBar({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn("flex flex-col gap-3 rounded-[var(--sf-radius-surface)] border border-border/80 bg-card p-3 shadow-[var(--sf-shadow-sm)] sm:flex-row sm:flex-wrap sm:items-end", className)}>{children}</div>;
+  return <div className={cn("flex flex-col gap-3 rounded-[var(--sf-radius-surface)] border border-border/75 bg-card p-3 shadow-[var(--sf-shadow-sm)] sm:flex-row sm:flex-wrap sm:items-end", className)}>{children}</div>;
 }

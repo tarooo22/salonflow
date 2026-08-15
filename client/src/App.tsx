@@ -1,29 +1,45 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
+import { lazy, Suspense } from "react";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
-import Book from "./pages/Book";
-import BookingFlow from "./pages/BookingFlow";
-import Calendar from "./pages/Calendar";
-import Reports from "./pages/Reports";
-import Staff from "./pages/Staff";
-import Services from "./pages/Services";
-import Clients from "./pages/Clients";
-import Today from "./pages/Today";
-import WorkspaceSetup from "./pages/WorkspaceSetup";
-import WorkspacePlaceholder from "./pages/WorkspacePlaceholder";
-import LocalAuth from "./pages/LocalAuth";
-import DemoPreview from "./pages/DemoPreview";
-import Settings from "./pages/Settings";
+
+const Book = lazy(() => import("./pages/Book"));
+const BookingFlow = lazy(() => import("./pages/BookingFlow"));
+const Calendar = lazy(() => import("./pages/Calendar"));
+const Reports = lazy(() => import("./pages/Reports"));
+const Staff = lazy(() => import("./pages/Staff"));
+const Services = lazy(() => import("./pages/Services"));
+const Clients = lazy(() => import("./pages/Clients"));
+const Today = lazy(() => import("./pages/Today"));
+const WorkspaceSetup = lazy(() => import("./pages/WorkspaceSetup"));
+const LocalAuth = lazy(() => import("./pages/LocalAuth"));
+const DemoPreview = lazy(() => import("./pages/DemoPreview"));
+const Settings = lazy(() => import("./pages/Settings"));
+const NotFound = lazy(() => import("@/pages/NotFound"));
+const FeaturesPage = lazy(() => import("./pages/MarketingPages").then(module => ({ default: module.FeaturesPage })));
+const PricingPage = lazy(() => import("./pages/MarketingPages").then(module => ({ default: module.PricingPage })));
+const DemoPage = lazy(() => import("./pages/MarketingPages").then(module => ({ default: module.DemoPage })));
+const FaqPage = lazy(() => import("./pages/MarketingPages").then(module => ({ default: module.FaqPage })));
+const ContactPage = lazy(() => import("./pages/MarketingPages").then(module => ({ default: module.ContactPage })));
+
+function RouteLoading() {
+  return <main className="sf-public-page grid min-h-screen place-items-center px-4" role="status" aria-live="polite"><div className="sf-luxury-panel flex w-full max-w-sm items-center gap-3 rounded-[var(--sf-radius-surface)] p-5"><span className="sf-skeleton size-9 rounded-xl" aria-hidden="true" /><p className="text-sm font-semibold">SalonFlow იტვირთება…</p></div></main>;
+}
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
+    <Suspense fallback={<RouteLoading />}>
     <Switch>
       <Route path={"/"} component={Home} />
+      <Route path={"/features"} component={FeaturesPage} />
+      <Route path={"/pricing"} component={PricingPage} />
+      <Route path={"/demo"} component={DemoPage} />
+      <Route path={"/faq"} component={FaqPage} />
+      <Route path={"/contact"} component={ContactPage} />
       <Route path={"/book"} component={Book} />
       <Route path={"/book/:slug"} component={BookingFlow} />
       <Route path={"/login"}>{() => <LocalAuth mode="login" />}</Route>
@@ -42,6 +58,7 @@ function Router() {
       {/* Final fallback route */}
       <Route component={NotFound} />
     </Switch>
+    </Suspense>
   );
 }
 
