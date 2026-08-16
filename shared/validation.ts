@@ -187,6 +187,20 @@ export const staffProfileCreateSchema = z.object({
   locationIds: z.array(opaqueIdSchema).min(1).max(20),
 });
 
+export const staffMemberCreateSchema = z.object({
+  organizationId: opaqueIdSchema,
+  fullName: z.string().trim().min(2).max(160),
+  role: z.enum(["MANAGER", "RECEPTIONIST", "STAFF"]),
+  publicDisplayName: z.string().trim().min(2).max(160),
+  jobTitle: z.string().trim().max(160).optional(),
+  specialty: z.string().trim().max(255).optional(),
+  onlineBookingVisible: z.boolean().default(true),
+  color: z.string().trim().regex(/^#[0-9A-Fa-f]{6}$/).default("#7C3AED"),
+  locationIds: z.array(opaqueIdSchema).min(1).max(20),
+  email: z.string().trim().email().max(320).optional().or(z.literal("")).transform(value => value || undefined),
+  password: z.string().min(8).max(200).optional().or(z.literal("")).transform(value => value || undefined),
+}).refine(input => !input.email || Boolean(input.password), { message: "პაროლი აუცილებელია, თუ ელფოსტა მითითებულია", path: ["password"] });
+
 export const workingHourRuleCreateSchema = z.object({
   organizationId: opaqueIdSchema,
   staffProfileId: opaqueIdSchema,
@@ -312,11 +326,63 @@ export const commissionEntryCreateSchema = z.object({
   ruleId: opaqueIdSchema,
 });
 
+export const commissionRuleCreateSchema = z.object({
+  organizationId: opaqueIdSchema,
+  locationId: opaqueIdSchema.optional(),
+  staffProfileId: opaqueIdSchema.optional(),
+  serviceId: opaqueIdSchema.optional(),
+  type: z.enum(["PERCENTAGE", "FIXED"]),
+  /** For PERCENTAGE this is basis points (0–10000); for FIXED it is tetri (0–100_000_000). */
+  valueTetri: z.number().int().min(0).max(100_000_000),
+});
+
+export const commissionRuleDeleteSchema = z.object({
+  organizationId: opaqueIdSchema,
+  id: opaqueIdSchema,
+});
+
+export const commissionListRangeSchema = z.object({
+  organizationId: opaqueIdSchema,
+  startsAt: z.coerce.date(),
+  endsAt: z.coerce.date(),
+  staffProfileId: opaqueIdSchema.optional(),
+});
+
 export const publicAvailabilityCheckSchema = z.object({
   slug: slugSchema,
   serviceId: opaqueIdSchema,
   staffProfileId: z.union([opaqueIdSchema, z.literal("ANY_AVAILABLE")]),
   startsAt: z.coerce.date(),
+});
+
+export const staffInviteCreateSchema = z.object({
+  organizationId: opaqueIdSchema,
+  email: z.string().trim().email().max(320),
+  role: z.enum(["MANAGER", "RECEPTIONIST", "STAFF"]),
+  locationId: opaqueIdSchema.optional(),
+  publicDisplayName: z.string().trim().min(2).max(160),
+  jobTitle: z.string().trim().max(160).optional().or(z.literal("")).transform(value => value || undefined),
+  specialty: z.string().trim().max(255).optional().or(z.literal("")).transform(value => value || undefined),
+  color: z.string().trim().regex(/^#[0-9A-Fa-f]{6}$/).default("#7C3AED"),
+  expiresInDays: z.number().int().min(1).max(30).default(7),
+});
+
+export const staffInviteRevokeSchema = z.object({
+  organizationId: opaqueIdSchema,
+  id: opaqueIdSchema,
+});
+
+export const staffInviteAcceptSchema = z.object({
+  token: z.string().trim().min(24).max(512),
+  password: z.string().min(10).max(128),
+  fullName: z.string().trim().min(2).max(160).optional(),
+});
+
+export const publicAvailableSlotsSchema = z.object({
+  slug: slugSchema,
+  serviceId: opaqueIdSchema,
+  staffProfileId: z.union([opaqueIdSchema, z.literal("ANY_AVAILABLE")]),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
 });
 
 export const publicBookingCommitSchema = publicAvailabilityCheckSchema.extend({

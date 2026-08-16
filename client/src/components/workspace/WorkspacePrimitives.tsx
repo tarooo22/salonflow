@@ -28,19 +28,26 @@ export function WorkspaceMetric({ label, value, helper, icon: Icon, tone = "neut
   value: ReactNode;
   helper?: string;
   icon?: (props: ComponentProps<"svg">) => ReactNode;
-  tone?: "neutral" | "jade" | "terracotta" | "violet";
+  tone?: "neutral" | "jade" | "terracotta" | "violet" | "fuchsia" | "amber";
 }) {
   const tones = {
-    neutral: "bg-[var(--sf-surface-hover)] text-foreground",
-    jade: "bg-[color-mix(in_srgb,var(--sf-jade)_16%,transparent)] text-[var(--sf-jade)]",
-    terracotta: "bg-primary/10 text-primary",
-    violet: "bg-[color-mix(in_srgb,var(--sf-violet)_16%,transparent)] text-[var(--sf-violet)]",
+    neutral: "bg-gradient-to-br from-[var(--sf-muted)] to-[var(--sf-ink)] text-white",
+    jade: "bg-gradient-to-br from-[var(--sf-teal)] to-[var(--sf-jade)] text-white",
+    terracotta: "bg-gradient-to-br from-[var(--sf-fuchsia)] to-[var(--sf-magenta)] text-white",
+    violet: "bg-gradient-to-br from-[var(--sf-violet)] to-[var(--sf-indigo)] text-white",
+    fuchsia: "bg-gradient-to-br from-[var(--sf-fuchsia)] to-[var(--sf-magenta)] text-white",
+    amber: "bg-gradient-to-br from-[var(--sf-amber)] to-[var(--sf-fuchsia)] text-white",
+  } as const;
+  const bars = {
+    neutral: "var(--sf-muted)", jade: "var(--sf-jade)", terracotta: "var(--sf-fuchsia)",
+    violet: "var(--sf-violet)", fuchsia: "var(--sf-fuchsia)", amber: "var(--sf-amber)",
   } as const;
   return (
-    <div className="min-w-0 rounded-[var(--sf-radius-surface)] border border-border/75 bg-card px-4 py-3 shadow-[var(--sf-shadow-sm)]">
+    <div className="sf-lift group relative min-w-0 overflow-hidden rounded-[var(--sf-radius-surface)] border border-border/75 bg-card px-4 py-4 shadow-[var(--sf-shadow-sm)]">
+      <span className="absolute inset-x-0 top-0 h-1" style={{ background: bars[tone], opacity: 0.85 }} aria-hidden="true" />
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0"><p className="text-xs font-medium text-muted-foreground">{label}</p><p className="mt-1 truncate text-xl font-semibold tracking-tight text-foreground">{value}</p></div>
-        {Icon ? <span className={cn("grid h-9 w-9 shrink-0 place-items-center rounded-lg", tones[tone])}><Icon className="h-4 w-4" /></span> : null}
+        <div className="min-w-0"><p className="text-xs font-medium text-muted-foreground">{label}</p><p className="sf-display mt-1.5 truncate text-[1.35rem] font-bold leading-tight tracking-tight text-foreground">{value}</p></div>
+        {Icon ? <span className={cn("grid h-10 w-10 shrink-0 place-items-center rounded-xl shadow-sm transition-transform group-hover:scale-105", tones[tone])}><Icon className="h-4.5 w-4.5" /></span> : null}
       </div>
       {helper ? <p className="mt-2 text-xs leading-5 text-muted-foreground">{helper}</p> : null}
     </div>

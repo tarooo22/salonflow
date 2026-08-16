@@ -16,6 +16,7 @@ const Clients = lazy(() => import("./pages/Clients"));
 const Today = lazy(() => import("./pages/Today"));
 const WorkspaceSetup = lazy(() => import("./pages/WorkspaceSetup"));
 const LocalAuth = lazy(() => import("./pages/LocalAuth"));
+const AcceptInvite = lazy(() => import("./pages/AcceptInvite"));
 const DemoPreview = lazy(() => import("./pages/DemoPreview"));
 const Settings = lazy(() => import("./pages/Settings"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
@@ -45,6 +46,7 @@ function Router() {
       <Route path={"/login"}>{() => <LocalAuth mode="login" />}</Route>
       <Route path={"/register"}>{() => <LocalAuth mode="register" />}</Route>
       <Route path={"/claim-account"}>{() => <LocalAuth mode="claim" />}</Route>
+      <Route path={"/invite/:token"} component={AcceptInvite} />
       {import.meta.env.DEV ? <Route path={"/preview-demo"} component={DemoPreview} /> : null}
       <Route path={"/app/today"} component={Today} />
       <Route path={"/app/calendar"} component={Calendar} />
@@ -71,7 +73,7 @@ function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider
-        defaultTheme="dark"
+        defaultTheme="light"
         switchable
       >
         <TooltipProvider>

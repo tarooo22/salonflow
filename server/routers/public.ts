@@ -3,8 +3,10 @@ import { createHash, createHmac } from "node:crypto";
 import { nanoid } from "nanoid";
 import { appointmentServices, appointments, appointmentStatusHistory, clientConsents, clients, locations, scheduleLocks, serviceCategories, services, staffLocations, staffProfiles, staffServices, workingHourRules } from "../../drizzle/schema";
 import { requireDb } from "../db";
-import { publicAvailabilityCheckSchema, publicBookingCommitSchema, slugSchema } from "../../shared/validation";
+import { publicAvailabilityCheckSchema, publicAvailableSlotsSchema, publicBookingCommitSchema, slugSchema } from "../../shared/validation";
 import { appointmentBlocksInterval, intervalsOverlap } from "../lib/appointments";
+import { generateAvailableSlots, type BusyInterval } from "../lib/availability";
+import { formatTimeInTimeZone, zonedDateTimeToUtc } from "../../shared/timezones";
 import { normalizeEmail, normalizeGeorgianPhone } from "../lib/normalization";
 import { ENV } from "../_core/env";
 import { publicProcedure, router } from "../_core/trpc";
@@ -162,6 +164,97 @@ export const publicRouter = router({
     return conflict
       ? { available: false, reason: "SLOT_UNAVAILABLE" as const }
       : { available: true, startsAt: input.startsAt, endsAt };
+  }),
+
+  availableSlots: publicProcedure.input(publicAvailableSlotsSchema).query(async ({ input }) => {
+    const empty = { timezone: "Asia/Tbilisi", slots: [] as Array<{ startsAt: string; label: string }> };
+    const db = await requireDb();
+    const [location] = await db.select().from(locations).where(and(
+      eq(locations.publicSlug, input.slug),
+      eq(locations.status, "ACTIVE"),
+      eq(locations.bookingEnabled, true),
+    )).limit(1);
+    if (!location) return empty;
+
+    const [service] = await db.select().from(services).where(and(
+      eq(services.id, input.serviceId),
+      eq(services.organizationId, location.organizationId),
+      eq(services.status, "ACTIVE"),
+      eq(services.onlineBookingEnabled, true),
+    )).limit(1);
+    if (!service) return { ...empty, timezone: location.timezone };
+
+    // Resolve candidate specialists (a specific one, or all eligible for ANY_AVAILABLE).
+    let candidates: Array<{ id: string; durationMinutes: number }> = [];
+    if (input.staffProfileId === "ANY_AVAILABLE") {
+      const rows = await db.select({ id: staffProfiles.id, durationOverrideMinutes: staffServices.durationOverrideMinutes }).from(staffProfiles)
+        .innerJoin(staffLocations, eq(staffProfiles.id, staffLocations.staffProfileId))
+        .innerJoin(staffServices, eq(staffProfiles.id, staffServices.staffProfileId))
+        .where(and(eq(staffLocations.locationId, location.id), eq(staffServices.serviceId, service.id), eq(staffServices.canPerform, true), eq(staffProfiles.status, "ACTIVE"), eq(staffProfiles.onlineBookingVisible, true)));
+      candidates = rows.map(row => ({ id: row.id, durationMinutes: row.durationOverrideMinutes ?? service.defaultDurationMinutes }));
+    } else {
+      const [staffAtLocation] = await db.select().from(staffLocations).where(and(eq(staffLocations.staffProfileId, input.staffProfileId), eq(staffLocations.locationId, location.id))).limit(1);
+      const [staff] = await db.select().from(staffProfiles).where(and(eq(staffProfiles.id, input.staffProfileId), eq(staffProfiles.status, "ACTIVE"), eq(staffProfiles.onlineBookingVisible, true))).limit(1);
+      const [eligibility] = await db.select().from(staffServices).where(and(eq(staffServices.staffProfileId, input.staffProfileId), eq(staffServices.serviceId, service.id), eq(staffServices.canPerform, true))).limit(1);
+      if (staffAtLocation && staff && eligibility) candidates = [{ id: staff.id, durationMinutes: eligibility.durationOverrideMinutes ?? service.defaultDurationMinutes }];
+    }
+    if (!candidates.length) return { ...empty, timezone: location.timezone };
+
+    const now = new Date();
+    const minimumStart = new Date(now.getTime() + location.minimumNoticeMinutes * 60_000);
+    const maximumStart = new Date(now.getTime() + location.maximumAdvanceDays * 86_400_000);
+
+    // Weekday of the requested local date (schema weekday: 0=Monday … 6=Sunday).
+    const [year, month, day] = input.date.split("-").map(Number) as [number, number, number];
+    const weekday = (new Date(Date.UTC(year, month - 1, day)).getUTCDay() + 6) % 7;
+
+    const staffIds = candidates.map(candidate => candidate.id);
+    const hourRows = await db.select({ staffProfileId: workingHourRules.staffProfileId, startLocalTime: workingHourRules.startLocalTime, endLocalTime: workingHourRules.endLocalTime }).from(workingHourRules)
+      .where(and(eq(workingHourRules.locationId, location.id), eq(workingHourRules.weekday, weekday), inArray(workingHourRules.staffProfileId, staffIds)));
+    if (!hourRows.length) return { ...empty, timezone: location.timezone };
+
+    const existing = await db.select({ staffProfileId: appointments.staffProfileId, startsAt: appointments.startsAt, endsAt: appointments.endsAt, bufferBeforeMinutes: appointments.bufferBeforeMinutes, bufferAfterMinutes: appointments.bufferAfterMinutes, status: appointments.status }).from(appointments)
+      .where(and(eq(appointments.locationId, location.id), inArray(appointments.staffProfileId, staffIds)));
+    const busyByStaff = new Map<string, BusyInterval[]>();
+    for (const appointment of existing) {
+      if (!appointmentBlocksInterval(appointment.status)) continue;
+      const intervals = busyByStaff.get(appointment.staffProfileId) ?? [];
+      intervals.push({ startsAt: new Date(appointment.startsAt.getTime() - appointment.bufferBeforeMinutes * 60_000), endsAt: new Date(appointment.endsAt.getTime() + appointment.bufferAfterMinutes * 60_000) });
+      busyByStaff.set(appointment.staffProfileId, intervals);
+    }
+
+    const parseTime = (value: string) => { const [h, m] = value.split(":").map(Number); return { hour: h ?? 0, minute: m ?? 0 }; };
+    const timeZone = location.timezone;
+    // A start time is offered if at least one eligible specialist is free for it.
+    const offered = new Set<number>();
+    for (const candidate of candidates) {
+      for (const rule of hourRows.filter(row => row.staffProfileId === candidate.id)) {
+        const start = parseTime(rule.startLocalTime);
+        const end = parseTime(rule.endLocalTime);
+        const openingStart = zonedDateTimeToUtc({ year, month, day, hour: start.hour, minute: start.minute, second: 0 }, timeZone);
+        const openingEnd = zonedDateTimeToUtc({ year, month, day, hour: end.hour, minute: end.minute, second: 0 }, timeZone);
+        const slots = generateAvailableSlots({
+          openingStart,
+          openingEnd,
+          durationMinutes: candidate.durationMinutes,
+          slotIntervalMinutes: location.slotIntervalMinutes,
+          bufferBeforeMinutes: service.bufferBeforeMinutes,
+          bufferAfterMinutes: service.bufferAfterMinutes,
+          minimumStart,
+          busyIntervals: busyByStaff.get(candidate.id) ?? [],
+        });
+        for (const slot of slots) {
+          if (slot.startsAt > maximumStart) continue;
+          offered.add(slot.startsAt.getTime());
+        }
+      }
+    }
+
+    const slots = Array.from(offered).sort((a, b) => a - b).map(timestamp => {
+      const value = new Date(timestamp);
+      return { startsAt: value.toISOString(), label: formatTimeInTimeZone(value, timeZone) };
+    });
+    return { timezone: timeZone, slots };
   }),
 
   commitBooking: publicProcedure.input(publicBookingCommitSchema).mutation(async ({ input }) => {

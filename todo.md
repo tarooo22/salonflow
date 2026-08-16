@@ -135,8 +135,7 @@
 - [x] Booking interaction polish: Add purposeful selection/progress/loading/submit micro-interactions that animate only transform/opacity and fully respect reduced-motion preferences.
 - [x] Booking error feedback: Replace scattered booking failure copy with accessible, Georgian inline and summary feedback that explains the recovery action without exposing internal API details.
 - [x] Booking interaction QA: Validate service/staff/time error and retry states at mobile/desktop, keyboard focus handoff, reduced-motion behavior, booking regressions, typecheck and production build.
-- [x] Claude Project Instructions: Provide a concise, copy-paste-ready permanent instruction set for Claude's project-level configuration, preserving SalonFlow security, Georgian localization, role/data scope and design constraints.
-- [ ] V2 replacement audit: Inspect uploaded salonflow-v2.zip for structure, framework, scripts, secrets, unsafe artifacts, database assumptions and compatibility with the managed SalonFlow runtime.
-- [ ] V2 replacement safety: Preserve the current recoverable SalonFlow state and document the exact source/data/environment boundary before replacing any project file.
-- [ ] V2 replacement implementation: Replace only the compatible project source from the approved archive, retain managed infrastructure and secrets, then restore dependencies/configuration as needed.
-- [ ] V2 replacement QA: Run project-specific tests, typecheck, build, server/browser validation and report any unsupported integration, migration or data-risk blocker before live checkpoint.
+- [x] V2 replacement audit: Inspect uploaded salonflow-v2.zip for structure, framework, scripts, secrets, unsafe artifacts, database assumptions and compatibility with the managed SalonFlow runtime.
+- [x] V2 replacement safety: Preserve the current recoverable SalonFlow state and document the exact source/data/environment boundary before replacing any project file.
+- [x] V2 replacement implementation: Replace the V2 archive source while retaining managed project identity, secrets, Git metadata and runtime folders; exclude embedded `.env`, node_modules, build output and archive metadata.
+- [x] V2 replacement QA: Reconcile dependencies, resolve V2-only Staff test mocks, pass 36 Vitest files / 110 tests, typecheck, production build, dev-server restart and browser route smoke review before checkpoint.

@@ -18,7 +18,7 @@ import { WorkspaceMetric, WorkspacePageHeader, WorkspaceSection, WorkspaceState,
 import { formatGelTetri, formatPaymentState } from "@/lib/presentation";
 
 const statusLabels: Record<string, string> = { PENDING: "დადასტურებას ელოდება", CONFIRMED: "დადასტურებული", CHECKED_IN: "მიღებულია", IN_SERVICE: "მომსახურებაშია", COMPLETED: "დასრულებული", CANCELLED: "გაუქმებული", NO_SHOW: "არ გამოცხადდა" };
-const statusTone: Record<string, string> = { PENDING: "border-[#D69A43]/30 bg-[#D69A43]/10 text-[#855B12]", CONFIRMED: "border-[#17826A]/30 bg-[#17826A]/10 text-[#216451]", CHECKED_IN: "border-[#17826A]/30 bg-[#17826A]/10 text-[#216451]", IN_SERVICE: "border-primary/30 bg-primary/10 text-primary", COMPLETED: "border-[#516159]/20 bg-[#516159]/10 text-[#516159]", CANCELLED: "border-destructive/30 bg-destructive/10 text-destructive", NO_SHOW: "border-destructive/30 bg-destructive/10 text-destructive" };
+const statusTone: Record<string, string> = { PENDING: "border-[var(--sf-amber)]/30 bg-[var(--sf-amber)]/10 text-[var(--sf-amber)]", CONFIRMED: "border-[var(--sf-jade)]/30 bg-[var(--sf-jade)]/10 text-[var(--sf-jade)]", CHECKED_IN: "border-[var(--sf-jade)]/30 bg-[var(--sf-jade)]/10 text-[var(--sf-jade)]", IN_SERVICE: "border-primary/30 bg-primary/10 text-primary", COMPLETED: "border-[var(--sf-muted)]/20 bg-[var(--sf-muted)]/10 text-[var(--sf-muted)]", CANCELLED: "border-destructive/30 bg-destructive/10 text-destructive", NO_SHOW: "border-destructive/30 bg-destructive/10 text-destructive" };
 
 function money(tetri: number) {
   return formatGelTetri(tetri);

@@ -81,4 +81,4 @@ export default function Clients() {
   </DashboardLayout>;
 }
 
-function CareFact({ label, value, sensitive = false }: { label: string; value: string | null | undefined; sensitive?: boolean }) { return <div className={sensitive && value ? "rounded-lg border border-[#D69A43]/30 bg-[#D69A43]/10 p-3" : "rounded-lg border bg-background p-3"}><p className="text-xs font-medium text-muted-foreground">{label}</p><p className="mt-2 whitespace-pre-wrap text-sm leading-5">{value || "ჯერ არ არის მითითებული"}</p></div>; }
+function CareFact({ label, value, sensitive = false }: { label: string; value: string | null | undefined; sensitive?: boolean }) { return <div className={sensitive && value ? "rounded-lg border border-[var(--sf-amber)]/30 bg-[var(--sf-amber)]/10 p-3" : "rounded-lg border bg-background p-3"}><p className="text-xs font-medium text-muted-foreground">{label}</p><p className="mt-2 whitespace-pre-wrap text-sm leading-5">{value || "ჯერ არ არის მითითებული"}</p></div>; }

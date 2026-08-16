@@ -15,5 +15,10 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["server/**/*.test.ts", "server/**/*.spec.ts", "client/**/*.test.ts", "client/**/*.test.tsx", "shared/**/*.test.ts"],
+    env: {
+      JWT_SECRET: "test-secret-do-not-use-in-production",
+      OWNER_OPEN_ID: "local_test_owner",
+      VITE_APP_ID: "test-app",
+    },
   },
 });

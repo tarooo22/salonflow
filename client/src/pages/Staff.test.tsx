@@ -14,12 +14,13 @@ vi.mock("@/lib/trpc", () => ({
   trpc: {
     useUtils: () => ({ staff: { list: { invalidate: vi.fn() } }, finance: { listExpenses: { invalidate: vi.fn() } }, reporting: { revenueSummary: { invalidate: vi.fn() } } }),
     organizations: { listMine: { useQuery: () => query([{ organization, membership }]) }, listLocations: { useQuery: () => query([{ id: "location_00001", name: "ვაკე" }]) } },
+    invitations: { list: { useQuery: () => query([]) }, create: { useMutation: () => mutation }, revoke: { useMutation: () => mutation } },
     staff: {
       list: { useQuery: () => query([{ profile, membership: { role: "OWNER", status: "ACTIVE", id: membership.id } }]) },
       listWorkingHours: { useQuery: () => state.workingHours },
       listScheduleExceptions: { useQuery: () => state.exceptions },
       performance: { useQuery: () => state.performance },
-      createProfile: { useMutation: () => mutation }, addWorkingHours: { useMutation: () => mutation }, updateWorkingHours: { useMutation: () => mutation }, addScheduleException: { useMutation: () => mutation }, updateScheduleException: { useMutation: () => mutation },
+      createProfile: { useMutation: () => mutation }, createMember: { useMutation: () => mutation }, addWorkingHours: { useMutation: () => mutation }, updateWorkingHours: { useMutation: () => mutation }, addScheduleException: { useMutation: () => mutation }, updateScheduleException: { useMutation: () => mutation },
       deleteWorkingHours: { useMutation: () => mutation }, deleteScheduleException: { useMutation: () => mutation },
     },
   },

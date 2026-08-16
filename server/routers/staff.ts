@@ -1,10 +1,13 @@
 import { and, asc, desc, eq, gte, lt } from "drizzle-orm";
 import { nanoid } from "nanoid";
-import { appointments, locations, organizationMemberships, scheduleExceptions, staffLocations, staffProfiles, workingHourRules } from "../../drizzle/schema";
+import { TRPCError } from "@trpc/server";
+import { appointments, locations, organizationMemberships, scheduleExceptions, staffLocations, staffProfiles, users, workingHourRules } from "../../drizzle/schema";
 import { requireOrganizationRole } from "../access";
 import { requireDb } from "../db";
-import { locationScopeSchema, scheduleExceptionCreateSchema, scheduleExceptionUpdateSchema, staffPerformanceSchema, staffProfileCreateSchema, staffScheduleListSchema, staffScheduleRecordDeleteSchema, workingHourRuleCreateSchema, workingHourRuleUpdateSchema } from "../../shared/validation";
+import { locationScopeSchema, scheduleExceptionCreateSchema, scheduleExceptionUpdateSchema, staffMemberCreateSchema, staffPerformanceSchema, staffProfileCreateSchema, staffScheduleListSchema, staffScheduleRecordDeleteSchema, workingHourRuleCreateSchema, workingHourRuleUpdateSchema } from "../../shared/validation";
 import { protectedProcedure, router } from "../_core/trpc";
+import { hashPassword } from "../lib/passwords";
+import { normalizeEmail } from "../lib/normalization";
 import { summarizeStaffPerformance } from "../lib/staffPerformance";
 
 export const staffRouter = router({
@@ -30,6 +33,57 @@ export const staffRouter = router({
       await tx.insert(staffLocations).values(input.locationIds.map(locationId => ({ staffProfileId, locationId })));
     });
     return { id: staffProfileId };
+  }),
+
+  createMember: protectedProcedure.input(staffMemberCreateSchema).mutation(async ({ ctx, input }) => {
+    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER"]);
+    const db = await requireDb();
+
+    // Verify every requested location belongs to this org and is active.
+    const locationRows = await db.select({ id: locations.id }).from(locations)
+      .where(and(eq(locations.organizationId, input.organizationId), eq(locations.status, "ACTIVE")));
+    const validIds = new Set(locationRows.map(row => row.id));
+    for (const id of input.locationIds) if (!validIds.has(id)) throw new TRPCError({ code: "BAD_REQUEST", message: "მითითებული ფილიალი აღარ არის აქტიური." });
+
+    // If email + password are supplied, the member will be able to sign in.
+    const normalizedEmail = input.email ? normalizeEmail(input.email) : undefined;
+    if (normalizedEmail) {
+      const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.normalizedEmail, normalizedEmail)).limit(1);
+      if (existing) throw new TRPCError({ code: "CONFLICT", message: "ამ ელფოსტით მომხმარებელი უკვე არსებობს." });
+    }
+    const passwordHash = input.password ? await hashPassword(input.password) : null;
+
+    const staffProfileId = nanoid(21);
+    const membershipId = nanoid(21);
+    const openId = `local_${nanoid(21)}`;
+
+    await db.transaction(async tx => {
+      await tx.insert(users).values({
+        openId,
+        name: input.fullName,
+        email: input.email ?? null,
+        normalizedEmail: normalizedEmail ?? null,
+        passwordHash,
+        loginMethod: normalizedEmail ? "local" : null,
+        locale: "ka-GE",
+        accountStatus: "ACTIVE",
+      });
+      const [inserted] = await tx.select({ id: users.id }).from(users).where(eq(users.openId, openId)).limit(1);
+      if (!inserted) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "მომხმარებლის შექმნა ვერ მოხერხდა." });
+      await tx.insert(organizationMemberships).values({
+        id: membershipId,
+        organizationId: input.organizationId,
+        userId: inserted.id,
+        role: input.role,
+        status: "ACTIVE",
+        invitedByUserId: ctx.user.id,
+        invitedAt: new Date(),
+        activatedAt: new Date(),
+      });
+      await tx.insert(staffProfiles).values({ id: staffProfileId, membershipId, publicDisplayName: input.publicDisplayName, jobTitle: input.jobTitle, specialty: input.specialty, onlineBookingVisible: input.onlineBookingVisible, color: input.color });
+      await tx.insert(staffLocations).values(input.locationIds.map(locationId => ({ staffProfileId, locationId })));
+    });
+    return { id: staffProfileId, membershipId, canSignIn: Boolean(normalizedEmail && passwordHash) };
   }),
 
   addWorkingHours: protectedProcedure.input(workingHourRuleCreateSchema).mutation(async ({ ctx, input }) => {

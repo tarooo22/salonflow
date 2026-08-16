@@ -9,7 +9,7 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground shadow-[0_8px_22px_color-mix(in_srgb,var(--primary)_22%,transparent)] hover:bg-primary/90 hover:-translate-y-0.5 hover:shadow-[0_14px_28px_color-mix(in_srgb,var(--primary)_28%,transparent)]",
+        default: "text-white [background-image:var(--sf-gradient-brand)] bg-[length:140%_140%] bg-[position:0%_50%] shadow-[var(--sf-glow-brand)] hover:-translate-y-0.5 hover:bg-[position:100%_50%] hover:shadow-[0_22px_46px_-12px_color-mix(in_srgb,var(--sf-accent-strong)_60%,transparent)]",
         destructive:
           "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
         outline:
@@ -19,7 +19,7 @@ const buttonVariants = cva(
         ghost:
           "hover:bg-accent dark:hover:bg-accent/50",
         link: "text-primary underline-offset-4 hover:underline",
-        public: "bg-[var(--sf-terracotta)] text-[var(--primary-foreground)] shadow-[0_10px_24px_color-mix(in_srgb,var(--sf-terracotta)_28%,transparent)] hover:-translate-y-0.5 hover:bg-[var(--sf-terracotta-strong)] hover:shadow-[0_18px_34px_color-mix(in_srgb,var(--sf-terracotta)_34%,transparent)]",
+        public: "text-white [background-image:var(--sf-gradient-brand)] bg-[length:150%_150%] bg-[position:0%_50%] shadow-[var(--sf-glow-brand)] hover:-translate-y-0.5 hover:bg-[position:100%_50%] hover:shadow-[0_24px_50px_-12px_color-mix(in_srgb,var(--sf-fuchsia)_55%,transparent)]",
         publicSecondary: "border border-[var(--sf-line)] bg-[var(--sf-surface-elevated)] text-[var(--sf-ink)] shadow-[var(--sf-shadow-sm)] hover:-translate-y-0.5 hover:border-[color-mix(in_srgb,var(--sf-terracotta)_65%,var(--sf-line))] hover:bg-[var(--sf-surface-hover)]",
         publicQuiet: "text-[var(--sf-ink)] hover:bg-[var(--sf-surface-hover)]",
       },
