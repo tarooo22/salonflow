@@ -19,7 +19,7 @@ const buttonVariants = cva(
         ghost:
           "hover:bg-accent dark:hover:bg-accent/50",
         link: "text-primary underline-offset-4 hover:underline",
-        public: "text-white [background-image:var(--sf-gradient-brand)] bg-[length:150%_150%] bg-[position:0%_50%] shadow-[var(--sf-glow-brand)] hover:-translate-y-0.5 hover:bg-[position:100%_50%] hover:shadow-[0_24px_50px_-12px_color-mix(in_srgb,var(--sf-fuchsia)_55%,transparent)]",
+        public: "!text-white [background-image:var(--sf-gradient-brand)] bg-[length:150%_150%] bg-[position:0%_50%] shadow-[var(--sf-glow-brand)] hover:-translate-y-0.5 hover:bg-[position:100%_50%] hover:shadow-[0_24px_50px_-12px_color-mix(in_srgb,var(--sf-fuchsia)_55%,transparent)]",
         publicSecondary: "border border-[var(--sf-line)] bg-[var(--sf-surface-elevated)] text-[var(--sf-ink)] shadow-[var(--sf-shadow-sm)] hover:-translate-y-0.5 hover:border-[color-mix(in_srgb,var(--sf-terracotta)_65%,var(--sf-line))] hover:bg-[var(--sf-surface-hover)]",
         publicQuiet: "text-[var(--sf-ink)] hover:bg-[var(--sf-surface-hover)]",
       },
