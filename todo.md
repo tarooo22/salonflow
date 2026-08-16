@@ -141,3 +141,5 @@
 - [x] V2 replacement QA: Reconcile dependencies, resolve V2-only Staff test mocks, pass 36 Vitest files / 110 tests, typecheck, production build, dev-server restart and browser route smoke review before checkpoint.
 - [x] CTA contrast fix: Make the V2 primary gradient button label and icon readable with explicit foreground/contrast styling in all theme states.
 - [x] CTA contrast QA: Verify primary CTA labels on Home, Register, Login, Booking and marketing routes at desktop/mobile sizes, then run typecheck, tests and build.
+- [x] Live domain recovery validation: full Vitest suite, TypeScript check, production build, managed restart, and live public-domain verification after the production bundle fix.
+- [x] Diagnose why the live domain salonflow-dpxqgxgv.manus.space does not open and restore public access: production manualChunks split caused a React/vendor circular initialization failure; Vite now preserves the dependency graph.

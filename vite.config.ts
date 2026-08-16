@@ -20,18 +20,9 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          if (!id.includes("node_modules")) return;
-          if (id.includes("/react/") || id.includes("/react-dom/") || id.includes("scheduler")) return "react-runtime";
-          if (id.includes("@tanstack/") || id.includes("@trpc/") || id.includes("superjson")) return "data-client";
-          if (id.includes("@radix-ui/") || id.includes("lucide-react") || id.includes("class-variance-authority")) return "ui-system";
-          if (id.includes("recharts") || id.includes("/d3-")) return "charts";
-          return "vendor";
-        },
-      },
-    },
+    // Keep Rollup's dependency graph intact. Manually separating React from
+    // the shared vendor chunk can create a production-only circular
+    // initialization where vendor reads React before its default export exists.
   },
   server: {
     host: true,
