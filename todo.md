@@ -144,3 +144,4 @@
 - [x] Live domain recovery validation: full Vitest suite, TypeScript check, production build, managed restart, and live public-domain verification after the production bundle fix.
 - [x] Diagnose why the live domain salonflow-dpxqgxgv.manus.space does not open and restore public access: production manualChunks split caused a React/vendor circular initialization failure; Vite now preserves the dependency graph.
 - [x] Force the corrected production bundle to replace the stale live assets and verify the public domain renders React.
+- [x] Restore Dark Luxury dark theme as the default live homepage appearance while preserving Light/System theme switching.
