@@ -135,3 +135,4 @@
 - [x] Booking interaction polish: Add purposeful selection/progress/loading/submit micro-interactions that animate only transform/opacity and fully respect reduced-motion preferences.
 - [x] Booking error feedback: Replace scattered booking failure copy with accessible, Georgian inline and summary feedback that explains the recovery action without exposing internal API details.
 - [x] Booking interaction QA: Validate service/staff/time error and retry states at mobile/desktop, keyboard focus handoff, reduced-motion behavior, booking regressions, typecheck and production build.
+- [x] Claude Project Instructions: Provide a concise, copy-paste-ready permanent instruction set for Claude's project-level configuration, preserving SalonFlow security, Georgian localization, role/data scope and design constraints.
