@@ -20,7 +20,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
-import { BarChart3, CalendarDays, LayoutDashboard, LogOut, Monitor, Moon, PanelLeft, Scissors, Settings2, Sun, Users } from "lucide-react";
+import { BarChart3, CalendarDays, CalendarHeart, LayoutDashboard, LogOut, Monitor, Moon, PanelLeft, Scissors, Settings2, Sun, Users } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -30,6 +30,7 @@ import { Button } from "./ui/button";
 const menuItems = [
   { icon: LayoutDashboard, label: "დღეს", path: "/app/today" },
   { icon: CalendarDays, label: "კალენდარი", path: "/app/calendar" },
+  { icon: CalendarHeart, label: "მოლოდინის სია", path: "/app/waitlist" },
   { icon: Users, label: "კლიენტები", path: "/app/clients" },
   { icon: Scissors, label: "სერვისები", path: "/app/services" },
   { icon: Users, label: "გუნდი", path: "/app/staff" },

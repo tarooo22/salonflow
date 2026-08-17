@@ -395,6 +395,43 @@ export const publicBookingCommitSchema = publicAvailabilityCheckSchema.extend({
   idempotencyKey: z.string().trim().min(16).max(128).regex(/^[A-Za-z0-9_-]+$/),
 });
 
+export const publicBookingTokenSchema = z.object({
+  token: z.string().trim().min(32).max(128).regex(/^[A-Za-z0-9_-]+$/),
+});
+
+export const publicBookingCancelSchema = publicBookingTokenSchema.extend({
+  reason: z.string().trim().min(2).max(255).optional(),
+});
+
+export const publicBookingRescheduleSchema = publicBookingTokenSchema.extend({
+  startsAt: z.coerce.date(),
+});
+
+export const publicWaitlistCreateSchema = z.object({
+  slug: slugSchema,
+  serviceId: opaqueIdSchema,
+  staffProfileId: opaqueIdSchema.optional(),
+  requestedDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  preferredStartLocalTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),
+  firstName: z.string().trim().min(1).max(100),
+  lastName: z.string().trim().max(100).optional(),
+  phone: z.string().trim().min(6).max(32),
+  email: z.string().trim().email().max(320).optional(),
+  customerNote: z.string().trim().max(2_000).optional(),
+  bookingTermsConsent: z.literal(true),
+  idempotencyKey: z.string().trim().min(16).max(128).regex(/^[A-Za-z0-9_-]+$/),
+});
+
+export const waitlistListSchema = organizationScopeSchema.extend({
+  locationId: opaqueIdSchema.optional(),
+  status: z.enum(["PENDING", "CONTACTED", "FULFILLED", "CANCELLED", "EXPIRED"]).optional(),
+});
+
+export const waitlistStatusUpdateSchema = organizationScopeSchema.extend({
+  id: opaqueIdSchema,
+  status: z.enum(["PENDING", "CONTACTED", "FULFILLED", "CANCELLED", "EXPIRED"]),
+});
+
 export const reportingRangeSchema = z.object({
   organizationId: opaqueIdSchema,
   startsAt: z.coerce.date(),

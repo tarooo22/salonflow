@@ -1,9 +1,9 @@
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { createHash, createHmac } from "node:crypto";
 import { nanoid } from "nanoid";
-import { appointmentServices, appointments, appointmentStatusHistory, clientConsents, clients, locations, scheduleLocks, serviceCategories, services, staffLocations, staffProfiles, staffServices, workingHourRules } from "../../drizzle/schema";
+import { appointmentServices, appointments, appointmentStatusHistory, clientConsents, clients, locations, scheduleLocks, serviceCategories, services, staffLocations, staffProfiles, staffServices, waitlistEntries, workingHourRules } from "../../drizzle/schema";
 import { requireDb } from "../db";
-import { publicAvailabilityCheckSchema, publicAvailableSlotsSchema, publicBookingCommitSchema, slugSchema } from "../../shared/validation";
+import { publicAvailabilityCheckSchema, publicAvailableSlotsSchema, publicBookingCancelSchema, publicBookingCommitSchema, publicBookingRescheduleSchema, publicBookingTokenSchema, publicWaitlistCreateSchema, slugSchema } from "../../shared/validation";
 import { appointmentBlocksInterval, intervalsOverlap } from "../lib/appointments";
 import { generateAvailableSlots, type BusyInterval } from "../lib/availability";
 import { formatTimeInTimeZone, zonedDateTimeToUtc } from "../../shared/timezones";
@@ -29,6 +29,17 @@ function publicTokenHash(token: string) {
 function confirmationTokenForAppointment(appointmentId: string) {
   if (!ENV.cookieSecret) throw new Error("Confirmation token secret is not configured");
   return createHmac("sha256", ENV.cookieSecret).update(`public-booking:${appointmentId}`).digest("base64url");
+}
+
+async function appointmentForPublicToken(db: Awaited<ReturnType<typeof requireDb>>, token: string) {
+  const tokenHash = publicTokenHash(token);
+  const [appointment] = await db.select().from(appointments).where(eq(appointments.publicTokenHash, tokenHash)).limit(1);
+  if (!appointment || !appointment.publicTokenExpiresAt || appointment.publicTokenExpiresAt <= new Date()) throw new Error("ჯავშნის მართვის ბმული არასწორია ან ვადა გაუვიდა.");
+  return appointment;
+}
+
+export function canCustomerManage(appointment: { status: string; startsAt: Date }, cutoffMinutes: number, now = Date.now()) {
+  return (appointment.status === "PENDING" || appointment.status === "CONFIRMED") && appointment.startsAt.getTime() - now > cutoffMinutes * 60_000;
 }
 
 export const publicRouter = router({
@@ -431,5 +442,80 @@ export const publicRouter = router({
       assignedStaffName: assigned?.name,
       endsAt: persistedAppointment.endsAt,
     };
+  }),
+
+  bookingByToken: publicProcedure.input(publicBookingTokenSchema).query(async ({ input }) => {
+    const db = await requireDb();
+    const appointment = await appointmentForPublicToken(db, input.token);
+    const [location] = await db.select({ publicSlug: locations.publicSlug, name: locations.name, timezone: locations.timezone, address: locations.address, cancellationCutoffMinutes: locations.cancellationCutoffMinutes }).from(locations).where(eq(locations.id, appointment.locationId)).limit(1);
+    const [staff] = await db.select({ name: staffProfiles.publicDisplayName }).from(staffProfiles).where(eq(staffProfiles.id, appointment.staffProfileId)).limit(1);
+    const servicesForAppointment = await db.select({ id: appointmentServices.id, serviceId: appointmentServices.serviceId, name: appointmentServices.serviceNameSnapshot, durationMinutes: appointmentServices.durationMinutesSnapshot, priceTetri: appointmentServices.priceTetriSnapshot }).from(appointmentServices).where(eq(appointmentServices.appointmentId, appointment.id)).orderBy(asc(appointmentServices.sortOrder));
+    if (!location) throw new Error("ჯავშნის ფილიალი აღარ არის ხელმისაწვდომი.");
+    return {
+      location: { publicSlug: location.publicSlug, name: location.name, timezone: location.timezone, address: location.address },
+      appointment: { staffProfileId: appointment.staffProfileId, status: appointment.status, startsAt: appointment.startsAt, endsAt: appointment.endsAt, totalTetri: appointment.totalTetri, canManage: canCustomerManage(appointment, location.cancellationCutoffMinutes), cancellationCutoffMinutes: location.cancellationCutoffMinutes },
+      staffName: staff?.name ?? null,
+      services: servicesForAppointment,
+    };
+  }),
+
+  cancelBookingByToken: publicProcedure.input(publicBookingCancelSchema).mutation(async ({ input }) => {
+    const db = await requireDb();
+    const appointment = await appointmentForPublicToken(db, input.token);
+    const [location] = await db.select({ cancellationCutoffMinutes: locations.cancellationCutoffMinutes }).from(locations).where(eq(locations.id, appointment.locationId)).limit(1);
+    if (!location || !canCustomerManage(appointment, location.cancellationCutoffMinutes)) throw new Error("ამ ჯავშნის გაუქმების ვადა უკვე გასულია ან სტატუსი აღარ იძლევა ცვლილების უფლებას.");
+    await db.transaction(async tx => {
+      await tx.update(appointments).set({ status: "CANCELLED", cancellationReason: input.reason ?? "CUSTOMER_CANCELLED", cancelledAt: new Date() }).where(eq(appointments.id, appointment.id));
+      await tx.insert(appointmentStatusHistory).values({ id: nanoid(21), appointmentId: appointment.id, oldStatus: appointment.status, newStatus: "CANCELLED", reason: input.reason, metadata: { source: "PUBLIC_TOKEN", event: "CUSTOMER_CANCELLED" } });
+    });
+    return { success: true };
+  }),
+
+  rescheduleBookingByToken: publicProcedure.input(publicBookingRescheduleSchema).mutation(async ({ input }) => {
+    const db = await requireDb();
+    const appointment = await appointmentForPublicToken(db, input.token);
+    const [location] = await db.select().from(locations).where(and(eq(locations.id, appointment.locationId), eq(locations.status, "ACTIVE"), eq(locations.bookingEnabled, true))).limit(1);
+    if (!location || !canCustomerManage(appointment, location.cancellationCutoffMinutes)) throw new Error("ამ ჯავშნის გადატანის ვადა უკვე გასულია ან სტატუსი აღარ იძლევა ცვლილების უფლებას.");
+    const minimumStart = new Date(Date.now() + location.minimumNoticeMinutes * 60_000);
+    const maximumStart = new Date(Date.now() + location.maximumAdvanceDays * 86_400_000);
+    if (input.startsAt < minimumStart || input.startsAt > maximumStart) throw new Error("არჩეული დრო ჩაწერის დაშვებულ დიაპაზონში არ არის.");
+    const durationMs = appointment.endsAt.getTime() - appointment.startsAt.getTime();
+    const endsAt = new Date(input.startsAt.getTime() + durationMs);
+    const protectedStart = new Date(input.startsAt.getTime() - appointment.bufferBeforeMinutes * 60_000);
+    const protectedEnd = new Date(endsAt.getTime() + appointment.bufferAfterMinutes * 60_000);
+    await db.transaction(async tx => {
+      for (const dateKey of enumerateUtcDates(input.startsAt, endsAt)) await tx.insert(scheduleLocks).values({ id: `${appointment.staffProfileId}:${dateKey}`, staffProfileId: appointment.staffProfileId, localDate: new Date(`${dateKey}T00:00:00.000Z`) }).onDuplicateKeyUpdate({ set: { createdAt: new Date() } });
+      const existing = await tx.select().from(appointments).where(and(eq(appointments.staffProfileId, appointment.staffProfileId), eq(appointments.locationId, appointment.locationId)));
+      if (existing.some(item => item.id !== appointment.id && appointmentBlocksInterval(item.status) && intervalsOverlap(protectedStart, protectedEnd, new Date(item.startsAt.getTime() - item.bufferBeforeMinutes * 60_000), new Date(item.endsAt.getTime() + item.bufferAfterMinutes * 60_000)))) throw new Error("ეს დრო ახლახან დაიკავეს. აირჩიეთ სხვა თავისუფალი დრო.");
+      await tx.update(appointments).set({ startsAt: input.startsAt, endsAt }).where(eq(appointments.id, appointment.id));
+      await tx.insert(appointmentStatusHistory).values({ id: nanoid(21), appointmentId: appointment.id, oldStatus: appointment.status, newStatus: appointment.status, reason: "CUSTOMER_RESCHEDULED", metadata: { source: "PUBLIC_TOKEN", event: "CUSTOMER_RESCHEDULED", previousStartsAt: appointment.startsAt.toISOString(), previousEndsAt: appointment.endsAt.toISOString(), startsAt: input.startsAt.toISOString(), endsAt: endsAt.toISOString() } });
+    });
+    return { startsAt: input.startsAt, endsAt };
+  }),
+
+  joinWaitlist: publicProcedure.input(publicWaitlistCreateSchema).mutation(async ({ input }) => {
+    const db = await requireDb();
+    const normalizedPhone = normalizeGeorgianPhone(input.phone);
+    if (!normalizedPhone) throw new Error("მიუთითეთ სწორი ქართული მობილურის ნომერი.");
+    const normalizedEmail = normalizeEmail(input.email);
+    const [existingRequest] = await db.select({ id: waitlistEntries.id }).from(waitlistEntries).where(eq(waitlistEntries.idempotencyKey, input.idempotencyKey)).limit(1);
+    if (existingRequest) return { id: existingRequest.id, replayed: true };
+    const [location] = await db.select().from(locations).where(and(eq(locations.publicSlug, input.slug), eq(locations.status, "ACTIVE"), eq(locations.bookingEnabled, true))).limit(1);
+    if (!location) throw new Error("ეს ჩაწერის ბმული აღარ არის აქტიური.");
+    const [service] = await db.select().from(services).where(and(eq(services.id, input.serviceId), eq(services.organizationId, location.organizationId), eq(services.status, "ACTIVE"), eq(services.onlineBookingEnabled, true))).limit(1);
+    if (!service) throw new Error("არჩეული სერვისი ონლაინ ჩაწერისთვის მიუწვდომელია.");
+    if (input.staffProfileId) {
+      const [eligible] = await db.select({ id: staffProfiles.id }).from(staffProfiles).innerJoin(staffLocations, eq(staffProfiles.id, staffLocations.staffProfileId)).innerJoin(staffServices, eq(staffProfiles.id, staffServices.staffProfileId)).where(and(eq(staffProfiles.id, input.staffProfileId), eq(staffProfiles.status, "ACTIVE"), eq(staffProfiles.onlineBookingVisible, true), eq(staffLocations.locationId, location.id), eq(staffServices.serviceId, service.id), eq(staffServices.canPerform, true))).limit(1);
+      if (!eligible) throw new Error("არჩეული სპეციალისტი ამ სერვისისთვის მიუწვდომელია.");
+    }
+    const id = nanoid(21);
+    await db.transaction(async tx => {
+      const [matchedClient] = await tx.select({ id: clients.id }).from(clients).where(and(eq(clients.organizationId, location.organizationId), eq(clients.normalizedPhone, normalizedPhone), eq(clients.status, "ACTIVE"))).limit(1);
+      const clientId = matchedClient?.id ?? nanoid(21);
+      if (!matchedClient) await tx.insert(clients).values({ id: clientId, organizationId: location.organizationId, firstName: input.firstName, lastName: input.lastName, normalizedPhone, email: input.email, normalizedEmail, source: "PUBLIC_WEB" });
+      await tx.insert(waitlistEntries).values({ id, organizationId: location.organizationId, locationId: location.id, clientId, serviceId: service.id, staffProfileId: input.staffProfileId, requestedDate: new Date(`${input.requestedDate}T00:00:00.000Z`), preferredStartLocalTime: input.preferredStartLocalTime, customerNote: input.customerNote, idempotencyKey: input.idempotencyKey });
+      await tx.insert(clientConsents).values({ id: nanoid(21), clientId, consentType: "BOOKING_TERMS", granted: true, source: "PUBLIC_WAITLIST", grantedAt: new Date() });
+    });
+    return { id, replayed: false };
   }),
 });

@@ -161,3 +161,9 @@
 - [x] Add a client-side calendar export to public booking confirmation using only the confirmed visit details already in memory and the server-persisted appointment end time.
 - [x] Extend skip-to-content and focusable main targets to the remaining public booking/demo/not-found route shells through the shared PublicHeader.
 - [x] Add targeted regression coverage and full QA for Milestone A public conversion/accessibility improvements.
+- [x] Audit existing notification provider readiness, scheduler boundary, payment integration status, and booking/token schema before customer lifecycle additions: no configured SMS/email/payment provider variables were present in the managed runtime; notification jobs/Heartbeat exist but no delivery handler is mounted.
+- [x] Add token-protected public appointment detail, safe reschedule, and safe cancellation workflow with expiry, status, availability re-check, and audit history safeguards.
+- [x] Add a privacy-safe waitlist workflow for unavailable public booking slots without sending unconfigured notifications, including a public request form and an organization-scoped workspace queue.
+- [ ] Design and implement multi-service public booking with authoritative duration, staff eligibility, price snapshots, and overlap protection.
+- [ ] Evaluate and, only if fully configured, activate booking confirmation and 24-hour reminder delivery through the prepared provider; otherwise document the exact required inputs.
+- [ ] Evaluate deposit/prepayment integration and request the required payment provider and booking policy decision before enabling checkout or charging customers.

@@ -35,6 +35,7 @@ export const notificationChannelValues = ["SMS", "EMAIL", "WHATSAPP"] as const;
 export const notificationStatusValues = ["PENDING", "PROCESSING", "SENT", "FAILED", "CANCELLED"] as const;
 export const inviteStatusValues = ["PENDING", "ACCEPTED", "REVOKED", "EXPIRED"] as const;
 export const verificationPurposeValues = ["PUBLIC_BOOKING", "EMAIL_VERIFICATION", "PHONE_VERIFICATION", "PASSWORD_RESET"] as const;
+export const waitlistStatusValues = ["PENDING", "CONTACTED", "FULFILLED", "CANCELLED", "EXPIRED"] as const;
 
 export const membershipRole = mysqlEnum("membership_role", membershipRoleValues);
 export const membershipStatus = mysqlEnum("membership_status", membershipStatusValues);
@@ -49,6 +50,7 @@ export const notificationChannel = mysqlEnum("notification_channel", notificatio
 export const notificationStatus = mysqlEnum("notification_status", notificationStatusValues);
 export const inviteStatus = mysqlEnum("invite_status", inviteStatusValues);
 export const verificationPurpose = mysqlEnum("verification_purpose", verificationPurposeValues);
+export const waitlistStatus = mysqlEnum("waitlist_status", waitlistStatusValues);
 
 /**
  * Secure platform identity synchronized by Manus OAuth. Business roles live in
@@ -460,6 +462,26 @@ export const notificationJobs = mysqlTable("notification_jobs", {
 }, table => [
   uniqueIndex("notification_jobs_idempotency_uq").on(table.idempotencyKey),
   index("notification_jobs_due_idx").on(table.status, table.scheduledAt),
+]);
+
+export const waitlistEntries = mysqlTable("waitlist_entries", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  organizationId: varchar("organizationId", { length: 36 }).notNull().references(() => organizations.id),
+  locationId: varchar("locationId", { length: 36 }).notNull().references(() => locations.id),
+  clientId: varchar("clientId", { length: 36 }).notNull().references(() => clients.id),
+  serviceId: varchar("serviceId", { length: 36 }).notNull().references(() => services.id),
+  staffProfileId: varchar("staffProfileId", { length: 36 }).references(() => staffProfiles.id),
+  requestedDate: date("requestedDate").notNull(),
+  preferredStartLocalTime: time("preferredStartLocalTime"),
+  customerNote: text("customerNote"),
+  status: waitlistStatus.default("PENDING").notNull(),
+  idempotencyKey: varchar("idempotencyKey", { length: 128 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [
+  uniqueIndex("waitlist_entries_idempotency_uq").on(table.idempotencyKey),
+  index("waitlist_entries_location_date_status_idx").on(table.locationId, table.requestedDate, table.status),
+  index("waitlist_entries_client_status_idx").on(table.clientId, table.status),
 ]);
 
 export const staffInvites = mysqlTable("staff_invites", {

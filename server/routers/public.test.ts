@@ -7,7 +7,7 @@ vi.mock("../db", () => ({
 }));
 vi.mock("nanoid", () => ({ nanoid: vi.fn(() => mocked.ids.shift() ?? "generated_id_000000001") }));
 
-import { publicRouter } from "./public";
+import { canCustomerManage, publicRouter } from "./public";
 
 const ids = {
   organizationId: "organization_0001",
@@ -82,6 +82,13 @@ function availabilityInput() {
 }
 
 describe("public booking router safeguards", () => {
+  it("allows token-based self-service only for pending or confirmed bookings strictly before the cancellation cutoff", () => {
+    const now = new Date("2026-08-20T08:00:00.000Z").getTime();
+    expect(canCustomerManage({ status: "PENDING", startsAt: new Date("2026-08-20T11:01:00.000Z") }, 180, now)).toBe(true);
+    expect(canCustomerManage({ status: "CONFIRMED", startsAt: new Date("2026-08-20T11:00:00.000Z") }, 180, now)).toBe(false);
+    expect(canCustomerManage({ status: "IN_SERVICE", startsAt: new Date("2026-08-20T15:00:00.000Z") }, 180, now)).toBe(false);
+  });
+
   it("exposes only active booking locations with database-backed service categories", async () => {
     mocked.db = publicCatalogDb([
       [{ id: ids.locationId, organizationId: ids.organizationId, publicSlug: "gldani-beauty", name: "გლდანი", publicDescription: "მზრუნველი მომსახურება", timezone: "Asia/Tbilisi", address: "გლდანი", phone: "+995555000000", email: "hello@example.com" }],

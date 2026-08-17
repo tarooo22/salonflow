@@ -8,6 +8,9 @@ import Home from "./pages/Home";
 
 const Book = lazy(() => import("./pages/Book"));
 const BookingFlow = lazy(() => import("./pages/BookingFlow"));
+const ManageBooking = lazy(() => import("./pages/ManageBooking"));
+const Waitlist = lazy(() => import("./pages/Waitlist"));
+const WaitlistQueue = lazy(() => import("./pages/WaitlistQueue"));
 const Calendar = lazy(() => import("./pages/Calendar"));
 const Reports = lazy(() => import("./pages/Reports"));
 const Staff = lazy(() => import("./pages/Staff"));
@@ -43,6 +46,8 @@ function Router() {
       <Route path={"/contact"} component={ContactPage} />
       <Route path={"/book"} component={Book} />
       <Route path={"/book/:slug"} component={BookingFlow} />
+      <Route path={"/manage-booking/:token"} component={ManageBooking} />
+      <Route path={"/waitlist/:slug"} component={Waitlist} />
       <Route path={"/login"}>{() => <LocalAuth mode="login" />}</Route>
       <Route path={"/register"}>{() => <LocalAuth mode="register" />}</Route>
       <Route path={"/claim-account"}>{() => <LocalAuth mode="claim" />}</Route>
@@ -55,6 +60,7 @@ function Router() {
       <Route path={"/app/staff"} component={Staff} />
       <Route path={"/app/reports"} component={Reports} />
       <Route path={"/app/settings"} component={Settings} />
+      <Route path={"/app/waitlist"} component={WaitlistQueue} />
       <Route path={"/app/setup"} component={WorkspaceSetup} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
