@@ -165,8 +165,10 @@
 - [x] Add token-protected public appointment detail, safe reschedule, and safe cancellation workflow with expiry, status, availability re-check, and audit history safeguards.
 - [x] Add a privacy-safe waitlist workflow for unavailable public booking slots without sending unconfigured notifications, including a public request form and an organization-scoped workspace queue.
 - [x] Design and implement multi-service public booking with authoritative duration, staff eligibility, price snapshots, and overlap protection: 2–6 services can be selected, only universally eligible specialists are offered, combined slots use authoritative server duration/buffers, and commit writes one appointment with ordered service snapshots transactionally.
-- [ ] Evaluate and, only if fully configured, activate booking confirmation and 24-hour reminder delivery through the prepared provider; otherwise document the exact required inputs.
-- [ ] Evaluate deposit/prepayment integration and request the required payment provider and booking policy decision before enabling checkout or charging customers.
+- [x] Evaluate and, only if fully configured, activate booking confirmation and 24-hour reminder delivery through the prepared provider; otherwise document the exact required inputs. No configured provider/sender/handler exists, so delivery remains intentionally disabled and the activation contract is documented.
+- [x] Evaluate deposit/prepayment integration and request the required payment provider and booking policy decision before enabling checkout or charging customers. No gateway/policy is configured, so checkout/charge remains intentionally disabled and the decision contract is documented.
+- [x] Document provider-neutral notification/reminder and deposit/prepayment activation contracts, exact secrets, scheduler safeguards, webhook requirements, and no-send/no-charge boundaries.
+- [x] Add a truthful Settings readiness surface that explains what remains unconfigured without implying that reminders or deposits are live.
 - [x] Audit Calendar drag/reschedule, Walk-in, attendance, tip, POS and inventory capabilities against current schema, routers and role permissions.
 - [x] Add role-gated drag-and-drop appointment move/reassign interactions backed by the existing authoritative reschedule mutation and conflict re-check.
 - [x] Add a compact Walk-in checkbox/quick-entry path in operations surfaces without bypassing price, duration, staff eligibility or schedule safeguards.

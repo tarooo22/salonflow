@@ -1,30 +1,68 @@
-# SalonFlow Transactional Delivery Readiness
+# SalonFlow — შეტყობინებების delivery readiness
 
-## Current State
+## მიმდინარე რეალური სტატუსი
 
-SalonFlow has local authentication, password recovery, and verification-code security foundations in place. Reset and verification records are purpose-bound, expiry-bound, hash-only, and single-use; the browser never receives a raw stored recovery token. Customer delivery is deliberately disabled.
+SalonFlow-ს აქვს `notification_jobs` რიგის მონაცემთა მოდელი, რომელშიც ინახება channel, template, დაგეგმილი დრო, მცდელობები, provider message ID და უნიკალური idempotency key. ეს არის **მოსამზადებელი საფუძველი** და არა მოქმედი delivery სისტემა. მიმდინარე production configuration-ში არ არსებობს customer-facing email/SMS provider adapter, დადასტურებული sender identity, provider secret ან `/api/scheduled/*` delivery endpoint.
 
-> No password-reset message, verification code, or appointment reminder is represented as sent until a verified sender identity and approved provider configuration exist.
+> **No-send boundary:** booking confirmation, password-recovery message, verification code და 24-საათიანი reminder არ უნდა გამოცხადდეს გაგზავნილად და არ უნდა გაეგზავნოს მომხმარებელს, სანამ ქვემოთ მოცემული activation contract სრულად არ შესრულდება.
 
-| Capability | Current state | Delivery dependency |
+| შესაძლებლობა | სტატუსი | რას ნიშნავს პრაქტიკაში |
 |---|---|---|
-| Local registration and sign-in | Available | None |
-| Password-reset request and secure token consumption | Available | A verified sender before a customer can receive the reset link or code |
-| Verification-code security lifecycle | Available | A verified sender before a customer can receive the code |
-| Appointment reminder jobs | Deferred | Verified sender, provider credentials, consent policy, and Heartbeat-backed scheduler configuration |
+| Local registration და sign-in | მოქმედებს | email/password authentication მუშაობს დამოუკიდებლად. |
+| უსაფრთხო recovery/verification records | მოქმედებს | token/code lifecycle არსებობს, მაგრამ customer delivery გამორთულია. |
+| Booking confirmation job model | მოსამზადებელია | მომავალში შეიქმნება idempotent job; დღეს არ იგზავნება. |
+| 24-საათიანი reminder model | მოსამზადებელია | მომავალში due jobs შეირჩევა scheduler-ით; დღეს არ არსებობს scheduler handler. |
+| Provider dispatch / bounce status | არ არის კონფიგურირებული | არც ერთი provider არ არის დაკავშირებული. |
 
-## Required Inputs Before Activation
+## არჩევანი, რომელიც მფლობელმა უნდა დაადასტუროს
 
-The project owner must provide the verified custom sender domain and select a transactional provider. The provider configuration must support an API credential that is stored as a server-only secret; it must never be embedded in the browser bundle, source code, sample data, or logs.
-
-| Required input | Why it is required |
+| გადაწყვეტილება | საჭირო პასუხი |
 |---|---|
-| Verified sender domain, such as `mail.example.ge` | Establishes an approved From identity for recipient-facing transactional messages. |
-| Transactional provider API key | Authorizes server-side dispatch and provider status checks. |
-| Approved From name and From address | Makes recipient-facing communication recognizable and consistent. |
-| Provider webhook/signature details, if delivery events are required | Enables status, bounce, and retry records without trusting unauthenticated callbacks. |
-| Reminder timing and consent policy | Determines which appointment messages can be queued and when. |
+| არხი | Email, SMS ან ორივე; თითოეული არხი დამოუკიდებლად ჩაირთვება. |
+| Email provider | მაგალითად Resend/SendGrid/სხვა transactional provider და verified From address. |
+| SMS provider | მაგალითად Twilio/ადგილობრივი SMS gateway და დამტკიცებული sender/ნომერი. |
+| Recipient consent | რომელ contact preference-ზეა ნებადართული transactional message; marketing consent არასოდეს უნდა შეიცვალოს transactional consent-ით. |
+| Timing | დადასტურება booking commit-ის შემდეგ; reminder appointment start-მდე ზუსტად 24 საათით ადრე, დაგვიანებული queue მხოლოდ ერთხელ. |
+| Template approval | ქართული (`ka-GE`) message templates, sender name, fallback copy და cancellation/reschedule links. |
 
-## Activation Guardrails
+## ზუსტი secrets და configuration contract
 
-When these inputs are available, message creation should remain separate from delivery. The implementation must create idempotent notification jobs, send through the provider from the server only, persist sanitized provider outcome metadata, and schedule retries/reminders through Heartbeat rather than in-process timers. A booking must remain committed when a notification provider is temporarily unavailable; the notification job should record the failure for safe retry.
+Secrets ინახება მხოლოდ server environment-ში. ისინი არასოდეს შედის browser bundle-ში, source-ში, test fixture-ში, notification payload log-ში ან settings UI-ში.
+
+| Channel / adapter | სავალდებულო environment variables | დამატებითი წინაპირობა |
+|---|---|---|
+| Email — Resend | `NOTIFICATION_EMAIL_PROVIDER=resend`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL` | `RESEND_FROM_EMAIL` უნდა იყოს provider-ში verified domain/address; webhook tracking-ისთვის დაემატება `RESEND_WEBHOOK_SECRET`. |
+| SMS — Twilio | `NOTIFICATION_SMS_PROVIDER=twilio`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` | `TWILIO_FROM_NUMBER` უნდა იყოს დამტკიცებული messaging sender. Twilio callback signature მოწმდება `TWILIO_AUTH_TOKEN`-ით. |
+| Provider-neutral toggle | `NOTIFICATION_DELIVERY_ENABLED=true` | ეს მნიშვნელობა განისაზღვრება **მხოლოდ** adapter, sender, templates, handler, scheduler და test runbook-ის წარმატებული deploy-ის შემდეგ. default არის unset/false. |
+
+შერჩეული provider-ის ოფიციალური webhook signature scheme უნდა შემოწმდეს მის მიმდინარე დოკუმენტაციასთან integration-ის განხორციელების დროს. Webhook არასოდეს ენდობა request body-ს: იგი ამოწმებს signature/timestamp-ს, ინახავს მხოლოდ აუცილებელ provider event metadata-ს და provider event ID-ს unique key-ით idempotently.
+
+## უსაფრთხო delivery architecture
+
+Notification job creation და delivery გაყოფილია. Booking commit არ უნდა ჩავარდეს მხოლოდ იმიტომ, რომ provider დროებით მიუწვდომელია.
+
+1. Booking commit ქმნის ერთ job-ს `BOOKING_CONFIRMATION`-ისთვის და ერთ job-ს `APPOINTMENT_REMINDER_24H`-ისთვის მხოლოდ მოქმედი consent/არხის საფუძველზე. თითო job იყენებს deterministic `idempotencyKey`-ს, მაგალითად appointment + event + channel + version.
+2. Confirmation job დაიგეგმება დაუყოვნებლივ, ხოლო reminder job — appointment start-მდე 24 საათით ადრე. Reschedule/cancel flow ძველ pending reminder-ს აუქმებს და მხოლოდ საჭიროებისას ქმნის ახალ, unique job-ს.
+3. Production endpoint `/api/scheduled/notification-delivery` authenticates scheduler identity-ს, არჩევს მხოლოდ due `PENDING`/retryable jobs-ს, ატარებს lock-ს ან safe claim-ს და არასოდეს იღებს appointment/job ID-ს დაუცველი request body-დან.
+4. Endpoint მუშაობს Heartbeat პერიოდული trigger-ით, არა `setInterval`, `node-cron` ან in-process timer-ით. Handler არის idempotent, error-ზე აბრუნებს sanitized JSON-ს და შეუძლია retry მხოლოდ მკაფიოდ განსაზღვრული attempt budget-ით.
+5. Provider-ის მიღებული response ინახავს მხოლოდ `providerMessageId`, status და უსაფრთხო error classification-ს. Email address, phone, full message content, API key და raw webhook payload არ ჩაიწერება error/log-ში.
+6. Hard failures ან bounce/undeliverable event ნიშნავს job-ის შეჩერებას და workspace audit visibility-ს; ისინი არ ცვლიან booking-ს და არ გზავნიან ფარულ retry-loop-ს.
+
+## Scheduler-ის activation checklist
+
+| ნაბიჯი | სავალდებულო მტკიცებულება |
+|---|---|
+| 1. Provider + sender | Provider account, verified domain/number, From name/address და approved Georgian templates. |
+| 2. Secret setup | ზემოთ ჩამოთვლილი server-only variables დამატებულია უსაფრთხოდ; client env-ში არც ერთი საიდუმლო არ არის. |
+| 3. Adapter tests | Mocked provider tests ადასტურებს idempotent send, timeout, retryable/non-retryable failure და consent/no-contact skip-ს. |
+| 4. Scheduled handler | `/api/scheduled/notification-delivery` mounted, scheduler-only authenticated და due queue-ს უსაფრთხოდ ამუშავებს. |
+| 5. Deployment | Handler-იანი release live-ა **scheduler creation-მდე**; შემდეგ იქმნება platform-managed periodic trigger და მისი task UID ინახება durable configuration-ში. |
+| 6. Controlled test | მხოლოდ owner-approved test recipient-ზე მოწმდება confirmation, 24h reminder, reschedule, cancel და duplicate trigger; შემდეგ იხილება execution log. |
+| 7. Enable | მხოლოდ ყველა წინა ნაბიჯის შემდეგ დგება `NOTIFICATION_DELIVERY_ENABLED=true`. |
+
+## Activation-მდე აკრძალული ქმედებები
+
+- არ დაემატოს UI toggle, რომელიც ქმნის შთაბეჭდილებას, რომ reminders უკვე live-ა.
+- არ დაემატოს browser-side provider call, API secret, raw payment/notification payload ან fixed in-memory timer.
+- არ ითქვას „გაგზავნილია“, სანამ provider-ის მიღებული outcome არ ჩაიწერება შესაბამის job-ზე.
+- არ გაიგზავნოს marketing message transactional booking job-ის სახელით და არ გამოყენებულ იქნას marketing consent როგორც ავტომატური transactional permission.
