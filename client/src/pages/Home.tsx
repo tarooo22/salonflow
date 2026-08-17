@@ -34,9 +34,8 @@ const faq = [
 
 export default function Home() {
   const revealRef = useReveal<HTMLElement>();
-  return <div className="sf-public-page">
-    <PublicHeader />
-    <main ref={revealRef}>
+  return <div className="sf-public-page"><a className="sf-skip-link" href="#main-content">ძირითად შინაარსზე გადასვლა</a><PublicHeader />
+    <main id="main-content" ref={revealRef} tabIndex={-1}>
       <section className="sf-public-container relative grid gap-12 pb-20 pt-14 lg:grid-cols-[1.03fr_.97fr] lg:items-center lg:pb-28 lg:pt-24">
         <span className="sf-blob hidden lg:block" style={{ width: "26rem", height: "26rem", top: "-6rem", left: "-8rem", background: "var(--sf-gradient-brand-soft)", animation: "sf-blob-morph 16s ease-in-out infinite" }} aria-hidden="true" />
         <div className="relative">

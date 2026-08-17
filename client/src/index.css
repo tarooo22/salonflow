@@ -281,7 +281,7 @@
   select:not(:disabled),
   input[type="checkbox"]:not(:disabled),
   input[type="radio"]:not(:disabled) { @apply cursor-pointer; }
-  :focus-visible { outline: 3px solid var(--sf-focus); outline-offset: 3px; }
+  :focus-visible { outline: 3px solid var(--sf-focus); outline-offset: 3px; box-shadow: 0 0 0 5px color-mix(in srgb, var(--sf-focus) 22%, transparent); }
   ::selection { background: color-mix(in srgb, var(--sf-terracotta) 32%, transparent); color: var(--sf-ink); }
 }
 
@@ -299,6 +299,9 @@
       var(--sf-canvas);
     color: var(--sf-ink);
   }
+  .sf-skip-link { position: fixed; top: 0.75rem; left: 50%; z-index: 80; transform: translate(-50%, -180%); border-radius: 0.75rem; background: var(--sf-surface-elevated); color: var(--sf-ink); padding: 0.75rem 1rem; font-size: 0.875rem; font-weight: 800; box-shadow: var(--sf-shadow-lg); transition: transform var(--sf-motion-fast); }
+  .sf-skip-link:focus-visible { transform: translate(-50%, 0); }
+  #main-content { scroll-margin-top: 5.75rem; }
   .sf-public-page main > section:first-child { animation: sf-enter 260ms var(--sf-ease-out) both; }
   .sf-public-container { width: min(100% - 2rem, 76rem); margin-inline: auto; }
   .sf-brand-mark { position: relative; display: grid; width: 2.25rem; height: 2.25rem; grid-template-columns: repeat(3, 1fr); align-items: end; gap: 0.16rem; border-radius: 0.8rem; background: var(--sf-gradient-brand); padding: 0.5rem; box-shadow: var(--sf-glow-brand), inset 0 1px 0 rgb(255 255 255 / 0.35); }
