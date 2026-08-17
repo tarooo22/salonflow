@@ -151,3 +151,4 @@
 - [x] Add accessible, ka-GE revenue trend and commission distribution charts to Reports using existing organization-scoped report data.
 - [x] Validate Reports charts across loading, empty, error, desktop, and mobile states without altering financial calculations or API contracts.
 - [x] Fix successful local login redirect so users reach their protected workspace instead of being returned to the public home page: deployed/embedded HTTPS now issues `SameSite=None; Secure` local session cookies while local HTTP stays `Lax`; real browser registration reached `/app/today`, then QA account was removed.
+- [x] Fix the low-contrast `დაიწყე უფასოდ` gradient CTA label shown in the public final conversion banner with a solid white high-contrast surface, dark foreground, interaction states, mobile/desktop QA, and a focused regression test.
