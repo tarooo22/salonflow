@@ -1,4 +1,5 @@
 import { RevenueTrendChart, CommissionDistributionChart } from "@/components/reports/ReportsCharts";
+import { BookingForecastPanel, PeakHourHeatmapPanel, RetentionCohortPanel, WeekComparisonPanel } from "@/components/reports/AdvancedAnalyticsPanels";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -147,6 +148,17 @@ export default function Reports() {
             <WorkspaceMetric icon={ReceiptText} label="ხარჯები" value={report.isLoading ? "…" : gel(summary?.expensesTetri ?? 0)} helper="აქტიური ხარჯები არჩეულ პერიოდში" tone="violet" />
           </div>
 
+          <div className="grid gap-4 xl:grid-cols-[.9fr_1.1fr]">
+            <WorkspaceSection title="კვირის შედარება" description="ეს კვირის აქტიური ჯავშნები წინა კვირის იმავე კალენდარულ ფანჯარასთან.">
+              {analytics.isLoading ? <SectionLoading title="კვირის შედარება იტვირთება…" /> : null}
+              {!analytics.isLoading && analytics.data ? <WeekComparisonPanel data={analytics.data.weekComparison} /> : null}
+            </WorkspaceSection>
+            <WorkspaceSection title="მომდევნო 7 დღის პროგნოზი" description="მხოლოდ არსებული ჯავშნებიდან დაგეგმილი და ჯერ გადასახდელი თანხა.">
+              {analytics.isLoading ? <SectionLoading title="პროგნოზი იტვირთება…" /> : null}
+              {!analytics.isLoading && analytics.data ? <BookingForecastPanel data={analytics.data.bookingForecast} /> : null}
+            </WorkspaceSection>
+          </div>
+
           <WorkspaceSection title="გადახდის მეთოდები" description="მიღებული გადახდების განაწილება არჩეულ პერიოდში.">
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
               {Object.entries(report.data?.paymentMethods ?? { CASH: 0, CARD_TERMINAL: 0, BANK_TRANSFER: 0, ONLINE: 0, OTHER: 0 }).map(([method, amount]) => <div key={method} className="rounded-xl border bg-muted/20 p-3"><p className="text-xs font-medium text-muted-foreground">{formatPaymentMethod(method)}</p><p className="mt-1 text-base font-semibold">{gel(amount)}</p></div>)}
@@ -181,6 +193,17 @@ export default function Reports() {
               {!commissions.isLoading && !commissions.isError && !commissionData.length ? <SectionEmpty title="არჩეულ პერიოდში კომისიის ჩანაწერი ჯერ არ არის" /> : null}
               {!commissions.isLoading && !commissions.isError && commissionData.length ? <CommissionDistributionChart data={commissionData} /> : null}
             </WorkspaceSection> : <WorkspaceSection title="საკომისიოები" description="საკომისიოების დეტალები ხელმისაწვდომია მფლობელისა და მენეჯერისთვის."><WorkspaceState kind="empty" title="ამ მონაცემზე წვდომა არ გაქვთ" /></WorkspaceSection>}
+          </div>
+
+          <div className="grid gap-4 xl:grid-cols-[1.05fr_.95fr]">
+            <WorkspaceSection title="Retention cohorts" description="თვეში პირველი დასრულებული ვიზიტით დაწყებული კლიენტები და შემდგომ თვეებში დაბრუნება.">
+              {analytics.isLoading ? <SectionLoading title="Retention cohorts იტვირთება…" /> : null}
+              {!analytics.isLoading && analytics.data ? <RetentionCohortPanel data={analytics.data.retentionCohorts} /> : null}
+            </WorkspaceSection>
+            <WorkspaceSection title="Peak hour heatmap" description="არჩეულ პერიოდში კვირის დღე და საათი აქტიური ჯავშნების რაოდენობით.">
+              {analytics.isLoading ? <SectionLoading title="დატვირთულობის heatmap იტვირთება…" /> : null}
+              {!analytics.isLoading && analytics.data ? <PeakHourHeatmapPanel data={analytics.data.peakHourHeatmap} /> : null}
+            </WorkspaceSection>
           </div>
 
           {canManageFinance ? <>

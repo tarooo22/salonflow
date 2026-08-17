@@ -179,3 +179,7 @@
 - [x] Add a client-owned before/after gallery linked to visits, including explicit publication consent, private default visibility, protected upload/list/delete controls, and no public exposure by default.
 - [x] Build a public SEO-friendly salon profile route with organization-specific cover, approved team profiles, active services/prices, location context, and an opt-in Instagram-style public feed.
 - [x] Validate multi-salon media isolation, uploads, public visibility/consent boundaries, responsive gallery/profile UI, tests, typecheck, production build, and live checkpoint.
+- [x] Audit reporting, appointments, payments, time-zone and role-scope contracts for week-over-week comparison, retention, peak-hour and booking forecast analytics.
+- [x] Add organization-scoped server analytics for current-versus-previous week trends, cohort retention, peak-hour/day demand, and a 7-day forecast derived only from future non-cancelled booking totals.
+- [x] Add responsive ka-GE Reports UI cards/charts for comparisons, retention cohort, capacity heatmap and transparent cash-flow forecast assumptions without treating forecast as settled revenue.
+- [x] Validate analytical definitions, integer-tetri calculations, timezone boundaries, finance-role access, loading/empty/error states, tests, typecheck, production build and live checkpoint.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { expensePressureBasisPoints, summarizeReportingAnalytics } from "./reportingAnalytics";
+import { expensePressureBasisPoints, summarizeAdvancedReportingAnalytics, summarizeReportingAnalytics } from "./reportingAnalytics";
 
 describe("reporting analytics", () => {
   it("uses historical snapshots, excludes cancelled rows, and keeps integer tetri totals", () => {
@@ -21,5 +21,37 @@ describe("reporting analytics", () => {
   it("expresses expense pressure in integer basis points without currency float arithmetic", () => {
     expect(expensePressureBasisPoints(12_500, 50_000)).toBe(2_500);
     expect(expensePressureBasisPoints(1, 0)).toBeNull();
+  });
+
+  it("separates future remaining booking balance from already-paid amounts, excludes cancelled bookings, and groups local demand", () => {
+    const reference = new Date("2026-08-17T08:00:00.000Z");
+    const result = summarizeAdvancedReportingAnalytics({
+      timeZone: "Asia/Tbilisi",
+      reference,
+      selectedRangeAppointments: [
+        { id: "heat-1", staffProfileId: "s1", startsAt: new Date("2026-08-17T08:00:00.000Z"), status: "CONFIRMED", totalTetri: 5_000 },
+        { id: "heat-cancelled", staffProfileId: "s1", startsAt: new Date("2026-08-17T08:00:00.000Z"), status: "CANCELLED", totalTetri: 9_000 },
+      ],
+      weeklyAppointments: [
+        { id: "current", staffProfileId: "s1", startsAt: new Date("2026-08-17T08:00:00.000Z"), status: "CONFIRMED", totalTetri: 5_000 },
+        { id: "previous", staffProfileId: "s1", startsAt: new Date("2026-08-10T08:00:00.000Z"), status: "COMPLETED", totalTetri: 3_000 },
+      ],
+      cohortAppointments: [
+        { id: "cohort-first", staffProfileId: "s1", clientId: "client_1", startsAt: new Date("2026-06-02T08:00:00.000Z"), status: "COMPLETED", totalTetri: 2_000 },
+        { id: "cohort-return", staffProfileId: "s1", clientId: "client_1", startsAt: new Date("2026-07-02T08:00:00.000Z"), status: "COMPLETED", totalTetri: 2_000 },
+        { id: "cohort-single", staffProfileId: "s1", clientId: "client_2", startsAt: new Date("2026-06-04T08:00:00.000Z"), status: "COMPLETED", totalTetri: 2_000 },
+      ],
+      futureAppointments: [
+        { id: "future-paid", staffProfileId: "s1", startsAt: new Date("2026-08-18T08:00:00.000Z"), status: "CONFIRMED", totalTetri: 10_000 },
+        { id: "future-cancelled", staffProfileId: "s1", startsAt: new Date("2026-08-19T08:00:00.000Z"), status: "CANCELLED", totalTetri: 7_000 },
+      ],
+      futurePayments: [{ appointmentId: "future-paid", amountTetri: 4_000, refundedTetri: 0, status: "PAID" }],
+    });
+    expect(result.weekComparison.current.bookedRevenueTetri).toBe(5_000);
+    expect(result.weekComparison.previous.bookedRevenueTetri).toBe(3_000);
+    expect(result.retentionCohorts.find(cohort => cohort.cohortMonth === "2026-06")).toMatchObject({ clients: 2, returningClients: 1, retentionBasisPoints: 5_000 });
+    expect(result.peakHourHeatmap.maxBookingCount).toBe(1);
+    expect(result.bookingForecast.scheduledTetri).toBe(10_000);
+    expect(result.bookingForecast.expectedCollectionTetri).toBe(6_000);
   });
 });

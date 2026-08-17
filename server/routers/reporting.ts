@@ -1,11 +1,11 @@
 import { and, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
-import { appointmentServices, appointments, commissionEntries, expenses, payments, staffProfiles } from "../../drizzle/schema";
+import { appointmentServices, appointments, commissionEntries, expenses, organizations, payments, staffProfiles } from "../../drizzle/schema";
 import { bookingHistorySchema, reportingRangeSchema } from "../../shared/validation";
 import { requireOrganizationAction } from "../access";
 import { requireDb } from "../db";
 import { buildCsv } from "../lib/csv";
 import { summarizePaymentMethods, summarizeRevenue } from "../lib/reporting";
-import { expensePressureBasisPoints, summarizeReportingAnalytics } from "../lib/reportingAnalytics";
+import { expensePressureBasisPoints, localWeekRange, nextSevenDaysRange, summarizeAdvancedReportingAnalytics, summarizeReportingAnalytics } from "../lib/reportingAnalytics";
 import { protectedProcedure, router } from "../_core/trpc";
 
 async function reportRows(organizationId: string, startsAt: Date, endsAt: Date) {
@@ -60,7 +60,22 @@ export const reportingRouter = router({
     const analytics = summarizeReportingAnalytics(appointmentRows, serviceRows, staffRows);
     const bookedRevenueTetri = analytics.staffMetrics.reduce((total, metric) => total + metric.bookedRevenueTetri, 0);
     const expensesTetri = expenseRows.reduce((total, expense) => total + expense.amountTetri, 0);
-    return { ...analytics, bookedRevenueTetri, expensesTetri, expensePressureBasisPoints: expensePressureBasisPoints(expensesTetri, bookedRevenueTetri) };
+    const [organization] = await db.select({ defaultTimezone: organizations.defaultTimezone }).from(organizations).where(eq(organizations.id, input.organizationId)).limit(1);
+    if (!organization) throw new Error("ორგანიზაცია ვერ მოიძებნა");
+    const now = new Date();
+    const week = localWeekRange(organization.defaultTimezone, now);
+    const forecast = nextSevenDaysRange(organization.defaultTimezone, now);
+    const previousWeekStart = new Date(week.startsAt);
+    previousWeekStart.setUTCDate(previousWeekStart.getUTCDate() - 7);
+    const [weeklyAppointments, cohortAppointments, futureAppointments] = await Promise.all([
+      db.select().from(appointments).where(and(eq(appointments.organizationId, input.organizationId), gte(appointments.startsAt, previousWeekStart), lte(appointments.startsAt, week.endsAt))),
+      db.select().from(appointments).where(and(eq(appointments.organizationId, input.organizationId), lte(appointments.startsAt, now))),
+      db.select().from(appointments).where(and(eq(appointments.organizationId, input.organizationId), gte(appointments.startsAt, now), lte(appointments.startsAt, forecast.endsAt))),
+    ]);
+    const futureIds = futureAppointments.map(appointment => appointment.id);
+    const futurePayments = futureIds.length ? await db.select({ appointmentId: payments.appointmentId, amountTetri: payments.amountTetri, refundedTetri: payments.refundedTetri, status: payments.status }).from(payments).where(inArray(payments.appointmentId, futureIds)) : [];
+    const advanced = summarizeAdvancedReportingAnalytics({ selectedRangeAppointments: appointmentRows, weeklyAppointments, cohortAppointments, futureAppointments, futurePayments, timeZone: organization.defaultTimezone, reference: now });
+    return { ...analytics, ...advanced, bookedRevenueTetri, expensesTetri, expensePressureBasisPoints: expensePressureBasisPoints(expensesTetri, bookedRevenueTetri) };
   }),
 
   commissionSummary: protectedProcedure.input(reportingRangeSchema).query(async ({ ctx, input }) => {
