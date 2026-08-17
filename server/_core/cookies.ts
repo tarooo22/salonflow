@@ -42,11 +42,11 @@ export function getSessionCookieOptions(
   return {
     httpOnly: true,
     path: "/",
-    // `SameSite=None` is rejected by modern browsers unless Secure is also
-    // present, which would silently break local HTTP development sessions.
-    // SalonFlow's app/API traffic is same-site, so Lax preserves CSRF
-    // protection while remaining valid on both local HTTP and deployed HTTPS.
-    sameSite: "lax",
+    // The deployed app can run inside a cross-site preview frame. Its first
+    // protected request must retain the just-issued local session cookie.
+    // Browsers require SameSite=None cookies to also be Secure, so local HTTP
+    // deliberately remains Lax while deployed HTTPS uses None + Secure.
+    sameSite: isSecureRequest(req) ? "none" : "lax",
     secure: isSecureRequest(req),
   };
 }

@@ -148,3 +148,6 @@
 - [x] Audit the newly uploaded salonflow-v2.zip against the current project and identify genuinely new compatible changes; archive included newer finance/reporting UI and commission endpoints, but also stale Light theme, broken manualChunks, old CTA styling, and unconfigured notification dispatch.
 - [x] Integrate only the selected safe V2 improvements while preserving current auth, database, permissions, booking, and live-domain fixes: upgraded Reports and finance router with commission rule management, commission listing, and completed-appointment commission backfill; preserved theme, CTA, Vite, auth, booking, and public notification boundaries.
 - [x] Validate the V2 integration with tests, typecheck, production build, visual QA, and checkpoint.
+- [x] Add accessible, ka-GE revenue trend and commission distribution charts to Reports using existing organization-scoped report data.
+- [x] Validate Reports charts across loading, empty, error, desktop, and mobile states without altering financial calculations or API contracts.
+- [x] Fix successful local login redirect so users reach their protected workspace instead of being returned to the public home page: deployed/embedded HTTPS now issues `SameSite=None; Secure` local session cookies while local HTTP stays `Lax`; real browser registration reached `/app/today`, then QA account was removed.

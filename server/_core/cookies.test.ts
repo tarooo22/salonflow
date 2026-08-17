@@ -7,8 +7,8 @@ describe("session cookie options", () => {
     expect(options).toMatchObject({ httpOnly: true, path: "/", sameSite: "lax", secure: false });
   });
 
-  it("keeps deployed HTTPS cookies secure while retaining same-site protection", () => {
+  it("keeps deployed HTTPS sessions available to the embedded workspace preview", () => {
     const options = getSessionCookieOptions({ protocol: "http", headers: { "x-forwarded-proto": "https" } } as never);
-    expect(options).toMatchObject({ httpOnly: true, path: "/", sameSite: "lax", secure: true });
+    expect(options).toMatchObject({ httpOnly: true, path: "/", sameSite: "none", secure: true });
   });
 });
