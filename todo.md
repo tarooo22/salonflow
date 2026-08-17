@@ -145,3 +145,6 @@
 - [x] Diagnose why the live domain salonflow-dpxqgxgv.manus.space does not open and restore public access: production manualChunks split caused a React/vendor circular initialization failure; Vite now preserves the dependency graph.
 - [x] Force the corrected production bundle to replace the stale live assets and verify the public domain renders React.
 - [x] Restore Dark Luxury dark theme as the default live homepage appearance while preserving Light/System theme switching.
+- [x] Audit the newly uploaded salonflow-v2.zip against the current project and identify genuinely new compatible changes; archive included newer finance/reporting UI and commission endpoints, but also stale Light theme, broken manualChunks, old CTA styling, and unconfigured notification dispatch.
+- [x] Integrate only the selected safe V2 improvements while preserving current auth, database, permissions, booking, and live-domain fixes: upgraded Reports and finance router with commission rule management, commission listing, and completed-appointment commission backfill; preserved theme, CTA, Vite, auth, booking, and public notification boundaries.
+- [x] Validate the V2 integration with tests, typecheck, production build, visual QA, and checkpoint.
