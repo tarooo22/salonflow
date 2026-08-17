@@ -38,10 +38,11 @@ describe("public booking conversion helpers", () => {
     expect(markup).toContain("ანა");
   });
 
-  it("shows the server-resolved specialist in the final confirmation", () => {
-    const markup = renderToStaticMarkup(<BookingConfirmation confirmationToken="safe-confirmation" assignedStaffName="ნინო" />);
+  it("shows the server-resolved specialist and calendar action in the final confirmation", () => {
+    const markup = renderToStaticMarkup(<BookingConfirmation confirmationToken="safe-confirmation" assignedStaffName="ნინო" serviceName="თმის შეჭრა" startsAt={new Date("2026-08-20T08:30:00.000Z")} endsAt={new Date("2026-08-20T09:15:00.000Z")} locationName="ვაკე" />);
     expect(markup).toContain("თქვენი სპეციალისტი:");
     expect(markup).toContain("ნინო");
+    expect(markup).toContain("კალენდარში დამატება");
   });
 
   it("gives a focused, non-technical recovery message when a booking step is incomplete", () => {

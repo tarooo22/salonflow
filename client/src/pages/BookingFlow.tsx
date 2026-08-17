@@ -3,10 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { downloadBookingCalendar } from "@/lib/bookingCalendar";
 import { formatGelTetri, formatKaDateTime } from "@/lib/presentation";
 import { trpc } from "@/lib/trpc";
 import { dateKeyInTimeZone } from "@shared/timezones";
-import { CalendarClock, Check, CheckCircle2, ChevronLeft, ChevronRight, CircleAlert, Clock3, Mail, MapPin, Phone, RefreshCw, ShieldCheck, Sparkles, UserRound } from "lucide-react";
+import { CalendarClock, CalendarPlus, Check, CheckCircle2, ChevronLeft, ChevronRight, CircleAlert, Clock3, Mail, MapPin, Phone, RefreshCw, ShieldCheck, Sparkles, UserRound } from "lucide-react";
 import React, { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useRoute } from "wouter";
 
@@ -59,7 +60,7 @@ export default function BookingFlow() {
   const [customerNote, setCustomerNote] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [idempotencyKey] = useState(() => crypto.randomUUID());
-  const [confirmation, setConfirmation] = useState<{ token: string; assignedStaffName?: string }>();
+  const [confirmation, setConfirmation] = useState<{ token: string; assignedStaffName?: string; endsAt: Date }>();
   const [interactionError, setInteractionError] = useState<BookingValidationIssue | null>(null);
   const errorRef = useRef<HTMLDivElement>(null);
   const startsAt = useMemo(() => (dateTime ? new Date(dateTime) : null), [dateTime]);
@@ -68,7 +69,7 @@ export default function BookingFlow() {
   const commitBooking = trpc.public.commitBooking.useMutation({
     onSuccess: result => {
       setInteractionError(null);
-      setConfirmation({ token: result.confirmationToken, assignedStaffName: result.assignedStaffName });
+      setConfirmation({ token: result.confirmationToken, assignedStaffName: result.assignedStaffName, endsAt: result.endsAt });
     },
     onError: () => setInteractionError({ kind: "submit", title: "ჯავშნის მოთხოვნა ვერ გაიგზავნა", description: "მონაცემები არ დაგვიკარგავს. შეამოწმეთ კავშირი და სცადეთ ხელახლა." }),
   });
@@ -108,7 +109,7 @@ export default function BookingFlow() {
     {catalog.isLoading ? <Card className="mt-8 border-border"><CardContent className="sf-skeleton p-6 text-sm text-muted-foreground" role="status" aria-live="polite">ჩაწერის კატალოგი იტვირთება…</CardContent></Card> : null}
     {catalog.isError ? <Alert>ჩაწერის მონაცემები დროებით მიუწვდომელია. შეამოწმეთ კავშირი და სცადეთ მოგვიანებით.</Alert> : null}
     {catalog.data === null ? <Card className="mt-8 border-[var(--sf-ink)]/10"><CardHeader><CardTitle>ეს ჩაწერის ბმული აღარ არის აქტიური</CardTitle></CardHeader><CardContent className="text-sm leading-6 text-muted-foreground">ფილიალი შესაძლოა გათიშულია ან ბმული არასწორია. დაბრუნდით ფილიალების სიაში და აირჩიეთ აქტიური ფილიალი.</CardContent></Card> : null}
-    {catalog.data && confirmation ? <BookingConfirmation confirmationToken={confirmation.token} assignedStaffName={confirmation.assignedStaffName} /> : null}
+    {catalog.data && confirmation && selectedService && startsAt ? <BookingConfirmation confirmationToken={confirmation.token} assignedStaffName={confirmation.assignedStaffName} serviceName={selectedService.nameKa} startsAt={startsAt} endsAt={confirmation.endsAt} locationName={catalog.data.location.name} locationAddress={catalog.data.location.address} /> : null}
     {catalog.data && !confirmation ? <div className="mt-7 grid gap-5 lg:grid-cols-[minmax(0,1fr)_21rem]"><section className="space-y-4"><LocationContext location={catalog.data.location} /><div key={step} className="sf-booking-step-pane">{step === 0 ? <ServiceStep catalog={catalog.data.catalog} selectedId={serviceId} onSelect={selectService} error={interactionError?.kind === "service" ? interactionError.description : undefined} /> : null}{step === 1 ? <StaffStep team={eligibleTeam} selectedId={staffProfileId} onSelect={selectStaff} error={interactionError?.kind === "staff" ? interactionError.description : undefined} /> : null}{step === 2 ? <TimeStep slug={slug} serviceId={serviceId} staffProfileId={staffProfileId} workingHours={catalog.data.location.workingHours} timezone={catalog.data.location.timezone} dateTime={dateTime} onChange={selectDateTime} availability={availability} error={interactionError?.kind === "time" ? interactionError.description : undefined} /> : null}{step === 3 ? <ContactStep firstName={firstName} lastName={lastName} phone={phone} email={email} customerNote={customerNote} termsAccepted={termsAccepted} error={interactionError?.kind === "contact" ? interactionError.description : undefined} onFirstName={value => { setFirstName(value); clearIssue("contact"); }} onLastName={setLastName} onPhone={value => { setPhone(value); clearIssue("contact"); }} onEmail={setEmail} onNote={setCustomerNote} onTerms={value => { setTermsAccepted(value); clearIssue("contact"); }} /> : null}</div></section><aside className="lg:sticky lg:top-6 lg:self-start"><BookingSummary step={step} service={selectedService} staff={selectedStaff} staffLabel={staffProfileId === ANY_AVAILABLE ? (availability.data?.staffName ? `${availability.data.staffName} (ავტომატურად შეირჩა)` : "ნებისმიერი თავისუფალი სპეციალისტი") : undefined} startsAt={startsAt} available={availability.data?.available === true} onBack={stepBack} onContinue={advanceBooking} submitting={commitBooking.isPending} /></aside><MobileBookingAction step={step} submitting={commitBooking.isPending} onContinue={advanceBooking} /></div> : null}
   </div></main>;
 }
@@ -178,7 +179,8 @@ function MobileBookingAction({ step, submitting, onContinue }: { step: number; s
   return <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border/90 bg-background/95 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-12px_30px_rgb(0_0_0_/_0.16)] lg:hidden"><div className="mx-auto flex max-w-xl items-center gap-3"><span className="shrink-0 text-xs font-semibold text-muted-foreground">ნაბიჯი {step + 1} / 4</span><Button className="flex-1" disabled={submitting} onClick={onContinue}>{step < 3 ? "გაგრძელება" : submitting ? "იგზავნება…" : "ჯავშნის გაგზავნა"}</Button></div></div>;
 }
 
-export function BookingConfirmation({ confirmationToken, assignedStaffName }: { confirmationToken: string; assignedStaffName?: string }) {
+export function BookingConfirmation({ confirmationToken, assignedStaffName, serviceName, startsAt, endsAt, locationName, locationAddress }: { confirmationToken: string; assignedStaffName?: string; serviceName: string; startsAt: Date; endsAt: Date; locationName: string; locationAddress?: string | null }) {
+  const saveToCalendar = () => downloadBookingCalendar({ startsAt, endsAt, title: `${serviceName} — ${locationName}`, location: locationAddress ?? locationName, description: `SalonFlow ჯავშანი. სტატუსი: სალონის დადასტურებას ელოდება.${assignedStaffName ? ` სპეციალისტი: ${assignedStaffName}.` : ""}` });
   return <Card role="status" aria-live="polite" className="sf-grain relative mt-8 overflow-hidden border-transparent text-center shadow-[var(--sf-glow-brand)]" style={{ background: "var(--sf-gradient-brand)" }}>
     <span className="sf-blob" style={{ width: "18rem", height: "18rem", top: "-6rem", left: "-4rem", background: "rgba(255,255,255,0.3)", opacity: 0.5, animation: "sf-blob-morph 15s ease-in-out infinite" }} aria-hidden="true" />
     <CardContent className="relative flex flex-col items-center gap-4 px-6 py-10 text-white">
@@ -186,7 +188,7 @@ export function BookingConfirmation({ confirmationToken, assignedStaffName }: { 
       <div><CardTitle className="text-2xl text-white">ჯავშანი მიღებულია! 🎉</CardTitle><p className="mx-auto mt-2 max-w-md text-sm leading-6 text-white/85">ჯავშანი ელოდება სალონის დადასტურებას. საჭიროების შემთხვევაში შეინახეთ დადასტურების კოდი.</p></div>
       {assignedStaffName ? <p className="rounded-xl border border-white/25 bg-white/15 px-4 py-2 text-sm text-white"><span className="font-semibold">თქვენი სპეციალისტი:</span> {assignedStaffName}</p> : null}
       <code aria-label="ჯავშნის დადასტურების კოდი" className="block max-w-full break-all rounded-lg bg-white/95 px-3 py-2 text-xs font-medium text-[var(--sf-ink)]">{confirmationToken}</code>
-      <a href="/book" className="mt-1 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-[var(--sf-accent-strong)] transition hover:-translate-y-0.5">ფილიალების სიაში დაბრუნება</a>
+      <div className="mt-1 flex flex-col items-center gap-3 sm:flex-row"><Button type="button" variant="outline" className="border-white/45 bg-white/10 text-white hover:bg-white/20 hover:text-white" onClick={saveToCalendar}><CalendarPlus className="size-4" aria-hidden="true" />კალენდარში დამატება</Button><a href="/book" className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-[var(--sf-accent-strong)] transition hover:-translate-y-0.5">ფილიალების სიაში დაბრუნება</a></div>
     </CardContent>
   </Card>;
 }

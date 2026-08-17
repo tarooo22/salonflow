@@ -1,14 +1,14 @@
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { DiscoveryResults, filterLocationsByCategory } from "./Book";
+import { DiscoveryResults, filterLocationsByCategory, workingHoursSummary } from "./Book";
 
 vi.mock("wouter", () => ({ Link: ({ children, href }: { children: React.ReactNode; href: string }) => <a href={href}>{children}</a> }));
 
 describe("public discovery category filtering", () => {
   const locations = [
-    { publicSlug: "gldani-beauty", name: "გლდანი", address: null, categories: ["თმის მოვლა", "მანიკიური"] },
-    { publicSlug: "vake-beauty", name: "ვაკე", address: null, categories: ["კოსმეტოლოგია"] },
+    { publicSlug: "gldani-beauty", name: "გლდანი", address: null, phone: "+995555111222", email: "hello@gldani.example", categories: ["თმის მოვლა", "მანიკიური"], workingHours: [{ weekday: 0, startLocalTime: "10:00", endLocalTime: "19:00" }, { weekday: 1, startLocalTime: "10:00", endLocalTime: "19:00" }] },
+    { publicSlug: "vake-beauty", name: "ვაკე", address: null, phone: null, email: null, categories: ["კოსმეტოლოგია"], workingHours: [] },
   ];
 
   it("shows all active locations or only locations that truly offer the selected category", () => {
@@ -22,7 +22,15 @@ describe("public discovery category filtering", () => {
     expect(markup).toContain("ყველა სერვისი");
     expect(markup).toContain("თმის მოვლა");
     expect(markup).toContain("გლდანი");
+    expect(markup).toContain("ორშ–სამ · 10:00–19:00");
+    expect(markup).toContain("დარეკვა");
+    expect(markup).toContain("ელფოსტა");
     expect(markup).not.toContain("ვაკე");
+  });
+
+  it("summarizes the public working-hours context without inventing unavailable hours", () => {
+    expect(workingHoursSummary(locations[0].workingHours)).toBe("ორშ–სამ · 10:00–19:00");
+    expect(workingHoursSummary(locations[1].workingHours)).toBeNull();
   });
 
   it("renders a clear empty filtered-results state", () => {

@@ -153,3 +153,11 @@
 - [x] Fix successful local login redirect so users reach their protected workspace instead of being returned to the public home page: deployed/embedded HTTPS now issues `SameSite=None; Secure` local session cookies while local HTTP stays `Lax`; real browser registration reached `/app/today`, then QA account was removed.
 - [x] Fix the low-contrast `დაიწყე უფასოდ` gradient CTA label shown in the public final conversion banner with a solid white high-contrast surface, dark foreground, interaction states, mobile/desktop QA, and a focused regression test.
 - [x] Audit and strengthen visible keyboard focus and Tab/Shift+Tab navigation across public marketing routes at mobile and desktop breakpoints: added Georgian skip-to-content links and focusable main targets to Home/marketing layouts, enhanced global focus ring, checked Home/Features at 1280px and 375px, and added targeted regression coverage.
+- [x] Complete a product, UX, operational, security, and quality audit of the current SalonFlow implementation.
+- [x] Document a prioritized, code-verifiable SalonFlow completion roadmap with explicit current constraints and safe implementation order.
+- [x] Implement the highest-priority safe roadmap improvements without changing existing authentication, organization scope, booking availability, or financial calculation contracts.
+- [x] Validate the roadmap improvements with tests, typecheck, production build, visual QA, and a live checkpoint.
+- [x] Enrich public booking discovery cards with existing public location contact and working-hours context.
+- [x] Add a client-side calendar export to public booking confirmation using only the confirmed visit details already in memory and the server-persisted appointment end time.
+- [x] Extend skip-to-content and focusable main targets to the remaining public booking/demo/not-found route shells through the shared PublicHeader.
+- [x] Add targeted regression coverage and full QA for Milestone A public conversion/accessibility improvements.

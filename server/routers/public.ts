@@ -35,12 +35,15 @@ export const publicRouter = router({
   locations: publicProcedure.query(async () => {
     const db = await requireDb();
     const locationRows = await db.select({
+      id: locations.id,
       organizationId: locations.organizationId,
       publicSlug: locations.publicSlug,
       name: locations.name,
       publicDescription: locations.publicDescription,
       timezone: locations.timezone,
       address: locations.address,
+      phone: locations.phone,
+      email: locations.email,
     }).from(locations).where(and(eq(locations.status, "ACTIVE"), eq(locations.bookingEnabled, true))).orderBy(asc(locations.name));
     const organizationIds = Array.from(new Set(locationRows.map(location => location.organizationId)));
     const categoryRows = organizationIds.length ? await db.select({ organizationId: services.organizationId, nameKa: serviceCategories.nameKa }).from(services)
@@ -48,7 +51,30 @@ export const publicRouter = router({
       .where(and(inArray(services.organizationId, organizationIds), eq(services.status, "ACTIVE"), eq(services.onlineBookingEnabled, true))) : [];
     const categoriesByOrganization = new Map<string, string[]>();
     for (const category of categoryRows) categoriesByOrganization.set(category.organizationId, Array.from(new Set([...(categoriesByOrganization.get(category.organizationId) ?? []), category.nameKa])));
-    return locationRows.map(({ organizationId, ...location }) => ({ ...location, categories: categoriesByOrganization.get(organizationId) ?? [] }));
+    const locationIds = locationRows.map(location => location.id);
+    const hourRows = locationIds.length ? await db.select({
+      locationId: workingHourRules.locationId,
+      weekday: workingHourRules.weekday,
+      startLocalTime: workingHourRules.startLocalTime,
+      endLocalTime: workingHourRules.endLocalTime,
+    }).from(workingHourRules)
+      .innerJoin(staffProfiles, eq(workingHourRules.staffProfileId, staffProfiles.id))
+      .where(and(inArray(workingHourRules.locationId, locationIds), eq(staffProfiles.status, "ACTIVE"))) : [];
+    const hoursByLocation = new Map<string, Map<number, { startLocalTime: string; endLocalTime: string }>>();
+    for (const row of hourRows) {
+      const byWeekday = hoursByLocation.get(row.locationId) ?? new Map<number, { startLocalTime: string; endLocalTime: string }>();
+      const previous = byWeekday.get(row.weekday);
+      byWeekday.set(row.weekday, previous ? {
+        startLocalTime: previous.startLocalTime < row.startLocalTime ? previous.startLocalTime : row.startLocalTime,
+        endLocalTime: previous.endLocalTime > row.endLocalTime ? previous.endLocalTime : row.endLocalTime,
+      } : { startLocalTime: row.startLocalTime, endLocalTime: row.endLocalTime });
+      hoursByLocation.set(row.locationId, byWeekday);
+    }
+    return locationRows.map(({ id, organizationId, ...location }) => ({
+      ...location,
+      categories: categoriesByOrganization.get(organizationId) ?? [],
+      workingHours: Array.from(hoursByLocation.get(id)?.entries() ?? []).map(([weekday, hours]) => ({ weekday, ...hours })).sort((a, b) => a.weekday - b.weekday),
+    }));
   }),
 
   bookingCatalog: publicProcedure.input(slugSchema).query(async ({ input: slug }) => {
@@ -263,13 +289,13 @@ export const publicRouter = router({
     if (!normalizedPhone) throw new Error("A valid Georgian mobile phone number is required");
     const normalizedEmail = normalizeEmail(input.email);
 
-    const [previousAttempt] = await db.select({ id: appointments.id }).from(appointments)
+    const [previousAttempt] = await db.select({ id: appointments.id, endsAt: appointments.endsAt }).from(appointments)
       .where(eq(appointments.idempotencyKey, input.idempotencyKey)).limit(1);
     if (previousAttempt) {
       const [assignment] = await db.select({ name: staffProfiles.publicDisplayName }).from(appointments)
         .innerJoin(staffProfiles, eq(appointments.staffProfileId, staffProfiles.id))
         .where(eq(appointments.id, previousAttempt.id)).limit(1);
-      return { confirmed: true, replayed: true, confirmationToken: confirmationTokenForAppointment(previousAttempt.id), assignedStaffName: assignment?.name };
+      return { confirmed: true, replayed: true, confirmationToken: confirmationTokenForAppointment(previousAttempt.id), assignedStaffName: assignment?.name, endsAt: previousAttempt.endsAt };
     }
 
     const [location] = await db.select().from(locations).where(and(
@@ -395,7 +421,7 @@ export const publicRouter = router({
       });
     });
 
-    const [persistedAppointment] = await db.select({ id: appointments.id }).from(appointments)
+    const [persistedAppointment] = await db.select({ id: appointments.id, endsAt: appointments.endsAt }).from(appointments)
       .where(eq(appointments.idempotencyKey, input.idempotencyKey)).limit(1);
     if (!persistedAppointment) throw new Error("Booking confirmation could not be persisted");
     return {
@@ -403,6 +429,7 @@ export const publicRouter = router({
       replayed: persistedAppointment.id !== appointmentId,
       confirmationToken: confirmationTokenForAppointment(persistedAppointment.id),
       assignedStaffName: assigned?.name,
+      endsAt: persistedAppointment.endsAt,
     };
   }),
 });

@@ -22,7 +22,15 @@ export function SalonFlowMark({ inverted = false }: { inverted?: boolean }) {
 
 export function PublicHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
-  return <header className="relative z-30 border-b border-[color-mix(in_srgb,var(--sf-line)_80%,transparent)] bg-[color-mix(in_srgb,var(--sf-canvas)_88%,transparent)] backdrop-blur-xl">
+  const skipToContent = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    const main = document.querySelector("main");
+    if (!main) return;
+    event.preventDefault();
+    if (!main.hasAttribute("tabindex")) main.setAttribute("tabindex", "-1");
+    main.focus();
+    main.scrollIntoView({ block: "start" });
+  };
+  return <><a className="sf-skip-link" href="#main-content" onClick={skipToContent}>ძირითად შინაარსზე გადასვლა</a><header className="relative z-30 border-b border-[color-mix(in_srgb,var(--sf-line)_80%,transparent)] bg-[color-mix(in_srgb,var(--sf-canvas)_88%,transparent)] backdrop-blur-xl">
     <div className="sf-public-container flex min-h-18 items-center justify-between gap-4 py-3">
       <SalonFlowMark />
       <nav className="hidden items-center gap-1 lg:flex" aria-label="მთავარი ნავიგაცია">{navigation.map(item => <a key={item.href} className="sf-interactive rounded-lg px-3 py-2 text-sm font-medium text-[var(--sf-muted)] hover:bg-[var(--sf-surface-hover)] hover:text-[var(--sf-ink)]" href={item.href}>{item.label}</a>)}<Link href={bookingHref} className="sf-interactive ml-1 inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-[var(--sf-accent-strong)] hover:bg-[color-mix(in_srgb,var(--sf-accent-strong)_10%,transparent)]"><Sparkles className="size-3.5" aria-hidden="true" />ონლაინ ჩაწერა</Link></nav>
@@ -30,7 +38,7 @@ export function PublicHeader() {
       <Button type="button" variant="publicQuiet" size="icon" className="sm:hidden" aria-expanded={menuOpen} aria-controls="public-mobile-menu" aria-label={menuOpen ? "მენიუს დახურვა" : "მენიუს გახსნა"} onClick={() => setMenuOpen(open => !open)}>{menuOpen ? <X aria-hidden="true" /> : <Menu aria-hidden="true" />}</Button>
     </div>
     {menuOpen ? <div id="public-mobile-menu" className="sf-motion-enter border-t border-[var(--sf-line)] bg-[var(--sf-surface-raised)] sm:hidden"><nav className="sf-public-container grid gap-1 py-3" aria-label="მობილური მთავარი ნავიგაცია"><a href={bookingHref} onClick={() => setMenuOpen(false)} className="flex items-center gap-2 rounded-lg px-3 py-3 text-sm font-semibold text-[var(--sf-accent-strong)] hover:bg-[color-mix(in_srgb,var(--sf-accent-strong)_10%,transparent)]"><Sparkles className="size-4" aria-hidden="true" />ონლაინ ჩაწერა</a>{navigation.map(item => <a key={item.href} href={item.href} onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-3 text-sm font-semibold hover:bg-[var(--sf-surface-hover)]">{item.label}</a>)}<div className="mt-2 grid grid-cols-2 gap-2"><Button asChild variant="publicSecondary"><Link href="/login">შესვლა</Link></Button><Button asChild variant="public"><Link href="/register">დაიწყე</Link></Button></div></nav></div> : null}
-  </header>;
+  </header></>;
 }
 
 export function PublicFooter() {

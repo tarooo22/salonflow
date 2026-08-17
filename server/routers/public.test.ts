@@ -84,12 +84,13 @@ function availabilityInput() {
 describe("public booking router safeguards", () => {
   it("exposes only active booking locations with database-backed service categories", async () => {
     mocked.db = publicCatalogDb([
-      [{ organizationId: ids.organizationId, publicSlug: "gldani-beauty", name: "გლდანი", publicDescription: "მზრუნველი მომსახურება", timezone: "Asia/Tbilisi", address: "გლდანი" }],
+      [{ id: ids.locationId, organizationId: ids.organizationId, publicSlug: "gldani-beauty", name: "გლდანი", publicDescription: "მზრუნველი მომსახურება", timezone: "Asia/Tbilisi", address: "გლდანი", phone: "+995555000000", email: "hello@example.com" }],
       [{ organizationId: ids.organizationId, nameKa: "თმის მოვლა" }, { organizationId: ids.organizationId, nameKa: "მანიკიური" }, { organizationId: ids.organizationId, nameKa: "თმის მოვლა" }],
+      [{ locationId: ids.locationId, weekday: 0, startLocalTime: "09:00", endLocalTime: "18:00" }],
     ]);
 
     await expect(caller().locations()).resolves.toEqual([{
-      publicSlug: "gldani-beauty", name: "გლდანი", publicDescription: "მზრუნველი მომსახურება", timezone: "Asia/Tbilisi", address: "გლდანი", categories: ["თმის მოვლა", "მანიკიური"],
+      publicSlug: "gldani-beauty", name: "გლდანი", publicDescription: "მზრუნველი მომსახურება", timezone: "Asia/Tbilisi", address: "გლდანი", phone: "+995555000000", email: "hello@example.com", categories: ["თმის მოვლა", "მანიკიური"], workingHours: [{ weekday: 0, startLocalTime: "09:00", endLocalTime: "18:00" }],
     }]);
   });
 
@@ -141,19 +142,20 @@ describe("public booking router safeguards", () => {
   });
 
   it("commits the first conflict-free any-available candidate and preserves idempotent replay", async () => {
+    const persistedEndsAt = new Date("2026-08-20T09:45:00.000Z");
     const db = anyAvailableCommitDb([
-      [], [activeLocation], [activeService], [{ id: "staff_any_01", name: "ნინო", durationOverrideMinutes: null }], [{ id: "appointment_any_001" }],
+      [], [activeLocation], [activeService], [{ id: "staff_any_01", name: "ნინო", durationOverrideMinutes: null }], [{ id: "appointment_any_001", endsAt: persistedEndsAt }],
     ], [[], [], [], []]);
     mocked.db = db;
     mocked.ids.splice(0, mocked.ids.length, "appointment_any_001", "client_any_001", "appointment_service_any_001", "history_any_001", "consent_any_001");
     const input = { ...availabilityInput(), staffProfileId: "ANY_AVAILABLE" as const, firstName: "თამარი", phone: "+995 555 12 34 56", bookingTermsConsent: true as const, idempotencyKey: "booking_any_available_001" };
     const result = await caller().commitBooking(input);
-    expect(result).toMatchObject({ confirmed: true, replayed: false, assignedStaffName: "ნინო" });
+    expect(result).toMatchObject({ confirmed: true, replayed: false, assignedStaffName: "ნინო", endsAt: persistedEndsAt });
     expect(db.values).toHaveBeenCalledWith(expect.objectContaining({ staffProfileId: "staff_any_01" }));
 
-    mocked.db = anyAvailableCommitDb([[{ id: "appointment_any_001" }], [{ name: "ნინო" }]], []);
+    mocked.db = anyAvailableCommitDb([[{ id: "appointment_any_001", endsAt: persistedEndsAt }], [{ name: "ნინო" }]], []);
     const replay = await caller().commitBooking(input);
-    expect(replay).toMatchObject({ confirmed: true, replayed: true, assignedStaffName: "ნინო" });
+    expect(replay).toMatchObject({ confirmed: true, replayed: true, assignedStaffName: "ნინო", endsAt: persistedEndsAt });
     expect(replay.confirmationToken).toBe(result.confirmationToken);
   });
 
