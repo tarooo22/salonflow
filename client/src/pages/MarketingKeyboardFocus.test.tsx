@@ -5,11 +5,13 @@ const css = readFileSync(new URL("../index.css", import.meta.url), "utf8");
 const home = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8");
 const marketing = readFileSync(new URL("./MarketingPages.tsx", import.meta.url), "utf8");
 const primitives = readFileSync(new URL("../components/public/PublicPrimitives.tsx", import.meta.url), "utf8");
+const localeContext = readFileSync(new URL("../contexts/PublicLocaleContext.tsx", import.meta.url), "utf8");
 
 describe("marketing keyboard-focus audit", () => {
   it("offers the first keyboard stop as a Georgian skip-to-content link", () => {
     expect(primitives).toContain('href="#main-content"');
-    expect(primitives).toContain("ძირითად შინაარსზე გადასვლა");
+    expect(primitives).toContain('t("skip")');
+    expect(localeContext).toContain('skip: "ძირითად შინაარსზე გადასვლა"');
     expect(primitives).toContain('document.querySelector("main")');
     expect(home).toContain('id="main-content"');
     expect(marketing).toContain("id=\"main-content\"");

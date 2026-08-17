@@ -26,11 +26,14 @@ vi.mock("@/lib/trpc", () => ({
 import Settings from "./Settings";
 
 describe("Settings integration readiness", () => {
-  it("truthfully states that notification delivery and online payment are not configured", () => {
+  it("truthfully states that notification delivery, web push, and online payment are not configured", () => {
     const markup = renderToStaticMarkup(<Settings />);
 
     expect(markup).toContain("ავტომატური booking confirmation და 24-საათიანი შეხსენება ამჟამად არ იგზავნება.");
     expect(markup).toContain("Email ან SMS provider");
+    expect(markup).toContain("Push notification ჯერ არ არის კონფიგურირებული");
+    expect(markup).toContain("არც permission-ს ითხოვს და არც push შეტყობინებას გზავნის");
+    expect(markup).toContain("VAPID public/private keys");
     expect(markup).toContain("Checkout და თანხის ჩამოჭრა გამორთულია");
     expect(markup).toContain("signed webhook და server-only payment secrets");
     expect(markup).toContain("არ არის კონფიგურირებული");

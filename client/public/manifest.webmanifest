@@ -1,0 +1,20 @@
+{
+  "name": "SalonFlow — სალონის ოპერაციები",
+  "short_name": "SalonFlow",
+  "description": "სალონის უსაფრთხო, მრავალფილიალიანი საოპერაციო სისტემა.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#12081f",
+  "theme_color": "#180c27",
+  "lang": "ka-GE",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "/manus-storage/salonflow-pwa-icon_7b626d05.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

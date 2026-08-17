@@ -183,3 +183,8 @@
 - [x] Add organization-scoped server analytics for current-versus-previous week trends, cohort retention, peak-hour/day demand, and a 7-day forecast derived only from future non-cancelled booking totals.
 - [x] Add responsive ka-GE Reports UI cards/charts for comparisons, retention cohort, capacity heatmap and transparent cash-flow forecast assumptions without treating forecast as settled revenue.
 - [x] Validate analytical definitions, integer-tetri calculations, timezone boundaries, finance-role access, loading/empty/error states, tests, typecheck, production build and live checkpoint.
+- [x] Audit existing PWA manifest/service-worker state, notification boundaries, localization architecture, static assets, hosting runtime and Cloudflare Tunnel feasibility.
+- [x] Add installable PWA foundation with manifest, app icons, offline-safe app shell behavior and clear install guidance without storing user data in an unsafe offline cache.
+- [x] Document and prepare opt-in web-push activation requirements, including VAPID secrets, subscription consent, unsubscribe controls, sender policy, server delivery endpoint and explicit no-send boundary until configured.
+- [x] Add safe multilingual architecture and a user-facing language selector for ka-GE, en and ru public/customer-facing surfaces, preserving Georgian as the workspace operating default.
+- [x] Add Manus-first production deployment guidance with exact Vercel/Railway compatibility cautions and Cloudflare Tunnel persistent-runtime limitations; validate PWA/i18n build, tests and live checkpoint.

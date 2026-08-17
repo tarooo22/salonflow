@@ -13,6 +13,7 @@ SalonFlow-ს აქვს `notification_jobs` რიგის მონაც�
 | Booking confirmation job model | მოსამზადებელია | მომავალში შეიქმნება idempotent job; დღეს არ იგზავნება. |
 | 24-საათიანი reminder model | მოსამზადებელია | მომავალში due jobs შეირჩევა scheduler-ით; დღეს არ არსებობს scheduler handler. |
 | Provider dispatch / bounce status | არ არის კონფიგურირებული | არც ერთი provider არ არის დაკავშირებული. |
+| Web Push / PWA notification | არ არის კონფიგურირებული | PWA install foundation არსებობს, მაგრამ browser permission, push subscription და provider delivery ჯერ არ ითხოვება და არ სრულდება. |
 
 ## არჩევანი, რომელიც მფლობელმა უნდა დაადასტუროს
 
@@ -34,8 +35,21 @@ Secrets ინახება მხოლოდ server environment-ში. ი�
 | Email — Resend | `NOTIFICATION_EMAIL_PROVIDER=resend`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL` | `RESEND_FROM_EMAIL` უნდა იყოს provider-ში verified domain/address; webhook tracking-ისთვის დაემატება `RESEND_WEBHOOK_SECRET`. |
 | SMS — Twilio | `NOTIFICATION_SMS_PROVIDER=twilio`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` | `TWILIO_FROM_NUMBER` უნდა იყოს დამტკიცებული messaging sender. Twilio callback signature მოწმდება `TWILIO_AUTH_TOKEN`-ით. |
 | Provider-neutral toggle | `NOTIFICATION_DELIVERY_ENABLED=true` | ეს მნიშვნელობა განისაზღვრება **მხოლოდ** adapter, sender, templates, handler, scheduler და test runbook-ის წარმატებული deploy-ის შემდეგ. default არის unset/false. |
+| Web Push — VAPID | `WEB_PUSH_ENABLED=true`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | `VAPID_SUBJECT` უნდა იყოს მოქმედი `mailto:` ან HTTPS contact URL. Private key რჩება server-only; public key მიეწოდება მხოლოდ explicit subscribe flow-ს. |
 
 შერჩეული provider-ის ოფიციალური webhook signature scheme უნდა შემოწმდეს მის მიმდინარე დოკუმენტაციასთან integration-ის განხორციელების დროს. Webhook არასოდეს ენდობა request body-ს: იგი ამოწმებს signature/timestamp-ს, ინახავს მხოლოდ აუცილებელ provider event metadata-ს და provider event ID-ს unique key-ით idempotently.
+
+## Web Push / PWA activation contract
+
+PWA install და Web Push დამოუკიდებელი შესაძლებლობებია. აპის დაყენება browser-ში **არ** ნიშნავს notification permission-ს და subscriber record-ის შექმნას. Push permission მოითხოვება მხოლოდ მომხმარებლის ნათელი მოქმედების შემდეგ, ქართულ/ინგლისურ/რუსულ განმარტებასთან და unsubscribe control-თან ერთად.
+
+1. დაემატება authenticated, organization-scoped `push_subscriptions` store: recipient user/client identity, endpoint, `p256dh`/`auth` keys, consent timestamp, locale, status და safe failure metadata. Endpoint/client keys არ ხვდება browser log-ში ან public profile-ში.
+2. Browser ითხოვს permission-ს მხოლოდ explicit “შეტყობინებების ჩართვა” მოქმედების შემდეგ. `denied`/`default` პასუხი არ ჩაითვლება consent-ად და UI პატივს სცემს ბრაუზერის არჩევანს.
+3. Backend ამოწმებს subscription ownership-ს, იყენებს VAPID private key-ს server-ზე, expiry/410 failure-ზე აუქმებს მხოლოდ შესაბამის subscription-ს და ყოველი dispatch-ს აქვს idempotency key.
+4. Booking reminder-ისთვის გამოიყენება platform-managed scheduled endpoint და due job claim; აკრძალულია `setInterval`, `node-cron` ან browser tab-ზე დამოკიდებული timer. Schedule იქმნება მხოლოდ live deployment, handler test და owner-controlled test recipient-ის შემდეგ.
+5. მომხმარებელს ექნება unsubscribe/disable მოქმედება; email/SMS, web push და marketing consent ერთმანეთისგან დამოუკიდებელი preference-ებია.
+
+> **No-push boundary:** `WEB_PUSH_ENABLED` default-ად unset/false რჩება. სანამ VAPID keys, subscription store, explicit consent UI, server sender, service-worker notification handler, unsubscribe და controlled delivery test არ დასრულდება, SalonFlow არც notification permission-ს ითხოვს და არც push შეტყობინებას გზავნის.
 
 ## უსაფრთხო delivery architecture
 
