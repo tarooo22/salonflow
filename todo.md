@@ -174,3 +174,8 @@
 - [x] Add a compact Walk-in checkbox/quick-entry path in operations surfaces without bypassing price, duration, staff eligibility or schedule safeguards.
 - [x] Add organization-scoped attendance clock-in/clock-out and tip tracking with auditable timestamps, role controls and Georgian presentation.
 - [x] Add a POS/inventory foundation for retail products, stock movements and client-linked sales while preserving immutable financial records and avoiding unconfigured payment capture.
+- [x] Audit existing S3 upload/storage utilities, current organization/location/staff/client image fields, media ownership boundaries, and public-versus-client-private consent requirements.
+- [x] Add organization/location cover media and staff avatar persistence/upload flows with organization-scoped role checks, file-type/size safeguards, and safe S3 metadata.
+- [x] Add a client-owned before/after gallery linked to visits, including explicit publication consent, private default visibility, protected upload/list/delete controls, and no public exposure by default.
+- [x] Build a public SEO-friendly salon profile route with organization-specific cover, approved team profiles, active services/prices, location context, and an opt-in Instagram-style public feed.
+- [x] Validate multi-salon media isolation, uploads, public visibility/consent boundaries, responsive gallery/profile UI, tests, typecheck, production build, and live checkpoint.

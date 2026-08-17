@@ -5,6 +5,7 @@ import { lazy, Suspense } from "react";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
+import SalonProfile from "./pages/SalonProfile";
 
 const Book = lazy(() => import("./pages/Book"));
 const BookingFlow = lazy(() => import("./pages/BookingFlow"));
@@ -24,6 +25,8 @@ const DemoPreview = lazy(() => import("./pages/DemoPreview"));
 const Settings = lazy(() => import("./pages/Settings"));
 const Operations = lazy(() => import("./pages/Operations"));
 const POS = lazy(() => import("./pages/POS"));
+const Media = lazy(() => import("./pages/Media"));
+const ClientGallery = lazy(() => import("./pages/ClientGallery"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const FeaturesPage = lazy(() => import("./pages/MarketingPages").then(module => ({ default: module.FeaturesPage })));
 const PricingPage = lazy(() => import("./pages/MarketingPages").then(module => ({ default: module.PricingPage })));
@@ -50,6 +53,7 @@ function Router() {
       <Route path={"/book/:slug"} component={BookingFlow} />
       <Route path={"/manage-booking/:token"} component={ManageBooking} />
       <Route path={"/waitlist/:slug"} component={Waitlist} />
+      <Route path={"/salon/:slug"} component={SalonProfile} />
       <Route path={"/login"}>{() => <LocalAuth mode="login" />}</Route>
       <Route path={"/register"}>{() => <LocalAuth mode="register" />}</Route>
       <Route path={"/claim-account"}>{() => <LocalAuth mode="claim" />}</Route>
@@ -64,6 +68,8 @@ function Router() {
       <Route path={"/app/settings"} component={Settings} />
       <Route path={"/app/operations"} component={Operations} />
       <Route path={"/app/pos"} component={POS} />
+      <Route path={"/app/media"} component={Media} />
+      <Route path={"/app/client-gallery"} component={ClientGallery} />
       <Route path={"/app/waitlist"} component={WaitlistQueue} />
       <Route path={"/app/setup"} component={WorkspaceSetup} />
       <Route path={"/404"} component={NotFound} />

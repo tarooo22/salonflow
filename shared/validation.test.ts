@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { appointmentRescheduleSchema, attendanceClockSchema, calendarRangeSchema, retailSaleCreateSchema, tipCreateSchema } from "./validation";
+import { appointmentRescheduleSchema, attendanceClockSchema, calendarRangeSchema, clientBeforeAfterCreateSchema, retailSaleCreateSchema, tipCreateSchema } from "./validation";
 
 const scope = {
   organizationId: "organization_2026_abcd",
@@ -33,5 +33,27 @@ describe("daily operations validation", () => {
     const input = { organizationId: scope.organizationId, locationId: scope.locationId, method: "CARD_TERMINAL" as const, lines: [{ productId: "product_2026_abcdefgh", quantity: 2 }] };
     expect(retailSaleCreateSchema.parse(input).lines).toHaveLength(1);
     expect(() => retailSaleCreateSchema.parse({ ...input, lines: [input.lines[0], input.lines[0]] })).toThrow();
+  });
+});
+
+describe("client gallery privacy validation", () => {
+  const galleryInput = {
+    organizationId: scope.organizationId,
+    clientId: "client_2026_abcdefgh",
+    appointmentId: "appointment_2026_abcdefgh",
+    beforeImageDataUrl: "data:image/png;base64,aGVsbG8=",
+    afterImageDataUrl: "data:image/png;base64,aGVsbG8=",
+    beforeAltTextKa: "მომსახურებამდე შედეგი",
+    afterAltTextKa: "მომსახურების შემდეგ შედეგი",
+  };
+
+  it("keeps a gallery set private by default", () => {
+    const parsed = clientBeforeAfterCreateSchema.parse(galleryInput);
+    expect(parsed.requestPublicVisibility).toBe(false);
+    expect(parsed.clientPublicationConsent).toBe(false);
+  });
+
+  it("rejects a public request without the client's separate consent", () => {
+    expect(() => clientBeforeAfterCreateSchema.parse({ ...galleryInput, requestPublicVisibility: true, clientPublicationConsent: false })).toThrow("საჯარო გამოჩენას სჭირდება კლიენტის ცალკე თანხმობა");
   });
 });

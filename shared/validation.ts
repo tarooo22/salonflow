@@ -176,6 +176,57 @@ export const clientMergeSchema = organizationScopeSchema.extend({
   reason: z.string().trim().max(255).optional(),
 }).refine(input => input.sourceClientId !== input.targetClientId, "Source and target clients must differ");
 
+const imageDataUrlSchema = z.string().max(7_000_000).regex(/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/, "მხოლოდ JPEG, PNG ან WebP ფოტო შეიძლება აიტვირთოს");
+const imageAltTextSchema = z.string().trim().min(3).max(255);
+
+export const locationCoverUploadSchema = organizationScopeSchema.extend({
+  locationId: opaqueIdSchema,
+  imageDataUrl: imageDataUrlSchema,
+  altTextKa: imageAltTextSchema,
+});
+
+export const staffAvatarUploadSchema = organizationScopeSchema.extend({
+  staffProfileId: opaqueIdSchema,
+  imageDataUrl: imageDataUrlSchema,
+  altTextKa: imageAltTextSchema,
+});
+
+export const publicLocationProfileUpdateSchema = organizationScopeSchema.extend({
+  locationId: opaqueIdSchema,
+  publicDescription: z.string().trim().max(2_000).optional(),
+  socialLinks: z.object({ instagram: z.string().url().max(500).optional(), facebook: z.string().url().max(500).optional(), website: z.string().url().max(500).optional() }).partial().optional(),
+}).refine(input => input.publicDescription !== undefined || input.socialLinks !== undefined, "საჯარო პროფილის მინიმუმ ერთი ველი უნდა შეიცვალოს");
+
+export const clientBeforeAfterCreateSchema = organizationScopeSchema.extend({
+  clientId: opaqueIdSchema,
+  appointmentId: opaqueIdSchema,
+  beforeImageDataUrl: imageDataUrlSchema,
+  afterImageDataUrl: imageDataUrlSchema,
+  beforeAltTextKa: imageAltTextSchema,
+  afterAltTextKa: imageAltTextSchema,
+  internalNote: z.string().trim().max(2_000).optional(),
+  clientPublicationConsent: z.boolean().default(false),
+  requestPublicVisibility: z.boolean().default(false),
+}).refine(input => !input.requestPublicVisibility || input.clientPublicationConsent, "საჯარო გამოჩენას სჭირდება კლიენტის ცალკე თანხმობა");
+
+export const clientMediaListSchema = organizationScopeSchema.extend({ clientId: opaqueIdSchema });
+export const clientMediaVisibilitySchema = organizationScopeSchema.extend({ setId: opaqueIdSchema, publicVisible: z.boolean() });
+export const clientMediaDeleteSchema = organizationScopeSchema.extend({ setId: opaqueIdSchema });
+
+export const locationFeedCreateSchema = organizationScopeSchema.extend({
+  locationId: opaqueIdSchema,
+  imageDataUrl: imageDataUrlSchema,
+  altTextKa: imageAltTextSchema,
+  titleKa: z.string().trim().max(160).optional(),
+  captionKa: z.string().trim().max(2_000).optional(),
+  publicVisible: z.boolean().default(false),
+  sortOrder: z.number().int().min(0).max(10_000).default(0),
+});
+
+export const locationFeedListSchema = organizationScopeSchema.extend({ locationId: opaqueIdSchema });
+export const locationFeedVisibilitySchema = organizationScopeSchema.extend({ postId: opaqueIdSchema, publicVisible: z.boolean() });
+export const locationFeedDeleteSchema = organizationScopeSchema.extend({ postId: opaqueIdSchema });
+
 export const staffProfileCreateSchema = z.object({
   organizationId: opaqueIdSchema,
   membershipId: opaqueIdSchema,

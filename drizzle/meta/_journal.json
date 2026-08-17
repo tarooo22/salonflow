@@ -43,6 +43,13 @@
       "when": 1786998299468,
       "tag": "0005_goofy_black_bolt",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1786999720033,
+      "tag": "0006_curious_wendigo",
+      "breakpoints": true
     }
   ]
 }

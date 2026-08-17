@@ -15,6 +15,7 @@ import { staffRouter } from "./routers/staff";
 import { waitlistRouter } from "./routers/waitlist";
 import { operationsRouter } from "./routers/operations";
 import { posRouter } from "./routers/pos";
+import { mediaRouter } from "./routers/media";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -33,6 +34,7 @@ export const appRouter = router({
   waitlist: waitlistRouter,
   operations: operationsRouter,
   pos: posRouter,
+  media: mediaRouter,
   public: publicRouter,
 });
 

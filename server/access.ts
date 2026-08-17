@@ -6,8 +6,8 @@ import { requireDb } from "./db";
 export type SalonRole = "OWNER" | "MANAGER" | "RECEPTIONIST" | "STAFF";
 
 export const ROLE_ACTIONS: Record<SalonRole, ReadonlySet<string>> = {
-  OWNER: new Set(["organization:manage", "team:manage", "services:manage", "clients:manage", "calendar:manage", "finance:view", "finance:manage", "reports:view", "audit:view", "tips:record", "pos:manage"]),
-  MANAGER: new Set(["team:manage", "services:manage", "clients:manage", "calendar:manage", "finance:view", "finance:manage", "reports:view", "tips:record", "pos:manage"]),
+  OWNER: new Set(["organization:manage", "team:manage", "services:manage", "clients:manage", "calendar:manage", "finance:view", "finance:manage", "reports:view", "audit:view", "tips:record", "pos:manage", "media:manage"]),
+  MANAGER: new Set(["team:manage", "services:manage", "clients:manage", "calendar:manage", "finance:view", "finance:manage", "reports:view", "tips:record", "pos:manage", "media:manage"]),
   RECEPTIONIST: new Set(["clients:manage", "calendar:manage", "payments:record", "tips:record", "pos:manage"]),
   STAFF: new Set(["calendar:own", "appointments:own-status"]),
 };

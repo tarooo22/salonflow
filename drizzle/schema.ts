@@ -38,6 +38,7 @@ export const verificationPurposeValues = ["PUBLIC_BOOKING", "EMAIL_VERIFICATION"
 export const waitlistStatusValues = ["PENDING", "CONTACTED", "FULFILLED", "CANCELLED", "EXPIRED"] as const;
 export const retailSaleStatusValues = ["COMPLETED", "VOIDED"] as const;
 export const stockMovementTypeValues = ["OPENING", "ADJUSTMENT", "SALE", "VOID"] as const;
+export const clientMediaStageValues = ["BEFORE", "AFTER"] as const;
 
 export const membershipRole = mysqlEnum("membership_role", membershipRoleValues);
 export const membershipStatus = mysqlEnum("membership_status", membershipStatusValues);
@@ -55,6 +56,7 @@ export const verificationPurpose = mysqlEnum("verification_purpose", verificatio
 export const waitlistStatus = mysqlEnum("waitlist_status", waitlistStatusValues);
 export const retailSaleStatus = mysqlEnum("retail_sale_status", retailSaleStatusValues);
 export const stockMovementType = mysqlEnum("stock_movement_type", stockMovementTypeValues);
+export const clientMediaStage = mysqlEnum("client_media_stage", clientMediaStageValues);
 
 /**
  * Secure platform identity synchronized by Manus OAuth. Business roles live in
@@ -109,6 +111,7 @@ export const locations = mysqlTable("locations", {
   socialLinks: json("socialLinks"),
   publicDescription: text("publicDescription"),
   coverImageKey: varchar("coverImageKey", { length: 512 }),
+  coverImageAltKa: varchar("coverImageAltKa", { length: 255 }),
   bookingEnabled: boolean("bookingEnabled").default(true).notNull(),
   slotIntervalMinutes: int("slotIntervalMinutes").default(15).notNull(),
   minimumNoticeMinutes: int("minimumNoticeMinutes").default(60).notNull(),
@@ -149,6 +152,7 @@ export const staffProfiles = mysqlTable("staff_profiles", {
   jobTitle: varchar("jobTitle", { length: 160 }),
   specialty: varchar("specialty", { length: 255 }),
   avatarKey: varchar("avatarKey", { length: 512 }),
+  avatarAltKa: varchar("avatarAltKa", { length: 255 }),
   phoneVisible: boolean("phoneVisible").default(false).notNull(),
   onlineBookingVisible: boolean("onlineBookingVisible").default(true).notNull(),
   sortOrder: int("sortOrder").default(0).notNull(),
@@ -319,6 +323,60 @@ export const clientMerges = mysqlTable("client_merges", {
   reason: varchar("reason", { length: 255 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, table => [index("client_merges_org_created_idx").on(table.organizationId, table.createdAt)]);
+
+export const clientMediaSets = mysqlTable("client_media_sets", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  organizationId: varchar("organizationId", { length: 36 }).notNull().references(() => organizations.id),
+  clientId: varchar("clientId", { length: 36 }).notNull().references(() => clients.id),
+  appointmentId: varchar("appointmentId", { length: 36 }).notNull().references(() => appointments.id),
+  locationId: varchar("locationId", { length: 36 }).notNull().references(() => locations.id),
+  publicVisible: boolean("publicVisible").default(false).notNull(),
+  clientPublicationConsent: boolean("clientPublicationConsent").default(false).notNull(),
+  clientPublicationConsentAt: timestamp("clientPublicationConsentAt"),
+  internalNote: text("internalNote"),
+  createdByUserId: int("createdByUserId").notNull().references(() => users.id),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [
+  index("client_media_sets_org_client_created_idx").on(table.organizationId, table.clientId, table.createdAt),
+  index("client_media_sets_appointment_idx").on(table.appointmentId),
+  index("client_media_sets_public_location_idx").on(table.publicVisible, table.locationId, table.createdAt),
+]);
+
+export const clientMediaItems = mysqlTable("client_media_items", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  setId: varchar("setId", { length: 36 }).notNull().references(() => clientMediaSets.id),
+  stage: clientMediaStage.notNull(),
+  mediaKey: varchar("mediaKey", { length: 512 }).notNull(),
+  contentType: varchar("contentType", { length: 64 }).notNull(),
+  byteSize: int("byteSize").notNull(),
+  altTextKa: varchar("altTextKa", { length: 255 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [
+  uniqueIndex("client_media_items_set_stage_uq").on(table.setId, table.stage),
+  index("client_media_items_set_idx").on(table.setId, table.stage),
+]);
+
+export const locationFeedPosts = mysqlTable("location_feed_posts", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  organizationId: varchar("organizationId", { length: 36 }).notNull().references(() => organizations.id),
+  locationId: varchar("locationId", { length: 36 }).notNull().references(() => locations.id),
+  mediaKey: varchar("mediaKey", { length: 512 }).notNull(),
+  contentType: varchar("contentType", { length: 64 }).notNull(),
+  byteSize: int("byteSize").notNull(),
+  titleKa: varchar("titleKa", { length: 160 }),
+  captionKa: text("captionKa"),
+  altTextKa: varchar("altTextKa", { length: 255 }).notNull(),
+  publicVisible: boolean("publicVisible").default(false).notNull(),
+  publishedAt: timestamp("publishedAt"),
+  sortOrder: int("sortOrder").default(0).notNull(),
+  createdByUserId: int("createdByUserId").notNull().references(() => users.id),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [
+  index("location_feed_posts_public_idx").on(table.locationId, table.publicVisible, table.publishedAt, table.sortOrder),
+  index("location_feed_posts_org_created_idx").on(table.organizationId, table.createdAt),
+]);
 
 export const scheduleLocks = mysqlTable("schedule_locks", {
   id: varchar("id", { length: 80 }).primaryKey(),

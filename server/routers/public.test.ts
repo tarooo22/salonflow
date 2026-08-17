@@ -45,7 +45,7 @@ function publicCatalogDb(queryRows: unknown[][]) {
       from: () => chain,
       innerJoin: () => chain,
       where: () => chain,
-      orderBy: async () => rows,
+      orderBy: () => chain,
       limit: async () => rows,
       then: <TResult1 = unknown[], TResult2 = never>(onfulfilled?: ((value: unknown[]) => TResult1 | PromiseLike<TResult1>) | null, onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null) => Promise.resolve(rows).then(onfulfilled, onrejected),
     };
@@ -112,6 +112,27 @@ describe("public booking router safeguards", () => {
     const result = await caller().bookingCatalog("gldani-beauty");
     expect(result?.location).toEqual(expect.objectContaining({ phone: "+995555000000", email: "hello@example.com", publicDescription: "მზრუნველი მომსახურება", workingHours: [{ weekday: 0, startLocalTime: "09:00", endLocalTime: "18:00" }] }));
     expect(result?.team[0]).toMatchObject({ id: ids.staffProfileId, eligibleServiceIds: [ids.serviceId] });
+  });
+
+  it("builds a public salon profile from only approved public media and excludes client identity data", async () => {
+    const location = { id: ids.locationId, organizationId: ids.organizationId, publicSlug: "gldani-beauty", name: "გლდანი", status: "ACTIVE", bookingEnabled: true, publicDescription: "მზრუნველი მომსახურება", coverImageKey: "salons/org/cover.webp", coverImageAltKa: "სალონის ინტერიერი", address: "გლდანი", phone: "+995555000000", email: "hello@example.com", socialLinks: { instagram: "https://instagram.com/example" } };
+    mocked.db = publicCatalogDb([
+      [{ location, organizationName: "Beauty Group" }],
+      [{ id: ids.serviceId, nameKa: "თმის შეჭრა", description: null, durationMinutes: 60, priceTetri: 4_000, isFromPrice: false, categoryNameKa: "თმის მოვლა", categorySortOrder: 0, sortOrder: 0 }],
+      [{ id: ids.staffProfileId, name: "ლელა", bio: "გამოცდილი სტილისტი", jobTitle: "სტილისტი", specialty: null, avatarKey: "salons/org/staff.webp", avatarAltKa: "ლელას ავატარი", sortOrder: 0 }],
+      [{ id: "feed_001", mediaKey: "salons/org/feed.webp", titleKa: "ახალი ლუქი", captionKa: "აღწერა", altTextKa: "თმის ახალი ლუქი", publishedAt: new Date("2026-08-20") }],
+      [{ id: "set_001", clientId: "private_client", appointmentId: "private_appointment", publicVisible: true, clientPublicationConsent: true }],
+      [{ id: "item_before", setId: "set_001", stage: "BEFORE", mediaKey: "salons/org/before.webp", altTextKa: "მანამდე" }, { id: "item_after", setId: "set_001", stage: "AFTER", mediaKey: "salons/org/after.webp", altTextKa: "შემდეგ" }],
+    ]);
+
+    const result = await caller().salonProfile("gldani-beauty");
+
+    expect(result?.salon).toMatchObject({ name: "გლდანი", coverImageUrl: "/manus-storage/salons/org/cover.webp" });
+    expect(result?.team[0]).toMatchObject({ avatarUrl: "/manus-storage/salons/org/staff.webp" });
+    expect(result?.feed[0]).toMatchObject({ mediaUrl: "/manus-storage/salons/org/feed.webp" });
+    expect(result?.gallery[0]).toEqual({ id: "set_001", before: { mediaUrl: "/manus-storage/salons/org/before.webp", altTextKa: "მანამდე" }, after: { mediaUrl: "/manus-storage/salons/org/after.webp", altTextKa: "შემდეგ" } });
+    expect(JSON.stringify(result)).not.toContain("private_client");
+    expect(JSON.stringify(result)).not.toContain("private_appointment");
   });
 
   it("keeps availability closed when the public location link is inactive", async () => {

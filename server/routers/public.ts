@@ -1,7 +1,7 @@
-import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { createHash, createHmac } from "node:crypto";
 import { nanoid } from "nanoid";
-import { appointmentServices, appointments, appointmentStatusHistory, clientConsents, clients, locations, scheduleLocks, serviceCategories, services, staffLocations, staffProfiles, staffServices, waitlistEntries, workingHourRules } from "../../drizzle/schema";
+import { appointmentServices, appointments, appointmentStatusHistory, clientConsents, clientMediaItems, clientMediaSets, clients, locationFeedPosts, locations, organizations, scheduleLocks, serviceCategories, services, staffLocations, staffProfiles, staffServices, waitlistEntries, workingHourRules } from "../../drizzle/schema";
 import { requireDb } from "../db";
 import { publicAvailabilityCheckSchema, publicAvailableSlotsSchema, publicBookingCancelSchema, publicBookingCommitSchema, publicBookingRescheduleSchema, publicBookingTokenSchema, publicMultiAvailabilityCheckSchema, publicMultiAvailableSlotsSchema, publicMultiBookingCommitSchema, publicWaitlistCreateSchema, slugSchema } from "../../shared/validation";
 import { appointmentBlocksInterval, intervalsOverlap } from "../lib/appointments";
@@ -9,6 +9,7 @@ import { generateAvailableSlots, type BusyInterval } from "../lib/availability";
 import { formatTimeInTimeZone, zonedDateTimeToUtc } from "../../shared/timezones";
 import { normalizeEmail, normalizeGeorgianPhone } from "../lib/normalization";
 import { ENV } from "../_core/env";
+import { mediaUrl } from "../lib/media";
 import { publicProcedure, router } from "../_core/trpc";
 
 function enumerateUtcDates(start: Date, end: Date) {
@@ -153,6 +154,50 @@ export const publicRouter = router({
       return hours;
     }, new Map<number, { weekday: number; startLocalTime: string; endLocalTime: string }>()).values()).sort((a, b) => a.weekday - b.weekday);
     return { location: { publicSlug: location.publicSlug, name: location.name, timezone: location.timezone, address: location.address, phone: location.phone, email: location.email, publicDescription: location.publicDescription, workingHours }, catalog, team };
+  }),
+
+  salonProfile: publicProcedure.input(slugSchema).query(async ({ input: slug }) => {
+    const db = await requireDb();
+    const [record] = await db.select({ location: locations, organizationName: organizations.name }).from(locations)
+      .innerJoin(organizations, eq(locations.organizationId, organizations.id))
+      .where(and(eq(locations.publicSlug, slug), eq(locations.status, "ACTIVE"))).limit(1);
+    if (!record) return null;
+    const location = record.location;
+    const [serviceRows, teamRows, feedRows, gallerySets] = await Promise.all([
+      db.select({ id: services.id, nameKa: services.nameKa, description: services.publicDescriptionKa, durationMinutes: services.defaultDurationMinutes, priceTetri: services.priceTetri, isFromPrice: services.isFromPrice, categoryNameKa: serviceCategories.nameKa, categorySortOrder: serviceCategories.sortOrder, sortOrder: services.sortOrder }).from(services)
+        .innerJoin(serviceCategories, eq(services.categoryId, serviceCategories.id))
+        .where(and(eq(services.organizationId, location.organizationId), eq(services.status, "ACTIVE"), eq(services.onlineBookingEnabled, true))).orderBy(asc(serviceCategories.sortOrder), asc(services.sortOrder)),
+      db.select({ id: staffProfiles.id, name: staffProfiles.publicDisplayName, bio: staffProfiles.publicBio, jobTitle: staffProfiles.jobTitle, specialty: staffProfiles.specialty, avatarKey: staffProfiles.avatarKey, avatarAltKa: staffProfiles.avatarAltKa, sortOrder: staffProfiles.sortOrder }).from(staffProfiles)
+        .innerJoin(staffLocations, eq(staffProfiles.id, staffLocations.staffProfileId))
+        .where(and(eq(staffLocations.locationId, location.id), eq(staffProfiles.status, "ACTIVE"), eq(staffProfiles.onlineBookingVisible, true))).orderBy(asc(staffProfiles.sortOrder)),
+      db.select().from(locationFeedPosts).where(and(eq(locationFeedPosts.locationId, location.id), eq(locationFeedPosts.publicVisible, true))).orderBy(desc(locationFeedPosts.publishedAt), asc(locationFeedPosts.sortOrder)).limit(24),
+      db.select().from(clientMediaSets).where(and(eq(clientMediaSets.locationId, location.id), eq(clientMediaSets.publicVisible, true), eq(clientMediaSets.clientPublicationConsent, true))).orderBy(desc(clientMediaSets.createdAt)).limit(12),
+    ]);
+    const gallerySetIds = gallerySets.map(set => set.id);
+    const galleryItems = gallerySetIds.length ? await db.select().from(clientMediaItems).where(inArray(clientMediaItems.setId, gallerySetIds)) : [];
+    return {
+      salon: {
+        organizationName: record.organizationName,
+        publicSlug: location.publicSlug,
+        name: location.name,
+        address: location.address,
+        phone: location.phone,
+        email: location.email,
+        publicDescription: location.publicDescription,
+        socialLinks: location.socialLinks as { instagram?: string; facebook?: string; website?: string } | null,
+        bookingEnabled: location.bookingEnabled,
+        coverImageUrl: location.coverImageKey ? mediaUrl(location.coverImageKey) : null,
+        coverImageAltKa: location.coverImageAltKa,
+      },
+      services: serviceRows,
+      team: teamRows.map(member => ({ ...member, avatarUrl: member.avatarKey ? mediaUrl(member.avatarKey) : null })),
+      feed: feedRows.map(post => ({ id: post.id, titleKa: post.titleKa, captionKa: post.captionKa, altTextKa: post.altTextKa, mediaUrl: mediaUrl(post.mediaKey), publishedAt: post.publishedAt })),
+      gallery: gallerySets.map(set => ({
+        id: set.id,
+        before: galleryItems.find(item => item.setId === set.id && item.stage === "BEFORE") ? (() => { const item = galleryItems.find(entry => entry.setId === set.id && entry.stage === "BEFORE")!; return { mediaUrl: mediaUrl(item.mediaKey), altTextKa: item.altTextKa }; })() : null,
+        after: galleryItems.find(item => item.setId === set.id && item.stage === "AFTER") ? (() => { const item = galleryItems.find(entry => entry.setId === set.id && entry.stage === "AFTER")!; return { mediaUrl: mediaUrl(item.mediaKey), altTextKa: item.altTextKa }; })() : null,
+      })).filter(set => set.before && set.after),
+    };
   }),
 
   checkAvailability: publicProcedure.input(publicAvailabilityCheckSchema).query(async ({ input }) => {

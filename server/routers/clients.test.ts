@@ -166,7 +166,7 @@ describe("clients.updateCare", () => {
 });
 
 describe("clients.merge", () => {
-  it("merges two active organization clients by reassigning appointments and creating an audit record", async () => {
+  it("merges two active organization clients by reassigning appointments and client gallery sets before creating an audit record", async () => {
     const values = vi.fn(async () => undefined);
     const source = { id: "client_source_001", organizationId: "organization_001", status: "ACTIVE" };
     const target = { id: "client_target_001", organizationId: "organization_001", status: "ACTIVE" };
@@ -186,7 +186,7 @@ describe("clients.merge", () => {
       targetClientId: target.id,
       reason: "დუბლიკატი ჩანაწერი",
     })).resolves.toEqual({ id: "client_merge_000001" });
-    expect(tx.update).toHaveBeenCalledTimes(2);
+    expect(tx.update).toHaveBeenCalledTimes(3);
     expect(values).toHaveBeenCalledWith(expect.objectContaining({ sourceClientId: source.id, targetClientId: target.id, mergedByUserId: user.id }));
   });
 });

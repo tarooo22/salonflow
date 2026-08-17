@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import React from "react";
 import { AlertCircle, Inbox, LoaderCircle } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 
