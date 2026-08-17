@@ -36,6 +36,8 @@ export const notificationStatusValues = ["PENDING", "PROCESSING", "SENT", "FAILE
 export const inviteStatusValues = ["PENDING", "ACCEPTED", "REVOKED", "EXPIRED"] as const;
 export const verificationPurposeValues = ["PUBLIC_BOOKING", "EMAIL_VERIFICATION", "PHONE_VERIFICATION", "PASSWORD_RESET"] as const;
 export const waitlistStatusValues = ["PENDING", "CONTACTED", "FULFILLED", "CANCELLED", "EXPIRED"] as const;
+export const retailSaleStatusValues = ["COMPLETED", "VOIDED"] as const;
+export const stockMovementTypeValues = ["OPENING", "ADJUSTMENT", "SALE", "VOID"] as const;
 
 export const membershipRole = mysqlEnum("membership_role", membershipRoleValues);
 export const membershipStatus = mysqlEnum("membership_status", membershipStatusValues);
@@ -51,6 +53,8 @@ export const notificationStatus = mysqlEnum("notification_status", notificationS
 export const inviteStatus = mysqlEnum("invite_status", inviteStatusValues);
 export const verificationPurpose = mysqlEnum("verification_purpose", verificationPurposeValues);
 export const waitlistStatus = mysqlEnum("waitlist_status", waitlistStatusValues);
+export const retailSaleStatus = mysqlEnum("retail_sale_status", retailSaleStatusValues);
+export const stockMovementType = mysqlEnum("stock_movement_type", stockMovementTypeValues);
 
 /**
  * Secure platform identity synchronized by Manus OAuth. Business roles live in
@@ -396,6 +400,97 @@ export const payments = mysqlTable("payments", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, table => [index("payments_appointment_status_idx").on(table.appointmentId, table.status)]);
+
+export const attendanceEntries = mysqlTable("attendance_entries", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  organizationId: varchar("organizationId", { length: 36 }).notNull().references(() => organizations.id),
+  locationId: varchar("locationId", { length: 36 }).notNull().references(() => locations.id),
+  staffProfileId: varchar("staffProfileId", { length: 36 }).notNull().references(() => staffProfiles.id),
+  clockInAt: timestamp("clockInAt").notNull(),
+  clockOutAt: timestamp("clockOutAt"),
+  note: text("note"),
+  recordedByUserId: int("recordedByUserId").notNull().references(() => users.id),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [
+  index("attendance_org_location_clockin_idx").on(table.organizationId, table.locationId, table.clockInAt),
+  index("attendance_staff_clockin_idx").on(table.staffProfileId, table.clockInAt),
+]);
+
+export const tips = mysqlTable("tips", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  organizationId: varchar("organizationId", { length: 36 }).notNull().references(() => organizations.id),
+  locationId: varchar("locationId", { length: 36 }).notNull().references(() => locations.id),
+  appointmentId: varchar("appointmentId", { length: 36 }).references(() => appointments.id),
+  staffProfileId: varchar("staffProfileId", { length: 36 }).notNull().references(() => staffProfiles.id),
+  amountTetri: int("amountTetri").notNull(),
+  method: paymentMethod.notNull(),
+  collectedByUserId: int("collectedByUserId").notNull().references(() => users.id),
+  note: text("note"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [
+  index("tips_org_location_created_idx").on(table.organizationId, table.locationId, table.createdAt),
+  index("tips_staff_created_idx").on(table.staffProfileId, table.createdAt),
+  index("tips_appointment_idx").on(table.appointmentId),
+]);
+
+export const retailProducts = mysqlTable("retail_products", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  organizationId: varchar("organizationId", { length: 36 }).notNull().references(() => organizations.id),
+  nameKa: varchar("nameKa", { length: 160 }).notNull(),
+  sku: varchar("sku", { length: 96 }),
+  retailPriceTetri: int("retailPriceTetri").notNull(),
+  costTetri: int("costTetri"),
+  status: recordStatus.default("ACTIVE").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [uniqueIndex("retail_products_org_sku_uq").on(table.organizationId, table.sku), index("retail_products_org_status_idx").on(table.organizationId, table.status)]);
+
+export const inventoryStocks = mysqlTable("inventory_stocks", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  productId: varchar("productId", { length: 36 }).notNull().references(() => retailProducts.id),
+  locationId: varchar("locationId", { length: 36 }).notNull().references(() => locations.id),
+  currentQuantity: int("currentQuantity").default(0).notNull(),
+  reorderLevel: int("reorderLevel").default(0).notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [uniqueIndex("inventory_stocks_product_location_uq").on(table.productId, table.locationId), index("inventory_stocks_location_quantity_idx").on(table.locationId, table.currentQuantity)]);
+
+export const retailSales = mysqlTable("retail_sales", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  organizationId: varchar("organizationId", { length: 36 }).notNull().references(() => organizations.id),
+  locationId: varchar("locationId", { length: 36 }).notNull().references(() => locations.id),
+  clientId: varchar("clientId", { length: 36 }).references(() => clients.id),
+  subtotalTetri: int("subtotalTetri").notNull(),
+  totalTetri: int("totalTetri").notNull(),
+  method: paymentMethod.notNull(),
+  status: retailSaleStatus.default("COMPLETED").notNull(),
+  collectedByUserId: int("collectedByUserId").notNull().references(() => users.id),
+  note: text("note"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [index("retail_sales_org_location_created_idx").on(table.organizationId, table.locationId, table.createdAt), index("retail_sales_client_created_idx").on(table.clientId, table.createdAt)]);
+
+export const retailSaleLines = mysqlTable("retail_sale_lines", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  saleId: varchar("saleId", { length: 36 }).notNull().references(() => retailSales.id),
+  productId: varchar("productId", { length: 36 }).references(() => retailProducts.id),
+  productNameSnapshot: varchar("productNameSnapshot", { length: 160 }).notNull(),
+  quantity: int("quantity").notNull(),
+  unitPriceTetri: int("unitPriceTetri").notNull(),
+  lineTotalTetri: int("lineTotalTetri").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [index("retail_sale_lines_sale_idx").on(table.saleId)]);
+
+export const inventoryMovements = mysqlTable("inventory_movements", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  productId: varchar("productId", { length: 36 }).notNull().references(() => retailProducts.id),
+  locationId: varchar("locationId", { length: 36 }).notNull().references(() => locations.id),
+  saleId: varchar("saleId", { length: 36 }).references(() => retailSales.id),
+  changeQuantity: int("changeQuantity").notNull(),
+  type: stockMovementType.notNull(),
+  reason: varchar("reason", { length: 255 }),
+  recordedByUserId: int("recordedByUserId").notNull().references(() => users.id),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [index("inventory_movements_product_location_created_idx").on(table.productId, table.locationId, table.createdAt), index("inventory_movements_sale_idx").on(table.saleId)]);
 
 export const commissionRules = mysqlTable("commission_rules", {
   id: varchar("id", { length: 36 }).primaryKey(),

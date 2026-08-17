@@ -14,6 +14,14 @@ describe("public booking conversion helpers", () => {
     expect(getEligibleTeam(team, "service-a").map(member => member.id)).toEqual(["staff-1"]);
   });
 
+  it("keeps only specialists eligible for every selected service in a multi-service booking", () => {
+    const team = [
+      { id: "staff-1", name: "ანა", specialty: null, bio: null, eligibleServiceIds: ["service-a", "service-b"] },
+      { id: "staff-2", name: "ნინო", specialty: null, bio: null, eligibleServiceIds: ["service-a"] },
+    ];
+    expect(getEligibleTeam(team, ["service-a", "service-b"]).map(member => member.id)).toEqual(["staff-1"]);
+  });
+
   it("formats service price from integer tetri for the decision card", () => {
     expect(formatGel(4050)).toContain("40,50");
     expect(formatGel(4050)).toContain("₾");

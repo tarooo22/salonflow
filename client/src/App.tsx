@@ -22,6 +22,8 @@ const LocalAuth = lazy(() => import("./pages/LocalAuth"));
 const AcceptInvite = lazy(() => import("./pages/AcceptInvite"));
 const DemoPreview = lazy(() => import("./pages/DemoPreview"));
 const Settings = lazy(() => import("./pages/Settings"));
+const Operations = lazy(() => import("./pages/Operations"));
+const POS = lazy(() => import("./pages/POS"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const FeaturesPage = lazy(() => import("./pages/MarketingPages").then(module => ({ default: module.FeaturesPage })));
 const PricingPage = lazy(() => import("./pages/MarketingPages").then(module => ({ default: module.PricingPage })));
@@ -60,6 +62,8 @@ function Router() {
       <Route path={"/app/staff"} component={Staff} />
       <Route path={"/app/reports"} component={Reports} />
       <Route path={"/app/settings"} component={Settings} />
+      <Route path={"/app/operations"} component={Operations} />
+      <Route path={"/app/pos"} component={POS} />
       <Route path={"/app/waitlist"} component={WaitlistQueue} />
       <Route path={"/app/setup"} component={WorkspaceSetup} />
       <Route path={"/404"} component={NotFound} />

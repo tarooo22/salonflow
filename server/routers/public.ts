@@ -3,7 +3,7 @@ import { createHash, createHmac } from "node:crypto";
 import { nanoid } from "nanoid";
 import { appointmentServices, appointments, appointmentStatusHistory, clientConsents, clients, locations, scheduleLocks, serviceCategories, services, staffLocations, staffProfiles, staffServices, waitlistEntries, workingHourRules } from "../../drizzle/schema";
 import { requireDb } from "../db";
-import { publicAvailabilityCheckSchema, publicAvailableSlotsSchema, publicBookingCancelSchema, publicBookingCommitSchema, publicBookingRescheduleSchema, publicBookingTokenSchema, publicWaitlistCreateSchema, slugSchema } from "../../shared/validation";
+import { publicAvailabilityCheckSchema, publicAvailableSlotsSchema, publicBookingCancelSchema, publicBookingCommitSchema, publicBookingRescheduleSchema, publicBookingTokenSchema, publicMultiAvailabilityCheckSchema, publicMultiAvailableSlotsSchema, publicMultiBookingCommitSchema, publicWaitlistCreateSchema, slugSchema } from "../../shared/validation";
 import { appointmentBlocksInterval, intervalsOverlap } from "../lib/appointments";
 import { generateAvailableSlots, type BusyInterval } from "../lib/availability";
 import { formatTimeInTimeZone, zonedDateTimeToUtc } from "../../shared/timezones";
@@ -40,6 +40,38 @@ async function appointmentForPublicToken(db: Awaited<ReturnType<typeof requireDb
 
 export function canCustomerManage(appointment: { status: string; startsAt: Date }, cutoffMinutes: number, now = Date.now()) {
   return (appointment.status === "PENDING" || appointment.status === "CONFIRMED") && appointment.startsAt.getTime() - now > cutoffMinutes * 60_000;
+}
+
+type MultiServiceSnapshot = { id: string; nameKa: string; durationMinutes: number; priceTetri: number; bufferBeforeMinutes: number; bufferAfterMinutes: number };
+type MultiCandidate = { id: string; name: string; services: MultiServiceSnapshot[]; durationMinutes: number; totalTetri: number; bufferBeforeMinutes: number; bufferAfterMinutes: number };
+
+async function resolveMultiCandidates(db: Awaited<ReturnType<typeof requireDb>>, location: typeof locations.$inferSelect, serviceIds: string[], requestedStaffId: string) {
+  const serviceRows = await db.select().from(services).where(and(inArray(services.id, serviceIds), eq(services.organizationId, location.organizationId), eq(services.status, "ACTIVE"), eq(services.onlineBookingEnabled, true)));
+  if (serviceRows.length !== serviceIds.length) throw new Error("არჩეული სერვისებიდან ერთი ან მეტი ონლაინ ჩაწერისთვის მიუწვდომელია.");
+  const rows = await db.select({ id: staffProfiles.id, name: staffProfiles.publicDisplayName, serviceId: staffServices.serviceId, durationOverrideMinutes: staffServices.durationOverrideMinutes, priceOverrideTetri: staffServices.priceOverrideTetri }).from(staffProfiles)
+    .innerJoin(staffLocations, eq(staffProfiles.id, staffLocations.staffProfileId))
+    .innerJoin(staffServices, eq(staffProfiles.id, staffServices.staffProfileId))
+    .where(and(eq(staffLocations.locationId, location.id), inArray(staffServices.serviceId, serviceIds), eq(staffServices.canPerform, true), eq(staffProfiles.status, "ACTIVE"), eq(staffProfiles.onlineBookingVisible, true), requestedStaffId === "ANY_AVAILABLE" ? undefined : eq(staffProfiles.id, requestedStaffId)));
+  const serviceById = new Map(serviceRows.map(service => [service.id, service]));
+  const byStaff = new Map<string, { id: string; name: string; eligibility: Map<string, { durationOverrideMinutes: number | null; priceOverrideTetri: number | null }> }>();
+  for (const row of rows) {
+    const candidate = byStaff.get(row.id) ?? { id: row.id, name: row.name, eligibility: new Map() };
+    candidate.eligibility.set(row.serviceId, { durationOverrideMinutes: row.durationOverrideMinutes, priceOverrideTetri: row.priceOverrideTetri });
+    byStaff.set(row.id, candidate);
+  }
+  return Array.from(byStaff.values()).filter(candidate => serviceIds.every(serviceId => candidate.eligibility.has(serviceId))).map(candidate => {
+    const selected = serviceIds.map(serviceId => {
+      const service = serviceById.get(serviceId)!;
+      const eligibility = candidate.eligibility.get(serviceId)!;
+      return { id: service.id, nameKa: service.nameKa, durationMinutes: eligibility.durationOverrideMinutes ?? service.defaultDurationMinutes, priceTetri: eligibility.priceOverrideTetri ?? service.priceTetri, bufferBeforeMinutes: service.bufferBeforeMinutes, bufferAfterMinutes: service.bufferAfterMinutes };
+    });
+    return { id: candidate.id, name: candidate.name, services: selected, durationMinutes: selected.reduce((sum, service) => sum + service.durationMinutes, 0), totalTetri: selected.reduce((sum, service) => sum + service.priceTetri, 0), bufferBeforeMinutes: selected[0]?.bufferBeforeMinutes ?? 0, bufferAfterMinutes: selected.at(-1)?.bufferAfterMinutes ?? 0 };
+  });
+}
+
+function multiCandidateAvailability(candidate: MultiCandidate, startsAt: Date) {
+  const endsAt = new Date(startsAt.getTime() + candidate.durationMinutes * 60_000);
+  return { endsAt, protectedStart: new Date(startsAt.getTime() - candidate.bufferBeforeMinutes * 60_000), protectedEnd: new Date(endsAt.getTime() + candidate.bufferAfterMinutes * 60_000) };
 }
 
 export const publicRouter = router({
@@ -292,6 +324,98 @@ export const publicRouter = router({
       return { startsAt: value.toISOString(), label: formatTimeInTimeZone(value, timeZone) };
     });
     return { timezone: timeZone, slots };
+  }),
+
+  checkMultiAvailability: publicProcedure.input(publicMultiAvailabilityCheckSchema).query(async ({ input }) => {
+    const db = await requireDb();
+    const [location] = await db.select().from(locations).where(and(eq(locations.publicSlug, input.slug), eq(locations.status, "ACTIVE"), eq(locations.bookingEnabled, true))).limit(1);
+    if (!location) return { available: false, reason: "LOCATION_UNAVAILABLE" as const };
+    const minimumStart = new Date(Date.now() + location.minimumNoticeMinutes * 60_000);
+    const maximumStart = new Date(Date.now() + location.maximumAdvanceDays * 86_400_000);
+    if (input.startsAt < minimumStart || input.startsAt > maximumStart) return { available: false, reason: "OUTSIDE_BOOKING_WINDOW" as const };
+    const candidates = await resolveMultiCandidates(db, location, input.serviceIds, input.staffProfileId);
+    if (!candidates.length) return { available: false, reason: "STAFF_UNAVAILABLE" as const };
+    for (const candidate of candidates) {
+      const { endsAt, protectedStart, protectedEnd } = multiCandidateAvailability(candidate, input.startsAt);
+      const existing = await db.select().from(appointments).where(and(eq(appointments.staffProfileId, candidate.id), eq(appointments.locationId, location.id)));
+      const conflict = existing.some(appointment => appointmentBlocksInterval(appointment.status) && intervalsOverlap(protectedStart, protectedEnd, new Date(appointment.startsAt.getTime() - appointment.bufferBeforeMinutes * 60_000), new Date(appointment.endsAt.getTime() + appointment.bufferAfterMinutes * 60_000)));
+      if (!conflict) return { available: true, startsAt: input.startsAt, endsAt, staffProfileId: candidate.id, staffName: candidate.name, totalTetri: candidate.totalTetri };
+    }
+    return { available: false, reason: "SLOT_UNAVAILABLE" as const };
+  }),
+
+  multiAvailableSlots: publicProcedure.input(publicMultiAvailableSlotsSchema).query(async ({ input }) => {
+    const empty = { timezone: "Asia/Tbilisi", slots: [] as Array<{ startsAt: string; label: string }> };
+    const db = await requireDb();
+    const [location] = await db.select().from(locations).where(and(eq(locations.publicSlug, input.slug), eq(locations.status, "ACTIVE"), eq(locations.bookingEnabled, true))).limit(1);
+    if (!location) return empty;
+    const candidates = await resolveMultiCandidates(db, location, input.serviceIds, input.staffProfileId);
+    if (!candidates.length) return { ...empty, timezone: location.timezone };
+    const now = new Date();
+    const minimumStart = new Date(now.getTime() + location.minimumNoticeMinutes * 60_000);
+    const maximumStart = new Date(now.getTime() + location.maximumAdvanceDays * 86_400_000);
+    const [year, month, day] = input.date.split("-").map(Number) as [number, number, number];
+    const weekday = (new Date(Date.UTC(year, month - 1, day)).getUTCDay() + 6) % 7;
+    const staffIds = candidates.map(candidate => candidate.id);
+    const hourRows = await db.select({ staffProfileId: workingHourRules.staffProfileId, startLocalTime: workingHourRules.startLocalTime, endLocalTime: workingHourRules.endLocalTime }).from(workingHourRules).where(and(eq(workingHourRules.locationId, location.id), eq(workingHourRules.weekday, weekday), inArray(workingHourRules.staffProfileId, staffIds)));
+    if (!hourRows.length) return { ...empty, timezone: location.timezone };
+    const existing = await db.select({ staffProfileId: appointments.staffProfileId, startsAt: appointments.startsAt, endsAt: appointments.endsAt, bufferBeforeMinutes: appointments.bufferBeforeMinutes, bufferAfterMinutes: appointments.bufferAfterMinutes, status: appointments.status }).from(appointments).where(and(eq(appointments.locationId, location.id), inArray(appointments.staffProfileId, staffIds)));
+    const busyByStaff = new Map<string, BusyInterval[]>();
+    for (const appointment of existing) {
+      if (!appointmentBlocksInterval(appointment.status)) continue;
+      const intervals = busyByStaff.get(appointment.staffProfileId) ?? [];
+      intervals.push({ startsAt: new Date(appointment.startsAt.getTime() - appointment.bufferBeforeMinutes * 60_000), endsAt: new Date(appointment.endsAt.getTime() + appointment.bufferAfterMinutes * 60_000) });
+      busyByStaff.set(appointment.staffProfileId, intervals);
+    }
+    const parseTime = (value: string) => { const [h, m] = value.split(":").map(Number); return { hour: h ?? 0, minute: m ?? 0 }; };
+    const offered = new Set<number>();
+    for (const candidate of candidates) {
+      for (const rule of hourRows.filter(row => row.staffProfileId === candidate.id)) {
+        const start = parseTime(rule.startLocalTime); const end = parseTime(rule.endLocalTime);
+        const openingStart = zonedDateTimeToUtc({ year, month, day, hour: start.hour, minute: start.minute, second: 0 }, location.timezone);
+        const openingEnd = zonedDateTimeToUtc({ year, month, day, hour: end.hour, minute: end.minute, second: 0 }, location.timezone);
+        const generated = generateAvailableSlots({ openingStart, openingEnd, durationMinutes: candidate.durationMinutes, slotIntervalMinutes: location.slotIntervalMinutes, bufferBeforeMinutes: candidate.bufferBeforeMinutes, bufferAfterMinutes: candidate.bufferAfterMinutes, minimumStart, busyIntervals: busyByStaff.get(candidate.id) ?? [] });
+        for (const slot of generated) if (slot.startsAt <= maximumStart) offered.add(slot.startsAt.getTime());
+      }
+    }
+    return { timezone: location.timezone, slots: Array.from(offered).sort((a, b) => a - b).map(timestamp => { const startsAt = new Date(timestamp); return { startsAt: startsAt.toISOString(), label: formatTimeInTimeZone(startsAt, location.timezone) }; }) };
+  }),
+
+  commitMultiBooking: publicProcedure.input(publicMultiBookingCommitSchema).mutation(async ({ input }) => {
+    const db = await requireDb();
+    const normalizedPhone = normalizeGeorgianPhone(input.phone);
+    if (!normalizedPhone) throw new Error("მიუთითეთ სწორი ქართული მობილურის ნომერი.");
+    const normalizedEmail = normalizeEmail(input.email);
+    const [previous] = await db.select({ id: appointments.id, endsAt: appointments.endsAt }).from(appointments).where(eq(appointments.idempotencyKey, input.idempotencyKey)).limit(1);
+    if (previous) return { confirmed: true, replayed: true, confirmationToken: confirmationTokenForAppointment(previous.id), endsAt: previous.endsAt };
+    const [location] = await db.select().from(locations).where(and(eq(locations.publicSlug, input.slug), eq(locations.status, "ACTIVE"), eq(locations.bookingEnabled, true))).limit(1);
+    if (!location) throw new Error("ეს ჩაწერის ბმული აღარ არის აქტიური.");
+    const minimumStart = new Date(Date.now() + location.minimumNoticeMinutes * 60_000);
+    const maximumStart = new Date(Date.now() + location.maximumAdvanceDays * 86_400_000);
+    if (input.startsAt < minimumStart || input.startsAt > maximumStart) throw new Error("არჩეული დრო ჩაწერის დაშვებულ დიაპაზონში არ არის.");
+    const candidates = await resolveMultiCandidates(db, location, input.serviceIds, input.staffProfileId);
+    if (!candidates.length) throw new Error("არცერთი სპეციალისტი ვერ ასრულებს ყველა არჩეულ სერვისს.");
+    const appointmentId = nanoid(21);
+    const confirmationToken = confirmationTokenForAppointment(appointmentId);
+    let assigned: MultiCandidate | undefined;
+    let endsAt: Date | undefined;
+    await db.transaction(async tx => {
+      for (const candidate of candidates) {
+        const interval = multiCandidateAvailability(candidate, input.startsAt);
+        for (const dateKey of enumerateUtcDates(input.startsAt, interval.endsAt)) await tx.insert(scheduleLocks).values({ id: `${candidate.id}:${dateKey}`, staffProfileId: candidate.id, localDate: new Date(`${dateKey}T00:00:00.000Z`) }).onDuplicateKeyUpdate({ set: { createdAt: new Date() } });
+        const existing = await tx.select().from(appointments).where(and(eq(appointments.staffProfileId, candidate.id), eq(appointments.locationId, location.id)));
+        if (!existing.some(appointment => appointmentBlocksInterval(appointment.status) && intervalsOverlap(interval.protectedStart, interval.protectedEnd, new Date(appointment.startsAt.getTime() - appointment.bufferBeforeMinutes * 60_000), new Date(appointment.endsAt.getTime() + appointment.bufferAfterMinutes * 60_000)))) { assigned = candidate; endsAt = interval.endsAt; break; }
+      }
+      if (!assigned || !endsAt) throw new Error("ეს დრო ახლახან დაიკავეს. აირჩიეთ სხვა თავისუფალი დრო.");
+      const [matchedClient] = await tx.select({ id: clients.id }).from(clients).where(and(eq(clients.organizationId, location.organizationId), eq(clients.normalizedPhone, normalizedPhone), eq(clients.status, "ACTIVE"))).limit(1);
+      const clientId = matchedClient?.id ?? nanoid(21);
+      if (!matchedClient) await tx.insert(clients).values({ id: clientId, organizationId: location.organizationId, firstName: input.firstName, lastName: input.lastName, normalizedPhone, email: input.email, normalizedEmail, source: "PUBLIC_WEB" });
+      await tx.insert(appointments).values({ id: appointmentId, organizationId: location.organizationId, locationId: location.id, clientId, staffProfileId: assigned.id, startsAt: input.startsAt, endsAt, bufferBeforeMinutes: assigned.bufferBeforeMinutes, bufferAfterMinutes: assigned.bufferAfterMinutes, source: "PUBLIC_WEB", status: "PENDING", customerNote: input.customerNote, subtotalTetri: assigned.totalTetri, discountTetri: 0, totalTetri: assigned.totalTetri, publicTokenHash: publicTokenHash(confirmationToken), publicTokenExpiresAt: new Date(input.startsAt.getTime() + 90 * 86_400_000), idempotencyKey: input.idempotencyKey });
+      await tx.insert(appointmentServices).values(assigned.services.map((service, sortOrder) => ({ id: nanoid(21), appointmentId, serviceId: service.id, staffProfileId: assigned!.id, serviceNameSnapshot: service.nameKa, durationMinutesSnapshot: service.durationMinutes, bufferBeforeMinutesSnapshot: service.bufferBeforeMinutes, bufferAfterMinutesSnapshot: service.bufferAfterMinutes, priceTetriSnapshot: service.priceTetri, sortOrder })));
+      await tx.insert(appointmentStatusHistory).values({ id: nanoid(21), appointmentId, oldStatus: null, newStatus: "PENDING", metadata: { source: "PUBLIC_WEB", idempotencyKey: input.idempotencyKey, serviceCount: assigned.services.length } });
+      await tx.insert(clientConsents).values({ id: nanoid(21), clientId, consentType: "BOOKING_TERMS", granted: true, source: "PUBLIC_WEB", grantedAt: new Date() });
+    });
+    return { confirmed: true, replayed: false, confirmationToken, assignedStaffName: assigned?.name, endsAt: endsAt! };
   }),
 
   commitBooking: publicProcedure.input(publicBookingCommitSchema).mutation(async ({ input }) => {

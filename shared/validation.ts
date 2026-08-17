@@ -275,6 +275,7 @@ export const appointmentRescheduleSchema = z.object({
   organizationId: opaqueIdSchema,
   appointmentId: opaqueIdSchema,
   startsAt: z.coerce.date(),
+  staffProfileId: opaqueIdSchema.optional(),
   reason: z.string().trim().max(255).optional(),
 });
 
@@ -283,6 +284,51 @@ export const appointmentStatusUpdateSchema = z.object({
   appointmentId: opaqueIdSchema,
   nextStatus: z.enum(["PENDING", "CONFIRMED", "CHECKED_IN", "IN_SERVICE", "COMPLETED", "CANCELLED", "NO_SHOW"]),
   reason: z.string().trim().max(255).optional(),
+});
+
+export const attendanceClockSchema = organizationScopeSchema.extend({
+  locationId: opaqueIdSchema,
+  note: z.string().trim().max(2_000).optional(),
+});
+
+export const attendanceListSchema = organizationScopeSchema.extend({
+  locationId: opaqueIdSchema.optional(),
+  startsAt: z.coerce.date(),
+  endsAt: z.coerce.date(),
+});
+
+export const tipCreateSchema = organizationScopeSchema.extend({
+  locationId: opaqueIdSchema,
+  staffProfileId: opaqueIdSchema,
+  appointmentId: opaqueIdSchema.optional(),
+  amountTetri: z.number().int().positive(),
+  method: z.enum(["CASH", "CARD_TERMINAL", "BANK_TRANSFER", "ONLINE", "OTHER"]),
+  note: z.string().trim().max(2_000).optional(),
+});
+
+export const retailProductCreateSchema = organizationScopeSchema.extend({
+  locationId: opaqueIdSchema,
+  nameKa: z.string().trim().min(2).max(160),
+  sku: z.string().trim().min(1).max(96).optional(),
+  retailPriceTetri: z.number().int().positive(),
+  costTetri: z.number().int().min(0).optional(),
+  openingQuantity: z.number().int().min(0).max(1_000_000),
+  reorderLevel: z.number().int().min(0).max(1_000_000).default(0),
+});
+
+export const inventoryAdjustSchema = organizationScopeSchema.extend({
+  locationId: opaqueIdSchema,
+  productId: opaqueIdSchema,
+  quantityDelta: z.number().int().refine(value => value !== 0, "Quantity change must not be zero"),
+  reason: z.string().trim().min(2).max(255),
+});
+
+export const retailSaleCreateSchema = organizationScopeSchema.extend({
+  locationId: opaqueIdSchema,
+  clientId: opaqueIdSchema.optional(),
+  lines: z.array(z.object({ productId: opaqueIdSchema, quantity: z.number().int().positive().max(99) })).min(1).max(20).refine(lines => new Set(lines.map(line => line.productId)).size === lines.length, "Products must be unique"),
+  method: z.enum(["CASH", "CARD_TERMINAL", "BANK_TRANSFER", "ONLINE", "OTHER"]),
+  note: z.string().trim().max(2_000).optional(),
 });
 
 export const calendarRangeSchema = z.object({
@@ -413,6 +459,30 @@ export const publicWaitlistCreateSchema = z.object({
   staffProfileId: opaqueIdSchema.optional(),
   requestedDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   preferredStartLocalTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),
+  firstName: z.string().trim().min(1).max(100),
+  lastName: z.string().trim().max(100).optional(),
+  phone: z.string().trim().min(6).max(32),
+  email: z.string().trim().email().max(320).optional(),
+  customerNote: z.string().trim().max(2_000).optional(),
+  bookingTermsConsent: z.literal(true),
+  idempotencyKey: z.string().trim().min(16).max(128).regex(/^[A-Za-z0-9_-]+$/),
+});
+
+const publicMultiServiceSelectionSchema = z.object({
+  slug: slugSchema,
+  serviceIds: z.array(opaqueIdSchema).min(2).max(6).refine(ids => new Set(ids).size === ids.length, "Services must be unique"),
+  staffProfileId: z.union([opaqueIdSchema, z.literal("ANY_AVAILABLE")]),
+});
+
+export const publicMultiAvailabilityCheckSchema = publicMultiServiceSelectionSchema.extend({
+  startsAt: z.coerce.date(),
+});
+
+export const publicMultiAvailableSlotsSchema = publicMultiServiceSelectionSchema.extend({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+});
+
+export const publicMultiBookingCommitSchema = publicMultiAvailabilityCheckSchema.extend({
   firstName: z.string().trim().min(1).max(100),
   lastName: z.string().trim().max(100).optional(),
   phone: z.string().trim().min(6).max(32),

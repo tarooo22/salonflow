@@ -26,8 +26,9 @@ type BookingLocation = { name: string; timezone: string; address: string | null;
 type BookingIssueKind = "service" | "staff" | "time" | "contact" | "submit";
 export type BookingValidationIssue = { kind: BookingIssueKind; title: string; description: string };
 
-export function getEligibleTeam(team: BookingTeamMember[], serviceId?: string) {
-  return team.filter(member => member.eligibleServiceIds.includes(serviceId ?? ""));
+export function getEligibleTeam(team: BookingTeamMember[], serviceIds?: string | string[]) {
+  const selected = Array.isArray(serviceIds) ? serviceIds : serviceIds ? [serviceIds] : [];
+  return team.filter(member => selected.every(serviceId => member.eligibleServiceIds.includes(serviceId)));
 }
 
 export function formatGel(tetri: number) {
@@ -50,7 +51,7 @@ export default function BookingFlow() {
   const slug = params?.slug ?? "";
   const catalog = trpc.public.bookingCatalog.useQuery(slug, { enabled: Boolean(slug) });
   const [step, setStep] = useState(0);
-  const [serviceId, setServiceId] = useState<string>();
+  const [serviceIds, setServiceIds] = useState<string[]>([]);
   const [staffProfileId, setStaffProfileId] = useState<string>();
   const [dateTime, setDateTime] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -64,8 +65,13 @@ export default function BookingFlow() {
   const [interactionError, setInteractionError] = useState<BookingValidationIssue | null>(null);
   const errorRef = useRef<HTMLDivElement>(null);
   const startsAt = useMemo(() => (dateTime ? new Date(dateTime) : null), [dateTime]);
+  const serviceId = serviceIds[0];
+  const isMultiService = serviceIds.length > 1;
   const availabilityInput = useMemo(() => ({ slug, serviceId: serviceId ?? "pending-service", staffProfileId: staffProfileId ?? "pending-specialist", startsAt: startsAt ?? new Date(0) }), [slug, serviceId, staffProfileId, startsAt]);
-  const availability = trpc.public.checkAvailability.useQuery(availabilityInput, { enabled: Boolean(serviceId && staffProfileId && startsAt && step >= 2) });
+  const multiAvailabilityInput = useMemo(() => ({ slug, serviceIds: isMultiService ? serviceIds : ["pending_service_001", "pending_service_002"], staffProfileId: staffProfileId ?? "pending-specialist", startsAt: startsAt ?? new Date(0) }), [slug, serviceIds, isMultiService, staffProfileId, startsAt]);
+  const singleAvailability = trpc.public.checkAvailability.useQuery(availabilityInput, { enabled: Boolean(serviceId && staffProfileId && startsAt && step >= 2 && !isMultiService) });
+  const multiAvailability = trpc.public.checkMultiAvailability.useQuery(multiAvailabilityInput, { enabled: Boolean(isMultiService && staffProfileId && startsAt && step >= 2) });
+  const availability = isMultiService ? multiAvailability : singleAvailability;
   const commitBooking = trpc.public.commitBooking.useMutation({
     onSuccess: result => {
       setInteractionError(null);
@@ -73,9 +79,18 @@ export default function BookingFlow() {
     },
     onError: () => setInteractionError({ kind: "submit", title: "ჯავშნის მოთხოვნა ვერ გაიგზავნა", description: "მონაცემები არ დაგვიკარგავს. შეამოწმეთ კავშირი და სცადეთ ხელახლა." }),
   });
-  const selectedService = catalog.data?.catalog.find(item => item.service.id === serviceId)?.service;
+  const commitMultiBooking = trpc.public.commitMultiBooking.useMutation({
+    onSuccess: result => {
+      setInteractionError(null);
+      setConfirmation({ token: result.confirmationToken, assignedStaffName: result.assignedStaffName, endsAt: result.endsAt });
+    },
+    onError: () => setInteractionError({ kind: "submit", title: "ჯავშნის მოთხოვნა ვერ გაიგზავნა", description: "მონაცემები არ დაგვიკარგავს. შეამოწმეთ კავშირი და სცადეთ ხელახლა." }),
+  });
+  const selectedServices = catalog.data?.catalog.filter(item => serviceIds.includes(item.service.id)).map(item => item.service) ?? [];
+  const selectedService = selectedServices[0];
+  const selectedServiceSummary = selectedServices.length ? { ...selectedServices[0]!, nameKa: selectedServices.map(service => service.nameKa).join(" + "), defaultDurationMinutes: selectedServices.reduce((sum, service) => sum + service.defaultDurationMinutes, 0), priceTetri: selectedServices.reduce((sum, service) => sum + service.priceTetri, 0) } : undefined;
   const selectedStaff = catalog.data?.team.find(member => member.id === staffProfileId);
-  const eligibleTeam = getEligibleTeam(catalog.data?.team ?? [], serviceId);
+  const eligibleTeam = getEligibleTeam(catalog.data?.team ?? [], serviceIds);
 
   useEffect(() => {
     if (!interactionError) return;
@@ -84,13 +99,15 @@ export default function BookingFlow() {
   }, [interactionError]);
 
   const clearIssue = (kind?: BookingIssueKind) => setInteractionError(current => !kind || current?.kind === kind ? null : current);
-  const selectService = (value: string) => { setServiceId(value); setStaffProfileId(undefined); clearIssue("service"); };
+  const selectService = (value: string) => { setServiceIds(current => current.includes(value) ? (current.length > 1 ? current.filter(item => item !== value) : current) : [...current, value]); setStaffProfileId(undefined); clearIssue("service"); };
   const selectStaff = (value: string) => { setStaffProfileId(value); clearIssue("staff"); };
   const selectDateTime = (value: string) => { setDateTime(value); clearIssue("time"); };
   const currentValidation = () => getBookingValidationIssue({ step, serviceId, staffProfileId, startsAt, available: availability.data?.available, firstName, phone, termsAccepted });
   const submitBooking = () => {
     if (!serviceId || !staffProfileId || !startsAt) return;
-    commitBooking.mutate({ slug, serviceId, staffProfileId, startsAt, firstName, lastName: lastName || undefined, phone, email: email || undefined, customerNote: customerNote || undefined, bookingTermsConsent: true, idempotencyKey });
+    const sharedPayload = { slug, staffProfileId, startsAt, firstName, lastName: lastName || undefined, phone, email: email || undefined, customerNote: customerNote || undefined, bookingTermsConsent: true as const, idempotencyKey };
+    if (isMultiService) commitMultiBooking.mutate({ ...sharedPayload, serviceIds });
+    else commitBooking.mutate({ ...sharedPayload, serviceId });
   };
   const advanceBooking = () => {
     const issue = currentValidation();
@@ -109,8 +126,8 @@ export default function BookingFlow() {
     {catalog.isLoading ? <Card className="mt-8 border-border"><CardContent className="sf-skeleton p-6 text-sm text-muted-foreground" role="status" aria-live="polite">ჩაწერის კატალოგი იტვირთება…</CardContent></Card> : null}
     {catalog.isError ? <Alert>ჩაწერის მონაცემები დროებით მიუწვდომელია. შეამოწმეთ კავშირი და სცადეთ მოგვიანებით.</Alert> : null}
     {catalog.data === null ? <Card className="mt-8 border-[var(--sf-ink)]/10"><CardHeader><CardTitle>ეს ჩაწერის ბმული აღარ არის აქტიური</CardTitle></CardHeader><CardContent className="text-sm leading-6 text-muted-foreground">ფილიალი შესაძლოა გათიშულია ან ბმული არასწორია. დაბრუნდით ფილიალების სიაში და აირჩიეთ აქტიური ფილიალი.</CardContent></Card> : null}
-    {catalog.data && confirmation && selectedService && startsAt ? <BookingConfirmation confirmationToken={confirmation.token} assignedStaffName={confirmation.assignedStaffName} serviceName={selectedService.nameKa} startsAt={startsAt} endsAt={confirmation.endsAt} locationName={catalog.data.location.name} locationAddress={catalog.data.location.address} /> : null}
-    {catalog.data && !confirmation ? <div className="mt-7 grid gap-5 lg:grid-cols-[minmax(0,1fr)_21rem]"><section className="space-y-4"><LocationContext location={catalog.data.location} /><div key={step} className="sf-booking-step-pane">{step === 0 ? <ServiceStep catalog={catalog.data.catalog} selectedId={serviceId} onSelect={selectService} error={interactionError?.kind === "service" ? interactionError.description : undefined} /> : null}{step === 1 ? <StaffStep team={eligibleTeam} selectedId={staffProfileId} onSelect={selectStaff} error={interactionError?.kind === "staff" ? interactionError.description : undefined} /> : null}{step === 2 ? <TimeStep slug={slug} serviceId={serviceId} staffProfileId={staffProfileId} workingHours={catalog.data.location.workingHours} timezone={catalog.data.location.timezone} dateTime={dateTime} onChange={selectDateTime} availability={availability} error={interactionError?.kind === "time" ? interactionError.description : undefined} /> : null}{step === 3 ? <ContactStep firstName={firstName} lastName={lastName} phone={phone} email={email} customerNote={customerNote} termsAccepted={termsAccepted} error={interactionError?.kind === "contact" ? interactionError.description : undefined} onFirstName={value => { setFirstName(value); clearIssue("contact"); }} onLastName={setLastName} onPhone={value => { setPhone(value); clearIssue("contact"); }} onEmail={setEmail} onNote={setCustomerNote} onTerms={value => { setTermsAccepted(value); clearIssue("contact"); }} /> : null}</div></section><aside className="lg:sticky lg:top-6 lg:self-start"><BookingSummary step={step} service={selectedService} staff={selectedStaff} staffLabel={staffProfileId === ANY_AVAILABLE ? (availability.data?.staffName ? `${availability.data.staffName} (ავტომატურად შეირჩა)` : "ნებისმიერი თავისუფალი სპეციალისტი") : undefined} startsAt={startsAt} available={availability.data?.available === true} onBack={stepBack} onContinue={advanceBooking} submitting={commitBooking.isPending} /></aside><MobileBookingAction step={step} submitting={commitBooking.isPending} onContinue={advanceBooking} /></div> : null}
+    {catalog.data && confirmation && selectedServiceSummary && startsAt ? <BookingConfirmation confirmationToken={confirmation.token} assignedStaffName={confirmation.assignedStaffName} serviceName={selectedServiceSummary.nameKa} startsAt={startsAt} endsAt={confirmation.endsAt} locationName={catalog.data.location.name} locationAddress={catalog.data.location.address} /> : null}
+    {catalog.data && !confirmation ? <div className="mt-7 grid gap-5 lg:grid-cols-[minmax(0,1fr)_21rem]"><section className="space-y-4"><LocationContext location={catalog.data.location} /><div key={step} className="sf-booking-step-pane">{step === 0 ? <ServiceStep catalog={catalog.data.catalog} selectedIds={serviceIds} onSelect={selectService} error={interactionError?.kind === "service" ? interactionError.description : undefined} /> : null}{step === 1 ? <StaffStep team={eligibleTeam} selectedId={staffProfileId} onSelect={selectStaff} error={interactionError?.kind === "staff" ? interactionError.description : undefined} /> : null}{step === 2 ? <TimeStep slug={slug} serviceId={serviceId} serviceIds={serviceIds} multiService={isMultiService} staffProfileId={staffProfileId} workingHours={catalog.data.location.workingHours} timezone={catalog.data.location.timezone} dateTime={dateTime} onChange={selectDateTime} availability={availability} error={interactionError?.kind === "time" ? interactionError.description : undefined} /> : null}{step === 3 ? <ContactStep firstName={firstName} lastName={lastName} phone={phone} email={email} customerNote={customerNote} termsAccepted={termsAccepted} error={interactionError?.kind === "contact" ? interactionError.description : undefined} onFirstName={value => { setFirstName(value); clearIssue("contact"); }} onLastName={setLastName} onPhone={value => { setPhone(value); clearIssue("contact"); }} onEmail={setEmail} onNote={setCustomerNote} onTerms={value => { setTermsAccepted(value); clearIssue("contact"); }} /> : null}</div></section><aside className="lg:sticky lg:top-6 lg:self-start"><BookingSummary step={step} service={selectedServiceSummary} staff={selectedStaff} staffLabel={staffProfileId === ANY_AVAILABLE ? (availability.data?.staffName ? `${availability.data.staffName} (ავტომატურად შეირჩა)` : "ნებისმიერი თავისუფალი სპეციალისტი") : undefined} startsAt={startsAt} available={availability.data?.available === true} onBack={stepBack} onContinue={advanceBooking} submitting={commitBooking.isPending || commitMultiBooking.isPending} /></aside><MobileBookingAction step={step} submitting={commitBooking.isPending || commitMultiBooking.isPending} onContinue={advanceBooking} /></div> : null}
   </div></main>;
 }
 
@@ -120,15 +137,15 @@ export function LocationContext({ location }: { location: BookingLocation }) {
 
 export function weekdayName(day: number) { return ["ორშაბათი", "სამშაბათი", "ოთხშაბათი", "ხუთშაბათი", "პარასკევი", "შაბათი", "კვირა"][day] ?? "დღე"; }
 
-function ServiceStep({ catalog, selectedId, onSelect, error }: { catalog: Array<{ service: BookingService; category: { nameKa: string } }>; selectedId?: string; onSelect: (id: string) => void; error?: string }) {
-  return <Card className="border-[var(--sf-ink)]/10"><CardHeader><p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--sf-accent-strong)]">ნაბიჯი 01</p><CardTitle className="mt-2">აირჩიეთ სერვისი</CardTitle><p className="mt-1 text-sm leading-6 text-muted-foreground">გამოიყენეთ მომსახურების ხანგრძლივობა და ფასი თქვენი დროის შესარჩევად.</p></CardHeader><CardContent className="space-y-3">{error ? <InlineIssue>{error}</InlineIssue> : null}{catalog.length ? catalog.map(({ service, category }) => <button key={service.id} type="button" aria-pressed={service.id === selectedId} onClick={() => onSelect(service.id)} className={`sf-booking-choice w-full rounded-2xl border p-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sf-accent-strong)] ${service.id === selectedId ? "sf-booking-choice--selected border-[var(--sf-accent-strong)] bg-[var(--sf-accent-strong)]/5 shadow-sm" : "border-[var(--sf-ink)]/10 bg-white hover:border-[var(--sf-accent-strong)]/60 hover:shadow-sm"}`}><div className="flex items-start justify-between gap-4"><div><p className="text-xs font-semibold text-[var(--sf-accent-strong)]">{category.nameKa}</p><p className="mt-1 text-base font-semibold">{service.nameKa}</p></div>{service.id === selectedId ? <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[var(--sf-accent-strong)] text-white"><Check className="h-3.5 w-3.5" aria-hidden="true" /></span> : null}</div><div className="mt-4 flex flex-wrap gap-2 text-xs font-medium text-[var(--sf-muted)]"><span className="rounded-full bg-[var(--sf-surface-subtle)] px-2.5 py-1"><Clock3 className="mr-1 inline h-3.5 w-3.5 text-[var(--sf-accent-strong)]" aria-hidden="true" />{service.defaultDurationMinutes} წუთი</span><span className="rounded-full bg-[var(--sf-surface-subtle)] px-2.5 py-1">{formatGel(service.priceTetri)}</span></div></button>) : <p className="rounded-xl border border-dashed border-[var(--sf-ink)]/15 bg-white/60 p-4 text-sm leading-6 text-muted-foreground">ამ ფილიალისთვის ჯერ არ არის ხელმისაწვდომი ონლაინ სერვისები.</p>}</CardContent></Card>;
+function ServiceStep({ catalog, selectedIds, onSelect, error }: { catalog: Array<{ service: BookingService; category: { nameKa: string } }>; selectedIds: string[]; onSelect: (id: string) => void; error?: string }) {
+  return <Card className="border-[var(--sf-ink)]/10"><CardHeader><p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--sf-accent-strong)]">ნაბიჯი 01</p><CardTitle className="mt-2">აირჩიეთ სერვისები</CardTitle><p className="mt-1 text-sm leading-6 text-muted-foreground">შეგიძლიათ დაამატოთ რამდენიმე სერვისი ერთ ვიზიტში. დრო და ფასი საბოლოოდ შეიკრიბება, ხოლო გამოჩნდება მხოლოდ ყველა არჩეული სერვისისთვის eligible სპეციალისტი.</p></CardHeader><CardContent className="space-y-3">{error ? <InlineIssue>{error}</InlineIssue> : null}{catalog.length ? catalog.map(({ service, category }) => { const selected = selectedIds.includes(service.id); return <button key={service.id} type="button" aria-pressed={selected} onClick={() => onSelect(service.id)} className={`sf-booking-choice w-full rounded-2xl border p-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sf-accent-strong)] ${selected ? "sf-booking-choice--selected border-[var(--sf-accent-strong)] bg-[var(--sf-accent-strong)]/5 shadow-sm" : "border-[var(--sf-ink)]/10 bg-white hover:border-[var(--sf-accent-strong)]/60 hover:shadow-sm"}`}><div className="flex items-start justify-between gap-4"><div><p className="text-xs font-semibold text-[var(--sf-accent-strong)]">{category.nameKa}</p><p className="mt-1 text-base font-semibold">{service.nameKa}</p></div>{selected ? <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[var(--sf-accent-strong)] text-white"><Check className="h-3.5 w-3.5" aria-hidden="true" /></span> : null}</div><div className="mt-4 flex flex-wrap gap-2 text-xs font-medium text-[var(--sf-muted)]"><span className="rounded-full bg-[var(--sf-surface-subtle)] px-2.5 py-1"><Clock3 className="mr-1 inline h-3.5 w-3.5 text-[var(--sf-accent-strong)]" aria-hidden="true" />{service.defaultDurationMinutes} წუთი</span><span className="rounded-full bg-[var(--sf-surface-subtle)] px-2.5 py-1">{formatGel(service.priceTetri)}</span></div></button>; }) : <p className="rounded-xl border border-dashed border-[var(--sf-ink)]/15 bg-white/60 p-4 text-sm leading-6 text-muted-foreground">ამ ფილიალისთვის ჯერ არ არის ხელმისაწვდომი ონლაინ სერვისები.</p>}</CardContent></Card>;
 }
 
 export function StaffStep({ team, selectedId, onSelect, error }: { team: BookingTeamMember[]; selectedId?: string; onSelect: (id: string) => void; error?: string }) {
   return <Card className="border-[var(--sf-ink)]/10"><CardHeader><p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--sf-accent-strong)]">ნაბიჯი 02</p><CardTitle className="mt-2">აირჩიეთ სპეციალისტი</CardTitle><p className="mt-1 text-sm leading-6 text-muted-foreground">ნაჩვენებია მხოლოდ ამ სერვისისთვის ხელმისაწვდომი სპეციალისტები. სურვილის შემთხვევაში სისტემა თავისუფალ სპეციალისტს თავად შეარჩევს.</p></CardHeader><CardContent className="space-y-3">{error ? <InlineIssue>{error}</InlineIssue> : null}{team.length ? <><button type="button" aria-pressed={selectedId === ANY_AVAILABLE} onClick={() => onSelect(ANY_AVAILABLE)} className={`sf-booking-choice w-full rounded-2xl border p-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sf-accent-strong)] ${selectedId === ANY_AVAILABLE ? "sf-booking-choice--selected border-[var(--sf-jade)] bg-[var(--sf-jade)]/5 shadow-sm" : "border-[var(--sf-jade)]/30 bg-white hover:border-[var(--sf-jade)] hover:shadow-sm"}`}><div className="flex items-start justify-between gap-3"><div><p className="font-semibold">ნებისმიერი თავისუფალი სპეციალისტი</p><p className="mt-1 text-sm text-[var(--sf-muted)]">ხელმისაწვდომობა საბოლოოდ გადამოწმდება დროის არჩევისას.</p></div>{selectedId === ANY_AVAILABLE ? <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[var(--sf-jade)] text-white"><Check className="h-3.5 w-3.5" aria-hidden="true" /></span> : null}</div></button>{team.map(member => <button key={member.id} type="button" aria-pressed={member.id === selectedId} onClick={() => onSelect(member.id)} className={`sf-booking-choice w-full rounded-2xl border p-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sf-accent-strong)] ${member.id === selectedId ? "sf-booking-choice--selected border-[var(--sf-accent-strong)] bg-[var(--sf-accent-strong)]/5 shadow-sm" : "border-[var(--sf-ink)]/10 bg-white hover:border-[var(--sf-accent-strong)]/60 hover:shadow-sm"}`}><div className="flex items-start justify-between gap-3"><div><p className="font-semibold">{member.name}</p>{member.specialty ? <p className="mt-1 text-sm text-[var(--sf-muted)]">{member.specialty}</p> : null}</div>{member.id === selectedId ? <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[var(--sf-accent-strong)] text-white"><Check className="h-3.5 w-3.5" aria-hidden="true" /></span> : null}</div><p className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-[var(--sf-jade)]"><CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" /> ხელმისაწვდომია ამ სერვისისთვის</p>{member.bio ? <p className="mt-2 text-xs leading-5 text-[var(--sf-muted)]">{member.bio}</p> : null}</button>)}</> : <p className="rounded-xl border border-dashed border-[var(--sf-ink)]/15 bg-white/60 p-4 text-sm leading-6 text-[var(--sf-muted)]">ამ სერვისისთვის ამ ფილიალში აქტიური ონლაინ სპეციალისტი ჯერ არ არის. გთხოვთ აირჩიოთ სხვა სერვისი ან დაუკავშირდეთ სალონს.</p>}</CardContent></Card>;
 }
 
-function TimeStep({ slug, serviceId, staffProfileId, workingHours, timezone, dateTime, onChange, availability, error }: { slug: string; serviceId?: string; staffProfileId?: string; workingHours: Array<{ weekday: number }>; timezone: string; dateTime: string; onChange: (value: string) => void; availability: { isLoading: boolean; isError: boolean; data?: { available: boolean; reason?: string } }; error?: string }) {
+function TimeStep({ slug, serviceId, serviceIds, multiService, staffProfileId, workingHours, timezone, dateTime, onChange, availability, error }: { slug: string; serviceId?: string; serviceIds: string[]; multiService: boolean; staffProfileId?: string; workingHours: Array<{ weekday: number }>; timezone: string; dateTime: string; onChange: (value: string) => void; availability: { isLoading: boolean; isError: boolean; data?: { available: boolean; reason?: string } }; error?: string }) {
   const openWeekdays = useMemo(() => new Set(workingHours.map(hour => hour.weekday)), [workingHours]);
   const today = useMemo(() => dateKeyInTimeZone(new Date(), timezone), [timezone]);
   const days = useMemo(() => Array.from({ length: 14 }, (_, index) => addDaysKey(today, index)), [today]);
@@ -139,10 +156,15 @@ function TimeStep({ slug, serviceId, staffProfileId, workingHours, timezone, dat
   const visibleDays = days.slice(pageStart, pageStart + 7);
 
   const dayIsOpen = openWeekdays.has(schemaWeekdayOf(selectedDate));
-  const slotsQuery = trpc.public.availableSlots.useQuery(
+  const singleSlotsQuery = trpc.public.availableSlots.useQuery(
     { slug, serviceId: serviceId ?? "", staffProfileId: staffProfileId ?? "", date: selectedDate },
-    { enabled: Boolean(serviceId && staffProfileId && selectedDate && dayIsOpen) },
+    { enabled: Boolean(serviceId && staffProfileId && selectedDate && dayIsOpen && !multiService) },
   );
+  const multiSlotsQuery = trpc.public.multiAvailableSlots.useQuery(
+    { slug, serviceIds: multiService ? serviceIds : ["pending_service_001", "pending_service_002"], staffProfileId: staffProfileId ?? "", date: selectedDate },
+    { enabled: Boolean(multiService && serviceIds.length > 1 && staffProfileId && selectedDate && dayIsOpen) },
+  );
+  const slotsQuery = multiService ? multiSlotsQuery : singleSlotsQuery;
   const slots = slotsQuery.data?.slots ?? [];
 
   const pickDate = (day: string) => { setSelectedDate(day); if (dateTime) onChange(""); };

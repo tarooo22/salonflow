@@ -264,17 +264,29 @@ export const appointmentsRouter = router({
     const [appointment] = await db.select().from(appointments).where(and(eq(appointments.id, input.appointmentId), eq(appointments.organizationId, input.organizationId))).limit(1);
     if (!appointment) throw new Error("ჯავშანი ვერ მოიძებნა.");
     if (!(appointment.status === "PENDING" || appointment.status === "CONFIRMED")) throw new Error("ამ სტატუსის ჯავშნის გადატანა აღარ შეიძლება.");
+    const targetStaffProfileId = input.staffProfileId ?? appointment.staffProfileId;
+    if (targetStaffProfileId !== appointment.staffProfileId) {
+      const bookedServices = await db.select({ serviceId: appointmentServices.serviceId }).from(appointmentServices).where(eq(appointmentServices.appointmentId, appointment.id));
+      const serviceIds = bookedServices.flatMap(item => item.serviceId ? [item.serviceId] : []);
+      if (!serviceIds.length) throw new Error("ამ ჩანაწერის სპეციალისტის შეცვლა ვერ მოხერხდა, რადგან სერვისის მონაცემი არასრულია.");
+      const eligibleRows = await db.select({ serviceId: staffServices.serviceId }).from(staffProfiles)
+        .innerJoin(organizationMemberships, eq(staffProfiles.membershipId, organizationMemberships.id))
+        .innerJoin(staffLocations, and(eq(staffLocations.staffProfileId, staffProfiles.id), eq(staffLocations.locationId, appointment.locationId)))
+        .innerJoin(staffServices, and(eq(staffServices.staffProfileId, staffProfiles.id), eq(staffServices.canPerform, true), inArray(staffServices.serviceId, serviceIds)))
+        .where(and(eq(staffProfiles.id, targetStaffProfileId), eq(staffProfiles.status, "ACTIVE"), eq(organizationMemberships.organizationId, input.organizationId), eq(organizationMemberships.status, "ACTIVE")));
+      if (new Set(eligibleRows.map(row => row.serviceId)).size !== new Set(serviceIds).size) throw new Error("არჩეული სპეციალისტი ამ ფილიალში ყველა სერვისისთვის ხელმისაწვდომი არ არის.");
+    }
     const endsAt = new Date(input.startsAt.getTime() + appointment.endsAt.getTime() - appointment.startsAt.getTime());
     await db.transaction(async tx => {
       for (const dateKey of enumerateUtcDates(input.startsAt, endsAt)) {
-        await tx.insert(scheduleLocks).values({ id: `${appointment.staffProfileId}:${dateKey}`, staffProfileId: appointment.staffProfileId, localDate: new Date(`${dateKey}T00:00:00.000Z`) }).onDuplicateKeyUpdate({ set: { createdAt: new Date() } });
+        await tx.insert(scheduleLocks).values({ id: `${targetStaffProfileId}:${dateKey}`, staffProfileId: targetStaffProfileId, localDate: new Date(`${dateKey}T00:00:00.000Z`) }).onDuplicateKeyUpdate({ set: { createdAt: new Date() } });
       }
-      const existing = await tx.select().from(appointments).where(and(eq(appointments.organizationId, input.organizationId), eq(appointments.staffProfileId, appointment.staffProfileId)));
+      const existing = await tx.select().from(appointments).where(and(eq(appointments.organizationId, input.organizationId), eq(appointments.staffProfileId, targetStaffProfileId)));
       if (existing.some(item => item.id !== appointment.id && appointmentBlocksInterval(item.status) && intervalsOverlap(input.startsAt, endsAt, item.startsAt, item.endsAt))) throw new Error("არჩეული დრო უკვე დაკავებულია.");
-      await tx.update(appointments).set({ startsAt: input.startsAt, endsAt }).where(eq(appointments.id, appointment.id));
+      await tx.update(appointments).set({ staffProfileId: targetStaffProfileId, startsAt: input.startsAt, endsAt }).where(eq(appointments.id, appointment.id));
       await tx.insert(appointmentStatusHistory).values({
         id: nanoid(21), appointmentId: appointment.id, oldStatus: appointment.status, newStatus: appointment.status, actorUserId: ctx.user.id,
-        reason: input.reason, metadata: { event: "RESCHEDULED", previousStartsAt: appointment.startsAt.toISOString(), previousEndsAt: appointment.endsAt.toISOString(), startsAt: input.startsAt.toISOString(), endsAt: endsAt.toISOString() },
+        reason: input.reason, metadata: { event: "RESCHEDULED", previousStartsAt: appointment.startsAt.toISOString(), previousEndsAt: appointment.endsAt.toISOString(), previousStaffProfileId: appointment.staffProfileId, staffProfileId: targetStaffProfileId, startsAt: input.startsAt.toISOString(), endsAt: endsAt.toISOString() },
       });
     });
     return { id: appointment.id, startsAt: input.startsAt, endsAt };

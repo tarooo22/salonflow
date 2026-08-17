@@ -164,6 +164,11 @@
 - [x] Audit existing notification provider readiness, scheduler boundary, payment integration status, and booking/token schema before customer lifecycle additions: no configured SMS/email/payment provider variables were present in the managed runtime; notification jobs/Heartbeat exist but no delivery handler is mounted.
 - [x] Add token-protected public appointment detail, safe reschedule, and safe cancellation workflow with expiry, status, availability re-check, and audit history safeguards.
 - [x] Add a privacy-safe waitlist workflow for unavailable public booking slots without sending unconfigured notifications, including a public request form and an organization-scoped workspace queue.
-- [ ] Design and implement multi-service public booking with authoritative duration, staff eligibility, price snapshots, and overlap protection.
+- [x] Design and implement multi-service public booking with authoritative duration, staff eligibility, price snapshots, and overlap protection: 2–6 services can be selected, only universally eligible specialists are offered, combined slots use authoritative server duration/buffers, and commit writes one appointment with ordered service snapshots transactionally.
 - [ ] Evaluate and, only if fully configured, activate booking confirmation and 24-hour reminder delivery through the prepared provider; otherwise document the exact required inputs.
 - [ ] Evaluate deposit/prepayment integration and request the required payment provider and booking policy decision before enabling checkout or charging customers.
+- [x] Audit Calendar drag/reschedule, Walk-in, attendance, tip, POS and inventory capabilities against current schema, routers and role permissions.
+- [x] Add role-gated drag-and-drop appointment move/reassign interactions backed by the existing authoritative reschedule mutation and conflict re-check.
+- [x] Add a compact Walk-in checkbox/quick-entry path in operations surfaces without bypassing price, duration, staff eligibility or schedule safeguards.
+- [x] Add organization-scoped attendance clock-in/clock-out and tip tracking with auditable timestamps, role controls and Georgian presentation.
+- [x] Add a POS/inventory foundation for retail products, stock movements and client-linked sales while preserving immutable financial records and avoiding unconfigured payment capture.
