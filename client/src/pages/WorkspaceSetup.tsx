@@ -48,6 +48,11 @@ export default function WorkspaceSetup() {
       await utils.organizations.listMine.invalidate();
       setRoute("/app/today?setup=complete");
     },
+    onError: error => {
+      const isCodeConflict = error.message.includes("კოდი") || error.message.includes("მისამართი");
+      setFormError(error.message || "სამუშაო სივრცის შექმნა დროებით ვერ მოხერხდა. სცადეთ ხელახლა.");
+      if (isCodeConflict) setStep(1);
+    },
   });
 
   useEffect(() => {
@@ -158,7 +163,7 @@ export default function WorkspaceSetup() {
             <CardContent className="space-y-5"><div className="grid gap-5 sm:grid-cols-2"><div className="space-y-2"><Label htmlFor="owner-name">საჯარო სახელი</Label><Input id="owner-name" value={ownerDisplayName} onChange={event => setOwnerDisplayName(event.target.value)} placeholder="მაგ. მარი კ." maxLength={160} /></div><div className="space-y-2"><Label htmlFor="owner-role">როლი <span className="text-muted-foreground">(არასავალდებულო)</span></Label><Input id="owner-role" value={ownerJobTitle} onChange={event => setOwnerJobTitle(event.target.value)} maxLength={160} /></div></div><label className="flex min-h-11 items-center gap-3 text-sm font-medium"><input type="checkbox" checked={ownerAvailable} onChange={event => setOwnerAvailable(event.target.checked)} />მე ვასრულებ ამ სერვისს და მინდა გამოჩნდეს ონლაინ ჩაწერაში</label><div className="rounded-xl border border-accent bg-accent/40 p-4 text-sm text-accent-foreground"><p className="font-semibold">თქვენი საჯარო მისამართი</p><p className="mt-1 break-all">/book/{publicSlug || "your-salon"}</p><p className="mt-2 text-xs">შექმნის შემდეგ შეძლებთ დაამატოთ მეტი სერვისი, თანამშრომელი, გამონაკლისი და ფილიალი.</p></div></CardContent>
           </Card> : null}
 
-          {formError || completed.error ? <Card className="border-destructive/30 bg-destructive/5"><CardContent className="p-4 text-sm text-destructive">{formError || "სამუშაო სივრცის შექმნა ვერ მოხერხდა. შეამოწმეთ კოდების უნიკალურობა და სცადეთ ხელახლა."}</CardContent></Card> : null}
+          {formError || completed.error ? <Card className="border-destructive/30 bg-destructive/5"><CardContent className="p-4 text-sm text-destructive">{formError || completed.error?.message || "სამუშაო სივრცის შექმნა დროებით ვერ მოხერხდა. სცადეთ ხელახლა."}</CardContent></Card> : null}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><p className="flex items-center gap-2 text-sm text-muted-foreground"><CheckCircle2 className="h-4 w-4 text-primary" />თქვენი მონაცემები შეიქმნება მხოლოდ ბოლო ნაბიჯზე, ერთ უსაფრთხო ტრანზაქციაში.</p><div className="flex gap-2"><Button type="button" variant="outline" onClick={() => { setFormError(""); setStep(current => Math.max(1, current - 1)); }} disabled={step === 1 || completed.isPending}><ChevronLeft className="h-4 w-4" />უკან</Button>{step < 4 ? <Button type="button" onClick={nextStep}><ChevronRight className="h-4 w-4" />გაგრძელება</Button> : <Button type="submit" disabled={completed.isPending}>{completed.isPending ? "სამუშაო სივრცე იქმნება…" : "სამუშაო სივრცის გაშვება"}</Button>}</div></div>
         </form>
       </div>

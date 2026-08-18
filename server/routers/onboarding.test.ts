@@ -10,9 +10,9 @@ vi.mock("nanoid", () => ({ nanoid: vi.fn(() => mocked.ids.shift()) }));
 
 import { onboardingRouter } from "./onboarding";
 
-function createDb() {
+function createDb(selectResults: unknown[][] = [[], [], []]) {
   const values = vi.fn(async () => undefined);
-  const limit = vi.fn(async () => []);
+  const limit = vi.fn(async () => selectResults.shift() ?? []);
   const where = vi.fn(() => ({ limit }));
   const from = vi.fn(() => ({ where }));
   const select = vi.fn(() => ({ from }));
@@ -51,5 +51,20 @@ describe("onboarding.complete", () => {
     expect(db.values).toHaveBeenCalledWith(expect.objectContaining({ id: "staff_onboard_0000001", onlineBookingVisible: true }));
     expect(db.values).toHaveBeenCalledWith(expect.objectContaining({ nameKa: "სტაილინგი", priceTetri: 7_500 }));
     expect(db.values).toHaveBeenCalledWith(expect.objectContaining({ staffProfileId: "staff_onboard_0000001", serviceId: "service_onboard_00001", canPerform: true }));
+  });
+
+  it("rejects an occupied public booking slug before opening the transaction", async () => {
+    const db = createDb([[], [], [{ id: "existing_location" }]]);
+    mocked.db = db;
+
+    await expect(onboardingRouter.createCaller({ user } as never).complete({
+      organization: { name: "თამარის სალონი", slug: "tamari-salon", timezone: "Asia/Tbilisi" },
+      location: { name: "ვაკის ფილიალი", publicSlug: "gldani-beauty", timezone: "Asia/Tbilisi", bookingEnabled: true, slotIntervalMinutes: 15, minimumNoticeMinutes: 60, maximumAdvanceDays: 60, cancellationCutoffMinutes: 120 },
+      openingHours: Array.from({ length: 7 }, (_, weekday) => ({ weekday, enabled: weekday === 1, startLocalTime: "10:00", endLocalTime: "18:00" })),
+      owner: { publicDisplayName: "მარი", onlineBookingVisible: false },
+      services: [{ categoryNameKa: "თმის მოვლა", nameKa: "სტაილინგი", defaultDurationMinutes: 60, priceTetri: 7_500, onlineBookingEnabled: true }],
+    })).rejects.toMatchObject({ code: "CONFLICT", message: "საჯარო დაჯავშნის მისამართი `/book/gldani-beauty` უკვე დაკავებულია. შეცვალეთ საჯარო კოდი და სცადეთ ხელახლა." });
+
+    expect(db.transaction).not.toHaveBeenCalled();
   });
 });

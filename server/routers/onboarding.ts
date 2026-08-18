@@ -1,10 +1,24 @@
 import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
+import { TRPCError } from "@trpc/server";
 import { locations, locationOpeningHours, organizationMemberships, organizations, serviceCategories, services, staffLocations, staffProfiles, staffServices, workingHourRules } from "../../drizzle/schema";
 import { guidedOnboardingSchema } from "../../shared/validation";
 import { protectedProcedure, router } from "../_core/trpc";
 import { requireDb } from "../db";
 import { normalizeEmail, normalizeGeorgianPhone } from "../lib/normalization";
+
+function duplicateCodeMessage(kind: "organization" | "location", value: string) {
+  return kind === "location"
+    ? `საჯარო დაჯავშნის მისამართი \`/book/${value}\` უკვე დაკავებულია. შეცვალეთ საჯარო კოდი და სცადეთ ხელახლა.`
+    : `სამუშაო სივრცის კოდი \`${value}\` უკვე დაკავებულია. შეცვალეთ კოდი და სცადეთ ხელახლა.`;
+}
+
+function databaseDuplicateKind(error: unknown): "organization" | "location" | null {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  if (message.includes("locations_public_slug_uq") || message.includes("publicSlug")) return "location";
+  if (message.includes("organizations_slug_uq") || message.includes("organizations.slug")) return "organization";
+  return null;
+}
 
 export const onboardingRouter = router({
   complete: protectedProcedure.input(guidedOnboardingSchema).mutation(async ({ ctx, input }) => {
@@ -15,13 +29,19 @@ export const onboardingRouter = router({
     )).limit(1);
     if (existing[0]) throw new Error("ამ ანგარიშისთვის სამუშაო სივრცე უკვე არსებობს.");
 
+    const existingOrganizationSlug = await db.select({ id: organizations.id }).from(organizations).where(eq(organizations.slug, input.organization.slug)).limit(1);
+    if (existingOrganizationSlug[0]) throw new TRPCError({ code: "CONFLICT", message: duplicateCodeMessage("organization", input.organization.slug) });
+    const existingPublicSlug = await db.select({ id: locations.id }).from(locations).where(eq(locations.publicSlug, input.location.publicSlug)).limit(1);
+    if (existingPublicSlug[0]) throw new TRPCError({ code: "CONFLICT", message: duplicateCodeMessage("location", input.location.publicSlug) });
+
     const organizationId = nanoid(21);
     const membershipId = nanoid(21);
     const locationId = nanoid(21);
     const staffProfileId = nanoid(21);
     const categoryIds = new Map<string, string>();
 
-    await db.transaction(async tx => {
+    try {
+      await db.transaction(async tx => {
       await tx.insert(organizations).values({
         id: organizationId,
         name: input.organization.name,
@@ -111,7 +131,14 @@ export const onboardingRouter = router({
         });
         await tx.insert(staffServices).values({ staffProfileId, serviceId, canPerform: true });
       }
-    });
+      });
+    } catch (error) {
+      const duplicateKind = databaseDuplicateKind(error);
+      if (duplicateKind) {
+        throw new TRPCError({ code: "CONFLICT", message: duplicateCodeMessage(duplicateKind, duplicateKind === "location" ? input.location.publicSlug : input.organization.slug) });
+      }
+      throw error;
+    }
 
     return {
       organizationId,
