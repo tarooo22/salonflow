@@ -151,6 +151,7 @@ export const staffProfiles = mysqlTable("staff_profiles", {
   color: varchar("color", { length: 16 }).default("#17826A").notNull(),
   jobTitle: varchar("jobTitle", { length: 160 }),
   specialty: varchar("specialty", { length: 255 }),
+  experienceYears: int("experienceYears"),
   avatarKey: varchar("avatarKey", { length: 512 }),
   avatarAltKa: varchar("avatarAltKa", { length: 255 }),
   phoneVisible: boolean("phoneVisible").default(false).notNull(),

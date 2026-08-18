@@ -6,7 +6,7 @@ const state = vi.hoisted(() => ({ performance: null as unknown, workingHours: nu
 const mutation = { mutate: vi.fn(), isPending: false, error: null };
 const organization = { id: "organization_001", name: "სილამაზის სივრცე" };
 const membership = { id: "membership_001", role: "OWNER" };
-const profile = { id: "staff_profile_00001", publicDisplayName: "ლელა ბერიძე", onlineBookingVisible: true, color: "#17826A", jobTitle: "სტილისტი", specialty: null };
+const profile = { id: "staff_profile_00001", publicDisplayName: "ლელა ბერიძე", publicBio: null, onlineBookingVisible: true, color: "#17826A", jobTitle: "სტილისტი", specialty: null, experienceYears: null, avatarKey: null, avatarAltKa: null };
 const query = (data: unknown) => ({ data, isLoading: false, isError: false, refetch: vi.fn() });
 
 vi.mock("@/components/DashboardLayout", () => ({ default: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
@@ -15,13 +15,13 @@ vi.mock("@/lib/trpc", () => ({
     useUtils: () => ({ staff: { list: { invalidate: vi.fn() } }, finance: { listExpenses: { invalidate: vi.fn() } }, reporting: { revenueSummary: { invalidate: vi.fn() } } }),
     organizations: { listMine: { useQuery: () => query([{ organization, membership }]) }, listLocations: { useQuery: () => query([{ id: "location_00001", name: "ვაკე" }]) } },
     invitations: { list: { useQuery: () => query([]) }, create: { useMutation: () => mutation }, revoke: { useMutation: () => mutation } },
-    media: { setStaffAvatar: { useMutation: () => ({ ...mutation, mutateAsync: vi.fn() }) } },
+    media: { setStaffAvatar: { useMutation: () => ({ ...mutation, mutateAsync: vi.fn() }) }, updateSelfAvatar: { useMutation: () => ({ ...mutation, mutateAsync: vi.fn() }) } },
     staff: {
-      list: { useQuery: () => query([{ profile, membership: { role: "OWNER", status: "ACTIVE", id: membership.id } }]) },
+      list: { useQuery: () => query([{ profile, membership: { role: membership.role, status: "ACTIVE", id: membership.id } }]) },
       listWorkingHours: { useQuery: () => state.workingHours },
       listScheduleExceptions: { useQuery: () => state.exceptions },
       performance: { useQuery: () => state.performance },
-      createProfile: { useMutation: () => mutation }, createMember: { useMutation: () => mutation }, addWorkingHours: { useMutation: () => mutation }, updateWorkingHours: { useMutation: () => mutation }, addScheduleException: { useMutation: () => mutation }, updateScheduleException: { useMutation: () => mutation },
+      createProfile: { useMutation: () => mutation }, createMember: { useMutation: () => mutation }, updateSelfProfile: { useMutation: () => mutation }, addWorkingHours: { useMutation: () => mutation }, updateWorkingHours: { useMutation: () => mutation }, addScheduleException: { useMutation: () => mutation }, updateScheduleException: { useMutation: () => mutation },
       deleteWorkingHours: { useMutation: () => mutation }, deleteScheduleException: { useMutation: () => mutation },
     },
   },
@@ -30,7 +30,7 @@ vi.mock("@/lib/trpc", () => ({
 import Staff from "./Staff";
 
 describe("Staff performance panel", () => {
-  beforeEach(() => { state.performance = query([]); state.workingHours = query([]); state.exceptions = query([]); });
+  beforeEach(() => { membership.role = "OWNER"; state.performance = query([]); state.workingHours = query([]); state.exceptions = query([]); });
 
   it("renders an accessible loading state", () => {
     state.performance = { data: undefined, isLoading: true, isError: false, refetch: vi.fn() };
@@ -56,5 +56,15 @@ describe("Staff performance panel", () => {
     const markup = renderToStaticMarkup(<Staff />);
     expect(markup).toContain("სამუშაო საათების შეცვლა");
     expect(markup).toContain("კალენდრის ბლოკის შეცვლა");
+  });
+
+  it("shows a self-service avatar, bio, experience and specialization form only to a specialist", () => {
+    membership.role = "STAFF";
+    const markup = renderToStaticMarkup(<Staff />);
+    expect(markup).toContain("ჩემი პროფილის შენახვა");
+    expect(markup).toContain("საჯარო აღწერა");
+    expect(markup).toContain("გამოცდილება (წლები)");
+    expect(markup).toContain("მფლობელის კონტროლში რჩება");
+    expect(markup).not.toContain("სამუშაო საათების შეცვლა");
   });
 });

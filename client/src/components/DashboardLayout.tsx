@@ -37,7 +37,7 @@ const menuItems = [
   { icon: Users, label: "კლიენტები", path: "/app/clients", roles: ["OWNER", "MANAGER", "RECEPTIONIST"] },
   { icon: Images, label: "კლიენტის გალერეა", path: "/app/client-gallery", roles: ["OWNER"] },
   { icon: Scissors, label: "სერვისები", path: "/app/services", roles: ["OWNER"] },
-  { icon: Users, label: "გუნდი", path: "/app/staff", roles: ["OWNER"] },
+  { icon: Users, label: "გუნდი", path: "/app/staff", roles: ["OWNER", "STAFF"] },
   { icon: BarChart3, label: "ანგარიშები", path: "/app/reports", roles: ["OWNER"] },
   { icon: Images, label: "მედია და პროფილი", path: "/app/media", roles: ["OWNER"] },
   { icon: Settings2, label: "პარამეტრები", path: "/app/settings", roles: ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"] },
@@ -195,18 +195,19 @@ function DashboardLayoutContent({
             <SidebarMenu className="gap-1">
               {visibleMenuItems.map(item => {
                 const isActive = location === item.path;
+                const label = item.path === "/app/staff" && role === "STAFF" ? "ჩემი პროფილი" : item.label;
                 return (
                   <SidebarMenuItem key={item.path}>
                     <SidebarMenuButton
                       isActive={isActive}
                       onClick={() => setLocation(item.path)}
-                      tooltip={item.label}
+                      tooltip={label}
                       className="min-h-11 rounded-xl px-3 text-sidebar-foreground/72 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground data-[active=true]:bg-sidebar-primary data-[active=true]:font-semibold data-[active=true]:text-sidebar-primary-foreground data-[active=true]:shadow-[0_8px_18px_rgb(0_0_0_/_0.18)]"
                     >
                       <item.icon
                         className={`h-4 w-4 ${isActive ? "text-sidebar-primary-foreground" : ""}`}
                       />
-                      <span>{item.label}</span>
+                      <span>{label}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );

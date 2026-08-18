@@ -5,7 +5,7 @@ import { randomBytes } from "node:crypto";
 import { appointments, locations, organizationMemberships, scheduleExceptions, staffLocations, staffProfiles, users, workingHourRules } from "../../drizzle/schema";
 import { requireOrganizationRole } from "../access";
 import { requireDb } from "../db";
-import { locationScopeSchema, scheduleExceptionCreateSchema, scheduleExceptionUpdateSchema, staffMemberCreateSchema, staffPerformanceSchema, staffProfileCreateSchema, staffScheduleListSchema, staffScheduleRecordDeleteSchema, workingHourRuleCreateSchema, workingHourRuleUpdateSchema } from "../../shared/validation";
+import { locationScopeSchema, scheduleExceptionCreateSchema, scheduleExceptionUpdateSchema, staffMemberCreateSchema, staffPerformanceSchema, staffProfileCreateSchema, staffScheduleListSchema, staffScheduleRecordDeleteSchema, staffSelfProfileUpdateSchema, workingHourRuleCreateSchema, workingHourRuleUpdateSchema } from "../../shared/validation";
 import { protectedProcedure, router } from "../_core/trpc";
 import { hashPassword } from "../lib/passwords";
 import { normalizeEmail } from "../lib/normalization";
@@ -31,6 +31,31 @@ export const staffRouter = router({
       .innerJoin(organizationMemberships, eq(staffProfiles.membershipId, organizationMemberships.id)).$dynamic();
     if (input.locationId) query.innerJoin(staffLocations, eq(staffLocations.staffProfileId, staffProfiles.id));
     return query.where(and(...conditions)).orderBy(asc(staffProfiles.sortOrder), asc(staffProfiles.publicDisplayName));
+  }),
+
+  updateSelfProfile: protectedProcedure.input(staffSelfProfileUpdateSchema).mutation(async ({ ctx, input }) => {
+    const membership = await requireOrganizationRole(ctx.user, input.organizationId, ["STAFF"]);
+    const db = await requireDb();
+    const [profile] = await db.select({ id: staffProfiles.id }).from(staffProfiles)
+      .innerJoin(organizationMemberships, eq(staffProfiles.membershipId, organizationMemberships.id))
+      .where(and(
+        eq(staffProfiles.id, input.staffProfileId),
+        eq(staffProfiles.membershipId, membership.id),
+        eq(organizationMemberships.organizationId, input.organizationId),
+        eq(organizationMemberships.status, "ACTIVE"),
+        eq(staffProfiles.status, "ACTIVE"),
+      )).limit(1);
+    if (!profile) throw new TRPCError({ code: "FORBIDDEN", message: "თქვენ არ შეგიძლიათ ამ სპეციალისტის პროფილის შეცვლა." });
+
+    await db.update(staffProfiles).set({
+      ...(input.publicDisplayName !== undefined ? { publicDisplayName: input.publicDisplayName } : {}),
+      ...(input.publicBio !== undefined ? { publicBio: input.publicBio || null } : {}),
+      ...(input.jobTitle !== undefined ? { jobTitle: input.jobTitle || null } : {}),
+      ...(input.specialty !== undefined ? { specialty: input.specialty || null } : {}),
+      ...(input.experienceYears !== undefined ? { experienceYears: input.experienceYears } : {}),
+      ...(input.avatarAltKa !== undefined ? { avatarAltKa: input.avatarAltKa } : {}),
+    }).where(and(eq(staffProfiles.id, input.staffProfileId), eq(staffProfiles.membershipId, membership.id)));
+    return { success: true };
   }),
 
   createProfile: protectedProcedure.input(staffProfileCreateSchema).mutation(async ({ ctx, input }) => {

@@ -238,6 +238,16 @@ export const staffProfileCreateSchema = z.object({
   locationIds: z.array(opaqueIdSchema).min(1).max(20),
 });
 
+export const staffSelfProfileUpdateSchema = organizationScopeSchema.extend({
+  staffProfileId: opaqueIdSchema,
+  publicDisplayName: z.string().trim().min(2).max(160).optional(),
+  publicBio: z.string().trim().max(2_000).nullable().optional(),
+  jobTitle: z.string().trim().max(160).nullable().optional(),
+  specialty: z.string().trim().max(255).nullable().optional(),
+  experienceYears: z.number().int().min(0).max(80).nullable().optional(),
+  avatarAltKa: imageAltTextSchema.nullable().optional(),
+}).strict().refine(input => input.publicDisplayName !== undefined || input.publicBio !== undefined || input.jobTitle !== undefined || input.specialty !== undefined || input.experienceYears !== undefined || input.avatarAltKa !== undefined, "პროფილის მინიმუმ ერთი ველი უნდა შეიცვალოს");
+
 export const staffMemberCreateSchema = z.object({
   organizationId: opaqueIdSchema,
   fullName: z.string().trim().min(2).max(160),

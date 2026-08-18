@@ -1,4 +1,4 @@
-import React, { FormEvent, useMemo, useState } from "react";
+import React, { FormEvent, useEffect, useMemo, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
 import { fileToImageDataUrl } from "@/lib/imageUpload";
 import { formatGelTetri } from "@/lib/presentation";
@@ -24,6 +25,7 @@ export default function Staff() {
   const organizationEntry = organizations.data?.[0];
   const organization = organizationEntry?.organization;
   const isOwner = organizationEntry?.membership.role === "OWNER";
+  const isStaff = organizationEntry?.membership.role === "STAFF";
   const staff = trpc.staff.list.useQuery({ organizationId: organization?.id ?? "" }, { enabled: Boolean(organization?.id) });
   const locations = trpc.organizations.listLocations.useQuery({ organizationId: organization?.id ?? "" }, { enabled: Boolean(organization?.id) });
   const scheduleInput = { organizationId: organization?.id ?? "" };
@@ -32,6 +34,7 @@ export default function Staff() {
   const performanceInput = useMemo(() => { const endsAt = new Date(); const startsAt = new Date(endsAt); startsAt.setUTCDate(startsAt.getUTCDate() - 30); return { organizationId: organization?.id ?? "", startsAt, endsAt }; }, [organization?.id]);
   const performance = trpc.staff.performance.useQuery(performanceInput, { enabled: Boolean(organization?.id && isOwner) });
   const hasOwnProfile = Boolean(staff.data?.some(item => item.membership.id === organizationEntry?.membership.id));
+  const ownProfile = staff.data?.find(item => item.membership.id === organizationEntry?.membership.id);
 
   const [profileOpen, setProfileOpen] = useState(false);
   const [displayName, setDisplayName] = useState("");
@@ -48,6 +51,14 @@ export default function Staff() {
   const [memberAvatarImageDataUrl, setMemberAvatarImageDataUrl] = useState("");
   const [memberAvatarAltKa, setMemberAvatarAltKa] = useState("");
   const [memberError, setMemberError] = useState("");
+  const [selfProfileId, setSelfProfileId] = useState("");
+  const [selfDisplayName, setSelfDisplayName] = useState("");
+  const [selfPublicBio, setSelfPublicBio] = useState("");
+  const [selfJobTitle, setSelfJobTitle] = useState("");
+  const [selfSpecialty, setSelfSpecialty] = useState("");
+  const [selfExperienceYears, setSelfExperienceYears] = useState("");
+  const [selfAvatarAltKa, setSelfAvatarAltKa] = useState("");
+  const [selfProfileError, setSelfProfileError] = useState("");
   const [issuedCredentials, setIssuedCredentials] = useState<{ loginId: string; temporaryPassword: string; fullName: string } | null>(null);
   const [hoursOpen, setHoursOpen] = useState(false);
   const [hoursEditingId, setHoursEditingId] = useState<string>();
@@ -111,6 +122,14 @@ export default function Staff() {
   const refreshSchedules = async () => { await Promise.all([workingHours.refetch(), exceptions.refetch()]); };
   const createProfile = trpc.staff.createProfile.useMutation({ onSuccess: async () => { await utils.staff.list.invalidate(); setProfileOpen(false); setDisplayName(""); setJobTitle(""); setSelectedLocationIds([]); toast.success("პროფილი შეიქმნა."); } });
   const setStaffAvatar = trpc.media.setStaffAvatar.useMutation({ onSuccess: async () => { await utils.staff.list.invalidate(); } });
+  const updateSelfProfile = trpc.staff.updateSelfProfile.useMutation({
+    onSuccess: async () => { await utils.staff.list.invalidate(); setSelfProfileError(""); toast.success("ჩემი პროფილი განახლდა."); },
+    onError: error => setSelfProfileError(error.message || "პროფილის განახლება ვერ მოხერხდა."),
+  });
+  const updateSelfAvatar = trpc.media.updateSelfAvatar.useMutation({
+    onSuccess: async () => { await utils.staff.list.invalidate(); setSelfProfileError(""); toast.success("ავატარი განახლდა."); },
+    onError: error => setSelfProfileError(error.message || "ავატარის ატვირთვა ვერ მოხერხდა."),
+  });
   const createMember = trpc.staff.createMember.useMutation({
     onSuccess: async result => {
       const avatarImageDataUrl = memberAvatarImageDataUrl;
@@ -138,6 +157,18 @@ export default function Staff() {
   const updateScheduleException = trpc.staff.updateScheduleException.useMutation({ onSuccess: async () => { await refreshSchedules(); toast.success("კალენდრის გამონაკლისი განახლდა."); setExceptionOpen(false); } });
   const deleteException = trpc.staff.deleteScheduleException.useMutation({ onSuccess: async () => { await exceptions.refetch(); toast.success("კალენდრის გამონაკლისი წაიშალა."); } });
 
+  useEffect(() => {
+    if (!isStaff || !ownProfile || ownProfile.profile.id === selfProfileId) return;
+    setSelfProfileId(ownProfile.profile.id);
+    setSelfDisplayName(ownProfile.profile.publicDisplayName);
+    setSelfPublicBio(ownProfile.profile.publicBio ?? "");
+    setSelfJobTitle(ownProfile.profile.jobTitle ?? "");
+    setSelfSpecialty(ownProfile.profile.specialty ?? "");
+    setSelfExperienceYears(ownProfile.profile.experienceYears === null || ownProfile.profile.experienceYears === undefined ? "" : String(ownProfile.profile.experienceYears));
+    setSelfAvatarAltKa(ownProfile.profile.avatarAltKa ?? `${ownProfile.profile.publicDisplayName} — პროფილის ფოტო`);
+    setSelfProfileError("");
+  }, [isStaff, ownProfile, selfProfileId]);
+
   const openHoursCreate = (staffProfileId: string) => { setHoursEditingId(undefined); setHoursProfileId(staffProfileId); setHoursLocationId(""); setHoursWeekday("0"); setHoursStart("09:00"); setHoursEnd("18:00"); setHoursError(""); setHoursOpen(true); };
   const openHoursEdit = (item: NonNullable<typeof workingHours.data>[number]) => { setHoursEditingId(item.rule.id); setHoursProfileId(item.rule.staffProfileId); setHoursLocationId(item.rule.locationId); setHoursWeekday(String(item.rule.weekday)); setHoursStart(item.rule.startLocalTime.slice(0, 5)); setHoursEnd(item.rule.endLocalTime.slice(0, 5)); setHoursError(""); setHoursOpen(true); };
   const openExceptionCreate = () => { setExceptionEditingId(undefined); setExceptionProfileId(""); setExceptionLocationId(""); setExceptionType("VACATION"); setExceptionStartsAt(""); setExceptionEndsAt(""); setExceptionReason(""); setExceptionError(""); setExceptionOpen(true); };
@@ -156,6 +187,24 @@ export default function Staff() {
       await setStaffAvatar.mutateAsync({ organizationId: organization.id, staffProfileId, imageDataUrl, altTextKa: `${publicDisplayName} — პროფილის ფოტო` });
       toast.success("სპეციალისტის ავატარი განახლდა.");
     } catch (error) { toast.error(error instanceof Error ? error.message : "ავატარის ატვირთვა ვერ მოხერხდა."); }
+  };
+  const submitSelfProfile = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!organization || !ownProfile) return;
+    const experienceYears = selfExperienceYears === "" ? null : Number(selfExperienceYears);
+    if (!Number.isInteger(experienceYears ?? 0) || (experienceYears !== null && (experienceYears < 0 || experienceYears > 80))) { setSelfProfileError("გამოცდილება მიუთითეთ 0-დან 80 წლამდე მთელი რიცხვით."); return; }
+    setSelfProfileError("");
+    updateSelfProfile.mutate({ organizationId: organization.id, staffProfileId: ownProfile.profile.id, publicDisplayName: selfDisplayName, publicBio: selfPublicBio || null, jobTitle: selfJobTitle || null, specialty: selfSpecialty || null, experienceYears, avatarAltKa: selfAvatarAltKa || null });
+  };
+  const chooseSelfAvatar = async (file: File | null) => {
+    if (!organization || !ownProfile || !file) return;
+    try {
+      setSelfProfileError("");
+      const imageDataUrl = await fileToImageDataUrl(file);
+      const altTextKa = selfAvatarAltKa.trim() || `${selfDisplayName || ownProfile.profile.publicDisplayName} — პროფილის ფოტო`;
+      await updateSelfAvatar.mutateAsync({ organizationId: organization.id, staffProfileId: ownProfile.profile.id, imageDataUrl, altTextKa });
+      setSelfAvatarAltKa(altTextKa);
+    } catch (error) { setSelfProfileError(error instanceof Error ? error.message : "ავატარის ატვირთვა ვერ მოხერხდა."); }
   };
   const submitMember = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -181,6 +230,7 @@ export default function Staff() {
     <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"><div className="min-w-0"><p className="text-sm font-medium text-primary">გუნდის სამუშაო სივრცე</p><h1 className="mt-1 text-3xl font-semibold tracking-tight">გუნდი</h1><p className="mt-2 text-sm text-muted-foreground">სპეციალისტების როლები, საჯარო პროფილები და ფილიალების აქტიური ქსელი.</p></div><div className="flex flex-wrap gap-2"><Badge variant="outline" className="border-primary/30 bg-primary/5 px-3 py-1 text-primary">{organization?.name ?? "სამუშაო სივრცე"}</Badge>{organization && isOwner && staff.data?.length ? <Button variant="outline" onClick={openExceptionCreate}>კალენდრის ბლოკი</Button> : null}{organization && isOwner && !hasOwnProfile ? <Button variant="outline" onClick={() => setProfileOpen(true)}><Plus className="mr-2 h-4 w-4" />ჩემი პროფილი</Button> : null}{organization && isOwner ? <Button variant="outline" onClick={openInviteDialog}><Send className="mr-2 h-4 w-4" />მოწვევა</Button> : null}{organization && isOwner ? <Button onClick={openMemberDialog}><Plus className="mr-2 h-4 w-4" />გუნდის წევრი</Button> : null}</div></header>
     {organizations.isLoading ? <StateCard text="გუნდის სამუშაო სივრცე იტვირთება…" /> : null}{organizations.isError ? <StateCard error text="სამუშაო სივრცის მონაცემები დროებით მიუწვდომელია." /> : null}{!organizations.isLoading && !organizations.isError && !organization ? <StateCard text="გუნდის გვერდის სანახავად ჯერ შექმენით სამუშაო სივრცე." /> : null}
     {organization ? <><div className="grid gap-4 lg:grid-cols-3"><Metric icon={UsersRound} label="აქტიური პროფილები" value={staff.isLoading ? "…" : String(staff.data?.length ?? 0)} hint="ორგანიზაციის აქტიური თანამშრომლები" /><Metric icon={MapPin} label="აქტიური ფილიალები" value={locations.isLoading ? "…" : String(locations.data?.length ?? 0)} hint="ფილიალები, სადაც გუნდი განთავსდება" /><Metric icon={BriefcaseBusiness} label="ონლაინ პროფილები" value={staff.isLoading ? "…" : String(staff.data?.filter(item => item.profile.onlineBookingVisible).length ?? 0)} hint="საჯარო ჩაწერაში ხილული სპეციალისტები" /></div>
+      {isStaff && ownProfile ? <SelfProfileCard profile={ownProfile.profile} locations={locations.data ?? []} displayName={selfDisplayName} setDisplayName={setSelfDisplayName} publicBio={selfPublicBio} setPublicBio={setSelfPublicBio} jobTitle={selfJobTitle} setJobTitle={setSelfJobTitle} specialty={selfSpecialty} setSpecialty={setSelfSpecialty} experienceYears={selfExperienceYears} setExperienceYears={setSelfExperienceYears} avatarAltKa={selfAvatarAltKa} setAvatarAltKa={setSelfAvatarAltKa} error={selfProfileError} onSubmit={submitSelfProfile} onChooseAvatar={chooseSelfAvatar} saving={updateSelfProfile.isPending} uploading={updateSelfAvatar.isPending} /> : null}
       <Card><CardHeader><CardTitle>{isOwner ? "აქტიური გუნდი" : "ჩემი სპეციალისტის პროფილი"}</CardTitle></CardHeader><CardContent><div className="grid gap-4 lg:grid-cols-2">{staff.isLoading ? <p className="text-sm text-muted-foreground">გუნდის პროფილები იტვირთება…</p> : null}{!staff.isLoading && !staff.data?.length ? <p className="rounded-xl border border-dashed p-5 text-sm text-muted-foreground">სპეციალისტის პროფილი ჯერ არ არის დამატებული.</p> : null}{staff.data?.map(item => <div key={item.profile.id} className="rounded-2xl border bg-card p-5 shadow-sm"><div className="flex items-start justify-between gap-3"><div className="flex min-w-0 items-center gap-3"><div className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-primary/10 text-sm font-semibold text-primary">{item.profile.avatarKey ? <img src={`/manus-storage/${item.profile.avatarKey}`} alt={item.profile.avatarAltKa || `${item.profile.publicDisplayName} — პროფილის ფოტო`} className="size-full object-cover" /> : item.profile.publicDisplayName.slice(0, 1).toUpperCase()}</div><div className="min-w-0"><h2 className="truncate text-lg font-semibold">{item.profile.publicDisplayName}</h2><p className="mt-1 text-sm text-muted-foreground">{item.profile.jobTitle || item.profile.specialty || "როლი და სპეციალიზაცია დაემატება აქ"}</p></div></div><Badge variant="outline">{roleLabel[item.membership.role] ?? item.membership.role}</Badge></div><p className="mt-4 text-sm text-muted-foreground">საჯარო პროფილი: {item.profile.onlineBookingVisible ? "აქტიურია" : "დამალულია"}</p>{isOwner ? <div className="mt-4 flex flex-wrap gap-2"><Button variant="outline" size="sm" onClick={() => openHoursCreate(item.profile.id)}>სამუშაო საათები</Button><label className="inline-flex"><input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={event => { void replaceStaffAvatar(item.profile.id, item.profile.publicDisplayName, event.target.files?.[0] ?? null); event.currentTarget.value = ""; }} disabled={setStaffAvatar.isPending} /><Button type="button" variant="outline" size="sm" asChild disabled={setStaffAvatar.isPending}><span><ImagePlus className="mr-1.5 h-3.5 w-3.5" />{setStaffAvatar.isPending ? "იტვირთება…" : "ავატარის შეცვლა"}</span></Button></label></div> : null}</div>)}</div></CardContent></Card>
       {isOwner && invites.data?.length ? <Card><CardHeader><CardTitle className="flex items-center gap-2"><Mail className="h-4 w-4 text-primary" />მოლოდინში მოწვევები ({invites.data.length})</CardTitle></CardHeader><CardContent className="space-y-2">{invites.data.map(invite => <div key={invite.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3"><div className="min-w-0"><p className="font-medium truncate">{invite.email}</p><p className="mt-0.5 text-xs text-muted-foreground">{roleLabel[invite.role]} · ვადა {new Intl.DateTimeFormat("ka-GE", { dateStyle: "medium" }).format(new Date(invite.expiresAt))}</p></div><Button variant="ghost" size="sm" onClick={() => organization && revokeInvite.mutate({ organizationId: organization.id, id: invite.id })} disabled={revokeInvite.isPending}><X className="mr-1 h-3.5 w-3.5" />გაუქმება</Button></div>)}</CardContent></Card> : null}
       {isOwner ? <><StaffPerformancePanel isLoading={performance.isLoading} isError={performance.isError} data={performance.data} /><Card><CardHeader><CardTitle>განრიგის წესები და ბლოკები</CardTitle></CardHeader><CardContent className="grid gap-5 lg:grid-cols-2"><ScheduleRules data={workingHours.data} onEdit={openHoursEdit} onDelete={id => organization && deleteWorkingHours.mutate({ organizationId: organization.id, id })} /><ScheduleExceptions data={exceptions.data} onEdit={openExceptionEdit} onDelete={id => organization && deleteException.mutate({ organizationId: organization.id, id })} /></CardContent></Card></> : null}
@@ -192,6 +242,10 @@ function ScheduleRules({ data, onEdit, onDelete }: { data: any[] | undefined; on
 function ScheduleExceptions({ data, onEdit, onDelete }: { data: any[] | undefined; onEdit: (item: any) => void; onDelete: (id: string) => void }) { return <section><div className="mb-3 flex items-center gap-2"><CalendarOff className="h-4 w-4 text-primary" /><p className="text-sm font-medium">კალენდრის გამონაკლისები</p></div>{!data?.length ? <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">კალენდრის გამონაკლისი ჯერ არ არის დამატებული.</p> : <div className="space-y-2">{data.map(item => <div key={item.exception.id} className="flex items-center justify-between gap-3 rounded-xl border p-3"><div><p className="font-medium">{item.profile?.publicDisplayName ?? item.location?.name ?? "ორგანიზაციის ბლოკი"}</p><p className="text-sm text-muted-foreground">{exceptionTypeLabel[item.exception.type]} · {formatScheduleDate(item.exception.startsAt)}–{formatScheduleDate(item.exception.endsAt)}</p></div><div className="flex"><Button variant="ghost" size="icon" aria-label="კალენდრის ბლოკის შეცვლა" onClick={() => onEdit(item)}><Pencil className="h-4 w-4" /></Button><Button variant="ghost" size="icon" aria-label="კალენდრის ბლოკის წაშლა" onClick={() => onDelete(item.exception.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></div></div>)}</div>}</section>; }
 export function StaffPerformancePanel({ isLoading, isError, data }: { isLoading: boolean; isError: boolean; data?: Array<{ profile: { id: string; publicDisplayName: string }; metrics: { completedAppointments: number; serviceVolume: number; bookedRevenueTetri: number } }> }) { return <Card><CardHeader><CardTitle>ბოლო 30 დღის სპეციალისტების სიგნალები</CardTitle></CardHeader><CardContent>{isLoading ? <p className="text-sm text-muted-foreground">მონაცემები იტვირთება…</p> : null}{isError ? <p className="text-sm text-destructive">სპეციალისტების მაჩვენებლები ვერ ჩაიტვირთა.</p> : null}{!isLoading && !isError ? <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-3">{data?.map(item => <div key={item.profile.id} className="rounded-xl border bg-muted/15 p-4"><p className="font-medium">{item.profile.publicDisplayName}</p><div className="mt-3 grid grid-cols-3 gap-2 text-center"><Signal label="დასრულებული" value={String(item.metrics.completedAppointments)} /><Signal label="მომსახურება" value={String(item.metrics.serviceVolume)} /><Signal label="ჯავშნები" value={formatGEL(item.metrics.bookedRevenueTetri)} /></div></div>)}{!data?.length ? <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">არჩეულ პერიოდში სპეციალისტის მონაცემი ჯერ არ არის.</p> : null}</div> : null}</CardContent></Card>; }
 function ProfileDialog({ open, setOpen, submit, displayName, setDisplayName, jobTitle, setJobTitle, locations, selected, setSelected, error, pending }: any) { const toggle = (id: string) => setSelected((current: string[]) => current.includes(id) ? current.filter(value => value !== id) : [...current, id]); return <Dialog open={open} onOpenChange={setOpen}><DialogContent><DialogHeader><DialogTitle>ჩემი სპეციალისტის პროფილი</DialogTitle><DialogDescription>პროფილი უკავშირდება თქვენს მიმდინარე წევრობას.</DialogDescription></DialogHeader><form onSubmit={submit} className="space-y-4"><Field label="საჯარო სახელი"><Input value={displayName} onChange={event => setDisplayName(event.target.value)} minLength={2} required /></Field><Field label="როლი ან სპეციალიზაცია"><Input value={jobTitle} onChange={event => setJobTitle(event.target.value)} /></Field><fieldset className="space-y-2"><legend className="text-sm font-medium">ფილიალები</legend>{locations.map((location: any) => <label key={location.id} className="flex items-center gap-2 rounded-lg border p-2"><input type="checkbox" checked={selected.includes(location.id)} onChange={() => toggle(location.id)} />{location.name}</label>)}</fieldset>{error ? <p className="text-sm text-destructive">{error}</p> : null}<DialogFooter><Button type="submit" disabled={pending}>{pending ? "ინახება…" : "პროფილის შენახვა"}</Button></DialogFooter></form></DialogContent></Dialog>; }
+
+function SelfProfileCard({ profile, locations, displayName, setDisplayName, publicBio, setPublicBio, jobTitle, setJobTitle, specialty, setSpecialty, experienceYears, setExperienceYears, avatarAltKa, setAvatarAltKa, error, onSubmit, onChooseAvatar, saving, uploading }: any) {
+  return <Card className="border-primary/30 bg-primary/[0.035]"><CardHeader><CardTitle>ჩემი პროფილი</CardTitle><p className="text-sm text-muted-foreground">შეავსეთ მხოლოდ თქვენთვის განკუთვნილი საჯარო ინფორმაცია. ცვლილება აისახება მხოლოდ იმ შემთხვევაში, თუ მფლობელმა თქვენი ონლაინ ხილვადობა ჩართული დატოვა.</p></CardHeader><CardContent><form onSubmit={onSubmit} className="space-y-5"><div className="flex flex-col gap-4 rounded-2xl border bg-card/70 p-4 sm:flex-row sm:items-center"><div className="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-primary/10 text-lg font-semibold text-primary">{profile.avatarKey ? <img src={`/manus-storage/${profile.avatarKey}`} alt={avatarAltKa || `${displayName} — პროფილის ფოტო`} className="size-full object-cover" /> : displayName.slice(0, 1).toUpperCase()}</div><div className="min-w-0 flex-1"><p className="font-medium">პროფილის ავატარი</p><p className="mt-1 text-sm text-muted-foreground">მიღებულია JPEG, PNG ან WebP; მაქსიმუმ 5 MB.</p><div className="mt-3 flex flex-wrap gap-2"><label className="inline-flex"><input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={event => { void onChooseAvatar(event.target.files?.[0] ?? null); event.currentTarget.value = ""; }} disabled={uploading} /><Button type="button" variant="outline" size="sm" asChild disabled={uploading}><span><ImagePlus className="mr-1.5 size-3.5" />{uploading ? "იტვირთება…" : "ფოტოს არჩევა"}</span></Button></label></div></div></div><Field label="ფოტოს აღწერა ქართულად"><Input value={avatarAltKa} onChange={event => setAvatarAltKa(event.target.value)} maxLength={255} placeholder="მაგ. ნინო ბერიძის პროფესიული პორტრეტი" /></Field><div className="grid gap-4 sm:grid-cols-2"><Field label="საჯარო სახელი *"><Input value={displayName} onChange={event => setDisplayName(event.target.value)} minLength={2} maxLength={160} required /></Field><Field label="თანამდებობა"><Input value={jobTitle} onChange={event => setJobTitle(event.target.value)} maxLength={160} placeholder="მაგ. წამყვანი სტილისტი" /></Field><Field label="სპეციალიზაცია"><Input value={specialty} onChange={event => setSpecialty(event.target.value)} maxLength={255} placeholder="მაგ. კოლორისტიკა და ბალაიაჟი" /></Field><Field label="გამოცდილება (წლები)"><Input type="number" min="0" max="80" step="1" inputMode="numeric" value={experienceYears} onChange={event => setExperienceYears(event.target.value)} placeholder="მაგ. 6" /></Field></div><Field label="საჯარო აღწერა"><Textarea value={publicBio} onChange={event => setPublicBio(event.target.value)} maxLength={2000} rows={5} placeholder="მოკლედ აღწერეთ თქვენი გამოცდილება, მიდგომა და სპეციალიზაცია…" /><p className="text-right text-xs text-muted-foreground">{publicBio.length}/2000</p></Field><div className="rounded-xl border border-dashed border-muted-foreground/30 bg-muted/20 p-4 text-sm"><p className="font-medium">მფლობელის კონტროლში რჩება</p><p className="mt-1 text-muted-foreground">როლი: {roleLabel.STAFF}; ფილიალი: {locations.map((location: any) => location.name).join(", ") || "არ არის მინიჭებული"}; ონლაინ ჩაწერის ხილვადობა: {profile.onlineBookingVisible ? "აქტიურია" : "დამალულია"}. ფილიალს, როლს, კალენდრის ფერს და ონლაინ-ჩაწერის სტატუსს მხოლოდ მფლობელი ცვლის.</p></div>{error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}<div className="flex justify-end"><Button type="submit" disabled={saving || uploading}>{saving ? "ინახება…" : "ჩემი პროფილის შენახვა"}</Button></div></form></CardContent></Card>;
+}
 
 const memberColorPresets = ["#ec4899", "#7c3aed", "#12b5a6", "#f59e0b", "#0ea472", "#2fa8f0", "#e05ac9", "#f97316"];
 function MemberDialog({ open, setOpen, submit, fullName, setFullName, displayName, setDisplayName, jobTitle, setJobTitle, role, setRole, color, setColor, locations, selected, setSelected, imageDataUrl, setImageDataUrl, altTextKa, setAltTextKa, onChooseAvatar, error, pending }: any) {

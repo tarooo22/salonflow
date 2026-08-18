@@ -199,3 +199,7 @@
 - [x] Verify and harden the owner-only branch booking-link copy button in Settings, including the exact copied URL and successful/failed clipboard toast feedback.
 - [x] Add owner-managed specialist avatar upload and replacement to Team create/edit workflows using validated S3 upload, profile-scoped metadata, preview/empty states and organization/branch role checks.
 - [x] Validate specialist filter, booking-link copy/toast, avatar upload/update and cross-role restrictions with tests, typecheck, production build and live checkpoint.
+- [x] Audit staff profile fields, existing owner avatar/media controls, local membership lookup and public profile projection for a specialist self-service edit flow.
+- [x] Add a protected self-profile update contract that permits a specialist to edit only their own avatar, public description, experience and specialization; forbid role, branch, online-booking visibility and other colleagues’ profile changes.
+- [x] Add a specialist-facing Team profile form with avatar upload/preview, Georgian public bio, experience input and specialization, with loading/error/success states and clear owner-controlled boundaries.
+- [x] Validate self-profile ownership, cross-profile denial, S3 file validation, owner-only visibility controls, public-safe output, tests, typecheck, production build and live checkpoint.

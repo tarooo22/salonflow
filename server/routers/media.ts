@@ -39,6 +39,25 @@ export const mediaRouter = router({
     return { key: stored.key, url: stored.url };
   }),
 
+  updateSelfAvatar: protectedProcedure.input(staffAvatarUploadSchema).mutation(async ({ ctx, input }) => {
+    const membership = await requireOrganizationRole(ctx.user, input.organizationId, ["STAFF"]);
+    const db = await requireDb();
+    const [staff] = await db.select({ id: staffProfiles.id }).from(staffProfiles)
+      .innerJoin(organizationMemberships, eq(staffProfiles.membershipId, organizationMemberships.id))
+      .where(and(
+        eq(staffProfiles.id, input.staffProfileId),
+        eq(staffProfiles.membershipId, membership.id),
+        eq(organizationMemberships.organizationId, input.organizationId),
+        eq(organizationMemberships.status, "ACTIVE"),
+        eq(staffProfiles.status, "ACTIVE"),
+      )).limit(1);
+    if (!staff) throw new Error("თქვენ არ შეგიძლიათ ამ სპეციალისტის ავატარის შეცვლა.");
+    const image = parseImageDataUrl(input.imageDataUrl);
+    const stored = await storagePut(`salons/${input.organizationId}/staff/${input.staffProfileId}/avatar.${image.extension}`, image.bytes, image.contentType);
+    await db.update(staffProfiles).set({ avatarKey: stored.key, avatarAltKa: input.altTextKa }).where(and(eq(staffProfiles.id, input.staffProfileId), eq(staffProfiles.membershipId, membership.id)));
+    return { key: stored.key, url: stored.url };
+  }),
+
   updatePublicLocationProfile: protectedProcedure.input(publicLocationProfileUpdateSchema).mutation(async ({ ctx, input }) => {
     await requireOrganizationRole(ctx.user, input.organizationId, [...profileManagers]);
     const db = await requireDb();

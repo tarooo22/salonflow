@@ -93,6 +93,57 @@ describe("staff.createMember", () => {
   });
 });
 
+describe("staff.updateSelfProfile", () => {
+  function selfProfileDb(profileRows: unknown[]) {
+    const updateWhere = vi.fn(async () => undefined);
+    const updateSet = vi.fn(() => ({ where: updateWhere }));
+    const chain = { from: () => chain, innerJoin: () => chain, where: () => ({ limit: vi.fn(async () => profileRows) }) };
+    return { select: vi.fn(() => chain), update: vi.fn(() => ({ set: updateSet })), updateSet, updateWhere };
+  }
+
+  it("updates only profile-safe fields for the calling specialist's own active membership", async () => {
+    const db = selfProfileDb([{ id: "staff_profile_00001" }]);
+    mocked.db = db;
+    mocked.requireOrganizationRole.mockResolvedValue({ id: "membership_0001", role: "STAFF" });
+
+    await expect(staffRouter.createCaller({ user } as never).updateSelfProfile({
+      organizationId: "organization_001",
+      staffProfileId: "staff_profile_00001",
+      publicDisplayName: "ლელა ბერიძე",
+      publicBio: "გამოცდილი კოლორისტი",
+      jobTitle: "წამყვანი სტილისტი",
+      specialty: "ბალაიაჟი",
+      experienceYears: 8,
+      avatarAltKa: "ლელა ბერიძის პროფესიული პორტრეტი",
+    })).resolves.toEqual({ success: true });
+
+    expect(mocked.requireOrganizationRole).toHaveBeenCalledWith(user, "organization_001", ["STAFF"]);
+    const update = db.updateSet.mock.calls[0]?.[0];
+    expect(update).toMatchObject({ publicDisplayName: "ლელა ბერიძე", publicBio: "გამოცდილი კოლორისტი", jobTitle: "წამყვანი სტილისტი", specialty: "ბალაიაჟი", experienceYears: 8, avatarAltKa: "ლელა ბერიძის პროფესიული პორტრეტი" });
+    expect(update).not.toHaveProperty("onlineBookingVisible");
+    expect(update).not.toHaveProperty("color");
+    expect(db.updateWhere).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects a cross-profile update before writing", async () => {
+    const db = selfProfileDb([]);
+    mocked.db = db;
+    mocked.requireOrganizationRole.mockResolvedValue({ id: "membership_0001", role: "STAFF" });
+
+    await expect(staffRouter.createCaller({ user } as never).updateSelfProfile({ organizationId: "organization_001", staffProfileId: "another_staff_profile", publicBio: "ცვლილების მცდელობა" })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect(db.update).not.toHaveBeenCalled();
+  });
+
+  it("rejects owner-controlled fields rather than silently accepting them", async () => {
+    await expect(staffRouter.createCaller({ user } as never).updateSelfProfile({
+      organizationId: "organization_001",
+      staffProfileId: "staff_profile_00001",
+      publicBio: "ჩემი აღწერა",
+      onlineBookingVisible: false,
+    } as never)).rejects.toThrow();
+  });
+});
+
 describe("staff.addWorkingHours", () => {
   it("rejects an hours rule when the specialist is not assigned to the selected active location", async () => {
     const chain = {

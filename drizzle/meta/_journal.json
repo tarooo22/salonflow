@@ -50,6 +50,13 @@
       "when": 1786999720033,
       "tag": "0006_curious_wendigo",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1787046962590,
+      "tag": "0007_salty_agent_brand",
+      "breakpoints": true
     }
   ]
 }
