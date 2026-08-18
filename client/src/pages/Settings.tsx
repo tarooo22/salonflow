@@ -10,6 +10,10 @@ import { toast } from "sonner";
 
 const themes = [{ value: "light", label: "ღია" }, { value: "dark", label: "მუქი" }, { value: "system", label: "სისტემა" }] as const;
 
+export function branchBookingLink(origin: string, publicSlug: string) {
+  return `${origin}/book/${publicSlug}`;
+}
+
 export default function Settings() {
   const { user } = useAuth();
   const { preference, setPreference } = useTheme();
@@ -18,7 +22,7 @@ export default function Settings() {
   const isOwner = entry?.membership.role === "OWNER";
   const locations = trpc.organizations.listLocations.useQuery({ organizationId: entry?.organization.id ?? "" }, { enabled: Boolean(entry?.organization.id) });
   const copyBookingLink = async (publicSlug: string) => {
-    const link = `${window.location.origin}/book/${publicSlug}`;
+    const link = branchBookingLink(window.location.origin, publicSlug);
     try { await navigator.clipboard.writeText(link); toast.success("ფილიალის booking link დაკოპირდა."); }
     catch { toast.error("ბმულის დაკოპირება ვერ მოხერხდა."); }
   };

@@ -194,3 +194,8 @@
 - [x] Add owner-managed specialist account provisioning with a unique SalonFlow login identifier, site-issued initial password shown once to the owner, explicit branch assignment and no access to other organizations or branches.
 - [x] Add role-aware navigation and protected route behavior, including a private owner-only booking-link surface for every branch and a copy/share control without exposing branch-management links to staff.
 - [x] Validate cross-role/cross-branch denial paths, manager client confirmation, staff own-calendar scope, account provisioning, booking-link privacy, tests, typecheck, production build and live checkpoint.
+- [x] Audit the existing owner/manager Calendar specialist filter, owner-only booking-link copy/toast action, staff profile avatar fields and S3 media helper before changing UI or persistence.
+- [x] Make the Calendar specialist filter clearly available to owner and manager users, preserve active branch scope, reset/filter data deterministically, and cover responsive/empty states without enabling staff to view other schedules.
+- [x] Verify and harden the owner-only branch booking-link copy button in Settings, including the exact copied URL and successful/failed clipboard toast feedback.
+- [x] Add owner-managed specialist avatar upload and replacement to Team create/edit workflows using validated S3 upload, profile-scoped metadata, preview/empty states and organization/branch role checks.
+- [x] Validate specialist filter, booking-link copy/toast, avatar upload/update and cross-role restrictions with tests, typecheck, production build and live checkpoint.

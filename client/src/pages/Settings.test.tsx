@@ -23,9 +23,13 @@ vi.mock("@/lib/trpc", () => ({
   },
 }));
 
-import Settings from "./Settings";
+import Settings, { branchBookingLink } from "./Settings";
 
 describe("Settings integration readiness", () => {
+  it("builds the exact owner-shareable booking URL for a branch", () => {
+    expect(branchBookingLink("https://salonflow.example", "gldani-beauty")).toBe("https://salonflow.example/book/gldani-beauty");
+  });
+
   it("truthfully states that notification delivery, web push, and online payment are not configured", () => {
     const markup = renderToStaticMarkup(<Settings />);
 

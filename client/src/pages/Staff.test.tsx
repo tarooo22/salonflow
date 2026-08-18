@@ -15,6 +15,7 @@ vi.mock("@/lib/trpc", () => ({
     useUtils: () => ({ staff: { list: { invalidate: vi.fn() } }, finance: { listExpenses: { invalidate: vi.fn() } }, reporting: { revenueSummary: { invalidate: vi.fn() } } }),
     organizations: { listMine: { useQuery: () => query([{ organization, membership }]) }, listLocations: { useQuery: () => query([{ id: "location_00001", name: "ვაკე" }]) } },
     invitations: { list: { useQuery: () => query([]) }, create: { useMutation: () => mutation }, revoke: { useMutation: () => mutation } },
+    media: { setStaffAvatar: { useMutation: () => ({ ...mutation, mutateAsync: vi.fn() }) } },
     staff: {
       list: { useQuery: () => query([{ profile, membership: { role: "OWNER", status: "ACTIVE", id: membership.id } }]) },
       listWorkingHours: { useQuery: () => state.workingHours },

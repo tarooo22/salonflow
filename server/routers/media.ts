@@ -8,7 +8,7 @@ import { mediaUrl, parseImageDataUrl } from "../lib/media";
 import { storagePut } from "../storage";
 import { protectedProcedure, router } from "../_core/trpc";
 
-const profileManagers = ["OWNER", "MANAGER"] as const;
+const profileManagers = ["OWNER"] as const;
 const clientManagers = ["OWNER", "MANAGER", "RECEPTIONIST"] as const;
 
 async function verifyLocation(db: Awaited<ReturnType<typeof requireDb>>, organizationId: string, locationId: string) {
