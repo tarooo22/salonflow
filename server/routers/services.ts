@@ -17,7 +17,7 @@ export const servicesRouter = router({
   }),
 
   createCategory: protectedProcedure.input(serviceCategoryCreateSchema).mutation(async ({ ctx, input }) => {
-    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER"]);
+    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER"]);
     const db = await requireDb();
     const id = nanoid(21);
     await db.insert(serviceCategories).values({ id, ...input });
@@ -25,7 +25,7 @@ export const servicesRouter = router({
   }),
 
   updateCategory: protectedProcedure.input(serviceCategoryUpdateSchema).mutation(async ({ ctx, input }) => {
-    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER"]);
+    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER"]);
     const db = await requireDb();
     const { organizationId, categoryId, ...changes } = input;
     await db.update(serviceCategories).set(changes).where(and(
@@ -46,7 +46,7 @@ export const servicesRouter = router({
   }),
 
   create: protectedProcedure.input(serviceCreateSchema).mutation(async ({ ctx, input }) => {
-    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER"]);
+    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER"]);
     const db = await requireDb();
     const [category] = await db.select({ id: serviceCategories.id }).from(serviceCategories).where(and(
       eq(serviceCategories.id, input.categoryId),
@@ -60,7 +60,7 @@ export const servicesRouter = router({
   }),
 
   update: protectedProcedure.input(serviceUpdateSchema).mutation(async ({ ctx, input }) => {
-    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER"]);
+    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER"]);
     const db = await requireDb();
     const { organizationId, serviceId, ...changes } = input;
     if (changes.categoryId) {
@@ -72,14 +72,14 @@ export const servicesRouter = router({
   }),
 
   archive: protectedProcedure.input(organizationScopeSchema.extend({ serviceId: opaqueIdSchema })).mutation(async ({ ctx, input }) => {
-    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER"]);
+    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER"]);
     const db = await requireDb();
     await db.update(services).set({ status: "ARCHIVED" }).where(and(eq(services.id, input.serviceId), eq(services.organizationId, input.organizationId)));
     return { success: true };
   }),
 
   listStaffEligibility: protectedProcedure.input(organizationScopeSchema.extend({ serviceId: opaqueIdSchema })).query(async ({ ctx, input }) => {
-    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER"]);
+    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER"]);
     const db = await requireDb();
     const [service] = await db.select({ id: services.id }).from(services).where(and(
       eq(services.id, input.serviceId),
@@ -91,7 +91,7 @@ export const servicesRouter = router({
   }),
 
   setStaffEligibility: protectedProcedure.input(organizationScopeSchema.extend({ staffProfileId: opaqueIdSchema, serviceId: opaqueIdSchema, canPerform: serviceCreateSchema.shape.onlineBookingEnabled })).mutation(async ({ ctx, input }) => {
-    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER"]);
+    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER"]);
     const db = await requireDb();
     const [service] = await db.select({ id: services.id }).from(services).where(and(
       eq(services.id, input.serviceId),

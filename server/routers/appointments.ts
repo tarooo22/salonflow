@@ -62,18 +62,22 @@ export const appointmentsRouter = router({
     const end = new Date(start);
     end.setUTCDate(end.getUTCDate() + 1);
 
+    const staffProfileIds = membership.role === "STAFF"
+      ? (await db.select({ id: staffProfiles.id }).from(staffProfiles).where(eq(staffProfiles.membershipId, membership.id))).map(profile => profile.id)
+      : [];
     const where = membership.role === "STAFF"
-      ? and(
+      ? staffProfileIds.length ? and(
           eq(appointments.organizationId, input.organizationId),
-          eq(appointments.createdByUserId, ctx.user.id),
+          inArray(appointments.staffProfileId, staffProfileIds),
           sql`${appointments.startsAt} >= ${start}`,
           sql`${appointments.startsAt} < ${end}`,
-        )
+        ) : undefined
       : and(
           eq(appointments.organizationId, input.organizationId),
           sql`${appointments.startsAt} >= ${start}`,
           sql`${appointments.startsAt} < ${end}`,
         );
+    if (!where) return [];
 
     return db.select().from(appointments).where(where).orderBy(asc(appointments.startsAt));
   }),
@@ -91,7 +95,11 @@ export const appointmentsRouter = router({
       const profiles = await db.select({ id: staffProfiles.id }).from(staffProfiles).where(eq(staffProfiles.membershipId, membership.id));
       const profileIds = profiles.map(profile => profile.id);
       if (!profileIds.length) return [];
+      const assignments = await db.select({ locationId: staffLocations.locationId }).from(staffLocations).where(inArray(staffLocations.staffProfileId, profileIds));
+      const locationIds = assignments.map(assignment => assignment.locationId);
+      if (!locationIds.length || (input.locationId && !locationIds.includes(input.locationId))) return [];
       conditions.push(inArray(appointments.staffProfileId, profileIds));
+      conditions.push(inArray(appointments.locationId, locationIds));
     } else if (input.staffProfileId) {
       conditions.push(eq(appointments.staffProfileId, input.staffProfileId));
     }
@@ -293,7 +301,7 @@ export const appointmentsRouter = router({
   }),
 
   updateStatus: protectedProcedure.input(appointmentStatusUpdateSchema).mutation(async ({ ctx, input }) => {
-    await requireOrganizationAction(ctx.user, input.organizationId, "calendar:manage");
+    await requireOrganizationAction(ctx.user, input.organizationId, "appointments:confirm");
     const db = await requireDb();
     const [appointment] = await db.select().from(appointments).where(and(
       eq(appointments.id, input.appointmentId),
@@ -330,9 +338,27 @@ export const appointmentsRouter = router({
       eq(locations.organizationId, input.organizationId),
       eq(locations.status, "ACTIVE"),
     )).orderBy(asc(locations.name));
+    const ownProfiles = membership.role === "STAFF"
+      ? await db.select({ id: staffProfiles.id }).from(staffProfiles).where(eq(staffProfiles.membershipId, membership.id))
+      : [];
+    const ownProfileIds = ownProfiles.map(profile => profile.id);
+    const ownLocationIds = membership.role === "STAFF" && ownProfileIds.length
+      ? (await db.select({ locationId: staffLocations.locationId }).from(staffLocations).where(inArray(staffLocations.staffProfileId, ownProfileIds))).map(row => row.locationId)
+      : [];
+    const visibleLocations = membership.role === "STAFF"
+      ? activeLocations.filter(item => ownLocationIds.includes(item.id))
+      : activeLocations;
     const location = input.locationId
-      ? activeLocations.find(item => item.id === input.locationId)
-      : activeLocations[0];
+      ? visibleLocations.find(item => item.id === input.locationId)
+      : visibleLocations[0];
+    if (input.locationId && !location && membership.role === "STAFF") return {
+      location: null,
+      dateKey: null,
+      appointments: [],
+      balances: [],
+      counts: {},
+      metrics: { scheduledTetri: 0, collectedTetri: 0, outstandingTetri: 0 },
+    };
     if (input.locationId && !location) throw new Error("Selected location does not belong to this organization");
     if (!location) return {
       location: null,
@@ -351,8 +377,7 @@ export const appointmentsRouter = router({
       sql`${appointments.startsAt} < ${endsAt}`,
     ];
     if (membership.role === "STAFF") {
-      const profiles = await db.select({ id: staffProfiles.id }).from(staffProfiles).where(eq(staffProfiles.membershipId, membership.id));
-      if (!profiles.length) return {
+      if (!ownProfileIds.length) return {
         location: { id: location.id, name: location.name, timezone: location.timezone },
         dateKey,
         appointments: [],
@@ -360,7 +385,7 @@ export const appointmentsRouter = router({
         counts: {},
         metrics: { scheduledTetri: 0, collectedTetri: 0, outstandingTetri: 0 },
       };
-      conditions.push(inArray(appointments.staffProfileId, profiles.map(profile => profile.id)));
+      conditions.push(inArray(appointments.staffProfileId, ownProfileIds));
     }
 
     const appointmentRows = await db.select({

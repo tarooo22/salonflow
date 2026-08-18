@@ -76,6 +76,23 @@ describe("staff.createProfile", () => {
   });
 });
 
+describe("staff.createMember", () => {
+  it("rejects assigning one specialist account to multiple branches", async () => {
+    mocked.db = {};
+    mocked.requireOrganizationRole.mockResolvedValue({ role: "OWNER" });
+
+    await expect(staffRouter.createCaller({ user } as never).createMember({
+      organizationId: "organization_001",
+      fullName: "ანი ბერიძე",
+      role: "STAFF",
+      publicDisplayName: "ანი",
+      onlineBookingVisible: true,
+      color: "#7C3AED",
+      locationIds: ["location_0001", "location_0002"],
+    })).rejects.toMatchObject({ message: "სპეციალისტი ზუსტად ერთ აქტიურ ფილიალზე უნდა იყოს მინიჭებული." });
+  });
+});
+
 describe("staff.addWorkingHours", () => {
   it("rejects an hours rule when the specialist is not assigned to the selected active location", async () => {
     const chain = {
@@ -184,7 +201,7 @@ describe("staff schedule management", () => {
 });
 
 describe("staff.performance", () => {
-  it("returns period-scoped, appointment-derived metrics only to an authorized manager", async () => {
+  it("returns period-scoped, appointment-derived metrics only to the organization owner", async () => {
     const rows = [
       [{ profile: { id: "staff_profile_00001", publicDisplayName: "ლელა ბერიძე", status: "ACTIVE", sortOrder: 0 } }],
       [{ staffProfileId: "staff_profile_00001", status: "COMPLETED", totalTetri: 12_500 }, { staffProfileId: "staff_profile_00001", status: "CONFIRMED", totalTetri: 8_000 }],
@@ -196,11 +213,11 @@ describe("staff.performance", () => {
       return chain;
     });
     mocked.db = { select };
-    mocked.requireOrganizationRole.mockResolvedValue({ role: "MANAGER" });
+    mocked.requireOrganizationRole.mockResolvedValue({ role: "OWNER" });
 
     const result = await staffRouter.createCaller({ user } as never).performance({ organizationId: "organization_001", startsAt: new Date("2026-08-01T00:00:00.000Z"), endsAt: new Date("2026-08-31T23:59:59.999Z") });
 
-    expect(mocked.requireOrganizationRole).toHaveBeenCalledWith(user, "organization_001", ["OWNER", "MANAGER"]);
+    expect(mocked.requireOrganizationRole).toHaveBeenCalledWith(user, "organization_001", ["OWNER"]);
     expect(result).toEqual([{ profile: expect.objectContaining({ id: "staff_profile_00001", publicDisplayName: "ლელა ბერიძე" }), metrics: { staffProfileId: "staff_profile_00001", completedAppointments: 1, serviceVolume: 2, bookedRevenueTetri: 20_500 } }]);
     expect(wheres[1]).toMatchObject({ kind: "and", conditions: expect.arrayContaining([
       expect.objectContaining({ kind: "eq", value: "organization_001" }),

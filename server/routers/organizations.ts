@@ -1,6 +1,6 @@
 import { and, asc, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
-import { locations, organizationMemberships, organizations } from "../../drizzle/schema";
+import { locations, organizationMemberships, organizations, staffLocations, staffProfiles } from "../../drizzle/schema";
 import { requireOrganizationRole } from "../access";
 import { requireDb } from "../db";
 import { normalizeEmail, normalizeGeorgianPhone } from "../lib/normalization";
@@ -90,7 +90,7 @@ export const organizationRouter = router({
   }),
 
   createLocation: protectedProcedure.input(locationCreateSchema).mutation(async ({ ctx, input }) => {
-    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER"]);
+    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER"]);
     const db = await requireDb();
     const locationId = nanoid(21);
     await db.insert(locations).values({
@@ -112,8 +112,16 @@ export const organizationRouter = router({
   }),
 
   listLocations: protectedProcedure.input(organizationScopeSchema).query(async ({ ctx, input }) => {
-    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"]);
+    const membership = await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"]);
     const db = await requireDb();
+    if (membership.role === "STAFF") {
+      const rows = await db.select({ location: locations }).from(staffProfiles)
+        .innerJoin(staffLocations, eq(staffLocations.staffProfileId, staffProfiles.id))
+        .innerJoin(locations, eq(locations.id, staffLocations.locationId))
+        .where(and(eq(staffProfiles.membershipId, membership.id), eq(locations.organizationId, input.organizationId), eq(locations.status, "ACTIVE")))
+        .orderBy(asc(locations.name));
+      return rows.map(row => row.location);
+    }
     return db.select().from(locations).where(and(
       eq(locations.organizationId, input.organizationId),
       eq(locations.status, "ACTIVE"),

@@ -21,9 +21,9 @@ describe("financial and role safeguards", () => {
     expect(toTetri(50)).toBe(5000);
   });
 
-  it("does not grant finance access to receptionist or staff roles", () => {
+  it("reserves finance and reports access for the owner role", () => {
     expect(roleCan("OWNER", "finance:manage")).toBe(true);
-    expect(roleCan("MANAGER", "reports:view")).toBe(true);
+    expect(roleCan("MANAGER", "reports:view")).toBe(false);
     expect(roleCan("RECEPTIONIST", "finance:view")).toBe(false);
     expect(roleCan("STAFF", "calendar:manage")).toBe(false);
   });

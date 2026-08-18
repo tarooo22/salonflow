@@ -6,10 +6,10 @@ import { requireDb } from "./db";
 export type SalonRole = "OWNER" | "MANAGER" | "RECEPTIONIST" | "STAFF";
 
 export const ROLE_ACTIONS: Record<SalonRole, ReadonlySet<string>> = {
-  OWNER: new Set(["organization:manage", "team:manage", "services:manage", "clients:manage", "calendar:manage", "finance:view", "finance:manage", "reports:view", "audit:view", "tips:record", "pos:manage", "media:manage"]),
-  MANAGER: new Set(["team:manage", "services:manage", "clients:manage", "calendar:manage", "finance:view", "finance:manage", "reports:view", "tips:record", "pos:manage", "media:manage"]),
+  OWNER: new Set(["organization:manage", "team:manage", "services:manage", "clients:manage", "calendar:manage", "appointments:confirm", "finance:view", "finance:manage", "payments:record", "reports:view", "audit:view", "tips:record", "pos:manage", "media:manage", "booking-link:view"]),
+  MANAGER: new Set(["clients:manage", "calendar:manage", "appointments:confirm", "payments:record", "tips:record", "pos:manage"]),
   RECEPTIONIST: new Set(["clients:manage", "calendar:manage", "payments:record", "tips:record", "pos:manage"]),
-  STAFF: new Set(["calendar:own", "appointments:own-status"]),
+  STAFF: new Set(["calendar:own", "appointments:own-status", "attendance:own"]),
 };
 
 export function roleCan(role: SalonRole, action: string): boolean {

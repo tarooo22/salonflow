@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, gte, lt } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { TRPCError } from "@trpc/server";
+import { randomBytes } from "node:crypto";
 import { appointments, locations, organizationMemberships, scheduleExceptions, staffLocations, staffProfiles, users, workingHourRules } from "../../drizzle/schema";
 import { requireOrganizationRole } from "../access";
 import { requireDb } from "../db";
@@ -10,11 +11,21 @@ import { hashPassword } from "../lib/passwords";
 import { normalizeEmail } from "../lib/normalization";
 import { summarizeStaffPerformance } from "../lib/staffPerformance";
 
+function generatedStaffLoginId(fullName: string) {
+  const readableStem = fullName.normalize("NFKD").replace(/[^A-Za-z0-9]+/g, "-").replace(/^-+|-+$/g, "").toLowerCase().slice(0, 24) || "staff";
+  return `${readableStem}-${randomBytes(4).toString("hex")}@staff.salonflow.local`;
+}
+
+function generatedTemporaryPassword() {
+  return `SF-${randomBytes(9).toString("base64url")}`;
+}
+
 export const staffRouter = router({
   list: protectedProcedure.input(locationScopeSchema).query(async ({ ctx, input }) => {
-    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"]);
+    const membership = await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"]);
     const db = await requireDb();
     const conditions = [eq(organizationMemberships.organizationId, input.organizationId), eq(staffProfiles.status, "ACTIVE")];
+    if (membership.role === "STAFF") conditions.push(eq(staffProfiles.membershipId, membership.id));
     if (input.locationId) conditions.push(eq(staffLocations.locationId, input.locationId));
     const query = db.select({ profile: staffProfiles, membership: organizationMemberships }).from(staffProfiles)
       .innerJoin(organizationMemberships, eq(staffProfiles.membershipId, organizationMemberships.id)).$dynamic();
@@ -23,7 +34,7 @@ export const staffRouter = router({
   }),
 
   createProfile: protectedProcedure.input(staffProfileCreateSchema).mutation(async ({ ctx, input }) => {
-    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER"]);
+    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER"]);
     const db = await requireDb();
     const [membership] = await db.select().from(organizationMemberships).where(and(eq(organizationMemberships.id, input.membershipId), eq(organizationMemberships.organizationId, input.organizationId), eq(organizationMemberships.status, "ACTIVE"))).limit(1);
     if (!membership) throw new Error("Membership is not active in this organization");
@@ -36,8 +47,12 @@ export const staffRouter = router({
   }),
 
   createMember: protectedProcedure.input(staffMemberCreateSchema).mutation(async ({ ctx, input }) => {
-    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER"]);
+    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER"]);
     const db = await requireDb();
+
+    if (input.role === "STAFF" && input.locationIds.length !== 1) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: "სპეციალისტი ზუსტად ერთ აქტიურ ფილიალზე უნდა იყოს მინიჭებული." });
+    }
 
     // Verify every requested location belongs to this org and is active.
     const locationRows = await db.select({ id: locations.id }).from(locations)
@@ -45,13 +60,16 @@ export const staffRouter = router({
     const validIds = new Set(locationRows.map(row => row.id));
     for (const id of input.locationIds) if (!validIds.has(id)) throw new TRPCError({ code: "BAD_REQUEST", message: "მითითებული ფილიალი აღარ არის აქტიური." });
 
-    // If email + password are supplied, the member will be able to sign in.
-    const normalizedEmail = input.email ? normalizeEmail(input.email) : undefined;
-    if (normalizedEmail) {
-      const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.normalizedEmail, normalizedEmail)).limit(1);
-      if (existing) throw new TRPCError({ code: "CONFLICT", message: "ამ ელფოსტით მომხმარებელი უკვე არსებობს." });
+    let loginId = generatedStaffLoginId(input.fullName);
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.normalizedEmail, loginId)).limit(1);
+      if (!existing) break;
+      loginId = generatedStaffLoginId(input.fullName);
     }
-    const passwordHash = input.password ? await hashPassword(input.password) : null;
+    const [duplicateLogin] = await db.select({ id: users.id }).from(users).where(eq(users.normalizedEmail, loginId)).limit(1);
+    if (duplicateLogin) throw new TRPCError({ code: "CONFLICT", message: "სპეციალისტის შესვლის ID-ის შექმნა ვერ მოხერხდა. სცადეთ ხელახლა." });
+    const temporaryPassword = generatedTemporaryPassword();
+    const passwordHash = await hashPassword(temporaryPassword);
 
     const staffProfileId = nanoid(21);
     const membershipId = nanoid(21);
@@ -61,10 +79,10 @@ export const staffRouter = router({
       await tx.insert(users).values({
         openId,
         name: input.fullName,
-        email: input.email ?? null,
-        normalizedEmail: normalizedEmail ?? null,
+        email: loginId,
+        normalizedEmail: loginId,
         passwordHash,
-        loginMethod: normalizedEmail ? "local" : null,
+        loginMethod: "local",
         locale: "ka-GE",
         accountStatus: "ACTIVE",
       });
@@ -83,11 +101,11 @@ export const staffRouter = router({
       await tx.insert(staffProfiles).values({ id: staffProfileId, membershipId, publicDisplayName: input.publicDisplayName, jobTitle: input.jobTitle, specialty: input.specialty, onlineBookingVisible: input.onlineBookingVisible, color: input.color });
       await tx.insert(staffLocations).values(input.locationIds.map(locationId => ({ staffProfileId, locationId })));
     });
-    return { id: staffProfileId, membershipId, canSignIn: Boolean(normalizedEmail && passwordHash) };
+    return { id: staffProfileId, membershipId, loginId, temporaryPassword };
   }),
 
   addWorkingHours: protectedProcedure.input(workingHourRuleCreateSchema).mutation(async ({ ctx, input }) => {
-    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER"]);
+    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER"]);
     if (input.startLocalTime >= input.endLocalTime) throw new Error("Working hours must end after they start");
     const db = await requireDb();
     const [assignment] = await db.select({ staffProfileId: staffLocations.staffProfileId }).from(staffLocations)
@@ -100,7 +118,7 @@ export const staffRouter = router({
   }),
 
   listWorkingHours: protectedProcedure.input(staffScheduleListSchema).query(async ({ ctx, input }) => {
-    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER"]);
+    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER"]);
     const db = await requireDb();
     const conditions = [eq(organizationMemberships.organizationId, input.organizationId), eq(organizationMemberships.status, "ACTIVE"), eq(staffProfiles.status, "ACTIVE")];
     if (input.staffProfileId) conditions.push(eq(workingHourRules.staffProfileId, input.staffProfileId));
@@ -111,7 +129,7 @@ export const staffRouter = router({
   }),
 
   deleteWorkingHours: protectedProcedure.input(staffScheduleRecordDeleteSchema).mutation(async ({ ctx, input }) => {
-    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER"]);
+    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER"]);
     const db = await requireDb();
     const [record] = await db.select({ id: workingHourRules.id }).from(workingHourRules)
       .innerJoin(staffProfiles, eq(workingHourRules.staffProfileId, staffProfiles.id)).innerJoin(organizationMemberships, eq(staffProfiles.membershipId, organizationMemberships.id)).innerJoin(locations, eq(workingHourRules.locationId, locations.id))
@@ -122,7 +140,7 @@ export const staffRouter = router({
   }),
 
   updateWorkingHours: protectedProcedure.input(workingHourRuleUpdateSchema).mutation(async ({ ctx, input }) => {
-    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER"]);
+    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER"]);
     if (input.startLocalTime >= input.endLocalTime) throw new Error("Working hours must end after they start");
     const db = await requireDb();
     const [record] = await db.select({ id: workingHourRules.id }).from(workingHourRules)
@@ -134,7 +152,7 @@ export const staffRouter = router({
   }),
 
   addScheduleException: protectedProcedure.input(scheduleExceptionCreateSchema).mutation(async ({ ctx, input }) => {
-    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER"]);
+    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER"]);
     const db = await requireDb();
     if (input.staffProfileId && input.locationId) {
       const [assignment] = await db.select({ staffProfileId: staffLocations.staffProfileId }).from(staffLocations).innerJoin(staffProfiles, eq(staffLocations.staffProfileId, staffProfiles.id)).innerJoin(organizationMemberships, eq(staffProfiles.membershipId, organizationMemberships.id)).innerJoin(locations, eq(staffLocations.locationId, locations.id))
@@ -153,7 +171,7 @@ export const staffRouter = router({
   }),
 
   listScheduleExceptions: protectedProcedure.input(staffScheduleListSchema).query(async ({ ctx, input }) => {
-    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER"]);
+    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER"]);
     const db = await requireDb();
     const conditions = [eq(scheduleExceptions.organizationId, input.organizationId)];
     if (input.staffProfileId) conditions.push(eq(scheduleExceptions.staffProfileId, input.staffProfileId));
@@ -164,7 +182,7 @@ export const staffRouter = router({
   }),
 
   deleteScheduleException: protectedProcedure.input(staffScheduleRecordDeleteSchema).mutation(async ({ ctx, input }) => {
-    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER"]);
+    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER"]);
     const db = await requireDb();
     const [record] = await db.select({ id: scheduleExceptions.id }).from(scheduleExceptions).where(and(eq(scheduleExceptions.id, input.id), eq(scheduleExceptions.organizationId, input.organizationId))).limit(1);
     if (!record) throw new Error("Schedule exception is not available in this organization");
@@ -173,7 +191,7 @@ export const staffRouter = router({
   }),
 
   updateScheduleException: protectedProcedure.input(scheduleExceptionUpdateSchema).mutation(async ({ ctx, input }) => {
-    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER"]);
+    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER"]);
     const db = await requireDb();
     const [record] = await db.select({ id: scheduleExceptions.id, staffProfileId: scheduleExceptions.staffProfileId, locationId: scheduleExceptions.locationId }).from(scheduleExceptions).where(and(eq(scheduleExceptions.id, input.id), eq(scheduleExceptions.organizationId, input.organizationId))).limit(1);
     if (!record) throw new Error("Schedule exception is not available in this organization");
@@ -186,7 +204,7 @@ export const staffRouter = router({
   }),
 
   performance: protectedProcedure.input(staffPerformanceSchema).query(async ({ ctx, input }) => {
-    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER"]);
+    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER"]);
     const db = await requireDb();
     const profileRows = await db.select({ profile: staffProfiles }).from(staffProfiles)
       .innerJoin(organizationMemberships, eq(staffProfiles.membershipId, organizationMemberships.id))

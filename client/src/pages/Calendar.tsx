@@ -32,7 +32,7 @@ export default function Calendar() {
   const organizationEntry = organizations.data?.[0];
   const organization = organizationEntry?.organization;
   const isStaff = organizationEntry?.membership.role === "STAFF";
-  const canManageCalendar = canManageAppointmentQueue(organizationEntry?.membership.role);
+  const canManageCalendar = ["OWNER", "MANAGER"].includes(organizationEntry?.membership.role ?? "");
   const utils = trpc.useUtils();
   const locations = trpc.organizations.listLocations.useQuery({ organizationId: organization?.id ?? "" }, { enabled: Boolean(organization?.id) });
   const [activeLocationId, setActiveLocationId] = useState("");

@@ -26,21 +26,22 @@ import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { useTheme } from "@/contexts/ThemeContext";
 import { Button } from "./ui/button";
+import { trpc } from "@/lib/trpc";
 
 const menuItems = [
-  { icon: LayoutDashboard, label: "დღეს", path: "/app/today" },
-  { icon: CalendarDays, label: "კალენდარი", path: "/app/calendar" },
-  { icon: CalendarHeart, label: "მოლოდინის სია", path: "/app/waitlist" },
-  { icon: Clock3, label: "ოპერაციები", path: "/app/operations" },
-  { icon: ReceiptText, label: "POS და მარაგი", path: "/app/pos" },
-  { icon: Users, label: "კლიენტები", path: "/app/clients" },
-  { icon: Images, label: "კლიენტის გალერეა", path: "/app/client-gallery" },
-  { icon: Scissors, label: "სერვისები", path: "/app/services" },
-  { icon: Users, label: "გუნდი", path: "/app/staff" },
-  { icon: BarChart3, label: "ანგარიშები", path: "/app/reports" },
-  { icon: Images, label: "მედია და პროფილი", path: "/app/media" },
-  { icon: Settings2, label: "პარამეტრები", path: "/app/settings" },
-];
+  { icon: LayoutDashboard, label: "დღეს", path: "/app/today", roles: ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"] },
+  { icon: CalendarDays, label: "კალენდარი", path: "/app/calendar", roles: ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"] },
+  { icon: CalendarHeart, label: "მოლოდინის სია", path: "/app/waitlist", roles: ["OWNER", "MANAGER", "RECEPTIONIST"] },
+  { icon: Clock3, label: "ოპერაციები", path: "/app/operations", roles: ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"] },
+  { icon: ReceiptText, label: "POS და მარაგი", path: "/app/pos", roles: ["OWNER", "MANAGER", "RECEPTIONIST"] },
+  { icon: Users, label: "კლიენტები", path: "/app/clients", roles: ["OWNER", "MANAGER", "RECEPTIONIST"] },
+  { icon: Images, label: "კლიენტის გალერეა", path: "/app/client-gallery", roles: ["OWNER"] },
+  { icon: Scissors, label: "სერვისები", path: "/app/services", roles: ["OWNER"] },
+  { icon: Users, label: "გუნდი", path: "/app/staff", roles: ["OWNER"] },
+  { icon: BarChart3, label: "ანგარიშები", path: "/app/reports", roles: ["OWNER"] },
+  { icon: Images, label: "მედია და პროფილი", path: "/app/media", roles: ["OWNER"] },
+  { icon: Settings2, label: "პარამეტრები", path: "/app/settings", roles: ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"] },
+] as const;
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
 const DEFAULT_WIDTH = 280;
@@ -115,13 +116,16 @@ function DashboardLayoutContent({
   setSidebarWidth,
 }: DashboardLayoutContentProps) {
   const { user, logout } = useAuth();
+  const organizations = trpc.organizations.listMine.useQuery();
   const [location, setLocation] = useLocation();
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
   const { preference, setPreference } = useTheme();
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
-  const activeMenuItem = menuItems.find(item => item.path === location);
+  const role = organizations.data?.[0]?.membership.role;
+  const visibleMenuItems = menuItems.filter(item => !role || (item.roles as readonly string[]).includes(role));
+  const activeMenuItem = visibleMenuItems.find(item => item.path === location);
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -189,7 +193,7 @@ function DashboardLayoutContent({
           <SidebarContent className="gap-0 px-2 py-4">
             {!isCollapsed ? <p className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-sidebar-foreground/55">ოპერაციები</p> : null}
             <SidebarMenu className="gap-1">
-              {menuItems.map(item => {
+              {visibleMenuItems.map(item => {
                 const isActive = location === item.path;
                 return (
                   <SidebarMenuItem key={item.path}>

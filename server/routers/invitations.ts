@@ -56,7 +56,7 @@ async function verifyInviteToken(token: string): Promise<InvitePayload | null> {
 
 export const invitationsRouter = router({
   list: protectedProcedure.input(organizationScopeSchema).query(async ({ ctx, input }) => {
-    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER"]);
+    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER"]);
     const db = await requireDb();
     return db.select().from(staffInvites)
       .where(and(eq(staffInvites.organizationId, input.organizationId), eq(staffInvites.status, "PENDING")))
@@ -64,7 +64,7 @@ export const invitationsRouter = router({
   }),
 
   create: protectedProcedure.input(staffInviteCreateSchema).mutation(async ({ ctx, input }) => {
-    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER"]);
+    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER"]);
     const db = await requireDb();
 
     if (input.locationId) {
@@ -106,7 +106,7 @@ export const invitationsRouter = router({
   }),
 
   revoke: protectedProcedure.input(staffInviteRevokeSchema).mutation(async ({ ctx, input }) => {
-    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER"]);
+    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER"]);
     const db = await requireDb();
     const [invite] = await db.select({ id: staffInvites.id, status: staffInvites.status }).from(staffInvites)
       .where(and(eq(staffInvites.id, input.id), eq(staffInvites.organizationId, input.organizationId))).limit(1);
