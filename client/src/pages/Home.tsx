@@ -25,6 +25,12 @@ const painPoints = [
   { title: "კონტროლი", before: "დღის სურათის მოსაძებნად რამდენიმე ფაილი და ჩათი", after: "ოპერაციები, გადახდები და ანგარიშები ერთ მშვიდ სამუშაო სივრცეში" },
 ];
 
+const bookingJourney = [
+  { number: "01", title: "კლიენტი ირჩევს სერვისს", text: "საჯარო booking გვერდზე ჩანს მხოლოდ აქტიური სერვისები და მათი რეალური ხანგრძლივობა/ფასი." },
+  { number: "02", title: "სისტემა ამოწმებს დროს", text: "სპეციალისტი და თავისუფალი დრო მოწმდება არჩეული სერვისისა და მიმდინარე განრიგის მიხედვით." },
+  { number: "03", title: "სალონი მართავს დღეს", text: "Today და Calendar აჩვენებს მოთხოვნას, სტატუსს და შემდეგ ოპერაციულ მოქმედებას." },
+];
+
 const faq = [
   { q: "არის თუ არა საჭირო Manus ანგარიში?", a: "არა. SalonFlow-ში გამოიყენება ადგილობრივი ელფოსტა და პაროლი. სამუშაო სივრცეში შესვლა სწორედ ამ ანგარიშით ხდება." },
   { q: "შემიძლია რამდენიმე ფილიალის მართვა?", a: "დიახ. სამუშაო სივრცე მხარდაჭერას უწევს ორგანიზაციასა და რამდენიმე ფილიალს, თითოეული ფილიალის timezone-ითა და public booking link-ით." },
@@ -42,13 +48,15 @@ export default function Home() {
           <PublicEyebrow>სალონის ყოველდღიური რიტმისთვის</PublicEyebrow>
           <h1 className="sf-display mt-5 max-w-3xl text-[2.4rem] font-semibold leading-[0.98] sm:text-6xl lg:text-7xl">მეტი დრო <span className="sf-gradient-text">სტუმრებისთვის</span>. ნაკლები დრო ქაოსისთვის.</h1>
           <p className="mt-7 max-w-xl text-lg leading-8 text-[var(--sf-muted)]">SalonFlow აერთიანებს ონლაინ ჩაწერას, კალენდარს, გუნდს, კლიენტებსა და ოპერაციულ კონტროლს ერთ მშვიდ, ქართულ სამუშაო სივრცეში.</p>
-          <div className="mt-9 flex flex-col gap-3 sm:flex-row"><Button asChild variant="public" size="lg"><Link href="/register">დაიწყე უფასოდ <ArrowRight className="size-4" aria-hidden="true" /></Link></Button><Button asChild variant="publicSecondary" size="lg"><a href="#how-it-works">იხილე როგორ მუშაობს</a></Button></div>
+          <div className="mt-9 flex flex-col gap-3 sm:flex-row"><Button asChild variant="public" size="lg"><Link href="/register">სამუშაო სივრცის შექმნა <ArrowRight className="size-4" aria-hidden="true" /></Link></Button><Button asChild variant="publicSecondary" size="lg"><Link href="/book">ონლაინ ჩაწერის ნახვა <ChevronRight className="size-4" aria-hidden="true" /></Link></Button></div>
           <p className="mt-5 inline-flex items-center gap-2 text-sm text-[var(--sf-muted)]"><LockKeyhole className="size-4 text-[var(--sf-jade)]" aria-hidden="true" /> ადგილობრივი ანგარიში · role-based წვდომა · რეალურ დროზე დაცული შემოწმება</p>
         </div>
         <div className="sf-reveal"><SalonFlowHeroScene /></div>
       </section>
 
       <section className="border-y border-[var(--sf-line)] bg-[color-mix(in_srgb,var(--sf-surface)_82%,transparent)] backdrop-blur-sm"><div className="sf-public-container grid gap-3 py-5 sm:grid-cols-3"><TrustItem label="მრავალფილიალიანი" text="ფილიალი, timezone და public link" /><TrustItem label="ქართული-first" text="ბუნებრივი UI და ka-GE ფორმატები" /><TrustItem label="სანდო ოპერაციები" text="როლები, ისტორია და server-side checks" /></div></section>
+
+      <section className="sf-public-container py-16 lg:py-20"><div className="grid gap-8 lg:grid-cols-[.78fr_1.22fr] lg:items-end"><div className="sf-reveal"><PublicEyebrow>ონლაინ ჩაწერის რეალური გზა</PublicEyebrow><h2 className="sf-display mt-4 text-4xl font-semibold leading-tight sm:text-5xl">კლიენტის არჩევანი — თქვენს ოპერაციულ დღემდე.</h2><p className="mt-5 max-w-xl text-base leading-7 text-[var(--sf-muted)]">SalonFlow არ აჩვენებს გამოგონილ თავისუფალ დროს: სერვისი, სპეციალისტი და დრო საბოლოოდ მოწმდება მოქმედი განრიგის მიხედვით.</p><Button asChild variant="publicSecondary" className="mt-7"><Link href="/book">საჯარო ჩაწერის გახსნა <ArrowRight className="ml-1.5 size-4" aria-hidden="true" /></Link></Button></div><ol className="grid gap-3 md:grid-cols-3">{bookingJourney.map((item, index) => <li key={item.number} className={`sf-surface sf-lift sf-reveal p-5 sf-motion-delay-${index + 1}`}><span className="sf-gradient-fill grid size-9 place-items-center rounded-xl text-sm font-bold shadow-[var(--sf-glow-brand)]">{item.number}</span><h3 className="mt-5 text-lg font-bold">{item.title}</h3><p className="mt-2 text-sm leading-6 text-[var(--sf-muted)]">{item.text}</p></li>)}</ol></div></section>
 
       <section className="sf-public-container py-20 lg:py-28"><div className="sf-reveal max-w-2xl"><PublicEyebrow>პრობლემიდან რიტმამდე</PublicEyebrow><h2 className="sf-display mt-4 text-4xl font-semibold leading-tight sm:text-5xl">დღის მართვა არ უნდა იწყებოდეს ქაოსის დალაგებით.</h2></div><div className="mt-10 grid gap-4 lg:grid-cols-3">{painPoints.map((item, i) => <article key={item.title} className={`sf-surface sf-lift sf-reveal p-6 sf-motion-delay-${i + 1}`}><p className="text-lg font-bold">{item.title}</p><p className="mt-5 text-sm leading-6 text-[var(--sf-muted)]">{item.before}</p><div className="my-5 h-px bg-[var(--sf-line)]" /><p className="flex gap-2 text-sm leading-6"><CheckCircle2 className="mt-0.5 size-4 shrink-0 text-[var(--sf-jade)]" aria-hidden="true" />{item.after}</p></article>)}</div></section>
 

@@ -208,9 +208,9 @@
 - [x] Phase 1: Redesign Today as a simplified role-aware daily operations center with Now/Next, attention queue, concise metrics, role-safe quick actions and setup readiness guidance.
 - [x] Phase 1: Add focused dashboard role, responsive, keyboard, reduced-motion, loading/error/empty-state and regression coverage; run test/typecheck/build/visual QA and checkpoint.
 - [x] Phase 2: Add a persisted, accessible role-aware guided help tour with next/previous, skip, disable-auto-show, restart, mobile fallback and safe contextual routes.
-- [ ] Phase 3: Improve public booking conversion and salon public profile clarity without changing authoritative availability, eligibility, token or payment safeguards.
-- [ ] Phase 3: Redesign the Home page as a Georgian-first booking-platform entry point with a clearer salon-management value proposition, conversion-safe CTA hierarchy, real-capability storytelling, responsive accessibility and no fabricated social proof.
-- [ ] Phase 4: Simplify Calendar, CRM, Team, Services, Operations and POS daily workflows with contextual next actions and role-safe help.
-- [ ] Phase 5: Add owner setup health, metric definitions, report clarity, public booking-share readiness and profile-completeness guidance based only on real data.
-- [ ] Phase 6: Keep provider-dependent email, SMS, deposit and push functionality inactive until verified sender, merchant, credential, consent and policy prerequisites are supplied.
-- [ ] Phase 7: Run cross-route performance/code-splitting, accessibility, responsive, security, production build and live release validation for completed roadmap phases.
+- [x] Phase 3: Improve public booking conversion and salon public profile clarity without changing authoritative availability, eligibility, token or payment safeguards.
+- [x] Phase 3: Redesign the Home page as a Georgian-first booking-platform entry point with a clearer salon-management value proposition, conversion-safe CTA hierarchy, real-capability storytelling, responsive accessibility and no fabricated social proof.
+- [x] Phase 4: Simplify Calendar, CRM, Team, Services, Operations and POS daily workflows with contextual next actions and role-safe help.
+- [x] Phase 5: Add owner setup health, metric definitions, report clarity, public booking-share readiness and profile-completeness guidance based only on real data.
+- [x] Phase 6: Keep provider-dependent email, SMS, deposit and push functionality inactive until verified sender, merchant, credential, consent and policy prerequisites are supplied.
+- [x] Phase 7: Run cross-route performance/code-splitting, accessibility, responsive, security, production build and live release validation for completed roadmap phases.

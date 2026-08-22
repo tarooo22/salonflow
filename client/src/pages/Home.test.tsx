@@ -10,4 +10,10 @@ describe("home final conversion CTA", () => {
     expect(source).toContain('!text-[#21072d]');
     expect(source).toContain("დაიწყე უფასოდ");
   });
+
+  it("uses a booking-first public CTA and avoids fabricated hero business proof", () => {
+    expect(source).toContain('href="/book"');
+    expect(source).toContain("ონლაინ ჩაწერის რეალური გზა");
+    expect(source).toContain("არ აჩვენებს გამოგონილ თავისუფალ დროს");
+  });
 });
