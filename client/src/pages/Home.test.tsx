@@ -16,4 +16,12 @@ describe("home final conversion CTA", () => {
     expect(source).toContain("ონლაინ ჩაწერის რეალური გზა");
     expect(source).toContain("არ აჩვენებს გამოგონილ თავისუფალ დროს");
   });
+
+  it("presents distinct salon owner and client paths using the shared Salon House system", () => {
+    expect(source).toContain("მე ვმართავ სალონს");
+    expect(source).toContain("მინდა ონლაინ ჩაწერა");
+    expect(source).toContain("სალონის პირველი სვლა");
+    expect(source).toContain("sf-salon-panel");
+    expect(source).toContain("sf-salon-flowline");
+  });
 });

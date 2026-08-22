@@ -214,3 +214,13 @@
 - [x] Phase 5: Add owner setup health, metric definitions, report clarity, public booking-share readiness and profile-completeness guidance based only on real data.
 - [x] Phase 6: Keep provider-dependent email, SMS, deposit and push functionality inactive until verified sender, merchant, credential, consent and policy prerequisites are supplied.
 - [x] Phase 7: Run cross-route performance/code-splitting, accessibility, responsive, security, production build and live release validation for completed roadmap phases.
+- [x] Public Phase 0: Audit every public/auth/booking route, current imagery, CTA, claims, states and mobile behavior; publish a Salon House brand and information-architecture implementation spec.
+- [x] Public Phase 1: Establish reusable Salon House public design primitives for navigation, conversion actions, salon/service/team cards, trust notes, loading/error/empty states, media handling and responsive accessibility.
+- [x] Public Phase 2: Redesign Home as a truthful Georgian salon-booking product story with visual flow, real capability hierarchy, owner readiness and client booking paths.
+- [x] Public Phase 3: Redesign Features, Pricing, Demo, FAQ, Contact and local-auth/invite surfaces with route-specific salon UX, truthful commercial language and localized accessibility.
+- [x] Public Phase 4: Refine booking discovery, booking flow, waitlist and manage-booking surfaces for conversion clarity without changing availability, token, consent, notification or payment contracts.
+- [x] Public Phase 5: Refine public salon profile, services, specialist/team presentation, owner-approved media/gallery/feed and SEO-safe content readiness states.
+- [x] Public Phase 6: Complete public performance, WCAG/keyboard/reduced-motion, responsive, runtime and usability-test-kit validation; checkpoint only after every public test gate passes.
+- [ ] Dashboard Phase 7: Audit role-specific workspace tasks, route behavior, permissions and responsive patterns; write target dashboard specification before dashboard UI changes.
+- [ ] Dashboard Phase 8: Implement dashboard redesign in gated Today/shell, calendar/CRM, team/operations/POS and reports/settings subphases with complete security regression coverage.
+- [ ] Final Phase 9: Complete full route validation, tests, typecheck, production build, visual QA, live checkpoint and delivery report.

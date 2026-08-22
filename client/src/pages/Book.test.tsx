@@ -25,6 +25,8 @@ describe("public discovery category filtering", () => {
     expect(markup).toContain("ორშ–სამ · 10:00–19:00");
     expect(markup).toContain("დარეკვა");
     expect(markup).toContain("ელფოსტა");
+    expect(markup).toContain("sf-salon-panel");
+    expect(markup).toContain("sf-salon-service-chip");
     expect(markup).not.toContain("ვაკე");
   });
 

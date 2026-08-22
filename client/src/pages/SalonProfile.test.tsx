@@ -10,4 +10,12 @@ describe("SalonProfile booking handoff", () => {
     expect(source).toContain("{salon.bookingEnabled ? <div");
     expect(source).toContain("დაცული მოთხოვნა");
   });
+
+  it("uses the shared Salon House presentation while retaining owner-approved public profile data", () => {
+    expect(source).toContain("sf-salon-media-frame");
+    expect(source).toContain("sf-salon-panel");
+    expect(source).toContain("experienceYears");
+    expect(source).toContain("კლიენტის ცალკე თანხმობით");
+    expect(source).toContain("მფლობელის ან მენეჯერის მიერ დამტკიცებული");
+  });
 });

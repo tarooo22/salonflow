@@ -20,4 +20,10 @@ describe("truthful public product-information routes", () => {
     expect(source).toContain("არ არის კონფიგურირებული საჯარო მხარდაჭერის ფორმა");
     expect(source).toContain("გამოგონილ საკონტაქტო არხს");
   });
+
+  it("uses shared Salon House panels and notes for public trust surfaces", () => {
+    expect(source).toContain("sf-salon-panel");
+    expect(source).toContain("sf-salon-note");
+    expect(source).toContain("sf-salon-media-frame");
+  });
 });
