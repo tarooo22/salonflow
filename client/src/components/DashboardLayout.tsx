@@ -20,13 +20,14 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
-import { BarChart3, CalendarDays, CalendarHeart, Clock3, Images, LayoutDashboard, LogOut, Monitor, Moon, PanelLeft, ReceiptText, Scissors, Settings2, Sun, Users } from "lucide-react";
+import { BarChart3, CalendarDays, CalendarHeart, CircleHelp, Clock3, Images, LayoutDashboard, LogOut, Monitor, Moon, PanelLeft, ReceiptText, Scissors, Settings2, Sun, Users } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { useTheme } from "@/contexts/ThemeContext";
 import { Button } from "./ui/button";
 import { trpc } from "@/lib/trpc";
+import { GuidedHelpTour } from "@/components/workspace/GuidedHelpTour";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "დღეს", path: "/app/today", roles: ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"] },
@@ -127,6 +128,7 @@ function DashboardLayoutContent({
   const visibleMenuItems = menuItems.filter(item => !role || (item.roles as readonly string[]).includes(role));
   const activeMenuItem = visibleMenuItems.find(item => item.path === location);
   const isMobile = useIsMobile();
+  const [helpOpen, setHelpOpen] = useState(false);
 
   useEffect(() => {
     if (isCollapsed) {
@@ -216,6 +218,7 @@ function DashboardLayoutContent({
           </SidebarContent>
 
           <SidebarFooter className="border-t border-sidebar-border/90 p-3">
+            <button type="button" onClick={() => setHelpOpen(true)} className="mb-2 flex min-h-10 w-full items-center gap-2 rounded-xl px-2 text-left text-sm font-medium text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-data-[collapsible=icon]:justify-center" aria-label="სამუშაო სივრცის დახმარება"><CircleHelp className="size-4" /><span className="group-data-[collapsible=icon]:hidden">დახმარება</span></button>
             <div className="mb-3 grid grid-cols-3 gap-1 rounded-xl border border-sidebar-border/90 bg-black/12 p-1 group-data-[collapsible=icon]:hidden" aria-label="თემის არჩევა">
               {([
                 { value: "light", label: "ღია", icon: Sun },
@@ -266,8 +269,8 @@ function DashboardLayoutContent({
       <SidebarInset className="sf-workspace-inset">
         {isMobile && (
           <div className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-border/90 bg-background px-3 shadow-[0_8px_24px_rgb(0_0_0_/_0.08)]">
-            <div className="flex items-center gap-2">
-              <SidebarTrigger className="h-11 w-11 rounded-xl border border-border/75 bg-card" />
+              <div className="flex items-center gap-2">
+                <SidebarTrigger className="h-11 w-11 rounded-xl border border-border/75 bg-card" />
               <div className="flex items-center gap-3">
                 <span className="sf-brand-mark" aria-hidden="true"><i /><i /><i /></span>
                 <div className="flex flex-col gap-0.5">
@@ -276,10 +279,12 @@ function DashboardLayoutContent({
                 </div>
               </div>
             </div>
+            <button type="button" onClick={() => setHelpOpen(true)} className="grid size-11 place-items-center rounded-xl border border-border/75 bg-card text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label="სამუშაო სივრცის დახმარება"><CircleHelp className="size-4" /></button>
           </div>
         )}
         <main className="sf-motion-enter sf-workspace-main flex-1 p-4 sm:p-5 xl:p-6">{children}</main>
       </SidebarInset>
+      {organizations.data?.[0]?.organization.id ? <GuidedHelpTour organizationId={organizations.data[0].organization.id} role={role} open={helpOpen} onOpenChange={setHelpOpen} /> : null}
     </>
   );
 }

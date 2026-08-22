@@ -57,6 +57,13 @@
       "when": 1787046962590,
       "tag": "0007_salty_agent_brand",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "5",
+      "when": 1787370595027,
+      "tag": "0008_sharp_rawhide_kid",
+      "breakpoints": true
     }
   ]
 }

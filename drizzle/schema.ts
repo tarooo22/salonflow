@@ -143,6 +143,24 @@ export const organizationMemberships = mysqlTable("organization_memberships", {
   index("memberships_user_status_idx").on(table.userId, table.status),
 ]);
 
+/** User-specific guided help state. Content is never stored here; only tour progress. */
+export const userGuidedTourProgress = mysqlTable("user_guided_tour_progress", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  organizationId: varchar("organizationId", { length: 36 }).notNull().references(() => organizations.id),
+  userId: int("userId").notNull().references(() => users.id),
+  tourKey: varchar("tourKey", { length: 64 }).notNull(),
+  version: int("version").default(1).notNull(),
+  currentStep: int("currentStep").default(0).notNull(),
+  completed: boolean("completed").default(false).notNull(),
+  autoShowDisabled: boolean("autoShowDisabled").default(false).notNull(),
+  completedAt: timestamp("completedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [
+  uniqueIndex("guided_tour_progress_user_org_key_uq").on(table.userId, table.organizationId, table.tourKey),
+  index("guided_tour_progress_organization_idx").on(table.organizationId),
+]);
+
 export const staffProfiles = mysqlTable("staff_profiles", {
   id: varchar("id", { length: 36 }).primaryKey(),
   membershipId: varchar("membershipId", { length: 36 }).notNull().references(() => organizationMemberships.id),

@@ -97,6 +97,16 @@ export const guidedOnboardingSchema = z.object({
 export const organizationScopeSchema = z.object({ organizationId: opaqueIdSchema });
 export const locationScopeSchema = z.object({ organizationId: opaqueIdSchema, locationId: opaqueIdSchema.optional() });
 
+export const guidedTourScopeSchema = organizationScopeSchema.extend({
+  tourKey: z.literal("workspace-foundation"),
+});
+
+export const guidedTourProgressSchema = guidedTourScopeSchema.extend({
+  currentStep: z.number().int().min(0).max(12),
+  completed: z.boolean(),
+  autoShowDisabled: z.boolean(),
+});
+
 export const serviceCategoryCreateSchema = z.object({
   organizationId: opaqueIdSchema,
   locationId: opaqueIdSchema.optional(),
