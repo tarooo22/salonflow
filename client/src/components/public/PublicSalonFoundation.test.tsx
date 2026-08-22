@@ -17,6 +17,7 @@ describe("Salon House public foundation", () => {
     expect(primitives).toContain("sf-public-header");
     expect(primitives).toContain("sf-public-nav-link");
     expect(primitives).toContain("sf-public-booking-link");
+    expect(primitives).not.toContain('size-3.5" aria-hidden="true" />{t("onlineBooking")}');
     expect(styles).toContain(".sf-public-booking-link:hover");
     expect(styles).toContain(".sf-public-booking-link:focus-visible");
     expect(primitives).toContain("sf-skip-link");
