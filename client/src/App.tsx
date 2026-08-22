@@ -27,6 +27,10 @@ const Operations = lazy(() => import("./pages/Operations"));
 const POS = lazy(() => import("./pages/POS"));
 const Media = lazy(() => import("./pages/Media"));
 const ClientGallery = lazy(() => import("./pages/ClientGallery"));
+const MarketplaceSetup = lazy(() => import("./pages/MarketplaceSetup"));
+const MarketplaceDirectory = lazy(() => import("./pages/MarketplaceDirectory"));
+const MarketplaceMap = lazy(() => import("./pages/MarketplaceMap"));
+const MarketplaceAdmin = lazy(() => import("./pages/MarketplaceAdmin"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const FeaturesPage = lazy(() => import("./pages/MarketingPages").then(module => ({ default: module.FeaturesPage })));
 const PricingPage = lazy(() => import("./pages/MarketingPages").then(module => ({ default: module.PricingPage })));
@@ -53,6 +57,8 @@ function Router() {
       <Route path={"/book/:slug"} component={BookingFlow} />
       <Route path={"/manage-booking/:token"} component={ManageBooking} />
       <Route path={"/waitlist/:slug"} component={Waitlist} />
+      <Route path={"/salons/map"} component={MarketplaceMap} />
+      <Route path={"/salons"} component={MarketplaceDirectory} />
       <Route path={"/salon/:slug"} component={SalonProfile} />
       <Route path={"/login"}>{() => <LocalAuth mode="login" />}</Route>
       <Route path={"/register"}>{() => <LocalAuth mode="register" />}</Route>
@@ -70,6 +76,8 @@ function Router() {
       <Route path={"/app/pos"} component={POS} />
       <Route path={"/app/media"} component={Media} />
       <Route path={"/app/client-gallery"} component={ClientGallery} />
+      <Route path={"/app/marketplace"} component={MarketplaceSetup} />
+      <Route path={"/app/marketplace-admin"} component={MarketplaceAdmin} />
       <Route path={"/app/waitlist"} component={WaitlistQueue} />
       <Route path={"/app/setup"} component={WorkspaceSetup} />
       <Route path={"/404"} component={NotFound} />

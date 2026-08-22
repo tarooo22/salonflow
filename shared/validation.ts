@@ -15,6 +15,64 @@ export const paginationSchema = z.object({
   offset: z.number().int().min(0).default(0),
 });
 
+export const marketplaceCategorySlugSchema = z.string().trim().toLowerCase().min(2).max(64).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
+export const marketplaceListingStatusSchema = z.enum(["DRAFT", "SUBMITTED", "APPROVED", "HIDDEN", "REJECTED"]);
+export const marketplacePromotionTierSchema = z.enum(["RECOMMENDED", "VIP"]);
+
+export const marketplaceDirectorySchema = paginationSchema.extend({
+  categorySlug: marketplaceCategorySlugSchema.optional(),
+  search: z.string().trim().min(1).max(120).optional(),
+  area: z.string().trim().min(1).max(160).optional(),
+});
+
+export const marketplaceOwnerListingScopeSchema = z.object({
+  organizationId: opaqueIdSchema,
+  locationId: opaqueIdSchema,
+});
+
+export const marketplaceOwnerListingUpdateSchema = marketplaceOwnerListingScopeSchema.extend({
+  areaLabelKa: z.string().trim().max(160).nullable().optional(),
+  mapVisibility: z.boolean().optional(),
+  geocodeConfirmed: z.boolean().optional(),
+  categoryServiceLinks: z.array(z.object({
+    categoryId: opaqueIdSchema,
+    serviceIds: z.array(opaqueIdSchema).min(1).max(100),
+  })).max(8).optional(),
+}).refine(input => input.areaLabelKa !== undefined || input.mapVisibility !== undefined || input.geocodeConfirmed !== undefined || input.categoryServiceLinks !== undefined, "Marketplace listing-ისთვის ერთი ცვლილება მაინც აირჩიეთ.");
+
+export const marketplaceOwnerGeocodeSchema = marketplaceOwnerListingScopeSchema;
+
+export const marketplaceOwnerMapPointConfirmSchema = marketplaceOwnerListingScopeSchema.extend({
+  placeId: z.string().trim().min(1).max(255),
+  latitudeE6: z.number().int().min(-90_000_000).max(90_000_000),
+  longitudeE6: z.number().int().min(-180_000_000).max(180_000_000),
+});
+
+export const marketplaceOwnerSubmitSchema = marketplaceOwnerListingScopeSchema;
+
+export const marketplaceAdminReviewSchema = z.object({
+  locationId: opaqueIdSchema,
+  status: z.enum(["APPROVED", "HIDDEN", "REJECTED"]),
+  reviewNoteKa: z.string().trim().max(500).optional(),
+});
+
+export const marketplaceAdminQueueSchema = paginationSchema.extend({
+  status: marketplaceListingStatusSchema.optional(),
+});
+
+export const marketplacePromotionScheduleSchema = z.object({
+  locationId: opaqueIdSchema,
+  tier: marketplacePromotionTierSchema,
+  startsAt: z.date(),
+  endsAt: z.date(),
+  manualPriceTetri: z.number().int().min(0).max(10_000_000).optional(),
+  billingReference: z.string().trim().max(160).optional(),
+}).refine(input => input.startsAt < input.endsAt, "Promotion დასრულების დრო დაწყების დროზე გვიან უნდა იყოს.");
+
+export const marketplacePromotionCancelSchema = z.object({
+  promotionId: opaqueIdSchema,
+});
+
 export const localRegistrationSchema = z.object({
   name: z.string().trim().min(2).max(160),
   email: z.string().trim().email().max(320),

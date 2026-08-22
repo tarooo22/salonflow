@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { appointmentRescheduleSchema, attendanceClockSchema, calendarRangeSchema, clientBeforeAfterCreateSchema, retailSaleCreateSchema, tipCreateSchema } from "./validation";
+import { appointmentRescheduleSchema, attendanceClockSchema, calendarRangeSchema, clientBeforeAfterCreateSchema, marketplaceOwnerMapPointConfirmSchema, marketplacePromotionCancelSchema, retailSaleCreateSchema, tipCreateSchema } from "./validation";
 
 const scope = {
   organizationId: "organization_2026_abcd",
@@ -55,5 +55,18 @@ describe("client gallery privacy validation", () => {
 
   it("rejects a public request without the client's separate consent", () => {
     expect(() => clientBeforeAfterCreateSchema.parse({ ...galleryInput, requestPublicVisibility: true, clientPublicationConsent: false })).toThrow("საჯარო გამოჩენას სჭირდება კლიენტის ცალკე თანხმობა");
+  });
+});
+
+describe("Marketplace map and promotion validation", () => {
+  it("accepts only bounded integer E6 coordinates for an owner-confirmed map point", () => {
+    expect(marketplaceOwnerMapPointConfirmSchema.parse({ ...scope, placeId: "ChIJ-test", latitudeE6: 41715100, longitudeE6: 44827100 })).toMatchObject({ latitudeE6: 41715100, longitudeE6: 44827100 });
+    expect(() => marketplaceOwnerMapPointConfirmSchema.parse({ ...scope, placeId: "ChIJ-test", latitudeE6: 90_000_001, longitudeE6: 44827100 })).toThrow();
+    expect(() => marketplaceOwnerMapPointConfirmSchema.parse({ ...scope, placeId: "ChIJ-test", latitudeE6: 41715100.5, longitudeE6: 44827100 })).toThrow();
+  });
+
+  it("requires a bounded opaque promotion identifier for admin cancellation", () => {
+    expect(marketplacePromotionCancelSchema.parse({ promotionId: "promotion_2026_abcdefgh" }).promotionId).toBe("promotion_2026_abcdefgh");
+    expect(() => marketplacePromotionCancelSchema.parse({ promotionId: "short" })).toThrow();
   });
 });

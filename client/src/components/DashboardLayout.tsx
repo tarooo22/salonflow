@@ -20,7 +20,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
-import { BarChart3, CalendarDays, CalendarHeart, CircleHelp, Clock3, Images, LayoutDashboard, LogOut, Monitor, Moon, PanelLeft, ReceiptText, Scissors, Settings2, Sun, Users } from "lucide-react";
+import { BarChart3, CalendarDays, CalendarHeart, CircleHelp, Clock3, Images, LayoutDashboard, LogOut, Monitor, Moon, PanelLeft, ReceiptText, Scissors, Settings2, Store, Sun, Users } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -41,6 +41,7 @@ const menuItems = [
   { icon: Users, label: "გუნდი", path: "/app/staff", group: "სალონის მართვა", roles: ["OWNER", "STAFF"] },
   { icon: BarChart3, label: "ანგარიშები", path: "/app/reports", group: "სალონის მართვა", roles: ["OWNER"] },
   { icon: Images, label: "მედია და პროფილი", path: "/app/media", group: "სალონის მართვა", roles: ["OWNER"] },
+  { icon: Store, label: "Marketplace", path: "/app/marketplace", group: "სალონის მართვა", roles: ["OWNER"] },
   { icon: Settings2, label: "პარამეტრები", path: "/app/settings", group: "სალონის მართვა", roles: ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"] },
 ] as const;
 

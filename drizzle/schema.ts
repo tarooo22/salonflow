@@ -39,6 +39,9 @@ export const waitlistStatusValues = ["PENDING", "CONTACTED", "FULFILLED", "CANCE
 export const retailSaleStatusValues = ["COMPLETED", "VOIDED"] as const;
 export const stockMovementTypeValues = ["OPENING", "ADJUSTMENT", "SALE", "VOID"] as const;
 export const clientMediaStageValues = ["BEFORE", "AFTER"] as const;
+export const marketplaceListingStatusValues = ["DRAFT", "SUBMITTED", "APPROVED", "HIDDEN", "REJECTED"] as const;
+export const marketplacePromotionTierValues = ["RECOMMENDED", "VIP"] as const;
+export const marketplacePromotionStatusValues = ["SCHEDULED", "ACTIVE", "EXPIRED", "CANCELLED"] as const;
 
 export const membershipRole = mysqlEnum("membership_role", membershipRoleValues);
 export const membershipStatus = mysqlEnum("membership_status", membershipStatusValues);
@@ -57,6 +60,9 @@ export const waitlistStatus = mysqlEnum("waitlist_status", waitlistStatusValues)
 export const retailSaleStatus = mysqlEnum("retail_sale_status", retailSaleStatusValues);
 export const stockMovementType = mysqlEnum("stock_movement_type", stockMovementTypeValues);
 export const clientMediaStage = mysqlEnum("client_media_stage", clientMediaStageValues);
+export const marketplaceListingStatus = mysqlEnum("marketplace_listing_status", marketplaceListingStatusValues);
+export const marketplacePromotionTier = mysqlEnum("marketplace_promotion_tier", marketplacePromotionTierValues);
+export const marketplacePromotionStatus = mysqlEnum("marketplace_promotion_status", marketplacePromotionStatusValues);
 
 /**
  * Secure platform identity synchronized by Manus OAuth. Business roles live in
@@ -123,6 +129,95 @@ export const locations = mysqlTable("locations", {
 }, table => [
   uniqueIndex("locations_public_slug_uq").on(table.publicSlug),
   index("locations_organization_idx").on(table.organizationId),
+]);
+
+/** Controlled platform-wide discovery taxonomy; it is never derived from arbitrary free text. */
+export const marketplaceCategories = mysqlTable("marketplace_categories", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  slug: varchar("slug", { length: 64 }).notNull(),
+  nameKa: varchar("nameKa", { length: 120 }).notNull(),
+  nameEn: varchar("nameEn", { length: 120 }),
+  nameRu: varchar("nameRu", { length: 120 }),
+  iconKey: varchar("iconKey", { length: 64 }).notNull(),
+  sortOrder: int("sortOrder").default(0).notNull(),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [
+  uniqueIndex("marketplace_categories_slug_uq").on(table.slug),
+  index("marketplace_categories_active_sort_idx").on(table.isActive, table.sortOrder),
+]);
+
+/** One moderated Marketplace listing per branch; point coordinates remain in locations and require explicit visibility consent. */
+export const locationMarketplaceProfiles = mysqlTable("location_marketplace_profiles", {
+  locationId: varchar("locationId", { length: 36 }).primaryKey().references(() => locations.id),
+  status: marketplaceListingStatus.default("DRAFT").notNull(),
+  areaLabelKa: varchar("areaLabelKa", { length: 160 }),
+  mapVisibility: boolean("mapVisibility").default(false).notNull(),
+  geocodeConfirmedAt: timestamp("geocodeConfirmedAt"),
+  ownerSubmittedAt: timestamp("ownerSubmittedAt"),
+  approvedAt: timestamp("approvedAt"),
+  approvedByUserId: int("approvedByUserId").references(() => users.id),
+  reviewNoteKa: varchar("reviewNoteKa", { length: 500 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [
+  index("marketplace_profiles_status_idx").on(table.status),
+  index("marketplace_profiles_map_idx").on(table.mapVisibility, table.status),
+]);
+
+/** Explicit owner-selected Marketplace categories for a location. */
+export const marketplaceLocationCategories = mysqlTable("marketplace_location_categories", {
+  locationId: varchar("locationId", { length: 36 }).notNull().references(() => locations.id),
+  categoryId: varchar("categoryId", { length: 36 }).notNull().references(() => marketplaceCategories.id),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [
+  primaryKey({ columns: [table.locationId, table.categoryId] }),
+  index("marketplace_location_categories_category_idx").on(table.categoryId),
+]);
+
+/** A public discovery category is valid only when linked to an active online-bookable service. */
+export const marketplaceLocationCategoryServices = mysqlTable("marketplace_location_category_services", {
+  locationId: varchar("locationId", { length: 36 }).notNull().references(() => locations.id),
+  categoryId: varchar("categoryId", { length: 36 }).notNull().references(() => marketplaceCategories.id),
+  serviceId: varchar("serviceId", { length: 36 }).notNull().references(() => services.id),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [
+  primaryKey({ columns: [table.locationId, table.categoryId, table.serviceId] }),
+  index("marketplace_category_services_service_idx").on(table.serviceId),
+]);
+
+/** Admin-managed promoted placement only; no checkout, charge or provider state is modeled here. */
+export const marketplacePromotions = mysqlTable("marketplace_promotions", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  locationId: varchar("locationId", { length: 36 }).notNull().references(() => locations.id),
+  tier: marketplacePromotionTier.notNull(),
+  status: marketplacePromotionStatus.default("SCHEDULED").notNull(),
+  startsAt: timestamp("startsAt").notNull(),
+  endsAt: timestamp("endsAt").notNull(),
+  displayDisclosure: varchar("displayDisclosure", { length: 80 }).notNull(),
+  manualPriceTetri: int("manualPriceTetri"),
+  billingReference: varchar("billingReference", { length: 160 }),
+  createdByUserId: int("createdByUserId").notNull().references(() => users.id),
+  approvedByUserId: int("approvedByUserId").references(() => users.id),
+  cancelledAt: timestamp("cancelledAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [
+  index("marketplace_promotions_location_status_idx").on(table.locationId, table.status),
+  index("marketplace_promotions_active_range_idx").on(table.status, table.startsAt, table.endsAt),
+]);
+
+/** Immutable moderation and placement audit trail. */
+export const marketplaceListingEvents = mysqlTable("marketplace_listing_events", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  locationId: varchar("locationId", { length: 36 }).notNull().references(() => locations.id),
+  eventType: varchar("eventType", { length: 80 }).notNull(),
+  actorUserId: int("actorUserId").references(() => users.id),
+  metadata: json("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [
+  index("marketplace_events_location_created_idx").on(table.locationId, table.createdAt),
 ]);
 
 export const organizationMemberships = mysqlTable("organization_memberships", {

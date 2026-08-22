@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { PublicEyebrow, PublicFooter, PublicHeader } from "@/components/public/PublicPrimitives";
 import { SalonFlowHeroScene } from "@/components/public/SalonFlowHeroScene";
+import { MarketplaceHighlights } from "@/components/public/MarketplaceDiscovery";
 import { useReveal } from "@/hooks/useReveal";
 import { ArrowRight, CalendarCheck2, CheckCircle2, ChevronRight, CreditCard, LockKeyhole, Sparkles, UsersRound } from "lucide-react";
 import { Link } from "wouter";
@@ -55,6 +56,8 @@ export default function Home() {
       </div></section>
 
       <section className="sf-public-container pb-4"><div className="sf-salon-panel grid gap-3 px-5 py-5 sm:grid-cols-3 sm:px-6"><TrustItem label="მრავალფილიალიანი" text="ფილიალი, timezone და public link" /><TrustItem label="ქართული-first" text="ბუნებრივი UI და ka-GE ფორმატები" /><TrustItem label="სანდო ოპერაციები" text="როლები, ისტორია და server-side checks" /></div></section>
+
+      <MarketplaceHighlights />
 
       <section className="sf-public-container py-16 lg:py-20"><div className="grid gap-8 lg:grid-cols-[.78fr_1.22fr] lg:items-end"><div className="sf-reveal"><p className="sf-salon-eyebrow">ონლაინ ჩაწერის რეალური გზა</p><h2 className="sf-display mt-4 text-4xl font-semibold leading-tight sm:text-5xl">სტუმრის არჩევანი — თქვენი დღის მშვიდ დასაწყისამდე.</h2><p className="mt-5 max-w-xl text-base leading-7 text-[var(--sf-muted)]">SalonFlow არ აჩვენებს გამოგონილ თავისუფალ დროს: სერვისი, სპეციალისტი და დრო საბოლოოდ მოწმდება მოქმედი განრიგის მიხედვით.</p><Button asChild variant="publicSecondary" className="mt-7"><Link href="/book">საჯარო ჩაწერის გახსნა <ArrowRight className="ml-1.5 size-4" aria-hidden="true" /></Link></Button></div><ol className="grid gap-3 md:grid-cols-3">{bookingJourney.map((item, index) => <li key={item.number} className={`sf-salon-panel sf-lift sf-reveal p-5 sf-motion-delay-${index + 1}`}><span className="sf-gradient-fill grid size-9 place-items-center rounded-xl text-sm font-bold shadow-[var(--sf-glow-brand)]">{item.number}</span><div className="sf-salon-flowline mt-5" aria-hidden="true" /><h3 className="mt-5 text-lg font-bold">{item.title}</h3><p className="mt-2 text-sm leading-6 text-[var(--sf-muted)]">{item.text}</p></li>)}</ol></div></section>
 

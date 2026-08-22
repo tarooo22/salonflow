@@ -25,6 +25,11 @@ describe("home final conversion CTA", () => {
     expect(source).toContain("sf-salon-flowline");
   });
 
+  it("keeps the approved-listing Marketplace discovery entry without replacing the existing hero", () => {
+    expect(source).toContain("MarketplaceHighlights");
+    expect(source).toContain("SalonFlowHeroScene");
+  });
+
   it("explains that salon users do not need special technical knowledge", () => {
     expect(source).toContain("მჭირდება თუ არა სპეციალური ტექნიკური ცოდნა SalonFlow-ის გამოსაყენებლად?");
     expect(source).toContain("საჭიროა მხოლოდ ადგილობრივი ელფოსტა და პაროლი");

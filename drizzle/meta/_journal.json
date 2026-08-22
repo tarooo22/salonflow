@@ -64,6 +64,13 @@
       "when": 1787370595027,
       "tag": "0008_sharp_rawhide_kid",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1787408104781,
+      "tag": "0009_long_black_widow",
+      "breakpoints": true
     }
   ]
 }

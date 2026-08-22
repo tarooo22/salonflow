@@ -26,6 +26,7 @@ export default function SalonProfile() {
   const ui = labels[locale];
   const bookingPath = bookingPathLabels[locale];
   const profile = trpc.public.salonProfile.useQuery(slug, { enabled: Boolean(slug) });
+  const marketplace = trpc.marketplace.listingBySlug.useQuery(slug, { enabled: Boolean(slug) });
   const money = (tetri: number) => new Intl.NumberFormat(locale === "ka" ? "ka-GE" : locale === "ru" ? "ru-RU" : "en-US", { style: "currency", currency: "GEL" }).format(tetri / 100);
 
   useEffect(() => { if (profile.data) document.title = `${profile.data.salon.name} | SalonFlow`; }, [profile.data]);
@@ -36,6 +37,7 @@ export default function SalonProfile() {
 
   const { salon, services, team, feed, gallery } = profile.data;
   const social = salon.socialLinks ?? {};
+  const marketplaceListing = marketplace.data;
 
   return <main className="sf-public-page min-h-screen">
     <header className="sticky top-0 z-30 border-b border-[var(--sf-salon-hairline)] bg-[color-mix(in_srgb,var(--sf-bg)_84%,transparent)] backdrop-blur-xl">
@@ -52,6 +54,7 @@ export default function SalonProfile() {
         <p className="sf-salon-eyebrow">{salon.organizationName}</p>
         <h1 className="sf-display mt-4 max-w-3xl text-4xl font-semibold tracking-tight sm:text-6xl">{salon.name}</h1>
         <p className="mt-5 max-w-2xl text-base leading-7 text-[var(--sf-muted)]">{salon.publicDescription || ui.noDescription}</p>
+        {marketplaceListing?.categories.length ? <div className="mt-5 flex flex-wrap gap-2">{marketplaceListing.categories.map(category => <span key={category.id} className="rounded-full border border-[var(--sf-salon-hairline)] bg-[color-mix(in_srgb,var(--sf-surface)_74%,transparent)] px-3 py-1.5 text-xs font-semibold">{category.nameKa}</span>)}{marketplaceListing.promotion ? <span className="rounded-full bg-[var(--sf-fuchsia)] px-3 py-1.5 text-xs font-bold text-white">{marketplaceListing.promotion.disclosure}</span> : null}</div> : null}
         <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-sm text-[var(--sf-muted)]">
           {salon.address ? <span className="inline-flex items-center gap-2"><MapPin className="size-4 text-[var(--sf-salon-warm)]" />{salon.address}</span> : null}
           {salon.phone ? <a href={`tel:${salon.phone}`} className="inline-flex items-center gap-2 hover:text-[var(--sf-ink)]"><Phone className="size-4 text-[var(--sf-salon-warm)]" />{salon.phone}</a> : null}

@@ -227,3 +227,11 @@
 - [x] Replace the public FAQ question about a Manus account with the approved Georgian question about required technical knowledge, preserving the truthful local-account answer and regression coverage.
 - [x] Consolidate duplicate public-header booking entries into one “ონლაინ ჩაწერა” link with a Salon House framed hover/focus treatment, preserving locale, login and mobile navigation behavior.
 - [x] Remove the decorative icon from the public-header “ონლაინ ჩაწერა” link while preserving its framed hover/focus treatment and accessible text label.
+- [x] Marketplace Phase 0: Document controlled public categories, listing states, owner consent, platform-admin governance and promotion disclosure rules without activating prices or payments.
+- [x] Marketplace Phase 1: Add additive marketplace data model, organization-safe moderation contracts, public approved-listing projection, category membership and auditable promotion foundation.
+- [x] Marketplace Phase 2: Add owner-only listing setup for approved public description, controlled categories, public cover/contact choice, address confirmation and map visibility with upload/permission tests.
+- [x] Marketplace Phase 3: Add real-data public salon directory and Home discovery module with category search, transparent Recommended/VIP labels, mobile cards and truthful empty/loading/error states.
+- [x] Marketplace Phase 4: Refine public salon storefront as the directory destination with approved category, services, team, consent-first media, location and secure booking handoff.
+- [x] Marketplace Phase 5: Add lazy accessible map/list search with owner-confirmed geocoding, marker/list parity, clustering and text fallback; never reveal hidden address data.
+- [x] Marketplace Phase 6: Add platform-admin-only recommendation/VIP schedule governance with audit trail and expiry, while keeping all checkout, recurring charges and payment capture inactive.
+- [x] Marketplace Phase 7: Run per-phase server/client security tests, keyboard/reduced-motion/WCAG checks, 375/768/1024/1440 visual QA, full test/typecheck/build and live checkpoint.

@@ -18,4 +18,9 @@ describe("SalonProfile booking handoff", () => {
     expect(source).toContain("კლიენტის ცალკე თანხმობით");
     expect(source).toContain("მფლობელის ან მენეჯერის მიერ დამტკიცებული");
   });
+
+  it("surfaces Marketplace categories only through the approved public listing query", () => {
+    expect(source).toContain("marketplace.listingBySlug");
+    expect(source).toContain("marketplaceListing?.categories.length");
+  });
 });
