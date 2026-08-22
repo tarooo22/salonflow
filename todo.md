@@ -225,3 +225,4 @@
 - [x] Dashboard Phase 8: Implement dashboard redesign in gated Today/shell, calendar/CRM, team/operations/POS and reports/settings subphases with complete security regression coverage.
 - [x] Final Phase 9: Complete full route validation, tests, typecheck, production build, visual QA, live checkpoint and delivery report.
 - [x] Replace the public FAQ question about a Manus account with the approved Georgian question about required technical knowledge, preserving the truthful local-account answer and regression coverage.
+- [x] Consolidate duplicate public-header booking entries into one “ონლაინ ჩაწერა” link with a Salon House framed hover/focus treatment, preserving locale, login and mobile navigation behavior.

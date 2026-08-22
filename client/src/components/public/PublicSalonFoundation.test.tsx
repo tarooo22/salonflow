@@ -16,6 +16,9 @@ describe("Salon House public foundation", () => {
   it("uses the Salon House header styles while retaining accessible public navigation", () => {
     expect(primitives).toContain("sf-public-header");
     expect(primitives).toContain("sf-public-nav-link");
+    expect(primitives).toContain("sf-public-booking-link");
+    expect(styles).toContain(".sf-public-booking-link:hover");
+    expect(styles).toContain(".sf-public-booking-link:focus-visible");
     expect(primitives).toContain("sf-skip-link");
     expect(primitives).toContain("aria-controls=\"public-mobile-menu\"");
   });
