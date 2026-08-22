@@ -24,4 +24,10 @@ describe("home final conversion CTA", () => {
     expect(source).toContain("sf-salon-panel");
     expect(source).toContain("sf-salon-flowline");
   });
+
+  it("explains that salon users do not need special technical knowledge", () => {
+    expect(source).toContain("მჭირდება თუ არა სპეციალური ტექნიკური ცოდნა SalonFlow-ის გამოსაყენებლად?");
+    expect(source).toContain("საჭიროა მხოლოდ ადგილობრივი ელფოსტა და პაროლი");
+    expect(source).not.toContain("არის თუ არა საჭირო Manus ანგარიში?");
+  });
 });
