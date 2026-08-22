@@ -30,19 +30,21 @@ import { trpc } from "@/lib/trpc";
 import { GuidedHelpTour } from "@/components/workspace/GuidedHelpTour";
 
 const menuItems = [
-  { icon: LayoutDashboard, label: "დღეს", path: "/app/today", roles: ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"] },
-  { icon: CalendarDays, label: "კალენდარი", path: "/app/calendar", roles: ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"] },
-  { icon: CalendarHeart, label: "მოლოდინის სია", path: "/app/waitlist", roles: ["OWNER", "MANAGER", "RECEPTIONIST"] },
-  { icon: Clock3, label: "ოპერაციები", path: "/app/operations", roles: ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"] },
-  { icon: ReceiptText, label: "POS და მარაგი", path: "/app/pos", roles: ["OWNER", "MANAGER", "RECEPTIONIST"] },
-  { icon: Users, label: "კლიენტები", path: "/app/clients", roles: ["OWNER", "MANAGER", "RECEPTIONIST"] },
-  { icon: Images, label: "კლიენტის გალერეა", path: "/app/client-gallery", roles: ["OWNER"] },
-  { icon: Scissors, label: "სერვისები", path: "/app/services", roles: ["OWNER"] },
-  { icon: Users, label: "გუნდი", path: "/app/staff", roles: ["OWNER", "STAFF"] },
-  { icon: BarChart3, label: "ანგარიშები", path: "/app/reports", roles: ["OWNER"] },
-  { icon: Images, label: "მედია და პროფილი", path: "/app/media", roles: ["OWNER"] },
-  { icon: Settings2, label: "პარამეტრები", path: "/app/settings", roles: ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"] },
+  { icon: LayoutDashboard, label: "დღეს", path: "/app/today", group: "დღის მართვა", roles: ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"] },
+  { icon: CalendarDays, label: "კალენდარი", path: "/app/calendar", group: "დღის მართვა", roles: ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"] },
+  { icon: CalendarHeart, label: "მოლოდინის სია", path: "/app/waitlist", group: "დღის მართვა", roles: ["OWNER", "MANAGER", "RECEPTIONIST"] },
+  { icon: Clock3, label: "ოპერაციები", path: "/app/operations", group: "დღის მართვა", roles: ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"] },
+  { icon: ReceiptText, label: "POS და მარაგი", path: "/app/pos", group: "კლიენტები და გაყიდვა", roles: ["OWNER", "MANAGER", "RECEPTIONIST"] },
+  { icon: Users, label: "კლიენტები", path: "/app/clients", group: "კლიენტები და გაყიდვა", roles: ["OWNER", "MANAGER", "RECEPTIONIST"] },
+  { icon: Images, label: "კლიენტის გალერეა", path: "/app/client-gallery", group: "კლიენტები და გაყიდვა", roles: ["OWNER"] },
+  { icon: Scissors, label: "სერვისები", path: "/app/services", group: "სალონის მართვა", roles: ["OWNER"] },
+  { icon: Users, label: "გუნდი", path: "/app/staff", group: "სალონის მართვა", roles: ["OWNER", "STAFF"] },
+  { icon: BarChart3, label: "ანგარიშები", path: "/app/reports", group: "სალონის მართვა", roles: ["OWNER"] },
+  { icon: Images, label: "მედია და პროფილი", path: "/app/media", group: "სალონის მართვა", roles: ["OWNER"] },
+  { icon: Settings2, label: "პარამეტრები", path: "/app/settings", group: "სალონის მართვა", roles: ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"] },
 ] as const;
+
+const menuGroups = ["დღის მართვა", "კლიენტები და გაყიდვა", "სალონის მართვა"] as const;
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
 const DEFAULT_WIDTH = 280;
@@ -126,6 +128,7 @@ function DashboardLayoutContent({
   const sidebarRef = useRef<HTMLDivElement>(null);
   const role = organizations.data?.[0]?.membership.role;
   const visibleMenuItems = menuItems.filter(item => !role || (item.roles as readonly string[]).includes(role));
+  const visibleMenuGroups = menuGroups.map(label => ({ label, items: visibleMenuItems.filter(item => item.group === label) })).filter(group => group.items.length);
   const activeMenuItem = visibleMenuItems.find(item => item.path === location);
   const isMobile = useIsMobile();
   const [helpOpen, setHelpOpen] = useState(false);
@@ -193,9 +196,10 @@ function DashboardLayoutContent({
           </SidebarHeader>
 
           <SidebarContent className="gap-0 px-2 py-4">
-            {!isCollapsed ? <p className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-sidebar-foreground/55">ოპერაციები</p> : null}
-            <SidebarMenu className="gap-1">
-              {visibleMenuItems.map(item => {
+            {visibleMenuGroups.map((group, groupIndex) => <div key={group.label} className={groupIndex ? "mt-5" : ""}>
+              {!isCollapsed ? <p className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-sidebar-foreground/55">{group.label}</p> : null}
+              <SidebarMenu className="gap-1">
+              {group.items.map(item => {
                 const isActive = location === item.path;
                 const label = item.path === "/app/staff" && role === "STAFF" ? "ჩემი პროფილი" : item.label;
                 return (
@@ -214,7 +218,8 @@ function DashboardLayoutContent({
                   </SidebarMenuItem>
                 );
               })}
-            </SidebarMenu>
+              </SidebarMenu>
+            </div>)}
           </SidebarContent>
 
           <SidebarFooter className="border-t border-sidebar-border/90 p-3">
@@ -274,7 +279,7 @@ function DashboardLayoutContent({
               <div className="flex items-center gap-3">
                 <span className="sf-brand-mark" aria-hidden="true"><i /><i /><i /></span>
                 <div className="flex flex-col gap-0.5">
-                  <span className="text-sm font-semibold tracking-tight text-foreground">{activeMenuItem?.label ?? "მენიუ"}</span>
+                  <span className="text-sm font-semibold tracking-tight text-foreground">{activeMenuItem?.path === "/app/staff" && role === "STAFF" ? "ჩემი პროფილი" : activeMenuItem?.label ?? "მენიუ"}</span>
                   <span className="text-[11px] text-muted-foreground">SalonFlow</span>
                 </div>
               </div>

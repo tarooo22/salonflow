@@ -221,6 +221,6 @@
 - [x] Public Phase 4: Refine booking discovery, booking flow, waitlist and manage-booking surfaces for conversion clarity without changing availability, token, consent, notification or payment contracts.
 - [x] Public Phase 5: Refine public salon profile, services, specialist/team presentation, owner-approved media/gallery/feed and SEO-safe content readiness states.
 - [x] Public Phase 6: Complete public performance, WCAG/keyboard/reduced-motion, responsive, runtime and usability-test-kit validation; checkpoint only after every public test gate passes.
-- [ ] Dashboard Phase 7: Audit role-specific workspace tasks, route behavior, permissions and responsive patterns; write target dashboard specification before dashboard UI changes.
-- [ ] Dashboard Phase 8: Implement dashboard redesign in gated Today/shell, calendar/CRM, team/operations/POS and reports/settings subphases with complete security regression coverage.
-- [ ] Final Phase 9: Complete full route validation, tests, typecheck, production build, visual QA, live checkpoint and delivery report.
+- [x] Dashboard Phase 7: Audit role-specific workspace tasks, route behavior, permissions and responsive patterns; write target dashboard specification before dashboard UI changes.
+- [x] Dashboard Phase 8: Implement dashboard redesign in gated Today/shell, calendar/CRM, team/operations/POS and reports/settings subphases with complete security regression coverage.
+- [x] Final Phase 9: Complete full route validation, tests, typecheck, production build, visual QA, live checkpoint and delivery report.

@@ -394,6 +394,14 @@
   .sf-booking-availability-dots i:nth-child(3) { animation-delay: 240ms; }
   .sf-workspace-inset { background: var(--sf-canvas); }
   .sf-workspace-main { background: radial-gradient(ellipse 44rem 30rem at 98% -8%, color-mix(in srgb, var(--sf-fuchsia) 10%, transparent), transparent 60%), radial-gradient(ellipse 40rem 30rem at 12% 104%, color-mix(in srgb, var(--sf-violet) 9%, transparent), transparent 60%), var(--sf-canvas); }
+  .sf-workspace-page-header { position: relative; border-bottom: 1px solid var(--sf-salon-hairline); }
+  .sf-workspace-page-header::after { position: absolute; bottom: -1px; left: 0; width: 3.25rem; height: 2px; content: ""; border-radius: 999px; background: linear-gradient(90deg, var(--sf-salon-warm), var(--sf-salon-champagne)); }
+  .sf-workspace-eyebrow { color: var(--sf-salon-warm); font-size: 0.72rem; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; }
+  .sf-workspace-metric { border: 1px solid var(--sf-salon-hairline); border-radius: var(--sf-radius-surface); background: linear-gradient(145deg, color-mix(in srgb, var(--sf-surface-elevated) 92%, transparent), color-mix(in srgb, var(--sf-surface) 96%, transparent)); box-shadow: var(--sf-shadow-sm), inset 0 1px 0 color-mix(in srgb, white 8%, transparent); }
+  .sf-workspace-section { border: 1px solid var(--sf-salon-hairline); border-radius: var(--sf-radius-surface); background: linear-gradient(145deg, color-mix(in srgb, var(--sf-surface-elevated) 94%, transparent), var(--sf-surface)); box-shadow: var(--sf-shadow-sm), inset 0 1px 0 color-mix(in srgb, white 8%, transparent); }
+  .sf-workspace-section > div:first-child { border-color: var(--sf-salon-hairline); }
+  .sf-workspace-state { border: 1px dashed var(--sf-salon-hairline); border-radius: var(--sf-radius-surface); background: color-mix(in srgb, var(--sf-salon-warm) 4%, var(--sf-surface)); }
+  .sf-workspace-filter-bar { border: 1px solid var(--sf-salon-hairline); border-radius: var(--sf-radius-surface); background: color-mix(in srgb, var(--sf-surface-elevated) 88%, transparent); box-shadow: var(--sf-shadow-sm); }
   .sf-workspace-sidebar { background: linear-gradient(184deg, var(--sidebar) 0%, color-mix(in srgb, var(--sidebar) 84%, var(--sf-indigo)) 62%, color-mix(in srgb, var(--sidebar) 74%, var(--sf-magenta)) 100%); }
   .sf-workspace-page { min-width: 0; }
   .sf-workspace-page > header { position: relative; } .sf-workspace-page > header::after { content: ""; position: absolute; bottom: -1px; left: 0; width: 2.75rem; height: 2px; border-radius: 999px; background: var(--sf-gradient-brand); }

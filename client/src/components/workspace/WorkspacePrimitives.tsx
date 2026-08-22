@@ -13,9 +13,9 @@ type WorkspacePageHeaderProps = {
 
 export function WorkspacePageHeader({ eyebrow, title, description, actions, className }: WorkspacePageHeaderProps) {
   return (
-    <header className={cn("flex flex-col gap-4 border-b border-border/75 pb-5 lg:flex-row lg:items-end lg:justify-between", className)}>
+    <header className={cn("sf-workspace-page-header flex flex-col gap-4 pb-5 lg:flex-row lg:items-end lg:justify-between", className)}>
       <div className="min-w-0">
-        {eyebrow ? <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">{eyebrow}</p> : null}
+        {eyebrow ? <p className="sf-workspace-eyebrow">{eyebrow}</p> : null}
         <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">{title}</h1>
         {description ? <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">{description}</p> : null}
       </div>
@@ -44,7 +44,7 @@ export function WorkspaceMetric({ label, value, helper, icon: Icon, tone = "neut
     violet: "var(--sf-violet)", fuchsia: "var(--sf-fuchsia)", amber: "var(--sf-amber)",
   } as const;
   return (
-    <div className="sf-lift group relative min-w-0 overflow-hidden rounded-[var(--sf-radius-surface)] border border-border/75 bg-card px-4 py-4 shadow-[var(--sf-shadow-sm)]">
+    <div className="sf-workspace-metric sf-lift group relative min-w-0 overflow-hidden px-4 py-4">
       <span className="absolute inset-x-0 top-0 h-1" style={{ background: bars[tone], opacity: 0.85 }} aria-hidden="true" />
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0"><p className="text-xs font-medium text-muted-foreground">{label}</p><p className="sf-display mt-1.5 truncate text-[1.35rem] font-bold leading-tight tracking-tight text-foreground">{value}</p></div>
@@ -57,7 +57,7 @@ export function WorkspaceMetric({ label, value, helper, icon: Icon, tone = "neut
 
 export function WorkspaceSection({ title, description, action, children, className }: { title: string; description?: string; action?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <section className={cn("sf-operational-panel", className)}>
+    <section className={cn("sf-workspace-section", className)}>
       <div className="flex flex-col gap-2 border-b border-border/70 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <div><h2 className="text-sm font-semibold text-foreground">{title}</h2>{description ? <p className="mt-1 text-xs leading-5 text-muted-foreground">{description}</p> : null}</div>
         {action ? <div className="shrink-0">{action}</div> : null}
@@ -71,7 +71,7 @@ export function WorkspaceState({ kind, title, description, action }: { kind: "lo
   const Icon = kind === "loading" ? LoaderCircle : kind === "error" ? AlertCircle : Inbox;
   const tone = kind === "error" ? "text-destructive bg-destructive/10" : "text-primary bg-primary/10";
   return (
-    <div className="flex min-h-32 flex-col items-start justify-center rounded-[var(--sf-radius-surface)] border border-dashed border-border bg-muted/25 p-5">
+    <div className="sf-workspace-state flex min-h-32 flex-col items-start justify-center p-5">
       <span className={cn("mb-3 grid h-9 w-9 place-items-center rounded-lg", tone)}><Icon className={cn("h-4 w-4", kind === "loading" && "animate-spin")} /></span>
       <p className="text-sm font-semibold text-foreground">{title}</p>
       {description ? <p className="mt-1 max-w-xl text-sm leading-6 text-muted-foreground">{description}</p> : null}
@@ -93,5 +93,5 @@ export function WorkspaceStatusPill({ children, tone = "neutral" }: { children: 
 }
 
 export function WorkspaceFilterBar({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn("flex flex-col gap-3 rounded-[var(--sf-radius-surface)] border border-border/75 bg-card p-3 shadow-[var(--sf-shadow-sm)] sm:flex-row sm:flex-wrap sm:items-end", className)}>{children}</div>;
+  return <div className={cn("sf-workspace-filter-bar flex flex-col gap-3 p-3 sm:flex-row sm:flex-wrap sm:items-end", className)}>{children}</div>;
 }
