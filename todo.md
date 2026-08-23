@@ -240,3 +240,6 @@
 - [x] Refine Marketplace directory mobile/desktop layout, filter overflow behavior and empty-state explanation; validate responsive navigation and release the fix.
 - [x] Refine the public desktop header navigation hierarchy, spacing, locale/account controls and primary actions while preserving current routes and local-auth behavior.
 - [x] Verify public header mobile parity, visible keyboard focus, contrast and responsive layout before release.
+- [x] Create a clearly labelled test salon with six real catalog categories/services, approved public description, cover image and end-to-end booking setup.
+- [x] Create local test accounts for the test salon owner, manager and specialists, with least-privilege organization membership and documented temporary credentials.
+- [x] Approve the test salon Marketplace listing and apply an explicitly disclosed, time-bounded VIP test placement; validate public profile and role boundaries.
