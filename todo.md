@@ -238,3 +238,5 @@
 - [x] Improve Marketplace directory category interactions so users can open a selected category as a navigable discovery view on desktop and mobile.
 - [x] Add truthful Recommended and VIP discovery sections that appear only for actively scheduled, platform-admin-approved promotions and retain explicit advertising disclosure.
 - [x] Refine Marketplace directory mobile/desktop layout, filter overflow behavior and empty-state explanation; validate responsive navigation and release the fix.
+- [x] Refine the public desktop header navigation hierarchy, spacing, locale/account controls and primary actions while preserving current routes and local-auth behavior.
+- [x] Verify public header mobile parity, visible keyboard focus, contrast and responsive layout before release.

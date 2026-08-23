@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { PublicLocaleProvider } from "@/contexts/PublicLocaleContext";
 import { PublicHeader } from "./PublicPrimitives";
 
-vi.mock("wouter", () => ({ Link: ({ href, children }: { href: string; children: React.ReactNode }) => <a href={href}>{children}</a> }));
+vi.mock("wouter", () => ({ Link: ({ href, children }: { href: string; children: React.ReactNode }) => <a href={href}>{children}</a>, useLocation: () => ["/", vi.fn()] }));
 
 describe("public multilingual navigation", () => {
   it("renders English and Russian tourist-facing labels without changing the Georgian default", () => {
