@@ -1,5 +1,5 @@
 import { Link, useRoute } from "wouter";
-import { CalendarDays, ChevronRight, ExternalLink, Instagram, MapPin, Phone, Sparkles, UsersRound } from "lucide-react";
+import { CalendarDays, ChevronRight, ExternalLink, Instagram, MapPin, Phone, Sparkles, Star, UsersRound } from "lucide-react";
 import { useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -35,7 +35,7 @@ export default function SalonProfile() {
   if (profile.isError) return <main className="sf-public-page grid min-h-screen place-items-center px-4"><WorkspaceState kind="error" title={ui.unavailable} description={ui.retry} /></main>;
   if (!profile.data) return <main className="sf-public-page grid min-h-screen place-items-center px-4"><WorkspaceState kind="empty" title={ui.missing} description={ui.missingLead} action={<Link href="/book"><Button>{ui.all}</Button></Link>} /></main>;
 
-  const { salon, services, team, feed, gallery } = profile.data;
+  const { salon, services, team, feed, gallery, feedback } = profile.data;
   const social = salon.socialLinks ?? {};
   const marketplaceListing = marketplace.data;
 
@@ -78,6 +78,12 @@ export default function SalonProfile() {
         <div className="sf-public-container"><SectionHeading eyebrow={ui.team} title={ui.meetTeam} />
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{team.map(member => <article key={member.id} className="sf-salon-panel p-5"><div className="flex items-center gap-4">{member.avatarUrl ? <img src={member.avatarUrl} alt={member.avatarAltKa || `${member.name} avatar`} className="size-14 rounded-2xl object-cover" loading="lazy" /> : <div className="grid size-14 place-items-center rounded-2xl bg-[color-mix(in_srgb,var(--sf-salon-warm)_12%,transparent)] text-[var(--sf-salon-warm)]"><UsersRound className="size-6" /></div>}<div><p className="font-semibold">{member.name}</p><p className="text-sm text-[var(--sf-muted)]">{member.jobTitle || member.specialty || ui.specialist}</p></div></div>{member.bio ? <p className="mt-4 text-sm leading-6 text-[var(--sf-muted)]">{member.bio}</p> : null}{member.experienceYears ? <p className="mt-3 text-xs font-semibold text-[var(--sf-salon-leaf)]">{member.experienceYears} {locale === "ka" ? "წლის გამოცდილება" : locale === "ru" ? "лет опыта" : "years of experience"}</p> : null}</article>)}{!team.length ? <p className="sf-salon-panel border-dashed p-5 text-sm text-[var(--sf-muted)] sm:col-span-2 lg:col-span-3">{ui.noTeam}</p> : null}</div>
         </div>
+      </section>
+
+      <section>
+        <SectionHeading eyebrow={locale === "ka" ? "კლიენტების შეფასებები" : locale === "ru" ? "Отзывы клиентов" : "Client feedback"} title={locale === "ka" ? "დადასტურებული ვიზიტების უკუკავშირი" : locale === "ru" ? "Отзывы подтверждённых визитов" : "Feedback from verified visits"} />
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--sf-muted)]">{locale === "ka" ? "უკუკავშირს ტოვებს მხოლოდ დასრულებული ვიზიტის კლიენტი; გამოქვეყნებამდე იგი გადის მოდერაციას." : locale === "ru" ? "Отзыв может оставить только клиент после завершённого визита; каждая публикация проходит модерацию." : "Only a client with a completed visit can submit feedback, and every submission is moderated before publication."}</p>
+        {feedback.length ? <div className="mt-6 grid gap-4 md:grid-cols-2">{feedback.map(item => <article key={item.id} className="sf-salon-panel p-5"><div className="flex items-center justify-between gap-3"><p className="font-semibold">{item.authorName}</p><div className="flex items-center gap-0.5 text-[var(--sf-salon-warm)]" aria-label={`${item.rating} / 5`}><Star className="size-4 fill-current" aria-hidden="true" /><span className="ml-1 text-sm font-semibold">{item.rating}/5</span></div></div><p className="mt-3 text-sm leading-6 text-[var(--sf-muted)]">{item.comment}</p><p className="mt-4 text-xs font-medium text-[var(--sf-muted)]">{new Intl.DateTimeFormat(locale === "ka" ? "ka-GE" : locale === "ru" ? "ru-RU" : "en-US", { day: "numeric", month: "long", year: "numeric" }).format(new Date(item.submittedAt))}</p></article>)}</div> : <div className="sf-salon-panel mt-6 border-dashed p-6 text-sm leading-6 text-[var(--sf-muted)]">{locale === "ka" ? "დამტკიცებული შეფასებები ჯერ არ გამოჩენილა." : locale === "ru" ? "Одобренных отзывов пока нет." : "No approved feedback has been published yet."}</div>}
       </section>
 
       {gallery.length ? <section><SectionHeading eyebrow={ui.results} title={ui.beforeAfter} /><p className="mt-2 text-sm text-[var(--sf-muted)]">{ui.consent}</p><div className="mt-6 grid gap-4 md:grid-cols-2">{gallery.map(item => <article key={item.id} className="sf-salon-panel overflow-hidden"><div className="grid grid-cols-2">{item.before ? <figure><img src={item.before.mediaUrl} alt={item.before.altTextKa || ui.before} className="aspect-square w-full object-cover" loading="lazy" /><figcaption className="px-3 py-2 text-xs text-[var(--sf-muted)]">{ui.before}</figcaption></figure> : null}{item.after ? <figure><img src={item.after.mediaUrl} alt={item.after.altTextKa || ui.after} className="aspect-square w-full object-cover" loading="lazy" /><figcaption className="px-3 py-2 text-xs text-[var(--sf-muted)]">{ui.after}</figcaption></figure> : null}</div></article>)}</div></section> : null}

@@ -53,6 +53,8 @@ describe("public booking conversion helpers", () => {
     expect(markup).toContain("თქვენი სპეციალისტი:");
     expect(markup).toContain("ნინო");
     expect(markup).toContain("კალენდარში დამატება");
+    expect(markup).toContain("sf-booking-confirmation");
+    expect(markup).toContain("/manage-booking/safe-confirmation");
   });
 
   it("gives a focused, non-technical recovery message when a booking step is incomplete", () => {

@@ -122,6 +122,7 @@ describe("public booking router safeguards", () => {
       [{ id: ids.staffProfileId, name: "ლელა", bio: "გამოცდილი სტილისტი", jobTitle: "სტილისტი", specialty: null, experienceYears: 8, avatarKey: "salons/org/staff.webp", avatarAltKa: "ლელას ავატარი", sortOrder: 0 }],
       [{ id: "feed_001", mediaKey: "salons/org/feed.webp", titleKa: "ახალი ლუქი", captionKa: "აღწერა", altTextKa: "თმის ახალი ლუქი", publishedAt: new Date("2026-08-20") }],
       [{ id: "set_001", clientId: "private_client", appointmentId: "private_appointment", publicVisible: true, clientPublicationConsent: true }],
+      [],
       [{ id: "item_before", setId: "set_001", stage: "BEFORE", mediaKey: "salons/org/before.webp", altTextKa: "მანამდე" }, { id: "item_after", setId: "set_001", stage: "AFTER", mediaKey: "salons/org/after.webp", altTextKa: "შემდეგ" }],
     ]);
 
@@ -131,6 +132,7 @@ describe("public booking router safeguards", () => {
     expect(result?.team[0]).toMatchObject({ avatarUrl: "/manus-storage/salons/org/staff.webp", experienceYears: 8 });
     expect(result?.feed[0]).toMatchObject({ mediaUrl: "/manus-storage/salons/org/feed.webp" });
     expect(result?.gallery[0]).toEqual({ id: "set_001", before: { mediaUrl: "/manus-storage/salons/org/before.webp", altTextKa: "მანამდე" }, after: { mediaUrl: "/manus-storage/salons/org/after.webp", altTextKa: "შემდეგ" } });
+    expect(result?.feedback).toEqual([]);
     expect(JSON.stringify(result)).not.toContain("private_client");
     expect(JSON.stringify(result)).not.toContain("private_appointment");
   });

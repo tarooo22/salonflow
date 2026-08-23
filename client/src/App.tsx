@@ -31,6 +31,7 @@ const MarketplaceSetup = lazy(() => import("./pages/MarketplaceSetup"));
 const MarketplaceDirectory = lazy(() => import("./pages/MarketplaceDirectory"));
 const MarketplaceMap = lazy(() => import("./pages/MarketplaceMap"));
 const MarketplaceAdmin = lazy(() => import("./pages/MarketplaceAdmin"));
+const FeedbackModeration = lazy(() => import("./pages/FeedbackModeration"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const FeaturesPage = lazy(() => import("./pages/MarketingPages").then(module => ({ default: module.FeaturesPage })));
 const PricingPage = lazy(() => import("./pages/MarketingPages").then(module => ({ default: module.PricingPage })));
@@ -78,6 +79,7 @@ function Router() {
       <Route path={"/app/client-gallery"} component={ClientGallery} />
       <Route path={"/app/marketplace"} component={MarketplaceSetup} />
       <Route path={"/app/marketplace-admin"} component={MarketplaceAdmin} />
+      <Route path={"/app/feedback"} component={FeedbackModeration} />
       <Route path={"/app/waitlist"} component={WaitlistQueue} />
       <Route path={"/app/setup"} component={WorkspaceSetup} />
       <Route path={"/404"} component={NotFound} />

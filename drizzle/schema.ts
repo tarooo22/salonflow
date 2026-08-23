@@ -42,6 +42,7 @@ export const clientMediaStageValues = ["BEFORE", "AFTER"] as const;
 export const marketplaceListingStatusValues = ["DRAFT", "SUBMITTED", "APPROVED", "HIDDEN", "REJECTED"] as const;
 export const marketplacePromotionTierValues = ["RECOMMENDED", "VIP"] as const;
 export const marketplacePromotionStatusValues = ["SCHEDULED", "ACTIVE", "EXPIRED", "CANCELLED"] as const;
+export const customerFeedbackStatusValues = ["PENDING", "APPROVED", "HIDDEN", "REJECTED"] as const;
 
 export const membershipRole = mysqlEnum("membership_role", membershipRoleValues);
 export const membershipStatus = mysqlEnum("membership_status", membershipStatusValues);
@@ -63,6 +64,7 @@ export const clientMediaStage = mysqlEnum("client_media_stage", clientMediaStage
 export const marketplaceListingStatus = mysqlEnum("marketplace_listing_status", marketplaceListingStatusValues);
 export const marketplacePromotionTier = mysqlEnum("marketplace_promotion_tier", marketplacePromotionTierValues);
 export const marketplacePromotionStatus = mysqlEnum("marketplace_promotion_status", marketplacePromotionStatusValues);
+export const customerFeedbackStatus = mysqlEnum("customer_feedback_status", customerFeedbackStatusValues);
 
 /**
  * Secure platform identity synchronized by Manus OAuth. Business roles live in
@@ -427,6 +429,40 @@ export const clientConsents = mysqlTable("client_consents", {
   withdrawnAt: timestamp("withdrawnAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, table => [index("client_consents_client_type_idx").on(table.clientId, table.consentType)]);
+
+/** One truthful feedback submission per completed appointment, submitted through its opaque customer booking token. */
+export const customerFeedback = mysqlTable("customer_feedback", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  organizationId: varchar("organizationId", { length: 36 }).notNull().references(() => organizations.id),
+  locationId: varchar("locationId", { length: 36 }).notNull().references(() => locations.id),
+  appointmentId: varchar("appointmentId", { length: 36 }).notNull().references(() => appointments.id),
+  clientId: varchar("clientId", { length: 36 }).notNull().references(() => clients.id),
+  rating: int("rating").notNull(),
+  comment: varchar("comment", { length: 1200 }).notNull(),
+  displayName: varchar("displayName", { length: 100 }),
+  publicNameConsent: boolean("publicNameConsent").default(false).notNull(),
+  status: customerFeedbackStatus.default("PENDING").notNull(),
+  moderationNote: varchar("moderationNote", { length: 500 }),
+  moderatedByUserId: int("moderatedByUserId").references(() => users.id),
+  moderatedAt: timestamp("moderatedAt"),
+  submittedAt: timestamp("submittedAt").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [
+  uniqueIndex("customer_feedback_appointment_uq").on(table.appointmentId),
+  index("customer_feedback_public_location_idx").on(table.locationId, table.status, table.submittedAt),
+  index("customer_feedback_org_status_idx").on(table.organizationId, table.status, table.submittedAt),
+]);
+
+/** Immutable audit trail for feedback submission and salon-side moderation. */
+export const customerFeedbackEvents = mysqlTable("customer_feedback_events", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  feedbackId: varchar("feedbackId", { length: 36 }).notNull().references(() => customerFeedback.id),
+  eventType: varchar("eventType", { length: 80 }).notNull(),
+  actorUserId: int("actorUserId").references(() => users.id),
+  metadata: json("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [index("customer_feedback_events_feedback_created_idx").on(table.feedbackId, table.createdAt)]);
 
 export const clientMerges = mysqlTable("client_merges", {
   id: varchar("id", { length: 36 }).primaryKey(),

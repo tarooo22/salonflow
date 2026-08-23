@@ -243,3 +243,6 @@
 - [x] Create a clearly labelled test salon with six real catalog categories/services, approved public description, cover image and end-to-end booking setup.
 - [x] Create local test accounts for the test salon owner, manager and specialists, with least-privilege organization membership and documented temporary credentials.
 - [x] Approve the test salon Marketplace listing and apply an explicitly disclosed, time-bounded VIP test placement; validate public profile and role boundaries.
+- [x] Define and implement booking-linked feedback data model with one real client submission per eligible completed appointment, consent controls and immutable moderation audit.
+- [x] Add owner/manager feedback moderation controls and a truthful public salon-profile review/comment section without fabricated ratings, reviews or aggregates.
+- [x] Improve mobile-first booking navigation, inline error states and reduced-motion-safe confirmation animation; validate 375px and keyboard flows.

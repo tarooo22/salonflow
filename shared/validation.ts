@@ -73,6 +73,29 @@ export const marketplacePromotionCancelSchema = z.object({
   promotionId: opaqueIdSchema,
 });
 
+export const publicFeedbackTokenSchema = z.object({ token: z.string().trim().min(24).max(256) });
+
+export const publicFeedbackSubmitSchema = publicFeedbackTokenSchema.extend({
+  rating: z.number().int().min(1).max(5),
+  comment: z.string().trim().min(4).max(1200),
+  displayName: z.string().trim().min(1).max(100).optional(),
+  publicNameConsent: z.boolean().default(false),
+}).superRefine((input, ctx) => {
+  if (input.publicNameConsent && !input.displayName) ctx.addIssue({ code: "custom", path: ["displayName"], message: "საჯარო სახელის გამოსაჩენად მიუთითეთ სახელი." });
+});
+
+export const feedbackModerationListSchema = paginationSchema.extend({
+  organizationId: opaqueIdSchema,
+  status: z.enum(["PENDING", "APPROVED", "HIDDEN", "REJECTED"]).optional(),
+});
+
+export const feedbackModerationSchema = z.object({
+  organizationId: opaqueIdSchema,
+  feedbackId: opaqueIdSchema,
+  status: z.enum(["APPROVED", "HIDDEN", "REJECTED"]),
+  moderationNote: z.string().trim().max(500).optional(),
+});
+
 export const localRegistrationSchema = z.object({
   name: z.string().trim().min(2).max(160),
   email: z.string().trim().email().max(320),

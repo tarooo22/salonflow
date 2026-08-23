@@ -1,9 +1,9 @@
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { createHash, createHmac } from "node:crypto";
 import { nanoid } from "nanoid";
-import { appointmentServices, appointments, appointmentStatusHistory, clientConsents, clientMediaItems, clientMediaSets, clients, locationFeedPosts, locations, organizations, scheduleLocks, serviceCategories, services, staffLocations, staffProfiles, staffServices, waitlistEntries, workingHourRules } from "../../drizzle/schema";
+import { appointmentServices, appointments, appointmentStatusHistory, clientConsents, clientMediaItems, clientMediaSets, clients, customerFeedback, customerFeedbackEvents, locationFeedPosts, locations, organizations, scheduleLocks, serviceCategories, services, staffLocations, staffProfiles, staffServices, waitlistEntries, workingHourRules } from "../../drizzle/schema";
 import { requireDb } from "../db";
-import { publicAvailabilityCheckSchema, publicAvailableSlotsSchema, publicBookingCancelSchema, publicBookingCommitSchema, publicBookingRescheduleSchema, publicBookingTokenSchema, publicMultiAvailabilityCheckSchema, publicMultiAvailableSlotsSchema, publicMultiBookingCommitSchema, publicWaitlistCreateSchema, slugSchema } from "../../shared/validation";
+import { publicAvailabilityCheckSchema, publicAvailableSlotsSchema, publicBookingCancelSchema, publicBookingCommitSchema, publicBookingRescheduleSchema, publicBookingTokenSchema, publicFeedbackSubmitSchema, publicFeedbackTokenSchema, publicMultiAvailabilityCheckSchema, publicMultiAvailableSlotsSchema, publicMultiBookingCommitSchema, publicWaitlistCreateSchema, slugSchema } from "../../shared/validation";
 import { appointmentBlocksInterval, intervalsOverlap } from "../lib/appointments";
 import { generateAvailableSlots, type BusyInterval } from "../lib/availability";
 import { formatTimeInTimeZone, zonedDateTimeToUtc } from "../../shared/timezones";
@@ -163,7 +163,7 @@ export const publicRouter = router({
       .where(and(eq(locations.publicSlug, slug), eq(locations.status, "ACTIVE"))).limit(1);
     if (!record) return null;
     const location = record.location;
-    const [serviceRows, teamRows, feedRows, gallerySets] = await Promise.all([
+    const [serviceRows, teamRows, feedRows, gallerySets, feedbackRows] = await Promise.all([
       db.select({ id: services.id, nameKa: services.nameKa, description: services.publicDescriptionKa, durationMinutes: services.defaultDurationMinutes, priceTetri: services.priceTetri, isFromPrice: services.isFromPrice, categoryNameKa: serviceCategories.nameKa, categorySortOrder: serviceCategories.sortOrder, sortOrder: services.sortOrder }).from(services)
         .innerJoin(serviceCategories, eq(services.categoryId, serviceCategories.id))
         .where(and(eq(services.organizationId, location.organizationId), eq(services.status, "ACTIVE"), eq(services.onlineBookingEnabled, true))).orderBy(asc(serviceCategories.sortOrder), asc(services.sortOrder)),
@@ -172,6 +172,8 @@ export const publicRouter = router({
         .where(and(eq(staffLocations.locationId, location.id), eq(staffProfiles.status, "ACTIVE"), eq(staffProfiles.onlineBookingVisible, true))).orderBy(asc(staffProfiles.sortOrder)),
       db.select().from(locationFeedPosts).where(and(eq(locationFeedPosts.locationId, location.id), eq(locationFeedPosts.publicVisible, true))).orderBy(desc(locationFeedPosts.publishedAt), asc(locationFeedPosts.sortOrder)).limit(24),
       db.select().from(clientMediaSets).where(and(eq(clientMediaSets.locationId, location.id), eq(clientMediaSets.publicVisible, true), eq(clientMediaSets.clientPublicationConsent, true))).orderBy(desc(clientMediaSets.createdAt)).limit(12),
+      db.select({ id: customerFeedback.id, rating: customerFeedback.rating, comment: customerFeedback.comment, displayName: customerFeedback.displayName, publicNameConsent: customerFeedback.publicNameConsent, submittedAt: customerFeedback.submittedAt }).from(customerFeedback)
+        .where(and(eq(customerFeedback.locationId, location.id), eq(customerFeedback.status, "APPROVED"))).orderBy(desc(customerFeedback.submittedAt)).limit(30),
     ]);
     const gallerySetIds = gallerySets.map(set => set.id);
     const galleryItems = gallerySetIds.length ? await db.select().from(clientMediaItems).where(inArray(clientMediaItems.setId, gallerySetIds)) : [];
@@ -197,7 +199,32 @@ export const publicRouter = router({
         before: galleryItems.find(item => item.setId === set.id && item.stage === "BEFORE") ? (() => { const item = galleryItems.find(entry => entry.setId === set.id && entry.stage === "BEFORE")!; return { mediaUrl: mediaUrl(item.mediaKey), altTextKa: item.altTextKa }; })() : null,
         after: galleryItems.find(item => item.setId === set.id && item.stage === "AFTER") ? (() => { const item = galleryItems.find(entry => entry.setId === set.id && entry.stage === "AFTER")!; return { mediaUrl: mediaUrl(item.mediaKey), altTextKa: item.altTextKa }; })() : null,
       })).filter(set => set.before && set.after),
+      feedback: feedbackRows.map(item => ({ id: item.id, rating: item.rating, comment: item.comment, authorName: item.publicNameConsent && item.displayName ? item.displayName : "დადასტურებული კლიენტი", submittedAt: item.submittedAt })),
     };
+  }),
+
+  feedbackEligibility: publicProcedure.input(publicFeedbackTokenSchema).query(async ({ input }) => {
+    const db = await requireDb();
+    const appointment = await appointmentForPublicToken(db, input.token);
+    if (appointment.status !== "COMPLETED" || !appointment.clientId) return { eligible: false, submitted: false, reason: "დასრულებული ვიზიტის შემდეგ შეძლებთ უკუკავშირის დატოვებას." };
+    const [existing] = await db.select({ id: customerFeedback.id, status: customerFeedback.status }).from(customerFeedback).where(eq(customerFeedback.appointmentId, appointment.id)).limit(1);
+    if (existing) return { eligible: false, submitted: true, status: existing.status, reason: "ამ ვიზიტისთვის უკუკავშირი უკვე დატოვებულია." };
+    const [location] = await db.select({ name: locations.name, publicSlug: locations.publicSlug }).from(locations).where(eq(locations.id, appointment.locationId)).limit(1);
+    return { eligible: true, submitted: false, locationName: location?.name ?? "SalonFlow", publicSlug: location?.publicSlug ?? null };
+  }),
+
+  submitFeedback: publicProcedure.input(publicFeedbackSubmitSchema).mutation(async ({ input }) => {
+    const db = await requireDb();
+    const appointment = await appointmentForPublicToken(db, input.token);
+    if (appointment.status !== "COMPLETED" || !appointment.clientId) throw new Error("უკუკავშირი ხელმისაწვდომია მხოლოდ დასრულებული ვიზიტის შემდეგ.");
+    const [existing] = await db.select({ id: customerFeedback.id }).from(customerFeedback).where(eq(customerFeedback.appointmentId, appointment.id)).limit(1);
+    if (existing) throw new Error("ამ ვიზიტისთვის უკუკავშირი უკვე დატოვებულია.");
+    const feedbackId = nanoid(21);
+    await db.transaction(async tx => {
+      await tx.insert(customerFeedback).values({ id: feedbackId, organizationId: appointment.organizationId, locationId: appointment.locationId, appointmentId: appointment.id, clientId: appointment.clientId!, rating: input.rating, comment: input.comment, displayName: input.publicNameConsent ? input.displayName ?? null : null, publicNameConsent: input.publicNameConsent, status: "PENDING" });
+      await tx.insert(customerFeedbackEvents).values({ id: nanoid(21), feedbackId, eventType: "SUBMITTED_BY_BOOKING_TOKEN", metadata: { rating: input.rating, publicNameConsent: input.publicNameConsent } });
+    });
+    return { submitted: true, status: "PENDING" as const };
   }),
 
   checkAvailability: publicProcedure.input(publicAvailabilityCheckSchema).query(async ({ input }) => {

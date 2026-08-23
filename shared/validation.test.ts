@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { appointmentRescheduleSchema, attendanceClockSchema, calendarRangeSchema, clientBeforeAfterCreateSchema, marketplaceOwnerMapPointConfirmSchema, marketplacePromotionCancelSchema, retailSaleCreateSchema, tipCreateSchema } from "./validation";
+import { appointmentRescheduleSchema, attendanceClockSchema, calendarRangeSchema, clientBeforeAfterCreateSchema, marketplaceOwnerMapPointConfirmSchema, marketplacePromotionCancelSchema, publicFeedbackSubmitSchema, retailSaleCreateSchema, tipCreateSchema } from "./validation";
 
 const scope = {
   organizationId: "organization_2026_abcd",
@@ -68,5 +68,19 @@ describe("Marketplace map and promotion validation", () => {
   it("requires a bounded opaque promotion identifier for admin cancellation", () => {
     expect(marketplacePromotionCancelSchema.parse({ promotionId: "promotion_2026_abcdefgh" }).promotionId).toBe("promotion_2026_abcdefgh");
     expect(() => marketplacePromotionCancelSchema.parse({ promotionId: "short" })).toThrow();
+  });
+});
+
+describe("verified feedback validation", () => {
+  const token = "booking_token_2026_abcdefghijklmno";
+
+  it("accepts a bounded completed-booking feedback payload", () => {
+    expect(publicFeedbackSubmitSchema.parse({ token, rating: 5, comment: "მომსახურებით კმაყოფილი ვარ.", publicNameConsent: false })).toMatchObject({ rating: 5, publicNameConsent: false });
+  });
+
+  it("rejects invalid ratings, short comments and named publication without a name", () => {
+    expect(() => publicFeedbackSubmitSchema.parse({ token, rating: 6, comment: "ძალიან კარგი მომსახურება", publicNameConsent: false })).toThrow();
+    expect(() => publicFeedbackSubmitSchema.parse({ token, rating: 4, comment: "კი", publicNameConsent: false })).toThrow();
+    expect(() => publicFeedbackSubmitSchema.parse({ token, rating: 4, comment: "ძალიან კარგი მომსახურება", publicNameConsent: true })).toThrow("საჯარო სახელის გამოსაჩენად მიუთითეთ სახელი.");
   });
 });
