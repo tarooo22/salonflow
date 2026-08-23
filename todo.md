@@ -235,3 +235,6 @@
 - [x] Marketplace Phase 5: Add lazy accessible map/list search with owner-confirmed geocoding, marker/list parity, clustering and text fallback; never reveal hidden address data.
 - [x] Marketplace Phase 6: Add platform-admin-only recommendation/VIP schedule governance with audit trail and expiry, while keeping all checkout, recurring charges and payment capture inactive.
 - [x] Marketplace Phase 7: Run per-phase server/client security tests, keyboard/reduced-motion/WCAG checks, 375/768/1024/1440 visual QA, full test/typecheck/build and live checkpoint.
+- [x] Improve Marketplace directory category interactions so users can open a selected category as a navigable discovery view on desktop and mobile.
+- [x] Add truthful Recommended and VIP discovery sections that appear only for actively scheduled, platform-admin-approved promotions and retain explicit advertising disclosure.
+- [x] Refine Marketplace directory mobile/desktop layout, filter overflow behavior and empty-state explanation; validate responsive navigation and release the fix.

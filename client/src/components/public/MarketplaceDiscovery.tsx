@@ -1,13 +1,26 @@
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 import { ArrowRight, Brush, Eye, Flower2, MapPin, Scissors, Sparkles, Sun, Tag, Zap } from "lucide-react";
-import { Link } from "wouter";
-import { useMemo, useState } from "react";
+import { Link, useLocation } from "wouter";
+import { useMemo } from "react";
 
 const iconByKey = { scissors: Scissors, sparkles: Sparkles, brush: Brush, eye: Eye, "flower-2": Flower2, sun: Sun, zap: Zap, plus: Tag } as const;
 
 export function marketplacePromotionLabel(tier: string | undefined) {
   return tier === "VIP" ? "VIP / რეკლამა" : tier === "RECOMMENDED" ? "რეკომენდებული" : null;
+}
+
+export function marketplaceDiscoveryHref(path: "/salons" | "/salons/map", categorySlug?: string, search?: string) {
+  const params = new URLSearchParams();
+  if (categorySlug) params.set("category", categorySlug);
+  if (search?.trim()) params.set("q", search.trim());
+  const query = params.toString();
+  return query ? `${path}?${query}` : path;
+}
+
+export function marketplaceDiscoveryFilters(queryString: string) {
+  const params = new URLSearchParams(queryString.startsWith("?") ? queryString.slice(1) : queryString);
+  return { categorySlug: params.get("category") || undefined, search: params.get("q") || "" };
 }
 
 export function MarketplaceListingCard({ item }: { item: any }) {
@@ -25,12 +38,15 @@ export function MarketplaceListingCard({ item }: { item: any }) {
 
 export function MarketplaceCategoryRail({ selectedSlug, onSelect }: { selectedSlug?: string; onSelect: (slug?: string) => void }) {
   const categories = trpc.marketplace.categories.useQuery();
-  return <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="სალონის კატეგორიები"><button type="button" onClick={() => onSelect(undefined)} aria-pressed={!selectedSlug} className={`shrink-0 rounded-2xl border px-4 py-3 text-sm font-semibold transition ${!selectedSlug ? "border-[var(--sf-salon-warm)] bg-[color-mix(in_srgb,var(--sf-salon-warm)_16%,var(--sf-surface))] text-[var(--sf-ink)]" : "border-[var(--sf-line)] bg-[var(--sf-surface-raised)] text-[var(--sf-muted)] hover:border-[var(--sf-salon-warm)]"}`}>ყველა</button>{categories.data?.map(category => { const Icon = iconByKey[category.iconKey as keyof typeof iconByKey] ?? Tag; return <button key={category.id} type="button" onClick={() => onSelect(category.slug)} aria-pressed={selectedSlug === category.slug} className={`inline-flex shrink-0 items-center gap-2 rounded-2xl border px-4 py-3 text-sm font-semibold transition ${selectedSlug === category.slug ? "border-[var(--sf-salon-warm)] bg-[color-mix(in_srgb,var(--sf-salon-warm)_16%,var(--sf-surface))] text-[var(--sf-ink)]" : "border-[var(--sf-line)] bg-[var(--sf-surface-raised)] text-[var(--sf-muted)] hover:border-[var(--sf-salon-warm)] hover:text-[var(--sf-ink)]"}`}><Icon className="size-4 text-[var(--sf-salon-warm)]" aria-hidden="true" />{category.nameKa}</button>; })}</div>;
+  const buttonClass = (selected: boolean) => `flex min-h-12 items-center justify-center gap-2 rounded-2xl border px-3 py-3 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sf-accent-strong)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--sf-bg)] ${selected ? "border-[var(--sf-salon-warm)] bg-[color-mix(in_srgb,var(--sf-salon-warm)_16%,var(--sf-surface))] text-[var(--sf-ink)]" : "border-[var(--sf-line)] bg-[var(--sf-surface-raised)] text-[var(--sf-muted)] hover:border-[var(--sf-salon-warm)] hover:text-[var(--sf-ink)]"}`;
+  return <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap" aria-label="სალონის კატეგორიები"><button type="button" onClick={() => onSelect(undefined)} aria-pressed={!selectedSlug} className={buttonClass(!selectedSlug)}>ყველა</button>{categories.data?.map(category => { const Icon = iconByKey[category.iconKey as keyof typeof iconByKey] ?? Tag; return <button key={category.id} type="button" onClick={() => onSelect(category.slug)} aria-pressed={selectedSlug === category.slug} className={buttonClass(selectedSlug === category.slug)}><Icon className="size-4 shrink-0 text-[var(--sf-salon-warm)]" aria-hidden="true" /><span className="truncate">{category.nameKa}</span></button>; })}</div>;
 }
 
 export function MarketplaceHighlights() {
-  const [categorySlug, setCategorySlug] = useState<string | undefined>();
-  const input = useMemo(() => ({ limit: 4, offset: 0, categorySlug }), [categorySlug]);
+  const [location, setLocation] = useLocation();
+  const filters = marketplaceDiscoveryFilters(typeof window === "undefined" ? "" : window.location.search);
+  const input = useMemo(() => ({ limit: 4, offset: 0, categorySlug: filters.categorySlug }), [filters.categorySlug]);
   const result = trpc.marketplace.directory.useQuery(input);
-  return <section className="sf-salon-section border-y border-[var(--sf-line)]"><div className="sf-public-container py-16 lg:py-20"><div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-end"><div><p className="sf-salon-eyebrow">SALONFLOW MARKETPLACE</p><h2 className="sf-display mt-4 max-w-2xl text-4xl font-semibold leading-tight sm:text-5xl">იპოვეთ სწორი სალონი — სერვისის, სტილისა და ადგილის მიხედვით.</h2><p className="mt-4 max-w-xl text-base leading-7 text-[var(--sf-muted)]">აირჩიეთ თმა, ფრჩხილები, მაკიაჟი ან სხვა სერვისი. აქ გამოჩნდება მხოლოდ review-ით დამტკიცებული სალონები და მათი რეალური online booking გზა.</p></div><Button asChild variant="publicSecondary"><Link href="/salons">ყველა სალონის ნახვა <ArrowRight className="ml-1.5 size-4" aria-hidden="true" /></Link></Button></div><div className="mt-8"><MarketplaceCategoryRail selectedSlug={categorySlug} onSelect={setCategorySlug} /></div>{result.isLoading ? <div className="mt-9 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{Array.from({ length: 4 }).map((_, index) => <div key={index} className="sf-skeleton h-72 rounded-[var(--sf-radius-surface)]" />)}</div> : null}{result.isError ? <p className="mt-8 rounded-2xl border border-dashed p-5 text-sm text-[var(--sf-muted)]">სალონების კატალოგი ახლა მიუწვდომელია. სცადეთ მოგვიანებით.</p> : null}{!result.isLoading && !result.isError && !result.data?.items.length ? <div className="mt-9 overflow-hidden rounded-[var(--sf-radius-surface)] border border-dashed bg-[radial-gradient(circle_at_85%_10%,color-mix(in_srgb,var(--sf-salon-warm)_17%,transparent),transparent_28%),var(--sf-surface-raised)] p-7"><p className="sf-salon-eyebrow">MARKETPLACE იწყება რეალური პროფილებით</p><p className="mt-3 text-xl font-semibold">პირველი დამტკიცებული სალონები მალე გამოჩნდება.</p><p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--sf-muted)]">არ ვაჩვენებთ გამოგონილ listing-ს. სალონი კატალოგში ჩნდება მხოლოდ მაშინ, როცა მფლობელი ამზადებს პროფილს, აკავშირებს რეალურ სერვისებს და იგი გადის platform review-ს.</p></div> : null}{result.data?.items.length ? <div className="mt-9 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{result.data.items.map(item => <MarketplaceListingCard key={item.locationId as string} item={item} />)}</div> : null}</div></section>;
+  const chooseCategory = (categorySlug?: string) => setLocation(marketplaceDiscoveryHref("/salons", categorySlug));
+  return <section className="sf-salon-section border-y border-[var(--sf-line)]"><div className="sf-public-container py-16 lg:py-20"><div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-end"><div><p className="sf-salon-eyebrow">SALONFLOW MARKETPLACE</p><h2 className="sf-display mt-4 max-w-2xl text-4xl font-semibold leading-tight sm:text-5xl">იპოვეთ სწორი სალონი — სერვისის, სტილისა და ადგილის მიხედვით.</h2><p className="mt-4 max-w-xl text-base leading-7 text-[var(--sf-muted)]">აირჩიეთ თმა, ფრჩხილები, მაკიაჟი ან სხვა სერვისი. კატეგორიის არჩევა გადაგიყვანთ მის სრულ კატალოგში; აქ ჩანს მხოლოდ review-ით დამტკიცებული სალონები და მათი რეალური online booking გზა.</p></div><Button asChild variant="publicSecondary"><Link href="/salons">ყველა სალონის ნახვა <ArrowRight className="ml-1.5 size-4" aria-hidden="true" /></Link></Button></div><div className="mt-8"><MarketplaceCategoryRail selectedSlug={filters.categorySlug} onSelect={chooseCategory} /></div>{result.isLoading ? <div className="mt-9 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{Array.from({ length: 4 }).map((_, index) => <div key={index} className="sf-skeleton h-72 rounded-[var(--sf-radius-surface)]" />)}</div> : null}{result.isError ? <p className="mt-8 rounded-2xl border border-dashed p-5 text-sm text-[var(--sf-muted)]">სალონების კატალოგი ახლა მიუწვდომელია. სცადეთ მოგვიანებით.</p> : null}{!result.isLoading && !result.isError && !result.data?.items.length ? <div className="mt-9 overflow-hidden rounded-[var(--sf-radius-surface)] border border-dashed bg-[radial-gradient(circle_at_85%_10%,color-mix(in_srgb,var(--sf-salon-warm)_17%,transparent),transparent_28%),var(--sf-surface-raised)] p-7"><p className="sf-salon-eyebrow">MARKETPLACE იწყება რეალური პროფილებით</p><p className="mt-3 text-xl font-semibold">პირველი დამტკიცებული სალონები მალე გამოჩნდება.</p><p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--sf-muted)]">არ ვაჩვენებთ გამოგონილ listing-ს. სალონი კატალოგში ჩნდება მხოლოდ მაშინ, როცა მფლობელი ამზადებს პროფილს, აკავშირებს რეალურ სერვისებს და იგი გადის platform review-ს.</p></div> : null}{result.data?.items.length ? <div className="mt-9 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{result.data.items.map(item => <MarketplaceListingCard key={item.locationId as string} item={item} />)}</div> : null}</div></section>;
 }
