@@ -339,13 +339,16 @@
   .sf-auth-card { border: 1px solid color-mix(in srgb, var(--sf-line) 86%, transparent); border-radius: var(--sf-radius-hero); background: linear-gradient(145deg, var(--sf-surface-elevated), var(--sf-surface)); box-shadow: var(--sf-shadow-lg); }
   /* ── Salon House public primitives ──────────────────────────────────── */
   .sf-public-header { border-color: color-mix(in srgb, var(--sf-salon-hairline) 62%, transparent); background: linear-gradient(90deg, color-mix(in srgb, var(--sf-canvas) 91%, transparent), color-mix(in srgb, var(--sf-surface-raised) 84%, transparent), color-mix(in srgb, var(--sf-canvas) 91%, transparent)); box-shadow: 0 1px 0 color-mix(in srgb, var(--sf-salon-champagne) 12%, transparent), 0 12px 28px -28px color-mix(in srgb, var(--sf-ink) 45%, transparent); transition: box-shadow var(--sf-motion-standard), background-color var(--sf-motion-standard); }
+  .sf-public-header > .sf-public-container { width: min(100% - 2rem, 96rem); }
   .sf-public-header--scrolled { background: linear-gradient(90deg, color-mix(in srgb, var(--sf-canvas) 96%, transparent), color-mix(in srgb, var(--sf-surface-raised) 93%, transparent), color-mix(in srgb, var(--sf-canvas) 96%, transparent)); box-shadow: 0 1px 0 color-mix(in srgb, var(--sf-salon-champagne) 20%, transparent), 0 16px 32px -24px color-mix(in srgb, var(--sf-ink) 48%, transparent); }
-  .sf-public-brand { color: var(--sf-ink); transition: color var(--sf-motion-fast), transform var(--sf-motion-fast); }
+  .sf-public-brand { color: var(--sf-ink); transform-origin: left center; transition: color var(--sf-motion-fast), transform var(--sf-motion-fast); }
   .sf-public-brand:hover { color: var(--sf-accent-strong); transform: translateY(-1px); }
-  .sf-public-nav-link { position: relative; color: var(--sf-muted); letter-spacing: -0.01em; }
+  .sf-public-brand--compact { transform: scale(0.9); }
+  .sf-public-brand--compact:hover { transform: scale(0.9) translateY(-1px); }
+  .sf-public-nav-link { position: relative; border: 1px solid transparent; color: var(--sf-muted); letter-spacing: -0.01em; }
   .sf-public-nav-link::after { content: ""; position: absolute; right: 0.75rem; bottom: 0.35rem; left: 0.75rem; height: 1px; transform: scaleX(0); transform-origin: left; border-radius: 999px; background: var(--sf-salon-warm); transition: transform var(--sf-motion-standard); }
   .sf-public-nav-link:hover::after, .sf-public-nav-link:focus-visible::after, .sf-public-nav-link--active::after { transform: scaleX(1); }
-  .sf-public-nav-link--active { color: var(--sf-ink); background: color-mix(in srgb, var(--sf-salon-warm) 9%, var(--sf-surface)); }
+  .sf-public-nav-link--active { color: var(--sf-ink); border: 1px solid color-mix(in srgb, var(--sf-salon-warm) 45%, var(--sf-salon-hairline)); background: linear-gradient(135deg, color-mix(in srgb, var(--sf-salon-warm) 16%, var(--sf-surface)), color-mix(in srgb, var(--sf-salon-champagne) 10%, var(--sf-surface))); box-shadow: inset 0 1px 0 color-mix(in srgb, white 12%, transparent), 0 7px 16px -16px color-mix(in srgb, var(--sf-salon-warm) 90%, transparent); }
   .sf-public-booking-link { position: relative; overflow: hidden; border: 1px solid color-mix(in srgb, var(--sf-salon-warm) 48%, var(--sf-salon-hairline)); border-radius: 0.8rem; background: linear-gradient(135deg, color-mix(in srgb, var(--sf-salon-warm) 13%, var(--sf-surface)), color-mix(in srgb, var(--sf-salon-champagne) 10%, var(--sf-surface))); color: var(--sf-salon-warm); box-shadow: inset 0 1px 0 color-mix(in srgb, white 18%, transparent), 0 7px 18px -14px color-mix(in srgb, var(--sf-salon-warm) 72%, transparent); transition: transform var(--sf-motion-fast), border-color var(--sf-motion-fast), box-shadow var(--sf-motion-fast), background-color var(--sf-motion-fast); }
   .sf-public-booking-link::before { position: absolute; inset: 0; content: ""; opacity: 0; background: linear-gradient(110deg, transparent 18%, color-mix(in srgb, white 38%, transparent) 48%, transparent 78%); transform: translateX(-118%); transition: opacity var(--sf-motion-fast), transform 420ms var(--sf-ease-out); }
   .sf-public-booking-link > * { position: relative; z-index: 1; }
@@ -353,6 +356,9 @@
   .sf-public-booking-link:hover::before { opacity: 1; transform: translateX(118%); }
   .sf-public-booking-link:focus-visible { outline: 3px solid var(--sf-focus); outline-offset: 3px; }
   .sf-public-compact-booking { justify-content: center; min-width: 9.6rem; box-shadow: inset 0 1px 0 color-mix(in srgb, white 24%, transparent), 0 12px 24px -16px color-mix(in srgb, var(--sf-salon-warm) 90%, transparent); }
+  .sf-public-discovery-shortcut { border: 1px solid color-mix(in srgb, var(--sf-salon-champagne) 42%, var(--sf-salon-hairline)); border-radius: 0.8rem; background: color-mix(in srgb, var(--sf-salon-champagne) 9%, var(--sf-surface)); color: var(--sf-ink); box-shadow: inset 0 1px 0 color-mix(in srgb, white 12%, transparent); }
+  .sf-public-discovery-shortcut:hover { border-color: var(--sf-salon-champagne); background: color-mix(in srgb, var(--sf-salon-champagne) 16%, var(--sf-surface)); }
+  .sf-public-discovery-shortcut:focus-visible { outline: 3px solid var(--sf-focus); outline-offset: 3px; }
   .sf-salon-section { position: relative; isolation: isolate; }
   .sf-salon-section::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: linear-gradient(112deg, color-mix(in srgb, var(--sf-salon-warm) 5%, transparent), transparent 42%, color-mix(in srgb, var(--sf-salon-champagne) 6%, transparent)); }
   .sf-salon-eyebrow { display: inline-flex; align-items: center; gap: 0.5rem; color: var(--sf-salon-warm); font-size: 0.72rem; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; }

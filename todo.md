@@ -250,3 +250,7 @@
 - [x] Refine public header spacing and visual hierarchy at 1024px and 1280px without reintroducing navigation overflow.
 - [x] Add an accessible reduced-motion-safe sticky header behavior and a prominent booking shortcut in the compact header/menu.
 - [x] Validate header interaction and layout at 1024px/1280px, keyboard focus and production build before release.
+- [x] Strengthen the desktop public navigation active-page indicator without relying on color alone.
+- [x] Add a visible salons-discovery quick link in the compact header/menu alongside the highlighted booking action.
+- [x] Add a reduced-motion-safe sticky-header logo scale effect and validate all header interactions responsively.
+- [x] Package the reviewed public header refinement workflow as a reusable Manus skill and validate it with skill-creator tooling.
