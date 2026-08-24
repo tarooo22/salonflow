@@ -107,6 +107,21 @@ export const localLoginSchema = z.object({
   password: z.string().min(1).max(128),
 });
 
+export const trialRequestSchema = z.object({
+  salonName: z.string().trim().min(2).max(160),
+  salonSlug: slugSchema,
+});
+
+export const trialAdminQueueSchema = paginationSchema.extend({
+  status: z.enum(["PENDING", "APPROVED", "REJECTED", "EXPIRED", "CANCELLED"]).optional(),
+});
+
+export const trialAdminDecisionSchema = z.object({
+  trialRequestId: opaqueIdSchema,
+  decision: z.enum(["APPROVE", "REJECT"]),
+  reviewNoteKa: z.string().trim().max(500).optional(),
+});
+
 export const legacyLocalAccountClaimSchema = z.union([
   z.object({
     recoveryCode: z.string().trim().min(10).max(32),

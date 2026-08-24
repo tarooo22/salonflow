@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { organizationMemberships, type User } from "../drizzle/schema";
 import { requireDb } from "./db";
+import { requireActiveTrialForOrganization } from "./lib/trialAccess";
 
 export type SalonRole = "OWNER" | "MANAGER" | "RECEPTIONIST" | "STAFF";
 
@@ -27,6 +28,7 @@ export async function requireOrganizationRole(user: User | null, organizationId:
   if (!membership || !allowedRoles.includes(membership.role)) {
     throw new TRPCError({ code: "FORBIDDEN", message: "ამ მოქმედებისთვის წვდომა არ გაქვთ" });
   }
+  await requireActiveTrialForOrganization(organizationId);
   return membership;
 }
 

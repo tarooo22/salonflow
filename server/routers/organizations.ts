@@ -1,9 +1,10 @@
 import { and, asc, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
-import { locations, organizationMemberships, organizations, staffLocations, staffProfiles } from "../../drizzle/schema";
+import { locations, organizationMemberships, organizations, staffLocations, staffProfiles, trialAccessEvents, trialAccessRequests } from "../../drizzle/schema";
 import { requireOrganizationRole } from "../access";
 import { requireDb } from "../db";
 import { normalizeEmail, normalizeGeorgianPhone } from "../lib/normalization";
+import { requireApprovedTrialForWorkspaceCreation } from "../lib/trialAccess";
 import { locationCreateSchema, organizationCreateSchema, organizationScopeSchema, workspaceSetupSchema } from "../../shared/validation";
 import { protectedProcedure, router } from "../_core/trpc";
 
@@ -21,6 +22,7 @@ export const organizationRouter = router({
 
   create: protectedProcedure.input(organizationCreateSchema).mutation(async ({ ctx, input }) => {
     const db = await requireDb();
+    const trial = await requireApprovedTrialForWorkspaceCreation(ctx.user.id);
     const organizationId = nanoid(21);
     const membershipId = nanoid(21);
     await db.transaction(async tx => {
@@ -42,12 +44,15 @@ export const organizationRouter = router({
         invitedAt: new Date(),
         activatedAt: new Date(),
       });
+      await tx.update(trialAccessRequests).set({ organizationId }).where(and(eq(trialAccessRequests.id, trial.id), eq(trialAccessRequests.status, "APPROVED")));
+      await tx.insert(trialAccessEvents).values({ id: nanoid(21), trialRequestId: trial.id, eventType: "WORKSPACE_CREATED_LEGACY", actorUserId: ctx.user.id, metadata: { organizationId } });
     });
     return { id: organizationId, membershipId };
   }),
 
   createWorkspace: protectedProcedure.input(workspaceSetupSchema).mutation(async ({ ctx, input }) => {
     const db = await requireDb();
+    const trial = await requireApprovedTrialForWorkspaceCreation(ctx.user.id);
     const organizationId = nanoid(21);
     const membershipId = nanoid(21);
     const locationId = nanoid(21);
@@ -85,6 +90,8 @@ export const organizationRouter = router({
         maximumAdvanceDays: input.location.maximumAdvanceDays,
         cancellationCutoffMinutes: input.location.cancellationCutoffMinutes,
       });
+      await tx.update(trialAccessRequests).set({ organizationId }).where(and(eq(trialAccessRequests.id, trial.id), eq(trialAccessRequests.status, "APPROVED")));
+      await tx.insert(trialAccessEvents).values({ id: nanoid(21), trialRequestId: trial.id, eventType: "WORKSPACE_CREATED_LEGACY", actorUserId: ctx.user.id, metadata: { organizationId, locationId } });
     });
     return { organizationId, membershipId, locationId };
   }),

@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 const mocked = vi.hoisted(() => ({
   db: null as unknown,
   nanoid: vi.fn(),
+  requireApprovedTrialForWorkspaceCreation: vi.fn(async () => ({ id: "trial_workspace_001" })),
 }));
 
 vi.mock("../db", () => ({
@@ -10,6 +11,7 @@ vi.mock("../db", () => ({
 }));
 
 vi.mock("nanoid", () => ({ nanoid: mocked.nanoid }));
+vi.mock("../lib/trialAccess", () => ({ requireApprovedTrialForWorkspaceCreation: mocked.requireApprovedTrialForWorkspaceCreation }));
 
 import { organizationRouter } from "./organizations";
 
@@ -27,10 +29,13 @@ const user = {
 
 function createWorkspaceDb() {
   const values = vi.fn(async () => undefined);
-  const transaction = vi.fn(async (callback: (tx: { insert: () => { values: typeof values } }) => Promise<void>) => {
-    await callback({ insert: () => ({ values }) });
+  const where = vi.fn(async () => undefined);
+  const set = vi.fn(() => ({ where }));
+  const update = vi.fn(() => ({ set }));
+  const transaction = vi.fn(async (callback: (tx: { insert: () => { values: typeof values }; update: typeof update }) => Promise<void>) => {
+    await callback({ insert: () => ({ values }), update });
   });
-  return { transaction, values };
+  return { transaction, values, update };
 }
 
 describe("organizations.createWorkspace", () => {
@@ -68,6 +73,7 @@ describe("organizations.createWorkspace", () => {
       locationId: "location_setup_00001",
     });
     expect(db.transaction).toHaveBeenCalledTimes(1);
+    expect(mocked.requireApprovedTrialForWorkspaceCreation).toHaveBeenCalledWith(user.id);
     expect(db.values).toHaveBeenNthCalledWith(1, expect.objectContaining({
       id: "organization_setup_001",
       slug: "lela-beauty",
@@ -87,6 +93,13 @@ describe("organizations.createWorkspace", () => {
       publicSlug: "lela-vake",
       timezone: "Asia/Tbilisi",
       email: "owner@example.com",
+    }));
+    expect(db.update).toHaveBeenCalledTimes(1);
+    expect(db.values).toHaveBeenNthCalledWith(4, expect.objectContaining({
+      trialRequestId: "trial_workspace_001",
+      eventType: "WORKSPACE_CREATED_LEGACY",
+      actorUserId: user.id,
+      metadata: { organizationId: "organization_setup_001", locationId: "location_setup_00001" },
     }));
   });
 });

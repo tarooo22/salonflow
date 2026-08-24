@@ -32,6 +32,9 @@ const MarketplaceDirectory = lazy(() => import("./pages/MarketplaceDirectory"));
 const MarketplaceMap = lazy(() => import("./pages/MarketplaceMap"));
 const MarketplaceAdmin = lazy(() => import("./pages/MarketplaceAdmin"));
 const FeedbackModeration = lazy(() => import("./pages/FeedbackModeration"));
+const TrialRequest = lazy(() => import("./pages/TrialRequest"));
+const TrialStatus = lazy(() => import("./pages/TrialStatus"));
+const TrialAdmin = lazy(() => import("./pages/TrialAdmin"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const FeaturesPage = lazy(() => import("./pages/MarketingPages").then(module => ({ default: module.FeaturesPage })));
 const PricingPage = lazy(() => import("./pages/MarketingPages").then(module => ({ default: module.PricingPage })));
@@ -80,6 +83,9 @@ function Router() {
       <Route path={"/app/marketplace"} component={MarketplaceSetup} />
       <Route path={"/app/marketplace-admin"} component={MarketplaceAdmin} />
       <Route path={"/app/feedback"} component={FeedbackModeration} />
+      <Route path={"/app/trial-request"} component={TrialRequest} />
+      <Route path={"/app/trial-status"} component={TrialStatus} />
+      <Route path={"/app/trials-admin"} component={TrialAdmin} />
       <Route path={"/app/waitlist"} component={WaitlistQueue} />
       <Route path={"/app/setup"} component={WorkspaceSetup} />
       <Route path={"/404"} component={NotFound} />

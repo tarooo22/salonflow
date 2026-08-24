@@ -23,6 +23,7 @@ export default function WorkspaceSetup() {
   const [, setRoute] = useLocation();
   const utils = trpc.useUtils();
   const organizations = trpc.organizations.listMine.useQuery();
+  const trial = trpc.trialAccess.mine.useQuery();
   const currentUser = trpc.auth.me.useQuery();
   const [step, setStep] = useState(1);
   const [organizationName, setOrganizationName] = useState("");
@@ -58,6 +59,12 @@ export default function WorkspaceSetup() {
   useEffect(() => {
     if (organizations.data?.length) setRoute("/app/today");
   }, [organizations.data?.length, setRoute]);
+
+  useEffect(() => {
+    const request = trial.data?.request;
+    const isActive = request?.status === "APPROVED" && request.expiresAt && new Date(request.expiresAt) > new Date();
+    if (!trial.isLoading && !organizations.isLoading && !isActive && !organizations.data?.length) setRoute("/app/trial-status");
+  }, [organizations.data?.length, organizations.isLoading, setRoute, trial.data?.request, trial.isLoading]);
 
   useEffect(() => {
     if (currentUser.data?.name && !ownerDisplayName) setOwnerDisplayName(currentUser.data.name);

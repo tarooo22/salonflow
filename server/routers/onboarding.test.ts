@@ -3,23 +3,28 @@ import { describe, expect, it, vi } from "vitest";
 const mocked = vi.hoisted(() => ({
   db: null as unknown,
   ids: ["org_onboard_000000001", "member_onboard_00001", "location_onboard_0001", "staff_onboard_0000001", "opening_one_000000001", "rule_one_000000000001", "opening_two_000000001", "rule_two_000000000001", "category_onboard_0001", "service_onboard_00001"] as string[],
+  requireApprovedTrialForWorkspaceCreation: vi.fn(async () => ({ id: "trial_onboarding_001" })),
 }));
 
 vi.mock("../db", () => ({ requireDb: vi.fn(async () => mocked.db) }));
 vi.mock("nanoid", () => ({ nanoid: vi.fn(() => mocked.ids.shift()) }));
+vi.mock("../lib/trialAccess", () => ({ requireApprovedTrialForWorkspaceCreation: mocked.requireApprovedTrialForWorkspaceCreation }));
 
 import { onboardingRouter } from "./onboarding";
 
 function createDb(selectResults: unknown[][] = [[], [], []]) {
   const values = vi.fn(async () => undefined);
+  const updateWhere = vi.fn(async () => undefined);
+  const updateSet = vi.fn(() => ({ where: updateWhere }));
+  const update = vi.fn(() => ({ set: updateSet }));
   const limit = vi.fn(async () => selectResults.shift() ?? []);
   const where = vi.fn(() => ({ limit }));
   const from = vi.fn(() => ({ where }));
   const select = vi.fn(() => ({ from }));
-  const transaction = vi.fn(async (callback: (tx: { insert: () => { values: typeof values } }) => Promise<void>) => {
-    await callback({ insert: () => ({ values }) });
+  const transaction = vi.fn(async (callback: (tx: { insert: () => { values: typeof values }; update: typeof update }) => Promise<void>) => {
+    await callback({ insert: () => ({ values }), update });
   });
-  return { select, transaction, values };
+  return { select, transaction, values, update };
 }
 
 const user = { id: 71, openId: "local_onboardingowner000", name: "მარი", email: "mari@example.com", normalizedEmail: "mari@example.com", normalizedPhone: null, passwordHash: "scrypt$test", avatarKey: null, locale: "ka-GE", loginMethod: "local", role: "user" as const, accountStatus: "ACTIVE" as const, createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date() };
@@ -47,10 +52,13 @@ describe("onboarding.complete", () => {
 
     expect(result).toEqual({ organizationId: "org_onboard_000000001", locationId: "location_onboard_0001", staffProfileId: "staff_onboard_0000001", publicBookingPath: "/book/tamari-vake" });
     expect(db.transaction).toHaveBeenCalledTimes(1);
+    expect(mocked.requireApprovedTrialForWorkspaceCreation).toHaveBeenCalledWith(user.id);
     expect(db.values).toHaveBeenCalledWith(expect.objectContaining({ id: "org_onboard_000000001", slug: "tamari-salon" }));
     expect(db.values).toHaveBeenCalledWith(expect.objectContaining({ id: "staff_onboard_0000001", onlineBookingVisible: true }));
     expect(db.values).toHaveBeenCalledWith(expect.objectContaining({ nameKa: "სტაილინგი", priceTetri: 7_500 }));
     expect(db.values).toHaveBeenCalledWith(expect.objectContaining({ staffProfileId: "staff_onboard_0000001", serviceId: "service_onboard_00001", canPerform: true }));
+    expect(db.update).toHaveBeenCalledTimes(1);
+    expect(db.values).toHaveBeenCalledWith(expect.objectContaining({ trialRequestId: "trial_onboarding_001", eventType: "WORKSPACE_CREATED", actorUserId: user.id, metadata: { organizationId: "org_onboard_000000001", locationId: "location_onboard_0001" } }));
   });
 
   it("rejects an occupied public booking slug before opening the transaction", async () => {

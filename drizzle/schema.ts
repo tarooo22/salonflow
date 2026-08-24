@@ -43,6 +43,7 @@ export const marketplaceListingStatusValues = ["DRAFT", "SUBMITTED", "APPROVED",
 export const marketplacePromotionTierValues = ["RECOMMENDED", "VIP"] as const;
 export const marketplacePromotionStatusValues = ["SCHEDULED", "ACTIVE", "EXPIRED", "CANCELLED"] as const;
 export const customerFeedbackStatusValues = ["PENDING", "APPROVED", "HIDDEN", "REJECTED"] as const;
+export const trialAccessStatusValues = ["PENDING", "APPROVED", "REJECTED", "EXPIRED", "CANCELLED"] as const;
 
 export const membershipRole = mysqlEnum("membership_role", membershipRoleValues);
 export const membershipStatus = mysqlEnum("membership_status", membershipStatusValues);
@@ -65,6 +66,7 @@ export const marketplaceListingStatus = mysqlEnum("marketplace_listing_status", 
 export const marketplacePromotionTier = mysqlEnum("marketplace_promotion_tier", marketplacePromotionTierValues);
 export const marketplacePromotionStatus = mysqlEnum("marketplace_promotion_status", marketplacePromotionStatusValues);
 export const customerFeedbackStatus = mysqlEnum("customer_feedback_status", customerFeedbackStatusValues);
+export const trialAccessStatus = mysqlEnum("trial_access_status", trialAccessStatusValues);
 
 /**
  * Secure platform identity synchronized by Manus OAuth. Business roles live in
@@ -104,6 +106,38 @@ export const organizations = mysqlTable("organizations", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, table => [uniqueIndex("organizations_slug_uq").on(table.slug)]);
+
+/** A requested trial is not a workspace. A platform admin must approve it before the applicant can create one. */
+export const trialAccessRequests = mysqlTable("trial_access_requests", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  userId: int("userId").notNull().references(() => users.id),
+  requestedSalonName: varchar("requestedSalonName", { length: 160 }).notNull(),
+  requestedSalonSlug: varchar("requestedSalonSlug", { length: 96 }).notNull(),
+  status: trialAccessStatus.default("PENDING").notNull(),
+  reviewNoteKa: varchar("reviewNoteKa", { length: 500 }),
+  reviewedByUserId: int("reviewedByUserId").references(() => users.id),
+  reviewedAt: timestamp("reviewedAt"),
+  startsAt: timestamp("startsAt"),
+  expiresAt: timestamp("expiresAt"),
+  organizationId: varchar("organizationId", { length: 36 }).references(() => organizations.id),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [
+  uniqueIndex("trial_requests_user_uq").on(table.userId),
+  uniqueIndex("trial_requests_org_uq").on(table.organizationId),
+  index("trial_requests_status_created_idx").on(table.status, table.createdAt),
+  index("trial_requests_expiry_idx").on(table.expiresAt),
+]);
+
+/** Immutable lifecycle evidence for request, approval, expiry and later cancellation. */
+export const trialAccessEvents = mysqlTable("trial_access_events", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  trialRequestId: varchar("trialRequestId", { length: 36 }).notNull().references(() => trialAccessRequests.id),
+  eventType: varchar("eventType", { length: 80 }).notNull(),
+  actorUserId: int("actorUserId").references(() => users.id),
+  metadata: json("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [index("trial_events_request_created_idx").on(table.trialRequestId, table.createdAt)]);
 
 export const locations = mysqlTable("locations", {
   id: varchar("id", { length: 36 }).primaryKey(),

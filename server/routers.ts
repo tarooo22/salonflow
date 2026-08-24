@@ -19,6 +19,7 @@ import { mediaRouter } from "./routers/media";
 import { guidedTourRouter } from "./routers/guidedTour";
 import { marketplaceRouter } from "./routers/marketplace";
 import { feedbackRouter } from "./routers/feedback";
+import { trialAccessRouter } from "./routers/trialAccess";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -41,6 +42,7 @@ export const appRouter = router({
   guidedTour: guidedTourRouter,
   marketplace: marketplaceRouter,
   feedback: feedbackRouter,
+  trialAccess: trialAccessRouter,
   public: publicRouter,
 });
 
