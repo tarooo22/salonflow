@@ -254,3 +254,4 @@
 - [x] Add a visible salons-discovery quick link in the compact header/menu alongside the highlighted booking action.
 - [x] Add a reduced-motion-safe sticky-header logo scale effect and validate all header interactions responsively.
 - [x] Package the reviewed public header refinement workflow as a reusable Manus skill and validate it with skill-creator tooling.
+- [x] Replace the public language selector's browser-default dropdown appearance with a branded, keyboard-accessible custom language menu and validate it across header breakpoints.

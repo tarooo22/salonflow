@@ -1,7 +1,8 @@
 import { PwaInstallButton } from "@/components/pwa/PwaInstallButton";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { usePublicLocale, type PublicLocale } from "@/contexts/PublicLocaleContext";
-import { Menu, Sparkles, X } from "lucide-react";
+import { ChevronDown, Menu, Sparkles, X } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 
@@ -14,7 +15,9 @@ export function SalonFlowMark({ inverted = false, compact = false }: { inverted?
 
 export function PublicLanguageSelector({ className = "" }: { className?: string }) {
   const { locale, setLocale } = usePublicLocale();
-  return <label className={`inline-flex items-center ${className}`}><span className="sr-only">Language</span><select value={locale} onChange={event => setLocale(event.target.value as PublicLocale)} className="sf-interactive h-10 rounded-xl border border-[var(--sf-line)] bg-[var(--sf-surface)] px-3 text-xs font-semibold text-[var(--sf-ink)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--sf-accent-strong)]">{localeOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>;
+  const [open, setOpen] = useState(false);
+  const selected = localeOptions.find(option => option.value === locale) ?? localeOptions[0];
+  return <DropdownMenu open={open} onOpenChange={setOpen}><DropdownMenuTrigger asChild><button type="button" className={`sf-language-trigger sf-interactive inline-flex min-h-10 items-center gap-2 rounded-xl px-3 text-xs font-semibold text-[var(--sf-ink)] focus-visible:outline-none ${className}`} aria-label="Language"><span>{selected.label}</span><ChevronDown className="size-3.5" aria-hidden="true" /></button></DropdownMenuTrigger><DropdownMenuContent align="end" sideOffset={8} className="sf-language-menu min-w-40 p-1.5"><DropdownMenuRadioGroup value={locale} onValueChange={value => { setLocale(value as PublicLocale); setOpen(false); }}>{localeOptions.map(option => <DropdownMenuRadioItem key={option.value} value={option.value} className="sf-language-option py-2.5 pr-3 text-sm font-semibold">{option.label}</DropdownMenuRadioItem>)}</DropdownMenuRadioGroup></DropdownMenuContent></DropdownMenu>;
 }
 
 export function PublicHeader() {

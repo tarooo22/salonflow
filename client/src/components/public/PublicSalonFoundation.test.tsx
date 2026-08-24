@@ -29,11 +29,17 @@ describe("Salon House public foundation", () => {
     expect(primitives).toContain("sf-public-compact-booking");
     expect(primitives).toContain("sf-public-discovery-shortcut");
     expect(primitives).toContain("compact={isScrolled}");
+    expect(primitives).toContain("DropdownMenuRadioGroup");
+    expect(primitives).toContain("sf-language-trigger");
+    expect(primitives).toContain("sf-language-menu");
+    expect(primitives).not.toContain("<select value={locale}");
     expect(styles).toContain(".sf-public-nav-link--active");
     expect(styles).toContain(".sf-public-brand");
     expect(styles).toContain(".sf-public-header--scrolled");
     expect(styles).toContain(".sf-public-compact-booking");
     expect(styles).toContain(".sf-public-brand--compact");
     expect(styles).toContain(".sf-public-discovery-shortcut");
+    expect(styles).toContain(".sf-language-trigger");
+    expect(styles).toContain(".sf-language-menu");
   });
 });
