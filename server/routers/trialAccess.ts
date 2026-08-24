@@ -30,7 +30,7 @@ export const trialAccessRouter = router({
       db.select({ id: organizations.id }).from(organizations).where(eq(organizations.slug, input.salonSlug)).limit(1),
       db.select({ id: locations.id }).from(locations).where(eq(locations.publicSlug, input.salonSlug)).limit(1),
     ]);
-    if (slugConflict || publicSlugConflict) throw new TRPCError({ code: "CONFLICT", message: "სალონის ეს კოდი უკვე გამოყენებულია. აირჩიეთ სხვა კოდი." });
+    if (slugConflict.length > 0 || publicSlugConflict.length > 0) throw new TRPCError({ code: "CONFLICT", message: "სალონის ეს კოდი უკვე გამოყენებულია. აირჩიეთ სხვა კოდი." });
     const existing = await getTrialRequestForUser(ctx.user.id);
     if (existing?.status === "APPROVED" && existing.expiresAt && existing.expiresAt > new Date()) return { request: existing, alreadyApproved: true };
     const now = new Date();
