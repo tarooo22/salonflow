@@ -35,7 +35,7 @@
 
 ## მონაცემის შენახვისა და public booking-ის პოლიტიკა
 
-მიმდინარე უსაფრთხო default არის **არაფერი წაიშალოს**: სალონის, კლიენტისა და ჩანაწერის მონაცემები retention-ში რჩება მომავალი აქტივაციისთვის. Trial expiry workspace action-ებს ბლოკავს. Public profile/booking-ის ზუსტი expiry policy უნდა დამტკიცდეს ცალკე product decision-ით, სანამ public listing ან existing booking data ავტომატურად დაიმალება/გაუქმდება.
+მიმდინარე პოლიტიკით **არაფერი იშლება**: სალონის, კლიენტის, ჩანაწერისა და საჯარო პროფილის მონაცემები retention-ში რჩება მომავალი აქტივაციისთვის. Trial expiry workspace action-ებს ბლოკავს და ასევე კრძალავს **ახალი public online booking-ის** მიღებას. Marketplace/profile არ იშლება; პროფილზე და უშუალო booking URL-ზე მომხმარებელი ხედავს ფაქტობრივ შეტყობინებას, რომ ონლაინ ჩაწერა დროებით მიუწვდომელია და შეუძლია დაუკავშირდეს სალონს. უკვე შექმნილი booking-ის მართვის token ან retention data ავტომატურად არ უქმდება.
 
 ## გადახდის მომავალი აქტივაცია
 
@@ -48,3 +48,5 @@ Applicant screens იყენებს ხილულ label-ებს, field-l
 ## Validation evidence
 
 სუფთა server restart-ის შემდეგ 375px და 1024px-ზე შემოწმდა `/register`, `/app/trial-request`, `/app/trial-status` და `/app/trials-admin`. რეგისტრაციის card-ს არ ჰქონდა horizontal overflow; 1024px-ზე auth fallback დარჩა readable ორპანელიან layout-ად. არაავტორიზებული applicant/status URL-ები local login-ზე გადავიდა და platform-admin URL-მა აჩვენა centered, overflow-free workspace sign-in gate. ამ შემოწმებისთვის არ შექმნილა ხელოვნური სალონი, trial, შეფასება ან customer data. ავტორიზებული applicant/admin state-ების server-side policy დაფარულია 191 automated assertion-ით; ვიზუალური role-state validation რჩება checkpoint-მდე გასატარებელ separate QA ნაბიჯად.
+
+Public expiry policy-ის შემდეგ სუფთა restart-ით 375px და 1024px-ზე ასევე შემოწმდა `/book`, `/book/gldani-beauty` და `/salon/gldani-beauty` არსებული რეალური public data-ით. Active სალონის discovery, ოთხნაბიჯიანი booking UI და public profile-ის booking CTA არ დაზიანებულა და overflow არ გამოჩენილა. Expired-state-ის არარსებული რეალური tenant data არ შექმნილა; ის სრულად დაცულია server-side availability/slot/commit checks, direct helper tests და factual BookingFlow/Profile rendering branch-ით.

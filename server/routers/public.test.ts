@@ -1,11 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 
-const mocked = vi.hoisted(() => ({ db: null as unknown, ids: [] as string[] }));
+const mocked = vi.hoisted(() => ({ db: null as unknown, ids: [] as string[], isOrganizationTrialPublicBookingActive: vi.fn(async () => true) }));
 
 vi.mock("../db", () => ({
   requireDb: vi.fn(async () => mocked.db),
 }));
 vi.mock("nanoid", () => ({ nanoid: vi.fn(() => mocked.ids.shift() ?? "generated_id_000000001") }));
+vi.mock("../lib/trialAccess", () => ({ isOrganizationTrialPublicBookingActive: mocked.isOrganizationTrialPublicBookingActive }));
 
 import { canCustomerManage, publicRouter } from "./public";
 
@@ -82,6 +83,11 @@ function availabilityInput() {
 }
 
 describe("public booking router safeguards", () => {
+  it("blocks new availability checks for an expired trial while retaining the location record", async () => {
+    mocked.isOrganizationTrialPublicBookingActive.mockResolvedValueOnce(false);
+    mocked.db = queuedDb([[activeLocation]]);
+    await expect(caller().checkAvailability(availabilityInput())).resolves.toEqual({ available: false, reason: "TRIAL_EXPIRED" });
+  });
   it("allows token-based self-service only for pending or confirmed bookings strictly before the cancellation cutoff", () => {
     const now = new Date("2026-08-20T08:00:00.000Z").getTime();
     expect(canCustomerManage({ status: "PENDING", startsAt: new Date("2026-08-20T11:01:00.000Z") }, 180, now)).toBe(true);

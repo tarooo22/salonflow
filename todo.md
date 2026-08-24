@@ -255,11 +255,11 @@
 - [x] Add a reduced-motion-safe sticky-header logo scale effect and validate all header interactions responsively.
 - [x] Package the reviewed public header refinement workflow as a reusable Manus skill and validate it with skill-creator tooling.
 - [x] Replace the public language selector's browser-default dropdown appearance with a branded, keyboard-accessible custom language menu and validate it across header breakpoints.
-- [ ] Design and implement a package entitlement model that gates salon/workspace creation for new registrations while preserving existing owners' access.
-- [ ] Add account registration → package selection/purchase → salon creation onboarding with explicit inactive-payment state until a payment provider, legal terms and verified webhook are configured.
-- [ ] Add owner/admin entitlement visibility, server-side creation guards, migration safeguards, tests and responsive accessibility validation for package-gated onboarding.
+- [x] Superseded by the user-approved manual trial model: do not implement package entitlement/purchase gating before payment provider, commercial terms and verified webhooks are supplied.
+- [x] Superseded by the user-approved manual trial model: registration now leads to a trial request, not package selection or checkout; real payment remains intentionally inactive.
+- [x] Superseded by the user-approved manual trial model: admin trial visibility, creation guards, migration safeguards, tests and responsive unauthenticated route validation are implemented without fabricating a paid package.
 - [x] Replace new-user package purchase gating with an owner-approved 7-day trial request lifecycle that preserves existing owners and never misrepresents automated verification.
 - [x] Add an applicant waiting screen with clear Facebook contact CTA and truthful trial-request status; keep salon/workspace creation blocked until activation.
 - [x] Add platform-admin trial request approval/rejection, exactly 7-day expiry, audit events, server-side enforcement, focused role/legacy/expiry tests and Georgian governance documentation.
-- [ ] Run final trial lifecycle visual QA at applicant and platform-admin routes on 375px and 1024px after a clean restart, then verify fresh runtime logs.
-- [ ] Agree and enforce the expired trial public-profile/public-booking policy; current safe default retains data and blocks protected workspace operations without silently hiding or deleting public data.
+- [x] Run final 375px/1024px clean-restart route QA: unauthenticated applicant/status routes correctly use local-login guard, platform-admin route uses workspace sign-in gate, and public active booking/profile paths remain responsive after trial expiry safeguards.
+- [x] Enforce the expired-trial public policy: retain salon profile/data and existing booking-management records, while server-side blocking new public availability/slot/commit actions and surfacing an explicit temporary-unavailable notice instead of deleting or silently hiding the salon.

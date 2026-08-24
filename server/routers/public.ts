@@ -11,6 +11,7 @@ import { normalizeEmail, normalizeGeorgianPhone } from "../lib/normalization";
 import { ENV } from "../_core/env";
 import { mediaUrl } from "../lib/media";
 import { publicProcedure, router } from "../_core/trpc";
+import { isOrganizationTrialPublicBookingActive } from "../lib/trialAccess";
 
 function enumerateUtcDates(start: Date, end: Date) {
   const dates: string[] = [];
@@ -89,13 +90,14 @@ export const publicRouter = router({
       phone: locations.phone,
       email: locations.email,
     }).from(locations).where(and(eq(locations.status, "ACTIVE"), eq(locations.bookingEnabled, true))).orderBy(asc(locations.name));
-    const organizationIds = Array.from(new Set(locationRows.map(location => location.organizationId)));
+    const bookingLocations = (await Promise.all(locationRows.map(async location => ({ location, bookingActive: await isOrganizationTrialPublicBookingActive(location.organizationId) })))).filter(item => item.bookingActive).map(item => item.location);
+    const organizationIds = Array.from(new Set(bookingLocations.map(location => location.organizationId)));
     const categoryRows = organizationIds.length ? await db.select({ organizationId: services.organizationId, nameKa: serviceCategories.nameKa }).from(services)
       .innerJoin(serviceCategories, eq(services.categoryId, serviceCategories.id))
       .where(and(inArray(services.organizationId, organizationIds), eq(services.status, "ACTIVE"), eq(services.onlineBookingEnabled, true))) : [];
     const categoriesByOrganization = new Map<string, string[]>();
     for (const category of categoryRows) categoriesByOrganization.set(category.organizationId, Array.from(new Set([...(categoriesByOrganization.get(category.organizationId) ?? []), category.nameKa])));
-    const locationIds = locationRows.map(location => location.id);
+    const locationIds = bookingLocations.map(location => location.id);
     const hourRows = locationIds.length ? await db.select({
       locationId: workingHourRules.locationId,
       weekday: workingHourRules.weekday,
@@ -114,7 +116,7 @@ export const publicRouter = router({
       } : { startLocalTime: row.startLocalTime, endLocalTime: row.endLocalTime });
       hoursByLocation.set(row.locationId, byWeekday);
     }
-    return locationRows.map(({ id, organizationId, ...location }) => ({
+    return bookingLocations.map(({ id, organizationId, ...location }) => ({
       ...location,
       categories: categoriesByOrganization.get(organizationId) ?? [],
       workingHours: Array.from(hoursByLocation.get(id)?.entries() ?? []).map(([weekday, hours]) => ({ weekday, ...hours })).sort((a, b) => a.weekday - b.weekday),
@@ -129,6 +131,8 @@ export const publicRouter = router({
       eq(locations.bookingEnabled, true),
     )).limit(1);
     if (!location) return null;
+    const onlineBookingAvailable = await isOrganizationTrialPublicBookingActive(location.organizationId);
+    if (!onlineBookingAvailable) return { location: { publicSlug: location.publicSlug, name: location.name, timezone: location.timezone, address: location.address, phone: location.phone, email: location.email, publicDescription: location.publicDescription, workingHours: [] }, catalog: [], team: [], onlineBookingAvailable: false as const, bookingUnavailableReason: "TRIAL_EXPIRED" as const };
     const catalog = await db.select({ service: services, category: serviceCategories }).from(services)
       .innerJoin(serviceCategories, eq(services.categoryId, serviceCategories.id))
       .where(and(eq(services.organizationId, location.organizationId), eq(services.status, "ACTIVE"), eq(services.onlineBookingEnabled, true)))
@@ -153,7 +157,7 @@ export const publicRouter = router({
       else hours.set(rule.weekday, { weekday: rule.weekday, startLocalTime: existing.startLocalTime < rule.startLocalTime ? existing.startLocalTime : rule.startLocalTime, endLocalTime: existing.endLocalTime > rule.endLocalTime ? existing.endLocalTime : rule.endLocalTime });
       return hours;
     }, new Map<number, { weekday: number; startLocalTime: string; endLocalTime: string }>()).values()).sort((a, b) => a.weekday - b.weekday);
-    return { location: { publicSlug: location.publicSlug, name: location.name, timezone: location.timezone, address: location.address, phone: location.phone, email: location.email, publicDescription: location.publicDescription, workingHours }, catalog, team };
+    return { location: { publicSlug: location.publicSlug, name: location.name, timezone: location.timezone, address: location.address, phone: location.phone, email: location.email, publicDescription: location.publicDescription, workingHours }, catalog, team, onlineBookingAvailable: true as const, bookingUnavailableReason: null };
   }),
 
   salonProfile: publicProcedure.input(slugSchema).query(async ({ input: slug }) => {
@@ -163,6 +167,7 @@ export const publicRouter = router({
       .where(and(eq(locations.publicSlug, slug), eq(locations.status, "ACTIVE"))).limit(1);
     if (!record) return null;
     const location = record.location;
+    const onlineBookingAvailable = location.bookingEnabled && await isOrganizationTrialPublicBookingActive(location.organizationId);
     const [serviceRows, teamRows, feedRows, gallerySets, feedbackRows] = await Promise.all([
       db.select({ id: services.id, nameKa: services.nameKa, description: services.publicDescriptionKa, durationMinutes: services.defaultDurationMinutes, priceTetri: services.priceTetri, isFromPrice: services.isFromPrice, categoryNameKa: serviceCategories.nameKa, categorySortOrder: serviceCategories.sortOrder, sortOrder: services.sortOrder }).from(services)
         .innerJoin(serviceCategories, eq(services.categoryId, serviceCategories.id))
@@ -187,7 +192,8 @@ export const publicRouter = router({
         email: location.email,
         publicDescription: location.publicDescription,
         socialLinks: location.socialLinks as { instagram?: string; facebook?: string; website?: string } | null,
-        bookingEnabled: location.bookingEnabled,
+        bookingEnabled: onlineBookingAvailable,
+        bookingUnavailableReason: location.bookingEnabled && !onlineBookingAvailable ? "TRIAL_EXPIRED" as const : null,
         coverImageUrl: location.coverImageKey ? mediaUrl(location.coverImageKey) : null,
         coverImageAltKa: location.coverImageAltKa,
       },
@@ -235,6 +241,7 @@ export const publicRouter = router({
       eq(locations.bookingEnabled, true),
     )).limit(1);
     if (!location) return { available: false, reason: "LOCATION_UNAVAILABLE" as const };
+    if (!await isOrganizationTrialPublicBookingActive(location.organizationId)) return { available: false, reason: "TRIAL_EXPIRED" as const };
 
     const [service] = await db.select().from(services).where(and(
       eq(services.id, input.serviceId),
@@ -316,6 +323,7 @@ export const publicRouter = router({
       eq(locations.bookingEnabled, true),
     )).limit(1);
     if (!location) return empty;
+    if (!await isOrganizationTrialPublicBookingActive(location.organizationId)) return { ...empty, timezone: location.timezone };
 
     const [service] = await db.select().from(services).where(and(
       eq(services.id, input.serviceId),
@@ -402,6 +410,7 @@ export const publicRouter = router({
     const db = await requireDb();
     const [location] = await db.select().from(locations).where(and(eq(locations.publicSlug, input.slug), eq(locations.status, "ACTIVE"), eq(locations.bookingEnabled, true))).limit(1);
     if (!location) return { available: false, reason: "LOCATION_UNAVAILABLE" as const };
+    if (!await isOrganizationTrialPublicBookingActive(location.organizationId)) return { available: false, reason: "TRIAL_EXPIRED" as const };
     const minimumStart = new Date(Date.now() + location.minimumNoticeMinutes * 60_000);
     const maximumStart = new Date(Date.now() + location.maximumAdvanceDays * 86_400_000);
     if (input.startsAt < minimumStart || input.startsAt > maximumStart) return { available: false, reason: "OUTSIDE_BOOKING_WINDOW" as const };
@@ -421,6 +430,7 @@ export const publicRouter = router({
     const db = await requireDb();
     const [location] = await db.select().from(locations).where(and(eq(locations.publicSlug, input.slug), eq(locations.status, "ACTIVE"), eq(locations.bookingEnabled, true))).limit(1);
     if (!location) return empty;
+    if (!await isOrganizationTrialPublicBookingActive(location.organizationId)) return { ...empty, timezone: location.timezone };
     const candidates = await resolveMultiCandidates(db, location, input.serviceIds, input.staffProfileId);
     if (!candidates.length) return { ...empty, timezone: location.timezone };
     const now = new Date();
@@ -462,6 +472,7 @@ export const publicRouter = router({
     if (previous) return { confirmed: true, replayed: true, confirmationToken: confirmationTokenForAppointment(previous.id), endsAt: previous.endsAt };
     const [location] = await db.select().from(locations).where(and(eq(locations.publicSlug, input.slug), eq(locations.status, "ACTIVE"), eq(locations.bookingEnabled, true))).limit(1);
     if (!location) throw new Error("ეს ჩაწერის ბმული აღარ არის აქტიური.");
+    if (!await isOrganizationTrialPublicBookingActive(location.organizationId)) throw new Error("ონლაინ ჩაწერა ამ სალონისთვის დროებით მიუწვდომელია.");
     const minimumStart = new Date(Date.now() + location.minimumNoticeMinutes * 60_000);
     const maximumStart = new Date(Date.now() + location.maximumAdvanceDays * 86_400_000);
     if (input.startsAt < minimumStart || input.startsAt > maximumStart) throw new Error("არჩეული დრო ჩაწერის დაშვებულ დიაპაზონში არ არის.");
@@ -511,6 +522,7 @@ export const publicRouter = router({
       eq(locations.bookingEnabled, true),
     )).limit(1);
     if (!location) throw new Error("This booking link is unavailable");
+    if (!await isOrganizationTrialPublicBookingActive(location.organizationId)) throw new Error("Online booking is temporarily unavailable for this salon");
 
     const [service] = await db.select().from(services).where(and(
       eq(services.id, input.serviceId),

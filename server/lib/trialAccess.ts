@@ -42,3 +42,15 @@ export async function requireActiveTrialForOrganization(organizationId: string) 
   }
   return current;
 }
+
+/**
+ * Public booking remains available to legacy tenants with no trial record. A trial-linked
+ * organization can retain its public profile after expiry, but cannot receive new bookings.
+ */
+export async function isOrganizationTrialPublicBookingActive(organizationId: string) {
+  const db = await requireDb();
+  const [trial] = await db.select().from(trialAccessRequests).where(eq(trialAccessRequests.organizationId, organizationId)).limit(1);
+  if (!trial) return true;
+  const current = await markExpired(trial);
+  return current.status === "APPROVED" && Boolean(current.expiresAt) && current.expiresAt! > new Date();
+}
