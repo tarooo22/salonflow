@@ -247,3 +247,6 @@
 - [x] Add owner/manager feedback moderation controls and a truthful public salon-profile review/comment section without fabricated ratings, reviews or aggregates.
 - [x] Improve mobile-first booking navigation, inline error states and reduced-motion-safe confirmation animation; validate 375px and keyboard flows.
 - [x] Fix the public header at medium tablet widths so desktop navigation/action controls never clip or overflow, using the compact menu at the correct breakpoint.
+- [x] Refine public header spacing and visual hierarchy at 1024px and 1280px without reintroducing navigation overflow.
+- [x] Add an accessible reduced-motion-safe sticky header behavior and a prominent booking shortcut in the compact header/menu.
+- [x] Validate header interaction and layout at 1024px/1280px, keyboard focus and production build before release.
