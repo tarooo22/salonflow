@@ -20,7 +20,7 @@ vi.mock("@/lib/trpc", () => ({
       createLocation: { useMutation: () => mutation },
     },
     appointments: { dashboard: { useQuery: () => query(state.dashboard) }, updateStatus: { useMutation: () => mutation } },
-    billing: { ownerStatus: { useQuery: () => query({ activeEndsAt: new Date("2030-09-22T00:00:00.000Z"), organization: { billingCode: "SF-TEST" }, config: null, submission: null }) } },
+    billing: { ownerStatus: { useQuery: () => query({ activeEndsAt: new Date("2030-09-22T00:00:00.000Z"), organization: { billingCode: "SF-TEST" }, config: null, submission: null }) }, workspaceStatus: { useQuery: () => query({ locked: false, endsAt: new Date("2030-09-22T00:00:00.000Z") }) } },
     services: { list: { useQuery: () => query(state.services) } },
     staff: { list: { useQuery: () => query(state.team) }, listWorkingHours: { useQuery: () => query(state.hours) } },
   },

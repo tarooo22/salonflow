@@ -49,6 +49,7 @@ const menuItems = [
 const menuGroups = ["დღის მართვა", "კლიენტები და გაყიდვა", "სალონის მართვა"] as const;
 const platformAdminItems = [
   { icon: ListChecks, label: "Trial requests", path: "/app/trial-admin" },
+  { icon: ReceiptText, label: "Billing payments", path: "/app/billing-admin" },
 ] as const;
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -132,12 +133,17 @@ function DashboardLayoutContent({
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const role = organizations.data?.[0]?.membership.role;
-  const visibleMenuItems = role ? menuItems.filter(item => (item.roles as readonly string[]).includes(role)) : [];
+  const organizationId = organizations.data?.[0]?.organization.id;
+  const workspaceStatus = trpc.billing.workspaceStatus.useQuery({ organizationId: organizationId ?? "" }, { enabled: Boolean(organizationId) });
+  const workspaceLocked = workspaceStatus.data?.locked === true;
+  const visibleMenuItems = role ? menuItems.filter(item => (item.roles as readonly string[]).includes(role) && (!workspaceLocked || item.path === "/app/today")) : [];
   const visibleMenuGroups = menuGroups.map(label => ({ label, items: visibleMenuItems.filter(item => item.group === label) })).filter(group => group.items.length);
   const visiblePlatformAdminItems = user?.role === "admin" ? platformAdminItems : [];
   const activeMenuItem = [...visibleMenuItems, ...visiblePlatformAdminItems].find(item => item.path === location);
   const isMobile = useIsMobile();
   const [helpOpen, setHelpOpen] = useState(false);
+
+  useEffect(() => { if (workspaceLocked && location !== "/app/today" && user?.role !== "admin") setLocation("/app/today"); }, [location, setLocation, user?.role, workspaceLocked]);
 
   useEffect(() => {
     if (isCollapsed) {
