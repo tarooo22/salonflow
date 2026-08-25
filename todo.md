@@ -297,3 +297,7 @@
 - [x] Create the release checkpoint and document the completed real-data verification after the admin configuration values are supplied.
 - [x] Configure the user-supplied real beneficiary and 49 GEL monthly package details through the protected platform-admin billing configuration; it renders only in the owner activation flow.
 - [x] With the owner's confirmation, link The Beauty Room N1 to an expired trial test state, verify Today-only owner lock and activation visibility, then restore access solely through a genuine receipt and manual platform-admin approval.
+- [x] Audit post-activation billing, owner/admin operations, accessibility, performance and runtime resilience; record only evidence-based production gaps and prioritize safe changes.
+- [x] Implement the highest-value, configuration-free production-hardening improvements without introducing payment automation, bank verification, fabricated data or weakened role boundaries.
+- [x] Validate the completed hardening scope with focused/new Vitest coverage, responsive/keyboard review, TypeScript, production build and clean runtime logs.
+- [x] Create a release checkpoint and concise handoff for the completed post-activation hardening scope.

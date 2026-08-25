@@ -4,7 +4,7 @@ import { nanoid } from "nanoid";
 import { z } from "zod";
 import { billingConfigurations, billingPaymentEvents, billingPaymentSubmissions, organizationAccessGrants, organizationMemberships, organizations, trialAccessRequests, users } from "../../drizzle/schema";
 import { requireDb } from "../db";
-import { storagePut } from "../storage";
+import { storageGetSignedUrl, storagePut } from "../storage";
 import { protectedProcedure, router } from "../_core/trpc";
 
 const receiptSchema = z.object({ organizationId: z.string().min(1), transferComment: z.string().trim().min(3).max(160), originalName: z.string().trim().min(1).max(255), mimeType: z.enum(["image/jpeg", "image/png", "image/webp", "application/pdf"]), dataUrl: z.string().min(20).max(14_000_000) });
@@ -18,6 +18,13 @@ async function ownerMembership(userId: number, organizationId: string) {
 }
 function requireAdmin(role: string) { if (role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "ეს მოქმედება ხელმისაწვდომია მხოლოდ SalonFlow platform admin-ისთვის." }); }
 function monthFrom(date: Date) { const value = new Date(date); value.setMonth(value.getMonth() + 1); return value; }
+function hasReceiptSignature(bytes: Buffer, mimeType: string) {
+  if (mimeType === "image/jpeg") return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  if (mimeType === "image/png") return bytes.length >= 8 && bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+  if (mimeType === "image/webp") return bytes.length >= 12 && bytes.subarray(0, 4).toString("ascii") === "RIFF" && bytes.subarray(8, 12).toString("ascii") === "WEBP";
+  if (mimeType === "application/pdf") return bytes.length >= 5 && bytes.subarray(0, 5).toString("ascii") === "%PDF-";
+  return false;
+}
 
 export const billingRouter = router({
   workspaceStatus: protectedProcedure.input(ownerInput).query(async ({ ctx, input }) => {
@@ -40,15 +47,18 @@ export const billingRouter = router({
     const [trial] = await db.select().from(trialAccessRequests).where(eq(trialAccessRequests.organizationId, input.organizationId)).limit(1);
     return { organization, config: config ? { beneficiaryName: config.beneficiaryName, personalNumber: config.personalNumber, accountNumber: config.accountNumber, monthlyPriceTetri: config.monthlyPriceTetri, transferCommentPrefix: config.transferCommentPrefix, privacyNoticeKa: config.privacyNoticeKa } : null, submission, trialEndsAt: trial?.status === "APPROVED" ? trial.expiresAt : null, activeEndsAt: grant?.endsAt ?? (trial?.status === "APPROVED" ? trial.expiresAt : null) };
   }),
-  submitReceipt: protectedProcedure.input(receiptSchema).mutation(async ({ ctx, input }) => {
-    const db = await ownerMembership(ctx.user.id, input.organizationId);
-    const [organization] = await db.select().from(organizations).where(eq(organizations.id, input.organizationId)).limit(1);
-    const [config] = await db.select().from(billingConfigurations).where(eq(billingConfigurations.id, 1)).limit(1);
-    if (!organization?.billingCode || !config?.monthlyPriceTetri || !config.beneficiaryName || !config.accountNumber) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "გადახდის რეკვიზიტები ჯერ არ არის კონფიგურირებული." });
-    const match = input.dataUrl.match(/^data:([^;]+);base64,(.+)$/);
-    if (!match || match[1] !== input.mimeType) throw new TRPCError({ code: "BAD_REQUEST", message: "ქვითრის ფორმატი არასწორია." });
-    const bytes = Buffer.from(match[2], "base64");
-    if (!bytes.length || bytes.length > 10 * 1024 * 1024) throw new TRPCError({ code: "BAD_REQUEST", message: "ქვითრის ზომა უნდა იყოს არაუმეტეს 10 MB." });
+	  submitReceipt: protectedProcedure.input(receiptSchema).mutation(async ({ ctx, input }) => {
+	    const db = await ownerMembership(ctx.user.id, input.organizationId);
+	    const [organization] = await db.select().from(organizations).where(eq(organizations.id, input.organizationId)).limit(1);
+	    const [config] = await db.select().from(billingConfigurations).where(eq(billingConfigurations.id, 1)).limit(1);
+	    if (!organization?.billingCode || !config?.monthlyPriceTetri || !config.beneficiaryName || !config.accountNumber) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "გადახდის რეკვიზიტები ჯერ არ არის კონფიგურირებული." });
+	    const [pending] = await db.select({ id: billingPaymentSubmissions.id }).from(billingPaymentSubmissions).where(and(eq(billingPaymentSubmissions.organizationId, organization.id), or(eq(billingPaymentSubmissions.status, "SUBMITTED"), eq(billingPaymentSubmissions.status, "UNDER_REVIEW")))).limit(1);
+	    if (pending) throw new TRPCError({ code: "CONFLICT", message: "წინა ქვითარი უკვე შემოწმებას ელოდება. ახალი ფაილის გაგზავნამდე დაელოდეთ გადაწყვეტილებას." });
+	    const match = input.dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+	    if (!match || match[1] !== input.mimeType) throw new TRPCError({ code: "BAD_REQUEST", message: "ქვითრის ფორმატი არასწორია." });
+	    const bytes = Buffer.from(match[2], "base64");
+	    if (!bytes.length || bytes.length > 10 * 1024 * 1024) throw new TRPCError({ code: "BAD_REQUEST", message: "ქვითრის ზომა უნდა იყოს არაუმეტეს 10 MB." });
+	    if (!hasReceiptSignature(bytes, input.mimeType)) throw new TRPCError({ code: "BAD_REQUEST", message: "ატვირთული ფაილის შიგთავსი არჩეულ ქვითრის ფორმატს არ შეესაბამება." });
     const ext = input.mimeType === "application/pdf" ? "pdf" : input.mimeType.split("/")[1];
     const stored = await storagePut(`billing-receipts/${organization.id}/${nanoid(12)}.${ext}`, bytes, input.mimeType);
     const id = nanoid(21);
@@ -62,17 +72,39 @@ export const billingRouter = router({
   saveConfig: protectedProcedure.input(z.object({ beneficiaryName: z.string().trim().min(2).max(160), personalNumber: z.string().trim().min(5).max(32), accountNumber: z.string().trim().min(8).max(64), monthlyPriceTetri: z.number().int().positive(), transferCommentPrefix: z.string().trim().min(2).max(32), privacyNoticeKa: z.string().trim().min(10).max(5000) })).mutation(async ({ ctx, input }) => {
     requireAdmin(ctx.user.role); const db = await requireDb(); await db.insert(billingConfigurations).values({ id: 1, ...input, updatedByUserId: ctx.user.id }).onDuplicateKeyUpdate({ set: { ...input, updatedByUserId: ctx.user.id } }); return { saved: true };
   }),
-  adminList: protectedProcedure.input(z.object({ status: z.enum(["SUBMITTED", "UNDER_REVIEW", "APPROVED", "REJECTED", "CANCELLED"]).optional(), search: z.string().trim().min(1).max(160).optional() })).query(async ({ ctx, input }) => {
-    requireAdmin(ctx.user.role); const db = await requireDb(); const term = input.search ? `%${input.search}%` : undefined;
-    const rows = await db.select({ submission: billingPaymentSubmissions, organizationName: organizations.name, ownerEmail: users.email }).from(billingPaymentSubmissions).innerJoin(organizations, eq(billingPaymentSubmissions.organizationId, organizations.id)).innerJoin(users, eq(billingPaymentSubmissions.submittedByUserId, users.id)).where(and(input.status ? eq(billingPaymentSubmissions.status, input.status) : undefined, term ? or(like(organizations.name, term), like(organizations.billingCode, term), like(users.email, term), like(billingPaymentSubmissions.billingCodeSnapshot, term)) : undefined)).orderBy(desc(billingPaymentSubmissions.createdAt)).limit(100);
-    return rows.map(row => ({ ...row.submission, organizationName: row.organizationName, ownerEmail: row.ownerEmail, receiptUrl: `/manus-storage/${row.submission.receiptKey}` }));
-  }),
+	  adminList: protectedProcedure.input(z.object({ status: z.enum(["SUBMITTED", "UNDER_REVIEW", "APPROVED", "REJECTED", "CANCELLED"]).optional(), search: z.string().trim().min(1).max(160).optional() })).query(async ({ ctx, input }) => {
+	    requireAdmin(ctx.user.role); const db = await requireDb(); const term = input.search ? `%${input.search}%` : undefined;
+	    const rows = await db.select({ submission: billingPaymentSubmissions, organizationName: organizations.name, ownerEmail: users.email }).from(billingPaymentSubmissions).innerJoin(organizations, eq(billingPaymentSubmissions.organizationId, organizations.id)).innerJoin(users, eq(billingPaymentSubmissions.submittedByUserId, users.id)).where(and(input.status ? eq(billingPaymentSubmissions.status, input.status) : undefined, term ? or(like(organizations.name, term), like(organizations.billingCode, term), like(users.email, term), like(billingPaymentSubmissions.billingCodeSnapshot, term)) : undefined)).orderBy(desc(billingPaymentSubmissions.createdAt)).limit(100);
+	    return Promise.all(rows.map(async row => ({ ...row.submission, organizationName: row.organizationName, ownerEmail: row.ownerEmail, receiptUrl: await storageGetSignedUrl(row.submission.receiptKey) })));
+	  }),
   approveMonthly: protectedProcedure.input(z.object({ submissionId: z.string().min(1), note: z.string().trim().max(500).optional() })).mutation(async ({ ctx, input }) => {
-    requireAdmin(ctx.user.role); const db = await requireDb(); const [submission] = await db.select().from(billingPaymentSubmissions).where(eq(billingPaymentSubmissions.id, input.submissionId)).limit(1); if (!submission || !["SUBMITTED", "UNDER_REVIEW"].includes(submission.status)) throw new TRPCError({ code: "CONFLICT", message: "ეს ქვითარი უკვე დამუშავებულია ან ვერ მოიძებნა." });
+    requireAdmin(ctx.user.role);
+    const db = await requireDb();
+    const [submission] = await db.select().from(billingPaymentSubmissions).where(eq(billingPaymentSubmissions.id, input.submissionId)).limit(1);
+    if (!submission || !["SUBMITTED", "UNDER_REVIEW"].includes(submission.status)) throw new TRPCError({ code: "CONFLICT", message: "ეს ქვითარი უკვე დამუშავებულია ან ვერ მოიძებნა." });
     const [existing] = await db.select().from(organizationAccessGrants).where(and(eq(organizationAccessGrants.organizationId, submission.organizationId), eq(organizationAccessGrants.status, "ACTIVE"), gt(organizationAccessGrants.endsAt, new Date()))).orderBy(desc(organizationAccessGrants.endsAt)).limit(1);
-    const startsAt = existing?.endsAt && existing.endsAt > new Date() ? existing.endsAt : new Date(); const endsAt = monthFrom(startsAt); const grantId = nanoid(21);
-    await db.transaction(async tx => { await tx.update(billingPaymentSubmissions).set({ status: "APPROVED", reviewedByUserId: ctx.user.id, reviewedAt: new Date(), reviewNoteKa: input.note ?? null }).where(eq(billingPaymentSubmissions.id, submission.id)); await tx.insert(organizationAccessGrants).values({ id: grantId, organizationId: submission.organizationId, source: "MONTHLY_MANUAL", billingPaymentSubmissionId: submission.id, startsAt, endsAt, grantedByUserId: ctx.user.id, grantReasonKa: input.note ?? "ხელით დადასტურებული 1-თვიანი პაკეტი" }); await tx.insert(billingPaymentEvents).values({ id: nanoid(21), billingPaymentSubmissionId: submission.id, eventType: "APPROVED_MONTHLY", actorUserId: ctx.user.id, metadata: { grantId, endsAt: endsAt.toISOString() } }); }); return { endsAt };
+    const startsAt = existing?.endsAt && existing.endsAt > new Date() ? existing.endsAt : new Date();
+    const endsAt = monthFrom(startsAt);
+    const grantId = nanoid(21);
+    const reviewedAt = new Date();
+    await db.transaction(async tx => {
+      const result = await tx.update(billingPaymentSubmissions).set({ status: "APPROVED", reviewedByUserId: ctx.user.id, reviewedAt, reviewNoteKa: input.note ?? null }).where(and(eq(billingPaymentSubmissions.id, submission.id), or(eq(billingPaymentSubmissions.status, "SUBMITTED"), eq(billingPaymentSubmissions.status, "UNDER_REVIEW"))));
+      if (result[0]?.affectedRows !== 1) throw new TRPCError({ code: "CONFLICT", message: "ეს ქვითარი უკვე დამუშავდა სხვა admin-ის მიერ." });
+      await tx.insert(organizationAccessGrants).values({ id: grantId, organizationId: submission.organizationId, source: "MONTHLY_MANUAL", billingPaymentSubmissionId: submission.id, startsAt, endsAt, grantedByUserId: ctx.user.id, grantReasonKa: input.note ?? "ხელით დადასტურებული 1-თვიანი პაკეტი" });
+      await tx.insert(billingPaymentEvents).values({ id: nanoid(21), billingPaymentSubmissionId: submission.id, eventType: "APPROVED_MONTHLY", actorUserId: ctx.user.id, metadata: { grantId, endsAt: endsAt.toISOString() } });
+    });
+    return { endsAt };
   }),
-  rejectReceipt: protectedProcedure.input(z.object({ submissionId: z.string().min(1), note: z.string().trim().min(3).max(500) })).mutation(async ({ ctx, input }) => { requireAdmin(ctx.user.role); const db = await requireDb(); const [submission] = await db.select().from(billingPaymentSubmissions).where(eq(billingPaymentSubmissions.id, input.submissionId)).limit(1); if (!submission || !["SUBMITTED", "UNDER_REVIEW"].includes(submission.status)) throw new TRPCError({ code: "CONFLICT", message: "ეს ქვითარი უკვე დამუშავებულია ან ვერ მოიძებნა." }); await db.transaction(async tx => { await tx.update(billingPaymentSubmissions).set({ status: "REJECTED", reviewedByUserId: ctx.user.id, reviewedAt: new Date(), reviewNoteKa: input.note }).where(eq(billingPaymentSubmissions.id, submission.id)); await tx.insert(billingPaymentEvents).values({ id: nanoid(21), billingPaymentSubmissionId: submission.id, eventType: "REJECTED", actorUserId: ctx.user.id, metadata: { note: input.note } }); }); return { rejected: true }; }),
+  rejectReceipt: protectedProcedure.input(z.object({ submissionId: z.string().min(1), note: z.string().trim().min(3).max(500) })).mutation(async ({ ctx, input }) => {
+    requireAdmin(ctx.user.role);
+    const db = await requireDb();
+    const reviewedAt = new Date();
+    await db.transaction(async tx => {
+      const result = await tx.update(billingPaymentSubmissions).set({ status: "REJECTED", reviewedByUserId: ctx.user.id, reviewedAt, reviewNoteKa: input.note }).where(and(eq(billingPaymentSubmissions.id, input.submissionId), or(eq(billingPaymentSubmissions.status, "SUBMITTED"), eq(billingPaymentSubmissions.status, "UNDER_REVIEW"))));
+      if (result[0]?.affectedRows !== 1) throw new TRPCError({ code: "CONFLICT", message: "ეს ქვითარი უკვე დამუშავებულია ან ვერ მოიძებნა." });
+      await tx.insert(billingPaymentEvents).values({ id: nanoid(21), billingPaymentSubmissionId: input.submissionId, eventType: "REJECTED", actorUserId: ctx.user.id, metadata: { note: input.note } });
+    });
+    return { rejected: true };
+  }),
   grantBonusDays: protectedProcedure.input(z.object({ organizationId: z.string().min(1), days: z.number().int().min(1).max(365), reason: z.string().trim().min(3).max(500) })).mutation(async ({ ctx, input }) => { requireAdmin(ctx.user.role); const db = await requireDb(); const [existing] = await db.select().from(organizationAccessGrants).where(and(eq(organizationAccessGrants.organizationId, input.organizationId), eq(organizationAccessGrants.status, "ACTIVE"), gt(organizationAccessGrants.endsAt, new Date()))).orderBy(desc(organizationAccessGrants.endsAt)).limit(1); const startsAt = existing?.endsAt && existing.endsAt > new Date() ? existing.endsAt : new Date(); const endsAt = new Date(startsAt.getTime() + input.days * 86400000); await db.insert(organizationAccessGrants).values({ id: nanoid(21), organizationId: input.organizationId, source: "BONUS_DAYS", startsAt, endsAt, grantedByUserId: ctx.user.id, grantReasonKa: input.reason, metadata: { days: input.days } }); return { endsAt }; }),
 });
