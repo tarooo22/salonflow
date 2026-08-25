@@ -85,6 +85,7 @@ function Router() {
       <Route path={"/app/feedback"} component={FeedbackModeration} />
       <Route path={"/app/trial-request"} component={TrialRequest} />
       <Route path={"/app/trial-status"} component={TrialStatus} />
+      <Route path={"/app/trial-admin"} component={TrialAdmin} />
       <Route path={"/app/trials-admin"} component={TrialAdmin} />
       <Route path={"/app/waitlist"} component={WaitlistQueue} />
       <Route path={"/app/setup"} component={WorkspaceSetup} />
