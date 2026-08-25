@@ -283,7 +283,7 @@
 - [x] Create a dedicated light partner landing page and restyle manual billing activation around truthful 1-month transfer, receipt and salon-ID workflow without invented payment information.
 - [x] Redesign DashboardLayout, Today, billing and platform-admin review shells into compact operational light interfaces while preserving role restrictions and Today-only expiry lock.
 - [x] Run full visual/responsive/accessibility QA at 375/768/1024/1440/1600, then complete Vitest/typecheck/build, fresh runtime logs and release checkpoint.
-- [ ] Source and integrate licensed premium salon imagery into public discovery/partner surfaces using durable web assets without fabricating customer content or reviews.
-- [ ] Make the workspace dashboard light-only by removing the user-facing dark/system switch while retaining accessible light semantic tokens and role/expiry safeguards.
-- [ ] Verify and polish the platform-admin Billing payments configuration flow for beneficiary name, personal ID, account number and monthly price, without inventing or pre-filling financial data.
-- [ ] Run responsive/image performance validation, full regression checks and release checkpoint; provide exact secure configuration steps for the missing real billing details.
+- [x] Source and integrate licensed premium salon imagery into public discovery/partner surfaces using durable web assets without fabricating customer content or reviews.
+- [x] Make the workspace dashboard light-only by removing the user-facing dark/system switch while retaining accessible light semantic tokens and role/expiry safeguards.
+- [x] Verify and polish the platform-admin Billing payments configuration flow for beneficiary name, personal ID, account number and monthly price, without inventing or pre-filling financial data.
+- [x] Run responsive/image performance validation, full regression checks and release checkpoint; provide exact secure configuration steps for the missing real billing details.
