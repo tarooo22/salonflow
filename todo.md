@@ -292,5 +292,8 @@
 - [x] Add automated manual activation lifecycle coverage for owner receipt submission, platform-admin review/approval and current monthly grant restoration, without fabricating a bank transfer.
 - [x] Refine the owner package activation page with a clearer step-by-step transfer/receipt instruction, visible SalonFlow ID and accessible pending/rejected/approved status states.
 - [x] Add a server-derived Georgian trial-expiry reminder banner to Today for active owners when their trial ends within the configured reminder window.
-- [ ] Enter the platform's real beneficiary details in Billing payments and perform one user-confirmed live receipt → admin approval → renewed-access verification; do not use fabricated financial data.
-- [ ] Create the release checkpoint and document the completed real-data verification after the admin configuration values are supplied.
+- [x] Enter the platform's real beneficiary details in Billing payments: ნიკოლოზ თარაშვილი, 01001070968, GE64BG0000000161381468 and 49 GEL monthly package price.
+- [x] Perform one user-confirmed live receipt → admin approval → renewed-access verification; do not use fabricated financial data or a false payment receipt.
+- [x] Create the release checkpoint and document the completed real-data verification after the admin configuration values are supplied.
+- [x] Configure the user-supplied real beneficiary and 49 GEL monthly package details through the protected platform-admin billing configuration; it renders only in the owner activation flow.
+- [x] With the owner's confirmation, link The Beauty Room N1 to an expired trial test state, verify Today-only owner lock and activation visibility, then restore access solely through a genuine receipt and manual platform-admin approval.
