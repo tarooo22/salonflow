@@ -8,6 +8,8 @@ import { AppointmentQuickAction } from "@/components/AppointmentQuickAction";
 import { WalkInQuickEntry } from "@/components/WalkInQuickEntry";
 import { WorkspaceMetric, WorkspacePageHeader, WorkspaceSection, WorkspaceState, WorkspaceStatusPill } from "@/components/workspace/WorkspacePrimitives";
 import { ActionTile, AttentionRow, CompactMetricRail, PriorityModule, WorkspaceContextBar } from "@/components/workspace/DashboardModules";
+import { DayCloseChecklist, NotificationCenter } from "@/components/workspace/DailyControl";
+import { MetricPreferenceMenu } from "@/components/workspace/MetricPreferenceMenu";
 import { trpc } from "@/lib/trpc";
 import { dashboardMetricKeys, dashboardQuickActions, nextOperationalAppointment } from "@/lib/dashboardExperience";
 import { canManageAppointmentQueue } from "@/lib/appointmentPresentation";
@@ -29,6 +31,7 @@ type TodayAppointment = {
   staff: { publicDisplayName: string };
 };
 type TodayFocus = { appointment: TodayAppointment; kind: "NOW" | "NEXT" } | null;
+type DashboardMetricKey = "BOOKINGS" | "PENDING" | "SCHEDULED" | "OUTSTANDING" | "UP_NEXT";
 
 function money(tetri: number) { return formatGelTetri(tetri); }
 
@@ -49,6 +52,7 @@ export default function Today() {
   const canManageOrganization = role === "OWNER";
   const billing = trpc.billing.ownerStatus.useQuery({ organizationId: organization?.id ?? "" }, { enabled: Boolean(organization?.id && canManageOrganization) });
   const workspaceStatus = trpc.billing.workspaceStatus.useQuery({ organizationId: organization?.id ?? "" }, { enabled: Boolean(organization?.id) });
+  const productivityPreferences = trpc.productivity.preferences.useQuery({ organizationId: organization?.id ?? "" }, { enabled: Boolean(organization?.id && role !== "STAFF") });
   const canConfirmAppointment = role === "OWNER" || role === "MANAGER";
   const canManageCalendar = canManageAppointmentQueue(role);
   const locations = trpc.organizations.listLocations.useQuery({ organizationId: organization?.id ?? "" }, { enabled: Boolean(organization?.id) });
@@ -98,8 +102,21 @@ export default function Today() {
   const dayLabel = dashboard.data?.dateKey ? new Intl.DateTimeFormat("ka-GE", { timeZone: timezone, weekday: "long", day: "numeric", month: "long" }).format(new Date()) : "მიმდინარე სამუშაო დღე";
   const activeLocation = locations.data?.find(location => location.id === (activeLocationId || locations.data?.[0]?.id));
   const quickActions = dashboardQuickActions(role, Boolean(activeLocation));
-  const metricKeys = dashboardMetricKeys(role);
+  const defaultMetricKeys = [...dashboardMetricKeys(role)] as DashboardMetricKey[];
+  const metricKeys = useMemo(() => {
+    if (role === "STAFF") return [...defaultMetricKeys];
+    const priority = (productivityPreferences.data?.metricKeys ?? []).filter((key): key is DashboardMetricKey => defaultMetricKeys.includes(key as DashboardMetricKey)).slice(0, 2);
+    return [...priority, ...defaultMetricKeys.filter(key => !priority.includes(key))];
+  }, [defaultMetricKeys, productivityPreferences.data?.metricKeys, role]);
   const operationalFocus = nextOperationalAppointment(appointments) as TodayFocus;
+  const timelineCue = useMemo(() => {
+    const now = Date.now();
+    const active = appointments.find(appointment => new Date(appointment.startsAt).getTime() <= now && new Date(appointment.endsAt).getTime() > now && !["CANCELLED", "NO_SHOW", "COMPLETED"].includes(appointment.status));
+    const anchor = active ? new Date(active.endsAt).getTime() : now;
+    const following = appointments.find(appointment => new Date(appointment.startsAt).getTime() >= anchor && !["CANCELLED", "NO_SHOW", "COMPLETED"].includes(appointment.status));
+    if (active) return following ? `შემდეგი: ${formatTimeInTimeZone(new Date(following.startsAt), timezone)}` : "დღის შემდეგი booking აღარ არის";
+    return following ? `თავისუფალი დრო → ${formatTimeInTimeZone(new Date(following.startsAt), timezone)}` : "დღეს დამატებითი booking აღარ არის";
+  }, [appointments, timezone]);
   const pendingCount = (dashboard.data?.counts as Record<string, number> | undefined)?.PENDING ?? 0;
   const nonStaffAttention = role !== "STAFF";
   const workspaceLocked = Boolean(workspaceStatus.data?.locked);
@@ -114,11 +131,20 @@ export default function Today() {
     { key: "hours", complete: Boolean(workingHours.data?.length), title: "სამუშაო საათები", detail: "დააყენეთ ჩაწერის დრო.", href: "/app/staff", cta: "საათები" },
     { key: "link", complete: Boolean(activeLocation?.publicSlug), title: "ონლაინ ჩაწერის ბმული", detail: "გააზიარეთ მხოლოდ მზადყოფნის შემდეგ.", href: "/app/settings", cta: "ბმული" },
   ].filter(item => !item.complete) : [];
+  const completedCount = appointments.filter(appointment => appointment.status === "COMPLETED").length;
+  const canCloseDay = role === "OWNER" || role === "MANAGER" || role === "RECEPTIONIST";
+  const notifications = [
+    pendingCount ? { key: `pending:${dashboard.data?.dateKey ?? "today"}`, title: "მომლოდინე booking-ები", description: `${pendingCount} ჩანაწერს დადასტურება ან გადამოწმება სჭირდება.`, href: "/app/calendar", tone: "warning" as const } : null,
+    nonStaffAttention && metrics.outstandingTetri ? { key: `outstanding:${dashboard.data?.dateKey ?? "today"}`, title: "დარჩენილი ბალანსი", description: `${money(metrics.outstandingTetri)} გადასამოწმებელია დღიური ანგარიშის მიხედვით.`, href: "/app/reports", tone: "warning" as const } : null,
+    showAccessExpiryReminder ? { key: `access:${activeAccessEndsAt?.toISOString() ?? ""}`, title: "პაკეტის წვდომა იწურება", description: `${activeAccessDaysRemaining} დღეში გახსენით 1-თვიანი პაკეტის ინსტრუქცია.`, href: "/app/billing", tone: "info" as const } : null,
+    canManageOrganization && readiness.length ? { key: `readiness:${readiness.map(item => item.key).join("-")}`, title: "სალონის მზადყოფნა", description: `${readiness.length} setup ნაბიჯი ჯერ დასასრულებელია.`, href: readiness[0]?.href ?? "/app/settings", tone: "info" as const } : null,
+  ].filter((notice): notice is { key: string; title: string; description: string; href: string; tone: "warning" | "info" } => Boolean(notice));
+  const emptyNextAction = role === "OWNER" && readiness[0] ? { href: readiness[0].href, label: readiness[0].cta } : role === "STAFF" ? { href: "/app/calendar", label: "ჩემი კალენდარი" } : { href: "/app/calendar", label: "კალენდრის გახსნა" };
 
   if (workspaceLocked && organization) return <DashboardLayout><div className="sf-workspace-page mx-auto w-full max-w-4xl space-y-5"><WorkspacePageHeader eyebrow="წვდომის სტატუსი" title="სამუშაო სივრცის წვდომა დასრულებულია" description="თქვენი სალონის მონაცემები შენახულია. 1-თვიანი პაკეტის ხელით გასააქტიურებლად ატვირთეთ ბანკის გადარიცხვის ქვითარი." /><WorkspaceSection title="გააქტიურება" description="გადახდის ინსტრუქცია და ქვითრის გაგზავნა ხელმისაწვდომია მხოლოდ მფლობელისთვის."><div className="rounded-2xl border border-[color-mix(in_srgb,var(--sf-salon-warm)_38%,transparent)] bg-[color-mix(in_srgb,var(--sf-salon-warm)_8%,transparent)] p-5"><p className="text-sm text-muted-foreground">სალონის ID: <strong className="font-mono text-foreground">{billing.data?.organization.billingCode ?? "—"}</strong></p><p className="mt-3 text-sm leading-6 text-muted-foreground">გადახდის workflow-ის სრულ გვერდზე გადასასვლელად გამოიყენეთ ქვემოთ მოცემული მოქმედება.</p><Button asChild className="mt-5"><Link href="/app/billing">1-თვიანი პაკეტის გააქტიურება</Link></Button></div></WorkspaceSection></div></DashboardLayout>;
   if (memberWorkspaceLocked && organization) return <DashboardLayout><div className="sf-workspace-page mx-auto w-full max-w-4xl"><WorkspaceState kind="empty" title="სამუშაო სივრცის წვდომა დასრულებულია" description="გადახდისა და ხელახალი გააქტიურების მართვა შეუძლია მხოლოდ სალონის მფლობელს. დაუკავშირდით მფლობელს." /></div></DashboardLayout>;
   return <DashboardLayout><div className="sf-workspace-page mx-auto w-full max-w-7xl space-y-5">
-    <WorkspaceContextBar eyebrow="დღის ოპერაციები" title="დღეს" detail={`${dayLabel} · ${roleHeading(role)}`} action={<div className="flex flex-wrap gap-2">{locations.data?.length ? <Select value={activeLocationId || locations.data[0]?.id} onValueChange={setActiveLocationId}><SelectTrigger className="min-w-52 bg-card" aria-label="აქტიური ფილიალი"><MapPin className="mr-2 h-4 w-4 text-primary" /><SelectValue placeholder="აირჩიეთ ფილიალი" /></SelectTrigger><SelectContent>{locations.data.map(location => <SelectItem key={location.id} value={location.id}>{location.name}</SelectItem>)}</SelectContent></Select> : null}{organization && canManageOrganization ? <Button onClick={() => { setLocationError(""); setLocationOpen(true); }}><Plus className="mr-2 h-4 w-4" />ფილიალი</Button> : null}</div>} />
+    <WorkspaceContextBar eyebrow="დღის ოპერაციები" title="დღეს" detail={`${dayLabel} · ${roleHeading(role)}`} action={<div className="flex flex-wrap gap-2">{organization ? <NotificationCenter organizationId={organization.id} notices={notifications} /> : null}{organization && role !== "STAFF" ? <MetricPreferenceMenu organizationId={organization.id} allowedKeys={defaultMetricKeys} selectedKeys={metricKeys.slice(0, 2)} /> : null}{locations.data?.length ? <Select value={activeLocationId || locations.data[0]?.id} onValueChange={setActiveLocationId}><SelectTrigger className="min-w-52 bg-card" aria-label="აქტიური ფილიალი"><MapPin className="mr-2 h-4 w-4 text-primary" /><SelectValue placeholder="აირჩიეთ ფილიალი" /></SelectTrigger><SelectContent>{locations.data.map(location => <SelectItem key={location.id} value={location.id}>{location.name}</SelectItem>)}</SelectContent></Select> : null}{organization && canManageOrganization ? <Button onClick={() => { setLocationError(""); setLocationOpen(true); }}><Plus className="mr-2 h-4 w-4" />ფილიალი</Button> : null}</div>} />
     {organizations.isLoading ? <WorkspaceState kind="loading" title="სამუშაო სივრცე იტვირთება…" /> : null}
     {organizations.isError ? <WorkspaceState kind="error" title="სამუშაო სივრცის მონაცემები მიუწვდომელია" description="გთხოვთ სცადოთ ხელახლა." /> : null}
     {!organizations.isLoading && !organizations.isError && !organization ? <WorkspaceState kind="empty" title="შექმენით თქვენი პირველი სამუშაო სივრცე" description="დაამატეთ ორგანიზაცია და ფილიალი, შემდეგ კი გუნდი, სერვისები და სამუშაო საათები." action={<Button asChild><Link href="/app/setup">სამუშაო სივრცის შექმნა</Link></Button>} /> : null}
@@ -128,14 +154,15 @@ export default function Today() {
       {!locations.isLoading && !dashboard.isLoading && !locations.data?.length ? <WorkspaceState kind="empty" title="ჯერ არ არის აქტიური ფილიალი" description="დღის ოპერაციების სანახავად ჯერ დაამატეთ ფილიალი." /> : null}
       {!locations.isLoading && !dashboard.isLoading && locations.data?.length ? <>
         <section aria-label="დღის გადაწყვეტილების ზედაპირი" className="grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(20rem,0.75fr)]">
-          <OperationalFocusCard focus={operationalFocus} timezone={timezone} onOpenCalendar={() => undefined} />
+          <OperationalFocusCard focus={operationalFocus} timezone={timezone} timelineCue={timelineCue} onOpenCalendar={() => undefined} />
           {nonStaffAttention ? <AttentionCard pendingCount={pendingCount} outstandingTetri={metrics.outstandingTetri} collectedTetri={metrics.collectedTetri} /> : <StaffDayCard appointmentCount={appointments.length} focus={operationalFocus} timezone={timezone} />}
         </section>
         <CompactMetricRail>{metricKeys.map(metricKey => <DashboardMetric key={metricKey} metricKey={metricKey} appointmentCount={appointments.length} pendingCount={pendingCount} scheduledTetri={metrics.scheduledTetri} outstandingTetri={metrics.outstandingTetri} focus={operationalFocus} timezone={timezone} />)}</CompactMetricRail>
         <QuickActions actions={quickActions} onWalkIn={() => setWalkInMode(true)} />
         {canManageCalendar && activeLocation ? <WalkInQuickEntry organizationId={organization.id} locationId={activeLocation.id} open={walkInMode} onOpenChange={setWalkInMode} /> : null}
         {(showAccessExpiryReminder || (canManageOrganization && readiness.length)) ? <SalonStatusPanel accessDaysRemaining={showAccessExpiryReminder ? activeAccessDaysRemaining : null} readiness={canManageOrganization ? readiness : []} /> : null}
-        {!dashboard.isError && dashboard.data?.location && appointments.length === 0 ? <WorkspaceState kind="empty" title="ამ ფილიალს დღეს ჯავშანი არ აქვს" description={role === "OWNER" ? "სერვისების, გუნდისა და სამუშაო საათების შემოწმება დაგეხმარებათ ონლაინ ჩაწერისთვის მზადებაში." : "როგორც კი საჯარო ან შიდა ჩაწერა შეიქმნება, ის აქ გამოჩნდება."} action={<Button asChild variant="outline"><Link href="/app/calendar">კალენდრის გახსნა</Link></Button>} /> : null}
+        {organization && dashboard.data?.location && dashboard.data.dateKey ? <DayCloseChecklist organizationId={organization.id} locationId={dashboard.data.location.id} businessDate={dashboard.data.dateKey} locationName={dashboard.data.location.name} timezone={timezone} pendingCount={pendingCount} completedCount={completedCount} outstandingLabel={money(metrics.outstandingTetri)} outstandingTetri={metrics.outstandingTetri} canClose={canCloseDay} /> : null}
+        {!dashboard.isError && dashboard.data?.location && appointments.length === 0 ? <WorkspaceState kind="empty" title="ამ ფილიალს დღეს ჯავშანი არ აქვს" description={role === "OWNER" ? "აირჩიეთ ერთი შემდეგი ნაბიჯი, რომ ონლაინ ჩაწერისთვის მზადყოფნა გაზარდოთ." : "როგორც კი საჯარო ან შიდა ჩაწერა შეიქმნება, ის აქ გამოჩნდება."} action={<Button asChild variant="outline"><Link href={emptyNextAction.href}>{emptyNextAction.label}</Link></Button>} /> : null}
         {!dashboard.isError && appointments.length ? <WorkspaceSection title="დღის სრული queue" description={`${dashboard.data?.location?.name} · ${timezone}`} action={<WorkspaceStatusPill tone="info">{appointments.length} ჯავშანი</WorkspaceStatusPill>}><div className="divide-y divide-border/70">{appointments.map(appointment => { const balance = balanceByAppointment.get(appointment.id); const clientName = appointment.client ? `${appointment.client.firstName} ${appointment.client.lastName ?? ""}`.trim() : "კლიენტი არ არის მითითებული"; return <article key={appointment.id} className="sf-queue-item grid gap-3 py-4 lg:grid-cols-[5.25rem_minmax(0,1fr)_auto] lg:items-center"><div className="rounded-lg bg-muted/65 px-2.5 py-2"><p className="font-mono text-base font-semibold text-foreground">{formatTimeInTimeZone(new Date(appointment.startsAt), timezone)}</p><p className="mt-0.5 text-xs text-muted-foreground">{formatTimeInTimeZone(new Date(appointment.endsAt), timezone)}</p></div><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><p className="font-semibold">{clientName}</p><StatusPill status={appointment.status} /><WorkspaceStatusPill tone={appointment.payment?.state === "PAID" ? "success" : appointment.payment?.state === "PARTIAL" ? "warning" : appointment.payment?.state === "REFUNDED" ? "danger" : "neutral"}>{formatPaymentState(appointment.payment?.state)}</WorkspaceStatusPill></div><p className="mt-1 truncate text-sm text-muted-foreground">{appointment.services.map(service => service.serviceNameSnapshot).join(", ") || "სერვისი არ არის მითითებული"} · {appointment.staff.publicDisplayName}</p>{role !== "STAFF" ? <p className="mt-1.5 text-xs text-muted-foreground">ნაშთი <span className="font-semibold text-foreground">{money(balance?.balanceTetri ?? appointment.totalTetri)}</span> · ჯამი <span className="font-semibold text-foreground">{money(appointment.totalTetri)}</span></p> : null}</div><div className="flex flex-wrap items-center gap-2 lg:justify-end"><AppointmentQuickAction role={canConfirmAppointment ? role : "STAFF"} status={appointment.status} cardHeight={72} context="today" disabled={updateStatus.isPending} onAction={() => updateStatus.mutate({ organizationId: organization.id, appointmentId: appointment.id, nextStatus: appointment.status === "PENDING" ? "CONFIRMED" : appointment.status === "CONFIRMED" ? "CHECKED_IN" : appointment.status === "CHECKED_IN" ? "IN_SERVICE" : "COMPLETED" })} className="inline-flex h-10 items-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-60" /></div></article>; })}</div></WorkspaceSection> : null}
       </> : null}
     </> : null}
@@ -151,10 +178,10 @@ function SalonStatusPanel({ accessDaysRemaining, readiness }: { accessDaysRemain
   </PriorityModule>;
 }
 
-function OperationalFocusCard({ focus, timezone }: { focus: TodayFocus; timezone: string; onOpenCalendar: () => void }) {
+function OperationalFocusCard({ focus, timezone, timelineCue }: { focus: TodayFocus; timezone: string; timelineCue: string; onOpenCalendar: () => void }) {
   const appointment = focus?.appointment;
   const clientName = appointment?.client ? `${appointment.client.firstName} ${appointment.client.lastName ?? ""}`.trim() : "კლიენტი არ არის მითითებული";
-  return <PriorityModule label={focus?.kind === "NOW" ? "ახლა მიმდინარეობს" : "დღის ფოკუსი"} title={appointment ? clientName : "ახლა თავისუფალი დროა"} description={appointment ? `${appointment.services.map(service => service.serviceNameSnapshot).join(", ") || "სერვისი არ არის მითითებული"} · ${appointment.staff.publicDisplayName}` : "ახალი booking ან Walk-in რომ დაემატება, ის აქ გამოჩნდება."} icon={CalendarClock} action={<Button asChild variant="outline" size="sm"><Link href="/app/calendar">კალენდარი<ArrowRight className="ml-1.5 size-3.5" /></Link></Button>}><div className="flex flex-wrap items-center justify-between gap-3"><div className="flex flex-wrap items-center gap-2">{appointment ? <StatusPill status={appointment.status} /> : <WorkspaceStatusPill tone="success">თავისუფალი დრო</WorkspaceStatusPill>}<p className="text-sm font-medium text-foreground">{appointment ? `${formatTimeInTimeZone(new Date(appointment.startsAt), timezone)}–${formatTimeInTimeZone(new Date(appointment.endsAt), timezone)}` : "დღის queue მზად არის"}</p></div></div></PriorityModule>;
+  return <PriorityModule label={focus?.kind === "NOW" ? "ახლა მიმდინარეობს" : "დღის ფოკუსი"} title={appointment ? clientName : "ახლა თავისუფალი დროა"} description={appointment ? `${appointment.services.map(service => service.serviceNameSnapshot).join(", ") || "სერვისი არ არის მითითებული"} · ${appointment.staff.publicDisplayName}` : "ახალი booking ან Walk-in რომ დაემატება, ის აქ გამოჩნდება."} icon={CalendarClock} action={<Button asChild variant="outline" size="sm"><Link href="/app/calendar">კალენდარი<ArrowRight className="ml-1.5 size-3.5" /></Link></Button>}><div className="flex flex-wrap items-center justify-between gap-3"><div className="flex flex-wrap items-center gap-2">{appointment ? <StatusPill status={appointment.status} /> : <WorkspaceStatusPill tone="success">თავისუფალი დრო</WorkspaceStatusPill>}<p className="text-sm font-medium text-foreground">{appointment ? `${formatTimeInTimeZone(new Date(appointment.startsAt), timezone)}–${formatTimeInTimeZone(new Date(appointment.endsAt), timezone)}` : "დღის queue მზად არის"}</p></div><p className="rounded-md bg-muted/60 px-2 py-1 text-xs font-medium text-muted-foreground">{timelineCue}</p></div></PriorityModule>;
 }
 
 function AttentionCard({ pendingCount, outstandingTetri, collectedTetri }: { pendingCount: number; outstandingTetri: number; collectedTetri: number }) {

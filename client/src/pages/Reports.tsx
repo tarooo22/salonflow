@@ -7,11 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { WorkspaceFilterBar, WorkspaceMetric, WorkspacePageHeader, WorkspaceSection, WorkspaceState, WorkspaceStatusPill } from "@/components/workspace/WorkspacePrimitives";
+import { SavedViewMenu, type SavedViewPayload } from "@/components/workspace/SavedViewMenu";
 import { gelInputToTetri } from "@/lib/money";
 import { formatGelTetri, formatPaymentMethod } from "@/lib/presentation";
 import { trpc } from "@/lib/trpc";
 import { ChevronLeft, ChevronRight, Download, Percent, PlayCircle, Plus, ReceiptText, Trash2, TrendingUp, Wallet, WalletCards } from "lucide-react";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
 
@@ -121,6 +122,15 @@ export default function Reports() {
   const pageEnd = Math.min(offset + HISTORY_PAGE_SIZE, history?.total ?? 0);
   const revenueTrend = analytics.data?.revenueTrend ?? [];
   const commissionData = commissions.data?.specialists ?? [];
+  const currentPeriod: "7d" | "30d" | "90d" = Math.abs(Math.round((range.endsAt.getTime() - range.startsAt.getTime()) / 86_400_000)) <= 8 ? "7d" : Math.abs(Math.round((range.endsAt.getTime() - range.startsAt.getTime()) / 86_400_000)) <= 31 ? "30d" : "90d";
+  const applySavedView = useCallback((payload: SavedViewPayload) => {
+    if (!payload.period) return;
+    const endsAt = new Date();
+    const startsAt = new Date(endsAt);
+    startsAt.setDate(startsAt.getDate() - (payload.period === "7d" ? 7 : payload.period === "30d" ? 30 : 90));
+    setRange({ startsAt, endsAt });
+    setOffset(0);
+  }, []);
 
   return (
     <DashboardLayout>
@@ -135,7 +145,7 @@ export default function Reports() {
         <WorkspaceFilterBar>
           <label className="grid gap-1 text-xs font-medium text-muted-foreground">დაწყება<Input type="date" value={range.startsAt.toISOString().slice(0, 10)} onChange={event => setRange(current => ({ ...current, startsAt: new Date(`${event.target.value}T00:00:00.000Z`) }))} /></label>
           <label className="grid gap-1 text-xs font-medium text-muted-foreground">დასრულება<Input type="date" value={range.endsAt.toISOString().slice(0, 10)} onChange={event => setRange(current => ({ ...current, endsAt: new Date(`${event.target.value}T23:59:59.999Z`) }))} /></label>
-          <WorkspaceStatusPill tone="info">{new Intl.DateTimeFormat("ka-GE", { dateStyle: "medium" }).format(range.startsAt)} – {new Intl.DateTimeFormat("ka-GE", { dateStyle: "medium" }).format(range.endsAt)}</WorkspaceStatusPill>
+          {organization ? <SavedViewMenu organizationId={organization.id} route="/app/reports" filterPayload={{ period: currentPeriod }} onApply={applySavedView} /> : null}<WorkspaceStatusPill tone="info">{new Intl.DateTimeFormat("ka-GE", { dateStyle: "medium" }).format(range.startsAt)} – {new Intl.DateTimeFormat("ka-GE", { dateStyle: "medium" }).format(range.endsAt)}</WorkspaceStatusPill>
         </WorkspaceFilterBar>
 
         {report.isError ? <WorkspaceState kind="error" title="ანგარიშის მონაცემები დროებით მიუწვდომელია" /> : null}

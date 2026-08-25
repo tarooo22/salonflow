@@ -14,6 +14,7 @@ export const clientsRouter = router({
     const search = cleanSearch(input.search);
     const conditions = [eq(clients.organizationId, input.organizationId)];
     if (input.status) conditions.push(eq(clients.status, input.status));
+    if (input.source) conditions.push(eq(clients.source, input.source));
     if (search) conditions.push(like(clients.firstName, `%${search}%`));
     const where = and(...conditions);
     const [items, [{ total }]] = await Promise.all([

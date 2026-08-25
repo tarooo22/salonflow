@@ -20,13 +20,14 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
-import { BarChart3, CalendarDays, CalendarHeart, ChevronDown, CircleHelp, Clock3, Images, LayoutDashboard, ListChecks, LogOut, MessageSquareText, MoreHorizontal, PanelLeft, ReceiptText, Scissors, Settings2, Store, Users } from "lucide-react";
+import { BarChart3, CalendarDays, CalendarHeart, ChevronDown, CircleHelp, Clock3, Images, LayoutDashboard, ListChecks, LogOut, MessageSquareText, MoreHorizontal, PanelLeft, ReceiptText, Scissors, Search, Settings2, Store, Users } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 import { trpc } from "@/lib/trpc";
 import { GuidedHelpTour } from "@/components/workspace/GuidedHelpTour";
+import { CommandPalette } from "@/components/workspace/CommandPalette";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "დღეს", path: "/app/today", group: "დღის მართვა", roles: ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"] },
@@ -144,6 +145,7 @@ function DashboardLayoutContent({
   const activeMenuItem = [...visibleMenuItems, ...visiblePlatformAdminItems].find(item => item.path === location);
   const isMobile = useIsMobile();
   const [helpOpen, setHelpOpen] = useState(false);
+  const [commandOpen, setCommandOpen] = useState(false);
   const [managementOpen, setManagementOpen] = useState(() => managementItems.some(item => item.path === location));
   const mobileQuickItems = workspaceRestricted
     ? visibleMenuItems.slice(0, 3)
@@ -211,6 +213,7 @@ function DashboardLayoutContent({
                   <div className="min-w-0"><span className="block truncate text-sm font-semibold tracking-tight text-sidebar-foreground">SalonFlow</span><span className="block truncate text-[11px] text-sidebar-foreground/65">სამუშაო სივრცე</span></div>
                 </div>
               ) : null}
+              <button type="button" onClick={() => setCommandOpen(true)} className="ml-auto grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-sidebar-border/90 bg-sidebar-accent/45 text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="სწრაფი ძიება"><Search className="size-4" aria-hidden="true" /></button>
             </div>
           </SidebarHeader>
 
@@ -320,7 +323,7 @@ function DashboardLayoutContent({
                 </div>
               </div>
             </div>
-            <button type="button" onClick={() => setHelpOpen(true)} className="grid size-11 place-items-center rounded-xl border border-border/75 bg-card text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label="სამუშაო სივრცის დახმარება"><CircleHelp className="size-4" /></button>
+            <div className="flex items-center gap-2"><button type="button" onClick={() => setCommandOpen(true)} className="grid size-11 place-items-center rounded-xl border border-border/75 bg-card text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label="სწრაფი ძიება"><Search className="size-4" /></button><button type="button" onClick={() => setHelpOpen(true)} className="grid size-11 place-items-center rounded-xl border border-border/75 bg-card text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label="სამუშაო სივრცის დახმარება"><CircleHelp className="size-4" /></button></div>
           </div>
         )}
         <main className="sf-motion-enter sf-workspace-main flex-1 p-4 pb-24 sm:p-5 sm:pb-5 xl:p-6">{children}</main>
@@ -330,6 +333,7 @@ function DashboardLayoutContent({
         </nav> : null}
       </SidebarInset>
       {organizations.data?.[0]?.organization.id ? <GuidedHelpTour organizationId={organizations.data[0].organization.id} role={role} open={helpOpen} onOpenChange={setHelpOpen} /> : null}
+      <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} organizationId={organizationId} role={role} restricted={workspaceRestricted} />
     </>
   );
 }

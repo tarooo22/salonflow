@@ -18,6 +18,9 @@ describe("dashboard role-safe navigation groups", () => {
     expect(source).toContain('aria-expanded={managementOpen}');
     expect(source).toContain('managementItems.some(item => item.path === location)');
     expect(source).toContain("mobileQuickItems");
+    expect(source).toContain("CommandPalette");
+    expect(source).toContain("setCommandOpen(true)");
+    expect(source).toContain("restricted={workspaceRestricted}");
     expect(source).toContain('aria-label="სწრაფი ნავიგაცია"');
     expect(source).toContain("workspaceRestricted\n    ? visibleMenuItems.slice(0, 3)");
     expect(source).toContain("onClick={toggleSidebar}");

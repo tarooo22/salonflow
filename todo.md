@@ -306,3 +306,8 @@
 - [x] Apply the shared compact action/context/filter pattern to Calendar, Clients, Operations, POS, Team, Reports and Settings without changing their data/API contracts.
 - [x] Refine the role-aware Guided Help Tour into contextual, skippable assistance and validate keyboard, reduced-motion and responsive behavior at 375/768/1024/1440px.
 - [x] Add/update focused Vitest coverage, run full validation and create the Dashboard simplification release checkpoint.
+- [x] Build a keyboard-first, mobile-accessible Command Palette with role-safe navigation/actions and organization-scoped client lookup.
+- [x] Add a bounded, actionable in-app notification feed and day-close control that respect organization, location, role and active-access boundaries.
+- [x] Add user-scoped saved views and compact metric preferences with schema validation, safe defaults and no sensitive payload persistence.
+- [x] Improve timeline and empty-state next actions without changing availability, booking transition or financial contracts.
+- [x] Validate productivity features with focused/full Vitest, TypeScript, production build, responsive/keyboard/security QA and create a release checkpoint.

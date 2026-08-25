@@ -13,7 +13,7 @@ vi.mock("@/components/WalkInQuickEntry", () => ({ WalkInQuickEntry: () => <span>
 vi.mock("wouter", () => ({ Link: ({ href, children, ...props }: { href: string; children: React.ReactNode }) => <a href={href} {...props}>{children}</a> }));
 vi.mock("@/lib/trpc", () => ({
   trpc: {
-    useUtils: () => ({ organizations: { listLocations: { invalidate: vi.fn() } }, appointments: { dashboard: { invalidate: vi.fn() }, listRange: { invalidate: vi.fn() } } }),
+    useUtils: () => ({ organizations: { listLocations: { invalidate: vi.fn() } }, appointments: { dashboard: { invalidate: vi.fn() }, listRange: { invalidate: vi.fn() } }, productivity: { preferences: { invalidate: vi.fn() }, dailyCloseState: { invalidate: vi.fn() } } }),
     organizations: {
       listMine: { useQuery: () => query([{ organization, membership: { id: "membership_001", role: state.role } }]) },
       listLocations: { useQuery: () => query([{ id: "location_001", name: "ვაკე", publicSlug: "vake-salon" }]) },
@@ -23,6 +23,7 @@ vi.mock("@/lib/trpc", () => ({
     billing: { ownerStatus: { useQuery: () => query({ activeEndsAt: state.activeEndsAt, trialEndsAt: null, organization: { billingCode: "SF-TEST" }, config: null, submission: null }) }, workspaceStatus: { useQuery: () => query({ locked: false, endsAt: state.activeEndsAt }) } },
     services: { list: { useQuery: () => query(state.services) } },
     staff: { list: { useQuery: () => query(state.team) }, listWorkingHours: { useQuery: () => query(state.hours) } },
+    productivity: { preferences: { useQuery: () => query({ dismissedNotificationKeys: [] }) }, savePreferences: { useMutation: () => mutation }, dailyCloseState: { useQuery: () => query({ completedKeys: [], closedAt: null }) }, saveDailyClose: { useMutation: () => mutation } },
   },
 }));
 

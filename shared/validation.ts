@@ -254,6 +254,7 @@ export const clientListSchema = paginationSchema.extend({
   organizationId: opaqueIdSchema,
   search: z.string().trim().max(120).optional(),
   status: z.enum(["ACTIVE", "MERGED", "ARCHIVED"]).optional(),
+  source: z.enum(["INTERNAL", "PUBLIC_WEB"]).optional(),
 });
 
 export const clientBookingHistorySchema = organizationScopeSchema.extend({

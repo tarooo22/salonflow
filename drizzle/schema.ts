@@ -358,6 +358,52 @@ export const userGuidedTourProgress = mysqlTable("user_guided_tour_progress", {
   index("guided_tour_progress_organization_idx").on(table.organizationId),
 ]);
 
+/** Lightweight per-user Dashboard preferences; never stores client or payment payloads. */
+export const dashboardUserPreferences = mysqlTable("dashboard_user_preferences", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  organizationId: varchar("organizationId", { length: 36 }).notNull().references(() => organizations.id),
+  userId: int("userId").notNull().references(() => users.id),
+  metricKeys: json("metricKeys"),
+  dismissedNotificationKeys: json("dismissedNotificationKeys"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [
+  uniqueIndex("dash_prefs_user_org_uq").on(table.userId, table.organizationId),
+]);
+
+/** Named, user-owned filter configurations for operational routes. */
+export const workspaceSavedViews = mysqlTable("workspace_saved_views", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  organizationId: varchar("organizationId", { length: 36 }).notNull().references(() => organizations.id),
+  userId: int("userId").notNull().references(() => users.id),
+  route: varchar("route", { length: 96 }).notNull(),
+  name: varchar("name", { length: 80 }).notNull(),
+  filterPayload: json("filterPayload").notNull(),
+  schemaVersion: int("schemaVersion").default(1).notNull(),
+  isDefault: boolean("isDefault").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [
+  uniqueIndex("saved_view_user_org_route_name_uq").on(table.userId, table.organizationId, table.route, table.name),
+  index("saved_view_user_org_route_idx").on(table.userId, table.organizationId, table.route),
+]);
+
+/** Daily close progress belongs to one user, workspace, location and local business date. */
+export const userDailyCloseChecklists = mysqlTable("user_daily_close_checklists", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  organizationId: varchar("organizationId", { length: 36 }).notNull().references(() => organizations.id),
+  locationId: varchar("locationId", { length: 36 }).notNull().references(() => locations.id),
+  userId: int("userId").notNull().references(() => users.id),
+  businessDate: date("businessDate").notNull(),
+  completedKeys: json("completedKeys").notNull(),
+  closedAt: timestamp("closedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [
+  uniqueIndex("daily_close_user_org_loc_date_uq").on(table.userId, table.organizationId, table.locationId, table.businessDate),
+  index("daily_close_org_loc_date_idx").on(table.organizationId, table.locationId, table.businessDate),
+]);
+
 export const staffProfiles = mysqlTable("staff_profiles", {
   id: varchar("id", { length: 36 }).primaryKey(),
   membershipId: varchar("membershipId", { length: 36 }).notNull().references(() => organizationMemberships.id),
