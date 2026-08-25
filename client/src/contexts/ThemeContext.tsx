@@ -3,8 +3,9 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from "
 export type Theme = "light" | "dark";
 export type ThemePreference = Theme | "system";
 
-// v2 resets the previous release's implicit Light default while preserving the switchable preference model.
-const STORAGE_KEY = "salonflow-theme-preference-v2";
+// v3 intentionally resets the previous dark-first preference for the light-premium release.
+// Users can still explicitly choose dark or system mode after this first light render.
+const STORAGE_KEY = "salonflow-theme-preference-v3";
 
 export function resolveTheme(preference: ThemePreference, systemPrefersDark: boolean): Theme {
   if (preference === "system") return systemPrefersDark ? "dark" : "light";

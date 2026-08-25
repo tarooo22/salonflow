@@ -37,6 +37,7 @@ const TrialStatus = lazy(() => import("./pages/TrialStatus"));
 const TrialAdmin = lazy(() => import("./pages/TrialAdmin"));
 const BillingActivation = lazy(() => import("./pages/BillingActivation"));
 const BillingAdmin = lazy(() => import("./pages/BillingAdmin"));
+const PartnerLanding = lazy(() => import("./pages/PartnerLanding"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const FeaturesPage = lazy(() => import("./pages/MarketingPages").then(module => ({ default: module.FeaturesPage })));
 const PricingPage = lazy(() => import("./pages/MarketingPages").then(module => ({ default: module.PricingPage })));
@@ -59,6 +60,7 @@ function Router() {
       <Route path={"/demo"} component={DemoPage} />
       <Route path={"/faq"} component={FaqPage} />
       <Route path={"/contact"} component={ContactPage} />
+      <Route path={"/partner"} component={PartnerLanding} />
       <Route path={"/book"} component={Book} />
       <Route path={"/book/:slug"} component={BookingFlow} />
       <Route path={"/manage-booking/:token"} component={ManageBooking} />
@@ -110,7 +112,7 @@ function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider
-        defaultTheme="dark"
+        defaultTheme="light"
         switchable
       >
         <TooltipProvider>

@@ -278,3 +278,8 @@
 - [x] Build platform-admin billing configuration and receipt review console with protected file preview, search/filter, manual monthly approval, rejection notes, bonus days, immutable audit events and idempotent grant logic.
 - [x] Restore public online booking only from a current effective grant/trial, and show owner plan/remaining days from server-derived end date.
 - [x] Add billing lifecycle regression coverage through the existing suite, Georgian governance documentation, clean route/runtime validation, and production typecheck/build before release checkpoint.
+- [x] Establish the SalonFlow Light design foundation: warm ivory canvas, calm white surfaces, accessible berry/plum CTA hierarchy, semantic tokens, focus states and reduced-motion-safe primitives.
+- [x] Redesign public header, Home, salons discovery/map, salon profile and booking flow as cohesive light-premium Georgian-first surfaces without changing booking/consent/data contracts.
+- [x] Create a dedicated light partner landing page and restyle manual billing activation around truthful 1-month transfer, receipt and salon-ID workflow without invented payment information.
+- [x] Redesign DashboardLayout, Today, billing and platform-admin review shells into compact operational light interfaces while preserving role restrictions and Today-only expiry lock.
+- [x] Run full visual/responsive/accessibility QA at 375/768/1024/1440/1600, then complete Vitest/typecheck/build, fresh runtime logs and release checkpoint.
