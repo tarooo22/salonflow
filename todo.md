@@ -270,3 +270,11 @@
 - [x] Show a clear Georgian success toast and persistent in-page confirmation after a platform admin approves a 7-day trial, then refresh the queue/status state.
 - [x] Add accessible server-side applicant/salon/email/code search and lifecycle-status filtering to the trial approval queue for high-volume review.
 - [x] Prevent non-admin users from seeing the Trial requests admin page or explanatory admin content: client route redirects them to `/app/today` with only a neutral transition state, while server-side admin enforcement remains in place.
+- [x] Add additive billing schema/migration: immutable organization billing codes, platform-admin billing configuration, manual receipt submissions/events, and organization access grants with TiDB-safe constraints.
+- [x] Generate/backfill unique billing codes without changing existing organization, trial, booking, or legacy-tenant data.
+- [x] Extend trial-only operational entitlement to recognize active monthly/bonus grants while preserving legacy tenants and existing expired-trial server-side blocks.
+- [ ] Implement Today-only client navigation and content lock for expired/pending-manual-review workspaces while preserving owner receipt actions and member-safe restricted notice.
+- [ ] Build owner manual bank-transfer activation surface with admin-configured beneficiary details, immutable salon billing ID, transfer comment, receipt upload and lifecycle status; do not display invented payment details.
+- [ ] Build platform-admin billing configuration and receipt review console with protected file preview, search/filter, manual monthly approval, rejection notes, bonus days, immutable audit events and idempotent grant logic.
+- [ ] Restore public online booking only from a current effective grant/trial, and show owner plan/remaining days from server-derived end date.
+- [ ] Add billing lifecycle/unit/router/UI tests, Georgian governance documentation, responsive/accessibility/runtime validation, then checkpoint the complete release.

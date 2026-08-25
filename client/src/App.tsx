@@ -35,6 +35,8 @@ const FeedbackModeration = lazy(() => import("./pages/FeedbackModeration"));
 const TrialRequest = lazy(() => import("./pages/TrialRequest"));
 const TrialStatus = lazy(() => import("./pages/TrialStatus"));
 const TrialAdmin = lazy(() => import("./pages/TrialAdmin"));
+const BillingActivation = lazy(() => import("./pages/BillingActivation"));
+const BillingAdmin = lazy(() => import("./pages/BillingAdmin"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const FeaturesPage = lazy(() => import("./pages/MarketingPages").then(module => ({ default: module.FeaturesPage })));
 const PricingPage = lazy(() => import("./pages/MarketingPages").then(module => ({ default: module.PricingPage })));
@@ -87,6 +89,8 @@ function Router() {
       <Route path={"/app/trial-status"} component={TrialStatus} />
       <Route path={"/app/trial-admin"} component={TrialAdmin} />
       <Route path={"/app/trials-admin"} component={TrialAdmin} />
+      <Route path={"/app/billing"} component={BillingActivation} />
+      <Route path={"/app/billing-admin"} component={BillingAdmin} />
       <Route path={"/app/waitlist"} component={WaitlistQueue} />
       <Route path={"/app/setup"} component={WorkspaceSetup} />
       <Route path={"/404"} component={NotFound} />

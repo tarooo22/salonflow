@@ -1,7 +1,7 @@
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq, gt } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { nanoid } from "nanoid";
-import { trialAccessEvents, trialAccessRequests } from "../../drizzle/schema";
+import { organizationAccessGrants, trialAccessEvents, trialAccessRequests } from "../../drizzle/schema";
 import { requireDb } from "../db";
 
 type TrialRequest = typeof trialAccessRequests.$inferSelect;
@@ -37,8 +37,10 @@ export async function requireActiveTrialForOrganization(organizationId: string) 
   const [trial] = await db.select().from(trialAccessRequests).where(eq(trialAccessRequests.organizationId, organizationId)).limit(1);
   if (!trial) return null;
   const current = await markExpired(trial);
+  const [grant] = await db.select().from(organizationAccessGrants).where(and(eq(organizationAccessGrants.organizationId, organizationId), eq(organizationAccessGrants.status, "ACTIVE"), gt(organizationAccessGrants.endsAt, new Date()))).limit(1);
+  if (grant && "endsAt" in grant) return current;
   if (current.status !== "APPROVED" || !current.expiresAt || current.expiresAt <= new Date()) {
-    throw new TRPCError({ code: "FORBIDDEN", message: "ამ სალონის 7-დღიანი საცდელი წვდომა დასრულებულია. გასაგრძელებლად დაუკავშირდით SalonFlow-ს." });
+    throw new TRPCError({ code: "FORBIDDEN", message: "ამ სალონის წვდომა დასრულებულია. გასაგრძელებლად გაააქტიურეთ 1-თვიანი პაკეტი Today გვერდიდან." });
   }
   return current;
 }
@@ -48,9 +50,10 @@ export async function requireActiveTrialForOrganization(organizationId: string) 
  * organization can retain its public profile after expiry, but cannot receive new bookings.
  */
 export async function isOrganizationTrialPublicBookingActive(organizationId: string) {
-  const db = await requireDb();
-  const [trial] = await db.select().from(trialAccessRequests).where(eq(trialAccessRequests.organizationId, organizationId)).limit(1);
-  if (!trial) return true;
-  const current = await markExpired(trial);
-  return current.status === "APPROVED" && Boolean(current.expiresAt) && current.expiresAt! > new Date();
+  try {
+    await requireActiveTrialForOrganization(organizationId);
+    return true;
+  } catch {
+    return false;
+  }
 }

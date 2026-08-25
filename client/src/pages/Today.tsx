@@ -46,6 +46,7 @@ export default function Today() {
   const organization = organizationEntry?.organization;
   const role = organizationEntry?.membership.role;
   const canManageOrganization = role === "OWNER";
+  const billing = trpc.billing.ownerStatus.useQuery({ organizationId: organization?.id ?? "" }, { enabled: Boolean(organization?.id && canManageOrganization) });
   const canConfirmAppointment = role === "OWNER" || role === "MANAGER";
   const canManageCalendar = canManageAppointmentQueue(role);
   const locations = trpc.organizations.listLocations.useQuery({ organizationId: organization?.id ?? "" }, { enabled: Boolean(organization?.id) });
@@ -99,6 +100,8 @@ export default function Today() {
   const operationalFocus = nextOperationalAppointment(appointments) as TodayFocus;
   const pendingCount = (dashboard.data?.counts as Record<string, number> | undefined)?.PENDING ?? 0;
   const nonStaffAttention = role !== "STAFF";
+  const accessEndsAt = billing.data?.activeEndsAt ? new Date(billing.data.activeEndsAt) : null;
+  const workspaceLocked = Boolean(canManageOrganization && billing.data && (!accessEndsAt || accessEndsAt <= new Date()));
   const readinessLoading = services.isLoading || team.isLoading || workingHours.isLoading;
   const readiness = canManageOrganization && !readinessLoading ? [
     { key: "service", complete: Boolean(services.data?.length), title: "სერვისები", detail: "დაამატეთ ფასი და ხანგრძლივობა." , href: "/app/services", cta: "სერვისები" },
@@ -107,6 +110,7 @@ export default function Today() {
     { key: "link", complete: Boolean(activeLocation?.publicSlug), title: "ონლაინ ჩაწერის ბმული", detail: "გააზიარეთ მხოლოდ მზადყოფნის შემდეგ.", href: "/app/settings", cta: "ბმული" },
   ].filter(item => !item.complete) : [];
 
+  if (workspaceLocked && organization) return <DashboardLayout><div className="sf-workspace-page mx-auto w-full max-w-4xl space-y-5"><WorkspacePageHeader eyebrow="წვდომის სტატუსი" title="სამუშაო სივრცის წვდომა დასრულებულია" description="თქვენი სალონის მონაცემები შენახულია. 1-თვიანი პაკეტის ხელით გასააქტიურებლად ატვირთეთ ბანკის გადარიცხვის ქვითარი." /><WorkspaceSection title="გააქტიურება" description="გადახდის ინსტრუქცია და ქვითრის გაგზავნა ხელმისაწვდომია მხოლოდ მფლობელისთვის."><div className="rounded-2xl border border-[color-mix(in_srgb,var(--sf-salon-warm)_38%,transparent)] bg-[color-mix(in_srgb,var(--sf-salon-warm)_8%,transparent)] p-5"><p className="text-sm text-muted-foreground">სალონის ID: <strong className="font-mono text-foreground">{billing.data?.organization.billingCode ?? "—"}</strong></p><p className="mt-3 text-sm leading-6 text-muted-foreground">გადახდის workflow-ის სრულ გვერდზე გადასასვლელად გამოიყენეთ ქვემოთ მოცემული მოქმედება.</p><Button asChild className="mt-5"><Link href="/app/billing">1-თვიანი პაკეტის გააქტიურება</Link></Button></div></WorkspaceSection></div></DashboardLayout>;
   return <DashboardLayout><div className="sf-workspace-page mx-auto w-full max-w-7xl space-y-5">
     <WorkspacePageHeader eyebrow="დღის ოპერაციები" title="დღეს" description={`${dayLabel} · ${roleHeading(role)}`} actions={<>{locations.data?.length ? <Select value={activeLocationId || locations.data[0]?.id} onValueChange={setActiveLocationId}><SelectTrigger className="min-w-52 bg-card" aria-label="აქტიური ფილიალი"><MapPin className="mr-2 h-4 w-4 text-primary" /><SelectValue placeholder="აირჩიეთ ფილიალი" /></SelectTrigger><SelectContent>{locations.data.map(location => <SelectItem key={location.id} value={location.id}>{location.name}</SelectItem>)}</SelectContent></Select> : null}{organization && canManageOrganization ? <Button onClick={() => { setLocationError(""); setLocationOpen(true); }}><Plus className="mr-2 h-4 w-4" />ფილიალი</Button> : null}</>} />
     {organizations.isLoading ? <WorkspaceState kind="loading" title="სამუშაო სივრცე იტვირთება…" /> : null}

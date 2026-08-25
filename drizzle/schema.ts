@@ -44,6 +44,9 @@ export const marketplacePromotionTierValues = ["RECOMMENDED", "VIP"] as const;
 export const marketplacePromotionStatusValues = ["SCHEDULED", "ACTIVE", "EXPIRED", "CANCELLED"] as const;
 export const customerFeedbackStatusValues = ["PENDING", "APPROVED", "HIDDEN", "REJECTED"] as const;
 export const trialAccessStatusValues = ["PENDING", "APPROVED", "REJECTED", "EXPIRED", "CANCELLED"] as const;
+export const billingSubmissionStatusValues = ["DRAFT", "SUBMITTED", "UNDER_REVIEW", "APPROVED", "REJECTED", "CANCELLED"] as const;
+export const accessGrantStatusValues = ["ACTIVE", "REVOKED", "EXPIRED"] as const;
+export const accessGrantSourceValues = ["MONTHLY_MANUAL", "BONUS_DAYS"] as const;
 
 export const membershipRole = mysqlEnum("membership_role", membershipRoleValues);
 export const membershipStatus = mysqlEnum("membership_status", membershipStatusValues);
@@ -67,6 +70,9 @@ export const marketplacePromotionTier = mysqlEnum("marketplace_promotion_tier", 
 export const marketplacePromotionStatus = mysqlEnum("marketplace_promotion_status", marketplacePromotionStatusValues);
 export const customerFeedbackStatus = mysqlEnum("customer_feedback_status", customerFeedbackStatusValues);
 export const trialAccessStatus = mysqlEnum("trial_access_status", trialAccessStatusValues);
+export const billingSubmissionStatus = mysqlEnum("billing_submission_status", billingSubmissionStatusValues);
+export const accessGrantStatus = mysqlEnum("access_grant_status", accessGrantStatusValues);
+export const accessGrantSource = mysqlEnum("access_grant_source", accessGrantSourceValues);
 
 /**
  * Secure platform identity synchronized by Manus OAuth. Business roles live in
@@ -102,10 +108,70 @@ export const organizations = mysqlTable("organizations", {
   defaultCurrency: varchar("defaultCurrency", { length: 3 }).default("GEL").notNull(),
   contactPhone: varchar("contactPhone", { length: 32 }),
   contactEmail: varchar("contactEmail", { length: 320 }),
+  billingCode: varchar("billingCode", { length: 24 }),
   status: recordStatus.default("ACTIVE").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-}, table => [uniqueIndex("organizations_slug_uq").on(table.slug)]);
+}, table => [uniqueIndex("organizations_slug_uq").on(table.slug), uniqueIndex("organizations_billing_code_uq").on(table.billingCode)]);
+
+/** Platform-admin managed manual bank-transfer details. There is exactly one active configuration row. */
+export const billingConfigurations = mysqlTable("billing_configurations", {
+  id: int("id").primaryKey(),
+  beneficiaryName: varchar("beneficiaryName", { length: 160 }),
+  personalNumber: varchar("personalNumber", { length: 32 }),
+  accountNumber: varchar("accountNumber", { length: 64 }),
+  monthlyPriceTetri: int("monthlyPriceTetri"),
+  transferCommentPrefix: varchar("transferCommentPrefix", { length: 32 }).default("SF").notNull(),
+  privacyNoticeKa: text("privacyNoticeKa"),
+  updatedByUserId: int("updatedByUserId").references(() => users.id),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+/** Manual receipt evidence for a SalonFlow workspace plan; never mix this with customer appointment payments. */
+export const billingPaymentSubmissions = mysqlTable("billing_payment_submissions", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  organizationId: varchar("organizationId", { length: 36 }).notNull().references(() => organizations.id),
+  submittedByUserId: int("submittedByUserId").notNull().references(() => users.id),
+  billingCodeSnapshot: varchar("billingCodeSnapshot", { length: 24 }).notNull(),
+  planCode: varchar("planCode", { length: 48 }).default("MONTHLY_MANUAL").notNull(),
+  amountTetri: int("amountTetri"),
+  transferComment: varchar("transferComment", { length: 160 }).notNull(),
+  receiptKey: varchar("receiptKey", { length: 512 }).notNull(),
+  receiptMimeType: varchar("receiptMimeType", { length: 120 }).notNull(),
+  receiptOriginalName: varchar("receiptOriginalName", { length: 255 }).notNull(),
+  receiptSizeBytes: int("receiptSizeBytes").notNull(),
+  status: billingSubmissionStatus.default("SUBMITTED").notNull(),
+  reviewedByUserId: int("reviewedByUserId").references(() => users.id),
+  reviewedAt: timestamp("reviewedAt"),
+  reviewNoteKa: varchar("reviewNoteKa", { length: 500 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [index("bill_sub_org_status_idx").on(table.organizationId, table.status), index("bill_sub_status_created_idx").on(table.status, table.createdAt)]);
+
+export const billingPaymentEvents = mysqlTable("billing_payment_events", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  billingPaymentSubmissionId: varchar("billingPaymentSubmissionId", { length: 36 }).notNull().references(() => billingPaymentSubmissions.id),
+  eventType: varchar("eventType", { length: 80 }).notNull(),
+  actorUserId: int("actorUserId").references(() => users.id),
+  metadata: json("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [index("bill_evt_sub_created_idx").on(table.billingPaymentSubmissionId, table.createdAt)]);
+
+/** Effective paid or bonus entitlement for an organization after its free trial ends. */
+export const organizationAccessGrants = mysqlTable("organization_access_grants", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  organizationId: varchar("organizationId", { length: 36 }).notNull().references(() => organizations.id),
+  source: accessGrantSource.notNull(),
+  billingPaymentSubmissionId: varchar("billingPaymentSubmissionId", { length: 36 }).references(() => billingPaymentSubmissions.id),
+  startsAt: timestamp("startsAt").notNull(),
+  endsAt: timestamp("endsAt").notNull(),
+  status: accessGrantStatus.default("ACTIVE").notNull(),
+  grantReasonKa: varchar("grantReasonKa", { length: 500 }),
+  grantedByUserId: int("grantedByUserId").notNull().references(() => users.id),
+  metadata: json("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [index("access_grant_org_end_idx").on(table.organizationId, table.status, table.endsAt), index("access_grant_sub_idx").on(table.billingPaymentSubmissionId)]);
 
 /** A requested trial is not a workspace. A platform admin must approve it before the applicant can create one. */
 export const trialAccessRequests = mysqlTable("trial_access_requests", {
