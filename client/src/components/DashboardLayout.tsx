@@ -20,11 +20,10 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
-import { BarChart3, CalendarDays, CalendarHeart, CircleHelp, Clock3, Images, LayoutDashboard, ListChecks, LogOut, MessageSquareText, Monitor, Moon, PanelLeft, ReceiptText, Scissors, Settings2, Store, Sun, Users } from "lucide-react";
+import { BarChart3, CalendarDays, CalendarHeart, CircleHelp, Clock3, Images, LayoutDashboard, ListChecks, LogOut, MessageSquareText, PanelLeft, ReceiptText, Scissors, Settings2, Store, Users } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
-import { useTheme } from "@/contexts/ThemeContext";
 import { Button } from "./ui/button";
 import { trpc } from "@/lib/trpc";
 import { GuidedHelpTour } from "@/components/workspace/GuidedHelpTour";
@@ -129,7 +128,6 @@ function DashboardLayoutContent({
   const [location, setLocation] = useLocation();
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
-  const { preference, setPreference } = useTheme();
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const role = organizations.data?.[0]?.membership.role;
@@ -252,13 +250,6 @@ function DashboardLayoutContent({
 
           <SidebarFooter className="border-t border-sidebar-border/90 p-3">
             <button type="button" onClick={() => setHelpOpen(true)} className="mb-2 flex min-h-10 w-full items-center gap-2 rounded-xl px-2 text-left text-sm font-medium text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-data-[collapsible=icon]:justify-center" aria-label="სამუშაო სივრცის დახმარება"><CircleHelp className="size-4" /><span className="group-data-[collapsible=icon]:hidden">დახმარება</span></button>
-            <div className="mb-3 grid grid-cols-3 gap-1 rounded-xl border border-sidebar-border/90 bg-black/12 p-1 group-data-[collapsible=icon]:hidden" aria-label="თემის არჩევა">
-              {([
-                { value: "light", label: "ღია", icon: Sun },
-                { value: "dark", label: "მუქი", icon: Moon },
-                { value: "system", label: "სისტემა", icon: Monitor },
-              ] as const).map(option => <button key={option.value} type="button" onClick={() => setPreference?.(option.value)} aria-pressed={preference === option.value} aria-label={`${option.label} თემა`} className={`grid min-h-10 place-items-center rounded-lg text-sidebar-foreground/65 transition-colors hover:bg-sidebar-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${preference === option.value ? "bg-sidebar-accent text-sidebar-foreground shadow-[inset_0_1px_0_rgb(255_255_255_/_0.04)]" : ""}`}><option.icon className="h-4 w-4" /></button>)}
-            </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex min-h-11 w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left transition-colors hover:bg-sidebar-accent group-data-[collapsible=icon]:justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
