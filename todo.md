@@ -289,3 +289,8 @@
 - [x] Run responsive/image performance validation, full regression checks and release checkpoint; provide exact secure configuration steps for the missing real billing details.
 - [x] Fix expired workspace access control so sidebar hides all operational routes, direct route navigation redirects to Today, and the owner retains only 1-month package activation/Billing access.
 - [x] Add regression coverage that verifies an expired trial with no active grant cannot use any protected organization action despite direct URL or tRPC attempts.
+- [x] Add automated manual activation lifecycle coverage for owner receipt submission, platform-admin review/approval and current monthly grant restoration, without fabricating a bank transfer.
+- [x] Refine the owner package activation page with a clearer step-by-step transfer/receipt instruction, visible SalonFlow ID and accessible pending/rejected/approved status states.
+- [x] Add a server-derived Georgian trial-expiry reminder banner to Today for active owners when their trial ends within the configured reminder window.
+- [ ] Enter the platform's real beneficiary details in Billing payments and perform one user-confirmed live receipt → admin approval → renewed-access verification; do not use fabricated financial data.
+- [ ] Create the release checkpoint and document the completed real-data verification after the admin configuration values are supplied.

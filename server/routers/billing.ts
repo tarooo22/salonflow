@@ -38,7 +38,7 @@ export const billingRouter = router({
     const [submission] = await db.select().from(billingPaymentSubmissions).where(eq(billingPaymentSubmissions.organizationId, input.organizationId)).orderBy(desc(billingPaymentSubmissions.createdAt)).limit(1);
     const [grant] = await db.select().from(organizationAccessGrants).where(and(eq(organizationAccessGrants.organizationId, input.organizationId), eq(organizationAccessGrants.status, "ACTIVE"), gt(organizationAccessGrants.endsAt, new Date()))).orderBy(desc(organizationAccessGrants.endsAt)).limit(1);
     const [trial] = await db.select().from(trialAccessRequests).where(eq(trialAccessRequests.organizationId, input.organizationId)).limit(1);
-    return { organization, config: config ? { beneficiaryName: config.beneficiaryName, personalNumber: config.personalNumber, accountNumber: config.accountNumber, monthlyPriceTetri: config.monthlyPriceTetri, transferCommentPrefix: config.transferCommentPrefix, privacyNoticeKa: config.privacyNoticeKa } : null, submission, activeEndsAt: grant?.endsAt ?? (trial?.status === "APPROVED" ? trial.expiresAt : null) };
+    return { organization, config: config ? { beneficiaryName: config.beneficiaryName, personalNumber: config.personalNumber, accountNumber: config.accountNumber, monthlyPriceTetri: config.monthlyPriceTetri, transferCommentPrefix: config.transferCommentPrefix, privacyNoticeKa: config.privacyNoticeKa } : null, submission, trialEndsAt: trial?.status === "APPROVED" ? trial.expiresAt : null, activeEndsAt: grant?.endsAt ?? (trial?.status === "APPROVED" ? trial.expiresAt : null) };
   }),
   submitReceipt: protectedProcedure.input(receiptSchema).mutation(async ({ ctx, input }) => {
     const db = await ownerMembership(ctx.user.id, input.organizationId);

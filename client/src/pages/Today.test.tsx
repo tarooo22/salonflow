@@ -2,7 +2,7 @@ import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
-const state = vi.hoisted(() => ({ role: "OWNER", dashboard: null as unknown, services: [] as unknown[], team: [] as unknown[], hours: [] as unknown[] }));
+const state = vi.hoisted(() => ({ role: "OWNER", dashboard: null as unknown, services: [] as unknown[], team: [] as unknown[], hours: [] as unknown[], trialEndsAt: null as Date | null }));
 const mutation = { mutate: vi.fn(), isPending: false, error: null };
 const organization = { id: "organization_001", name: "სილამაზის სივრცე" };
 const query = (data: unknown) => ({ data, isLoading: false, isError: false, refetch: vi.fn() });
@@ -20,7 +20,7 @@ vi.mock("@/lib/trpc", () => ({
       createLocation: { useMutation: () => mutation },
     },
     appointments: { dashboard: { useQuery: () => query(state.dashboard) }, updateStatus: { useMutation: () => mutation } },
-    billing: { ownerStatus: { useQuery: () => query({ activeEndsAt: new Date("2030-09-22T00:00:00.000Z"), organization: { billingCode: "SF-TEST" }, config: null, submission: null }) }, workspaceStatus: { useQuery: () => query({ locked: false, endsAt: new Date("2030-09-22T00:00:00.000Z") }) } },
+    billing: { ownerStatus: { useQuery: () => query({ activeEndsAt: new Date("2030-09-22T00:00:00.000Z"), trialEndsAt: state.trialEndsAt, organization: { billingCode: "SF-TEST" }, config: null, submission: null }) }, workspaceStatus: { useQuery: () => query({ locked: false, endsAt: new Date("2030-09-22T00:00:00.000Z") }) } },
     services: { list: { useQuery: () => query(state.services) } },
     staff: { list: { useQuery: () => query(state.team) }, listWorkingHours: { useQuery: () => query(state.hours) } },
   },
@@ -46,6 +46,7 @@ describe("Today dashboard experience", () => {
     state.services = [];
     state.team = [];
     state.hours = [];
+    state.trialEndsAt = null;
     state.dashboard = { appointments: [appointment], balances: [{ appointmentId: appointment.id, totals: { balanceTetri: 7_500 } }], metrics: { scheduledTetri: 7_500, collectedTetri: 0, outstandingTetri: 7_500 }, counts: { PENDING: 2 }, location: { id: "location_001", name: "ვაკე", timezone: "Asia/Tbilisi" }, dateKey: "2030-08-22" };
   });
 
@@ -67,5 +68,13 @@ describe("Today dashboard experience", () => {
     expect(markup).not.toContain("სალონის მზადყოფნა");
     expect(markup).not.toContain("დაგეგმილი თანხა");
     expect(markup).not.toContain("დარჩენილი ბალანსი");
+  });
+
+  it("warns the owner before an active trial expires and links to package activation", () => {
+    state.trialEndsAt = new Date(Date.now() + 2 * 86_400_000);
+    const markup = renderToStaticMarkup(<Today />);
+    expect(markup).toContain("საცდელი წვდომა იწურება");
+    expect(markup).toContain("პაკეტის ნახვა");
+    expect(markup).toContain("/app/billing");
   });
 });

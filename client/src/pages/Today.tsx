@@ -103,6 +103,9 @@ export default function Today() {
   const nonStaffAttention = role !== "STAFF";
   const workspaceLocked = Boolean(workspaceStatus.data?.locked);
   const memberWorkspaceLocked = Boolean(!canManageOrganization && workspaceStatus.data?.locked);
+  const trialEndsAt = billing.data?.trialEndsAt ? new Date(billing.data.trialEndsAt) : null;
+  const trialDaysRemaining = trialEndsAt ? Math.ceil((trialEndsAt.getTime() - Date.now()) / 86_400_000) : null;
+  const showTrialExpiryReminder = Boolean(canManageOrganization && trialDaysRemaining != null && trialDaysRemaining > 0 && trialDaysRemaining <= 3 && !workspaceLocked);
   const readinessLoading = services.isLoading || team.isLoading || workingHours.isLoading;
   const readiness = canManageOrganization && !readinessLoading ? [
     { key: "service", complete: Boolean(services.data?.length), title: "სერვისები", detail: "დაამატეთ ფასი და ხანგრძლივობა." , href: "/app/services", cta: "სერვისები" },
@@ -115,6 +118,7 @@ export default function Today() {
   if (memberWorkspaceLocked && organization) return <DashboardLayout><div className="sf-workspace-page mx-auto w-full max-w-4xl"><WorkspaceState kind="empty" title="სამუშაო სივრცის წვდომა დასრულებულია" description="გადახდისა და ხელახალი გააქტიურების მართვა შეუძლია მხოლოდ სალონის მფლობელს. დაუკავშირდით მფლობელს." /></div></DashboardLayout>;
   return <DashboardLayout><div className="sf-workspace-page mx-auto w-full max-w-7xl space-y-5">
     <WorkspacePageHeader eyebrow="დღის ოპერაციები" title="დღეს" description={`${dayLabel} · ${roleHeading(role)}`} actions={<>{locations.data?.length ? <Select value={activeLocationId || locations.data[0]?.id} onValueChange={setActiveLocationId}><SelectTrigger className="min-w-52 bg-card" aria-label="აქტიური ფილიალი"><MapPin className="mr-2 h-4 w-4 text-primary" /><SelectValue placeholder="აირჩიეთ ფილიალი" /></SelectTrigger><SelectContent>{locations.data.map(location => <SelectItem key={location.id} value={location.id}>{location.name}</SelectItem>)}</SelectContent></Select> : null}{organization && canManageOrganization ? <Button onClick={() => { setLocationError(""); setLocationOpen(true); }}><Plus className="mr-2 h-4 w-4" />ფილიალი</Button> : null}</>} />
+    {showTrialExpiryReminder ? <section role="status" className="flex flex-col gap-3 rounded-2xl border border-[color-mix(in_srgb,var(--sf-salon-warm)_40%,transparent)] bg-[color-mix(in_srgb,var(--sf-salon-warm)_9%,transparent)] p-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold">საცდელი წვდომა იწურება {trialDaysRemaining} დღეში</p><p className="mt-1 text-sm leading-6 text-muted-foreground">წვდომის დასრულებამდე შეგიძლიათ წინასწარ გადახვიდეთ 1-თვიანი პაკეტის ინსტრუქციაზე, რათა სამუშაო პროცესი არ შეწყდეს.</p></div><Button asChild variant="outline" className="shrink-0"><Link href="/app/billing">პაკეტის ნახვა</Link></Button></section> : null}
     {organizations.isLoading ? <WorkspaceState kind="loading" title="სამუშაო სივრცე იტვირთება…" /> : null}
     {organizations.isError ? <WorkspaceState kind="error" title="სამუშაო სივრცის მონაცემები მიუწვდომელია" description="გთხოვთ სცადოთ ხელახლა." /> : null}
     {!organizations.isLoading && !organizations.isError && !organization ? <WorkspaceState kind="empty" title="შექმენით თქვენი პირველი სამუშაო სივრცე" description="დაამატეთ ორგანიზაცია და ფილიალი, შემდეგ კი გუნდი, სერვისები და სამუშაო საათები." action={<Button asChild><Link href="/app/setup">სამუშაო სივრცის შექმნა</Link></Button>} /> : null}
