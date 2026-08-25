@@ -269,3 +269,4 @@
 - [x] Add a persistent admin-only “Trial requests” sidebar link that opens the protected trial approval queue.
 - [x] Show a clear Georgian success toast and persistent in-page confirmation after a platform admin approves a 7-day trial, then refresh the queue/status state.
 - [x] Add accessible server-side applicant/salon/email/code search and lifecycle-status filtering to the trial approval queue for high-volume review.
+- [x] Prevent non-admin users from seeing the Trial requests admin page or explanatory admin content: client route redirects them to `/app/today` with only a neutral transition state, while server-side admin enforcement remains in place.

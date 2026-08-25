@@ -11,4 +11,10 @@ describe("trial admin review controls", () => {
     expect(source).toContain("ფილტრების გასუფთავება");
     expect(source).toContain("search: deferredSearch || undefined");
   });
+
+  it("redirects non-admin users before rendering any platform-admin content", () => {
+    expect(source).toContain('user.role !== "admin") setLocation("/app/today")');
+    expect(source).toContain('if (loading || !user || user.role !== "admin") return');
+    expect(source).toContain("თქვენს სამუშაო სივრცეში გადამისამართება…");
+  });
 });
