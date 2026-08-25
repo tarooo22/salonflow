@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { appointmentRescheduleSchema, attendanceClockSchema, calendarRangeSchema, clientBeforeAfterCreateSchema, marketplaceOwnerMapPointConfirmSchema, marketplacePromotionCancelSchema, publicFeedbackSubmitSchema, retailSaleCreateSchema, tipCreateSchema } from "./validation";
+import { appointmentRescheduleSchema, attendanceClockSchema, calendarRangeSchema, clientBeforeAfterCreateSchema, marketplaceOwnerMapPointConfirmSchema, marketplacePromotionCancelSchema, publicFeedbackSubmitSchema, retailSaleCreateSchema, tipCreateSchema, trialAdminQueueSchema } from "./validation";
 
 const scope = {
   organizationId: "organization_2026_abcd",
@@ -16,6 +16,13 @@ describe("calendar range validation", () => {
 
   it("rejects ranges greater than fourteen days", () => {
     expect(() => calendarRangeSchema.parse({ ...scope, startsAt: "2026-08-01T00:00:00.000Z", endsAt: "2026-08-16T00:00:00.000Z" })).toThrow("Calendar range must be 14 days or fewer");
+  });
+});
+
+describe("trial admin queue validation", () => {
+  it("accepts a bounded applicant or salon search term and rejects an empty one", () => {
+    expect(trialAdminQueueSchema.parse({ limit: 25, offset: 0, status: "PENDING", search: "tarashvili" }).search).toBe("tarashvili");
+    expect(() => trialAdminQueueSchema.parse({ limit: 25, offset: 0, search: "   " })).toThrow();
   });
 });
 

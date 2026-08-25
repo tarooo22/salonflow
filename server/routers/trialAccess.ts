@@ -1,4 +1,4 @@
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, like, or } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { nanoid } from "nanoid";
 import { locations, organizationMemberships, organizations, trialAccessEvents, trialAccessRequests, users } from "../../drizzle/schema";
@@ -52,9 +52,18 @@ export const trialAccessRouter = router({
   adminList: protectedProcedure.input(trialAdminQueueSchema).query(async ({ ctx, input }) => {
     requirePlatformAdmin(ctx.user.role);
     const db = await requireDb();
+    const search = input.search ? `%${input.search}%` : undefined;
     const rows = await db.select({ request: trialAccessRequests, applicantName: users.name, applicantEmail: users.email }).from(trialAccessRequests)
       .innerJoin(users, eq(trialAccessRequests.userId, users.id))
-      .where(input.status ? eq(trialAccessRequests.status, input.status) : undefined)
+      .where(and(
+        input.status ? eq(trialAccessRequests.status, input.status) : undefined,
+        search ? or(
+          like(trialAccessRequests.requestedSalonName, search),
+          like(trialAccessRequests.requestedSalonSlug, search),
+          like(users.name, search),
+          like(users.email, search),
+        ) : undefined,
+      ))
       .orderBy(asc(trialAccessRequests.status), desc(trialAccessRequests.createdAt)).limit(input.limit).offset(input.offset);
     return { items: rows.map(row => ({ ...row.request, applicantName: row.applicantName, applicantEmail: row.applicantEmail })), facebookContactUrl: SALONFLOW_FACEBOOK_CONTACT_URL, trialDurationDays: TRIAL_DURATION_DAYS };
   }),

@@ -266,3 +266,6 @@
 - [x] Fix the trial-request form that continued to show a salon-code conflict error after the applicant changed the code: empty Drizzle query arrays are now handled correctly, while genuine organization/public-booking slug collisions remain blocked and regression-tested.
 - [x] Verify the registered account for tarashvili8@gmail.com and confirm it is already ACTIVE with the platform-admin role for the trial approval console; no additional permission change was needed.
 - [x] Fix the 404 failure for the platform-admin trial console URL: `/app/trial-admin` is now a stable singular alias of `/app/trials-admin`, and both resolve to the same protected admin console rather than Not Found.
+- [x] Add a persistent admin-only “Trial requests” sidebar link that opens the protected trial approval queue.
+- [x] Show a clear Georgian success toast and persistent in-page confirmation after a platform admin approves a 7-day trial, then refresh the queue/status state.
+- [x] Add accessible server-side applicant/salon/email/code search and lifecycle-status filtering to the trial approval queue for high-volume review.

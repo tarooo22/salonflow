@@ -114,6 +114,7 @@ export const trialRequestSchema = z.object({
 
 export const trialAdminQueueSchema = paginationSchema.extend({
   status: z.enum(["PENDING", "APPROVED", "REJECTED", "EXPIRED", "CANCELLED"]).optional(),
+  search: z.string().trim().min(1).max(160).optional(),
 });
 
 export const trialAdminDecisionSchema = z.object({

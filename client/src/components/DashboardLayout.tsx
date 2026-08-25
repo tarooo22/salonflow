@@ -20,7 +20,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
-import { BarChart3, CalendarDays, CalendarHeart, CircleHelp, Clock3, Images, LayoutDashboard, LogOut, MessageSquareText, Monitor, Moon, PanelLeft, ReceiptText, Scissors, Settings2, Store, Sun, Users } from "lucide-react";
+import { BarChart3, CalendarDays, CalendarHeart, CircleHelp, Clock3, Images, LayoutDashboard, ListChecks, LogOut, MessageSquareText, Monitor, Moon, PanelLeft, ReceiptText, Scissors, Settings2, Store, Sun, Users } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -47,6 +47,9 @@ const menuItems = [
 ] as const;
 
 const menuGroups = ["დღის მართვა", "კლიენტები და გაყიდვა", "სალონის მართვა"] as const;
+const platformAdminItems = [
+  { icon: ListChecks, label: "Trial requests", path: "/app/trial-admin" },
+] as const;
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
 const DEFAULT_WIDTH = 280;
@@ -129,9 +132,10 @@ function DashboardLayoutContent({
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const role = organizations.data?.[0]?.membership.role;
-  const visibleMenuItems = menuItems.filter(item => !role || (item.roles as readonly string[]).includes(role));
+  const visibleMenuItems = role ? menuItems.filter(item => (item.roles as readonly string[]).includes(role)) : [];
   const visibleMenuGroups = menuGroups.map(label => ({ label, items: visibleMenuItems.filter(item => item.group === label) })).filter(group => group.items.length);
-  const activeMenuItem = visibleMenuItems.find(item => item.path === location);
+  const visiblePlatformAdminItems = user?.role === "admin" ? platformAdminItems : [];
+  const activeMenuItem = [...visibleMenuItems, ...visiblePlatformAdminItems].find(item => item.path === location);
   const isMobile = useIsMobile();
   const [helpOpen, setHelpOpen] = useState(false);
 
@@ -222,6 +226,22 @@ function DashboardLayoutContent({
               })}
               </SidebarMenu>
             </div>)}
+            {visiblePlatformAdminItems.length ? <div className={visibleMenuGroups.length ? "mt-5" : ""}>
+              {!isCollapsed ? <p className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-sidebar-foreground/55">პლატფორმის მართვა</p> : null}
+              <SidebarMenu className="gap-1">
+                {visiblePlatformAdminItems.map(item => <SidebarMenuItem key={item.path}>
+                  <SidebarMenuButton
+                    isActive={location === item.path}
+                    onClick={() => setLocation(item.path)}
+                    tooltip={item.label}
+                    className="min-h-11 rounded-xl px-3 text-sidebar-foreground/72 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground data-[active=true]:bg-sidebar-primary data-[active=true]:font-semibold data-[active=true]:text-sidebar-primary-foreground data-[active=true]:shadow-[0_8px_18px_rgb(0_0_0_/_0.18)]"
+                  >
+                    <item.icon className={`h-4 w-4 ${location === item.path ? "text-sidebar-primary-foreground" : ""}`} />
+                    <span>{item.label}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>)}
+              </SidebarMenu>
+            </div> : null}
           </SidebarContent>
 
           <SidebarFooter className="border-t border-sidebar-border/90 p-3">
