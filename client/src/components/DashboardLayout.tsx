@@ -134,14 +134,16 @@ function DashboardLayoutContent({
   const organizationId = organizations.data?.[0]?.organization.id;
   const workspaceStatus = trpc.billing.workspaceStatus.useQuery({ organizationId: organizationId ?? "" }, { enabled: Boolean(organizationId) });
   const workspaceLocked = workspaceStatus.data?.locked === true;
-  const visibleMenuItems = role ? menuItems.filter(item => (item.roles as readonly string[]).includes(role) && (!workspaceLocked || item.path === "/app/today")) : [];
+  const workspaceRestricted = Boolean(organizationId && (workspaceStatus.isLoading || workspaceStatus.isError || workspaceLocked));
+  const lockedOwnerItems = workspaceRestricted && role === "OWNER" ? [{ icon: ReceiptText, label: "პაკეტის გააქტიურება", path: "/app/billing", group: "წვდომის აღდგენა", roles: ["OWNER"] }] : [];
+  const visibleMenuItems = role ? [...menuItems.filter(item => (item.roles as readonly string[]).includes(role) && (!workspaceRestricted || item.path === "/app/today")), ...lockedOwnerItems] : [];
   const visibleMenuGroups = menuGroups.map(label => ({ label, items: visibleMenuItems.filter(item => item.group === label) })).filter(group => group.items.length);
   const visiblePlatformAdminItems = user?.role === "admin" ? platformAdminItems : [];
   const activeMenuItem = [...visibleMenuItems, ...visiblePlatformAdminItems].find(item => item.path === location);
   const isMobile = useIsMobile();
   const [helpOpen, setHelpOpen] = useState(false);
 
-  useEffect(() => { if (workspaceLocked && location !== "/app/today" && user?.role !== "admin") setLocation("/app/today"); }, [location, setLocation, user?.role, workspaceLocked]);
+  useEffect(() => { if (workspaceLocked && location !== "/app/today" && location !== "/app/billing" && user?.role !== "admin") setLocation("/app/today"); }, [location, setLocation, user?.role, workspaceLocked]);
 
   useEffect(() => {
     if (isCollapsed) {
@@ -230,6 +232,10 @@ function DashboardLayoutContent({
               })}
               </SidebarMenu>
             </div>)}
+            {lockedOwnerItems.length ? <div className="mt-5">
+              {!isCollapsed ? <p className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-sidebar-foreground/55">წვდომის აღდგენა</p> : null}
+              <SidebarMenu className="gap-1">{lockedOwnerItems.map(item => <SidebarMenuItem key={item.path}><SidebarMenuButton isActive={location === item.path} onClick={() => setLocation(item.path)} tooltip={item.label} className="min-h-11 rounded-xl px-3 text-sidebar-foreground/72 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground data-[active=true]:bg-sidebar-primary data-[active=true]:font-semibold data-[active=true]:text-sidebar-primary-foreground"><item.icon className={`h-4 w-4 ${location === item.path ? "text-sidebar-primary-foreground" : ""}`} /><span>{item.label}</span></SidebarMenuButton></SidebarMenuItem>)}</SidebarMenu>
+            </div> : null}
             {visiblePlatformAdminItems.length ? <div className={visibleMenuGroups.length ? "mt-5" : ""}>
               {!isCollapsed ? <p className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-sidebar-foreground/55">პლატფორმის მართვა</p> : null}
               <SidebarMenu className="gap-1">

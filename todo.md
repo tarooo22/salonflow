@@ -287,3 +287,5 @@
 - [x] Make the workspace dashboard light-only by removing the user-facing dark/system switch while retaining accessible light semantic tokens and role/expiry safeguards.
 - [x] Verify and polish the platform-admin Billing payments configuration flow for beneficiary name, personal ID, account number and monthly price, without inventing or pre-filling financial data.
 - [x] Run responsive/image performance validation, full regression checks and release checkpoint; provide exact secure configuration steps for the missing real billing details.
+- [x] Fix expired workspace access control so sidebar hides all operational routes, direct route navigation redirects to Today, and the owner retains only 1-month package activation/Billing access.
+- [x] Add regression coverage that verifies an expired trial with no active grant cannot use any protected organization action despite direct URL or tRPC attempts.

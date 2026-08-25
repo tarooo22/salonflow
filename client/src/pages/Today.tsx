@@ -101,8 +101,7 @@ export default function Today() {
   const operationalFocus = nextOperationalAppointment(appointments) as TodayFocus;
   const pendingCount = (dashboard.data?.counts as Record<string, number> | undefined)?.PENDING ?? 0;
   const nonStaffAttention = role !== "STAFF";
-  const accessEndsAt = billing.data?.activeEndsAt ? new Date(billing.data.activeEndsAt) : null;
-  const workspaceLocked = Boolean(canManageOrganization && billing.data && (!accessEndsAt || accessEndsAt <= new Date()));
+  const workspaceLocked = Boolean(workspaceStatus.data?.locked);
   const memberWorkspaceLocked = Boolean(!canManageOrganization && workspaceStatus.data?.locked);
   const readinessLoading = services.isLoading || team.isLoading || workingHours.isLoading;
   const readiness = canManageOrganization && !readinessLoading ? [

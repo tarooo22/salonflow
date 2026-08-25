@@ -13,5 +13,9 @@ describe("dashboard role-safe navigation groups", () => {
     expect(source).toContain('user?.role === "admin"');
     expect(source).toContain("visibleMenuItems.filter");
     expect(source).toContain("role === \"STAFF\" ? \"ჩემი პროფილი\"");
+    expect(source).toContain("lockedOwnerItems");
+    expect(source).toContain('item.path === "/app/today"');
+    expect(source).toContain('location !== "/app/billing"');
+    expect(source).toContain("პაკეტის გააქტიურება");
   });
 });
