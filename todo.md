@@ -311,3 +311,8 @@
 - [x] Add user-scoped saved views and compact metric preferences with schema validation, safe defaults and no sensitive payload persistence.
 - [x] Improve timeline and empty-state next actions without changing availability, booking transition or financial contracts.
 - [x] Validate productivity features with focused/full Vitest, TypeScript, production build, responsive/keyboard/security QA and create a release checkpoint.
+- [x] Simplify the Home hero and create keyboard-accessible client/owner intent routes without changing public booking or auth contracts.
+- [x] Improve marketplace discovery entry and booking funnel using only existing real catalog/listing data and truthful empty states.
+- [x] Refine owner conversion with factual registration → approval → 7-day trial → setup narrative and compact progressive product proof.
+- [x] Improve Home metadata, accessibility, responsive performance and motion while retaining localized public routes and avoiding fabricated social proof.
+- [x] Add/update focused coverage, complete responsive/keyboard QA, run full validation and create the Home page release checkpoint.

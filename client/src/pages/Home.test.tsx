@@ -8,7 +8,8 @@ describe("home final conversion CTA", () => {
     expect(source).toContain('variant="publicSecondary"');
     expect(source).toContain('!bg-white');
     expect(source).toContain('!text-[#21072d]');
-    expect(source).toContain("დაიწყე უფასოდ");
+    expect(source).toContain("რეგისტრაციის დაწყება");
+    expect(source).toContain("ხელით დამტკიცების შემდეგ");
   });
 
   it("uses a booking-first public CTA and avoids fabricated hero business proof", () => {
@@ -18,8 +19,11 @@ describe("home final conversion CTA", () => {
   });
 
   it("presents distinct salon owner and client paths using the shared Salon House system", () => {
-    expect(source).toContain("მე ვმართავ სალონს");
-    expect(source).toContain("მინდა ონლაინ ჩაწერა");
+    expect(source).toContain("იპოვე სალონი");
+    expect(source).toContain("ვმართავ სალონს");
+    expect(source).toContain("კლიენტისთვის");
+    expect(source).toContain("სალონისთვის");
+    expect(source).toContain("ხელით დამტკიცება");
     expect(source).toContain("სალონის პირველი სვლა");
     expect(source).toContain("sf-salon-panel");
     expect(source).toContain("sf-salon-flowline");
