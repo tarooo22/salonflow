@@ -52,9 +52,9 @@ describe("Today dashboard experience", () => {
 
   it("gives an owner operational focus, attention queue and only incomplete readiness steps", () => {
     const markup = renderToStaticMarkup(<Today />);
-    expect(markup).toContain("შემდეგი კლიენტი");
+    expect(markup).toContain("დღის ფოკუსი");
     expect(markup).toContain("ნინო ბერიძე");
-    expect(markup).toContain("საჭირო ყურადღება");
+    expect(markup).toContain("დღის მოქმედებები");
     expect(markup).toContain("სალონის მზადყოფნა");
     expect(markup).toContain("სერვისები");
     expect(markup).toContain("Booking ბმული");

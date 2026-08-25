@@ -301,3 +301,8 @@
 - [x] Implement the highest-value, configuration-free production-hardening improvements without introducing payment automation, bank verification, fabricated data or weakened role boundaries.
 - [x] Validate the completed hardening scope with focused/new Vitest coverage, responsive/keyboard review, TypeScript, production build and clean runtime logs.
 - [x] Create a release checkpoint and concise handoff for the completed post-activation hardening scope.
+- [x] Create reusable dashboard modules and simplify role-safe navigation with progressive disclosure, without changing route permissions or access-lock behavior.
+- [x] Refactor Today into a role-specific Day Command Center with context, focus, actionable attention, compact metrics, 2–4 quick actions, unified salon status and preserved daily queue.
+- [x] Apply the shared compact action/context/filter pattern to Calendar, Clients, Operations, POS, Team, Reports and Settings without changing their data/API contracts.
+- [x] Refine the role-aware Guided Help Tour into contextual, skippable assistance and validate keyboard, reduced-motion and responsive behavior at 375/768/1024/1440px.
+- [x] Add/update focused Vitest coverage, run full validation and create the Dashboard simplification release checkpoint.

@@ -13,7 +13,7 @@ type WorkspacePageHeaderProps = {
 
 export function WorkspacePageHeader({ eyebrow, title, description, actions, className }: WorkspacePageHeaderProps) {
   return (
-    <header className={cn("sf-workspace-page-header flex flex-col gap-4 pb-5 lg:flex-row lg:items-end lg:justify-between", className)}>
+    <header className={cn("sf-workspace-page-header flex flex-col gap-4 rounded-2xl border border-border/70 bg-card p-4 shadow-sm lg:flex-row lg:items-end lg:justify-between", className)}>
       <div className="min-w-0">
         {eyebrow ? <p className="sf-workspace-eyebrow">{eyebrow}</p> : null}
         <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">{title}</h1>
@@ -93,5 +93,5 @@ export function WorkspaceStatusPill({ children, tone = "neutral" }: { children: 
 }
 
 export function WorkspaceFilterBar({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn("sf-workspace-filter-bar flex flex-col gap-3 p-3 sm:flex-row sm:flex-wrap sm:items-end", className)}>{children}</div>;
+  return <div className={cn("sf-workspace-filter-bar flex flex-col gap-3 rounded-2xl border border-border/70 bg-card p-3 shadow-sm sm:flex-row sm:flex-wrap sm:items-end", className)}>{children}</div>;
 }

@@ -14,6 +14,13 @@ describe("dashboard role-safe navigation groups", () => {
     expect(source).toContain("visibleMenuItems.filter");
     expect(source).toContain("role === \"STAFF\" ? \"ჩემი პროფილი\"");
     expect(source).toContain("lockedOwnerItems");
+    expect(source).toContain("managementOpen");
+    expect(source).toContain('aria-expanded={managementOpen}');
+    expect(source).toContain('managementItems.some(item => item.path === location)');
+    expect(source).toContain("mobileQuickItems");
+    expect(source).toContain('aria-label="სწრაფი ნავიგაცია"');
+    expect(source).toContain("workspaceRestricted\n    ? visibleMenuItems.slice(0, 3)");
+    expect(source).toContain("onClick={toggleSidebar}");
     expect(source).toContain('item.path === "/app/today"');
     expect(source).toContain('location !== "/app/billing"');
     expect(source).toContain("პაკეტის გააქტიურება");

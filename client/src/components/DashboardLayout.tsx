@@ -20,7 +20,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
-import { BarChart3, CalendarDays, CalendarHeart, CircleHelp, Clock3, Images, LayoutDashboard, ListChecks, LogOut, MessageSquareText, PanelLeft, ReceiptText, Scissors, Settings2, Store, Users } from "lucide-react";
+import { BarChart3, CalendarDays, CalendarHeart, ChevronDown, CircleHelp, Clock3, Images, LayoutDashboard, ListChecks, LogOut, MessageSquareText, MoreHorizontal, PanelLeft, ReceiptText, Scissors, Settings2, Store, Users } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -137,13 +137,20 @@ function DashboardLayoutContent({
   const workspaceRestricted = Boolean(organizationId && (workspaceStatus.isLoading || workspaceStatus.isError || workspaceLocked));
   const lockedOwnerItems = workspaceRestricted && role === "OWNER" ? [{ icon: ReceiptText, label: "პაკეტის გააქტიურება", path: "/app/billing", group: "წვდომის აღდგენა", roles: ["OWNER"] }] : [];
   const visibleMenuItems = role ? [...menuItems.filter(item => (item.roles as readonly string[]).includes(role) && (!workspaceRestricted || item.path === "/app/today")), ...lockedOwnerItems] : [];
-  const visibleMenuGroups = menuGroups.map(label => ({ label, items: visibleMenuItems.filter(item => item.group === label) })).filter(group => group.items.length);
+  const dailyItems = visibleMenuItems.filter(item => item.group === "დღის მართვა");
+  const salesItems = visibleMenuItems.filter(item => item.group === "კლიენტები და გაყიდვა");
+  const managementItems = visibleMenuItems.filter(item => item.group === "სალონის მართვა");
   const visiblePlatformAdminItems = user?.role === "admin" ? platformAdminItems : [];
   const activeMenuItem = [...visibleMenuItems, ...visiblePlatformAdminItems].find(item => item.path === location);
   const isMobile = useIsMobile();
   const [helpOpen, setHelpOpen] = useState(false);
+  const [managementOpen, setManagementOpen] = useState(() => managementItems.some(item => item.path === location));
+  const mobileQuickItems = workspaceRestricted
+    ? visibleMenuItems.slice(0, 3)
+    : ["/app/today", "/app/calendar", role === "STAFF" ? "/app/staff" : "/app/clients"].map(path => visibleMenuItems.find(item => item.path === path)).filter((item): item is typeof visibleMenuItems[number] => Boolean(item));
 
   useEffect(() => { if (workspaceLocked && location !== "/app/today" && location !== "/app/billing" && user?.role !== "admin") setLocation("/app/today"); }, [location, setLocation, user?.role, workspaceLocked]);
+  useEffect(() => { if (managementItems.some(item => item.path === location)) setManagementOpen(true); }, [location, managementItems]);
 
   useEffect(() => {
     if (isCollapsed) {
@@ -208,7 +215,7 @@ function DashboardLayoutContent({
           </SidebarHeader>
 
           <SidebarContent className="gap-0 px-2 py-4">
-            {visibleMenuGroups.map((group, groupIndex) => <div key={group.label} className={groupIndex ? "mt-5" : ""}>
+            {[{ label: "დღის მართვა", items: dailyItems }, { label: "კლიენტები და გაყიდვა", items: salesItems }].filter(group => group.items.length).map((group, groupIndex) => <div key={group.label} className={groupIndex ? "mt-5" : ""}>
               {!isCollapsed ? <p className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-sidebar-foreground/55">{group.label}</p> : null}
               <SidebarMenu className="gap-1">
               {group.items.map(item => {
@@ -232,11 +239,15 @@ function DashboardLayoutContent({
               })}
               </SidebarMenu>
             </div>)}
+            {managementItems.length ? <div className="mt-5">
+              {!isCollapsed ? <button type="button" onClick={() => setManagementOpen(open => !open)} aria-expanded={managementOpen} className="flex min-h-11 w-full items-center justify-between rounded-xl px-2 text-left text-[11px] font-semibold uppercase tracking-[0.14em] text-sidebar-foreground/55 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><span>სალონის მართვა</span><ChevronDown className={`size-4 transition-transform motion-reduce:transition-none motion-reduce:transform-none ${managementOpen ? "rotate-180" : ""}`} aria-hidden="true" /></button> : null}
+              {(managementOpen || isCollapsed) ? <SidebarMenu className="mt-1 gap-1">{managementItems.map(item => { const isActive = location === item.path; return <SidebarMenuItem key={item.path}><SidebarMenuButton isActive={isActive} onClick={() => setLocation(item.path)} tooltip={item.label} className="min-h-11 rounded-xl px-3 text-sidebar-foreground/72 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground data-[active=true]:bg-sidebar-primary data-[active=true]:font-semibold data-[active=true]:text-sidebar-primary-foreground"><item.icon className={`h-4 w-4 ${isActive ? "text-sidebar-primary-foreground" : ""}`} /><span>{item.label}</span></SidebarMenuButton></SidebarMenuItem>; })}</SidebarMenu> : null}
+            </div> : null}
             {lockedOwnerItems.length ? <div className="mt-5">
               {!isCollapsed ? <p className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-sidebar-foreground/55">წვდომის აღდგენა</p> : null}
               <SidebarMenu className="gap-1">{lockedOwnerItems.map(item => <SidebarMenuItem key={item.path}><SidebarMenuButton isActive={location === item.path} onClick={() => setLocation(item.path)} tooltip={item.label} className="min-h-11 rounded-xl px-3 text-sidebar-foreground/72 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground data-[active=true]:bg-sidebar-primary data-[active=true]:font-semibold data-[active=true]:text-sidebar-primary-foreground"><item.icon className={`h-4 w-4 ${location === item.path ? "text-sidebar-primary-foreground" : ""}`} /><span>{item.label}</span></SidebarMenuButton></SidebarMenuItem>)}</SidebarMenu>
             </div> : null}
-            {visiblePlatformAdminItems.length ? <div className={visibleMenuGroups.length ? "mt-5" : ""}>
+            {visiblePlatformAdminItems.length ? <div className={(dailyItems.length || salesItems.length || managementItems.length) ? "mt-5" : ""}>
               {!isCollapsed ? <p className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-sidebar-foreground/55">პლატფორმის მართვა</p> : null}
               <SidebarMenu className="gap-1">
                 {visiblePlatformAdminItems.map(item => <SidebarMenuItem key={item.path}>
@@ -312,7 +323,11 @@ function DashboardLayoutContent({
             <button type="button" onClick={() => setHelpOpen(true)} className="grid size-11 place-items-center rounded-xl border border-border/75 bg-card text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label="სამუშაო სივრცის დახმარება"><CircleHelp className="size-4" /></button>
           </div>
         )}
-        <main className="sf-motion-enter sf-workspace-main flex-1 p-4 sm:p-5 xl:p-6">{children}</main>
+        <main className="sf-motion-enter sf-workspace-main flex-1 p-4 pb-24 sm:p-5 sm:pb-5 xl:p-6">{children}</main>
+        {isMobile ? <nav aria-label="სწრაფი ნავიგაცია" className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-border/90 bg-background/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_24px_rgb(0_0_0_/_0.08)] backdrop-blur">
+          {mobileQuickItems.map(item => { const isActive = location === item.path; return <button key={item.path} type="button" onClick={() => setLocation(item.path)} aria-current={isActive ? "page" : undefined} className={`grid min-h-12 place-items-center rounded-xl text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"}`}><item.icon className="size-4" aria-hidden="true" /><span className="mt-0.5 max-w-20 truncate">{item.path === "/app/staff" && role === "STAFF" ? "პროფილი" : item.label}</span></button>; })}
+          <button type="button" onClick={toggleSidebar} className="grid min-h-12 place-items-center rounded-xl text-xs font-medium text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><MoreHorizontal className="size-4" aria-hidden="true" /><span className="mt-0.5">მეტი</span></button>
+        </nav> : null}
       </SidebarInset>
       {organizations.data?.[0]?.organization.id ? <GuidedHelpTour organizationId={organizations.data[0].organization.id} role={role} open={helpOpen} onOpenChange={setHelpOpen} /> : null}
     </>
