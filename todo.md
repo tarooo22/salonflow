@@ -334,3 +334,7 @@
 - [x] Add server-enforced owner-only updates for existing location and online-booking-rule fields, keeping trial entitlement and public booking guards intact.
 - [x] Add Settings controls for truthful public-profile/media navigation, privacy/review guidance and user-scoped appearance/notification preferences without delivery automation.
 - [x] Add owner/manager/staff access regressions, responsive/keyboard QA, full validation and a Settings release checkpoint.
+- [x] Create reusable public booking shell, visit summary, step and slot-group primitives while retaining current booking contracts.
+- [x] Simplify service, specialist and real-slot selection with category filtering, any-available fast path, editable summary and truthful waitlist handoff.
+- [x] Polish contact, confirmation, manage-booking and waitlist states with privacy-safe inline validation and accurate pending-request communication.
+- [x] Add allowlisted consent-gated booking funnel signals, booking accessibility/responsive regressions, full validation and a booking release checkpoint.

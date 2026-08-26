@@ -2,6 +2,7 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { BookingConfirmation, formatGel, getBookingValidationIssue, getEligibleTeam, LocationContext, StaffStep } from "./BookingFlow";
+import { BookingChoiceCard, BookingSlotGroup } from "@/components/public/BookingPrimitives";
 
 vi.mock("wouter", () => ({ Link: ({ children, href }: { children: React.ReactNode; href: string }) => <a href={href}>{children}</a> }));
 
@@ -44,8 +45,17 @@ describe("public booking conversion helpers", () => {
   it("renders a clearly labelled any-available specialist choice alongside eligible staff", () => {
     const markup = renderToStaticMarkup(<StaffStep team={[{ id: "staff-1", name: "ანა", specialty: "სტილისტი", bio: null, eligibleServiceIds: ["service-a"] }]} selectedId={undefined} onSelect={() => undefined} />);
     expect(markup).toContain("ნებისმიერი თავისუფალი სპეციალისტი");
-    expect(markup).toContain("ხელმისაწვდომობა საბოლოოდ გადამოწმდება");
+    expect(markup).toContain("რეალურად თავისუფალ სპეციალისტს");
     expect(markup).toContain("ანა");
+  });
+
+  it("keeps booking choice and slot analytics markers aggregate-only", () => {
+    const choice = renderToStaticMarkup(<BookingChoiceCard selected={false} label="ტესტ სერვისი" conversionEvent="BOOKING_SERVICE_SELECTED" onSelect={() => undefined}>სერვისი</BookingChoiceCard>);
+    const slots = renderToStaticMarkup(<BookingSlotGroup title="დილა" conversionEvent="BOOKING_TIME_SELECTED" selectedStartsAt="" onSelect={() => undefined} slots={[{ startsAt: "2026-08-20T09:00:00.000Z", label: "09:00" }]} />);
+    expect(choice).toContain('data-conversion-event="BOOKING_SERVICE_SELECTED"');
+    expect(slots).toContain('data-conversion-event="BOOKING_TIME_SELECTED"');
+    expect(choice).not.toContain("phone");
+    expect(slots).not.toContain("bookingToken");
   });
 
   it("shows the server-resolved specialist and calendar action in the final confirmation", () => {
@@ -55,6 +65,7 @@ describe("public booking conversion helpers", () => {
     expect(markup).toContain("კალენდარში დამატება");
     expect(markup).toContain("sf-booking-confirmation");
     expect(markup).toContain("/manage-booking/safe-confirmation");
+    expect(markup).toContain("ელოდება სალონის დადასტურებას");
   });
 
   it("gives a focused, non-technical recovery message when a booking step is incomplete", () => {
