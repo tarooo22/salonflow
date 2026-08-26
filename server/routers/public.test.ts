@@ -8,7 +8,7 @@ vi.mock("../db", () => ({
 vi.mock("nanoid", () => ({ nanoid: vi.fn(() => mocked.ids.shift() ?? "generated_id_000000001") }));
 vi.mock("../lib/trialAccess", () => ({ isOrganizationTrialPublicBookingActive: mocked.isOrganizationTrialPublicBookingActive }));
 
-import { canCustomerManage, publicRouter } from "./public";
+import { assertWaitlistFuturePreference, canCustomerManage, publicRouter } from "./public";
 
 const ids = {
   organizationId: "organization_0001",
@@ -93,6 +93,14 @@ describe("public booking router safeguards", () => {
     expect(canCustomerManage({ status: "PENDING", startsAt: new Date("2026-08-20T11:01:00.000Z") }, 180, now)).toBe(true);
     expect(canCustomerManage({ status: "CONFIRMED", startsAt: new Date("2026-08-20T11:00:00.000Z") }, 180, now)).toBe(false);
     expect(canCustomerManage({ status: "IN_SERVICE", startsAt: new Date("2026-08-20T15:00:00.000Z") }, 180, now)).toBe(false);
+  });
+
+  it("rejects waitlist preferences from a past Tbilisi date or elapsed same-day time", () => {
+    const now = new Date("2026-08-27T08:30:00.000Z"); // 12:30 in Asia/Tbilisi
+    expect(() => assertWaitlistFuturePreference({ requestedDate: "2026-08-26" }, "Asia/Tbilisi", now)).toThrow("გასული თარიღისთვის");
+    expect(() => assertWaitlistFuturePreference({ requestedDate: "2026-08-27", preferredStartLocalTime: "12:00" }, "Asia/Tbilisi", now)).toThrow("გასული დროის არჩევა შეუძლებელია");
+    expect(() => assertWaitlistFuturePreference({ requestedDate: "2026-08-27", preferredStartLocalTime: "13:00" }, "Asia/Tbilisi", now)).not.toThrow();
+    expect(() => assertWaitlistFuturePreference({ requestedDate: "2026-08-28", preferredStartLocalTime: "08:00" }, "Asia/Tbilisi", now)).not.toThrow();
   });
 
   it("exposes only active booking locations with database-backed service categories", async () => {

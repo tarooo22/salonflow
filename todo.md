@@ -338,3 +338,7 @@
 - [x] Simplify service, specialist and real-slot selection with category filtering, any-available fast path, editable summary and truthful waitlist handoff.
 - [x] Polish contact, confirmation, manage-booking and waitlist states with privacy-safe inline validation and accurate pending-request communication.
 - [x] Add allowlisted consent-gated booking funnel signals, booking accessibility/responsive regressions, full validation and a booking release checkpoint.
+- [x] Audit native date/time input usage, Georgian timezone helpers and server-side waitlist/reschedule future-time validation.
+- [x] Create reusable Georgian calendar and time-of-day picker primitives that disable past dates and past times for the current Asia/Tbilisi day.
+- [x] Replace Waitlist native date/time controls and align ManageBooking date controls with the new picker while retaining server-side validation.
+- [x] Add timezone-boundary/accessibility regressions, responsive QA, full validation and a date-time picker release checkpoint.

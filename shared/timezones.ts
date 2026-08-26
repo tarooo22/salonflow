@@ -48,6 +48,30 @@ export function dateKeyInTimeZone(value: Date, timeZone: string): string {
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
+export function timeKeyInTimeZone(value: Date, timeZone: string): string {
+  const { hour, minute } = numericParts(value, timeZone);
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
+function datePartsFromKey(dateKey: string) {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  return { year, month, day };
+}
+
+/** Returns true when a YYYY-MM-DD key is before the location's active local day. */
+export function isDateKeyInPast(dateKey: string, timeZone: string, reference = new Date()): boolean {
+  return dateKey < dateKeyInTimeZone(reference, timeZone);
+}
+
+/** Returns true when an optional local HH:mm preference is already elapsed in the location's timezone. */
+export function isLocalDateTimeElapsed(dateKey: string, timeKey: string, timeZone: string, reference = new Date()): boolean {
+  if (isDateKeyInPast(dateKey, timeZone, reference)) return true;
+  if (dateKey > dateKeyInTimeZone(reference, timeZone)) return false;
+  const { year, month, day } = datePartsFromKey(dateKey);
+  const [hour, minute] = timeKey.split(":").map(Number);
+  return zonedDateTimeToUtc({ year, month, day, hour, minute, second: 0 }, timeZone).getTime() <= reference.getTime();
+}
+
 function incrementCalendarDate(parts: Pick<ZonedDateParts, "year" | "month" | "day">): Pick<ZonedDateParts, "year" | "month" | "day"> {
   const next = new Date(Date.UTC(parts.year, parts.month - 1, parts.day + 1));
   return { year: next.getUTCFullYear(), month: next.getUTCMonth() + 1, day: next.getUTCDate() };

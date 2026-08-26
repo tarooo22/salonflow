@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { businessDayRange, dateKeyInTimeZone, zonedDateTimeToUtc } from "./timezones";
+import { businessDayRange, dateKeyInTimeZone, isDateKeyInPast, isLocalDateTimeElapsed, zonedDateTimeToUtc } from "./timezones";
 
 describe("IANA business-day helpers", () => {
   it("maps Asia/Tbilisi's local day back to the correct UTC bounds", () => {
@@ -16,5 +16,14 @@ describe("IANA business-day helpers", () => {
 
     expect(dateKeyInTimeZone(start, "Europe/Berlin")).toBe("2026-03-29");
     expect(range.endsAt.getTime() - range.startsAt.getTime()).toBe(23 * 60 * 60 * 1000);
+  });
+
+  it("recognizes elapsed local times only for the active Tbilisi day", () => {
+    const reference = new Date("2026-08-27T08:30:00.000Z"); // 12:30 in Asia/Tbilisi
+    expect(isDateKeyInPast("2026-08-26", "Asia/Tbilisi", reference)).toBe(true);
+    expect(isDateKeyInPast("2026-08-27", "Asia/Tbilisi", reference)).toBe(false);
+    expect(isLocalDateTimeElapsed("2026-08-27", "12:00", "Asia/Tbilisi", reference)).toBe(true);
+    expect(isLocalDateTimeElapsed("2026-08-27", "13:00", "Asia/Tbilisi", reference)).toBe(false);
+    expect(isLocalDateTimeElapsed("2026-08-28", "08:00", "Asia/Tbilisi", reference)).toBe(false);
   });
 });

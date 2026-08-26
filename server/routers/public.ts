@@ -6,7 +6,7 @@ import { requireDb } from "../db";
 import { publicAvailabilityCheckSchema, publicAvailableSlotsSchema, publicBookingCancelSchema, publicBookingCommitSchema, publicBookingRescheduleSchema, publicBookingTokenSchema, publicFeedbackSubmitSchema, publicFeedbackTokenSchema, publicMultiAvailabilityCheckSchema, publicMultiAvailableSlotsSchema, publicMultiBookingCommitSchema, publicWaitlistCreateSchema, slugSchema } from "../../shared/validation";
 import { appointmentBlocksInterval, intervalsOverlap } from "../lib/appointments";
 import { generateAvailableSlots, type BusyInterval } from "../lib/availability";
-import { formatTimeInTimeZone, zonedDateTimeToUtc } from "../../shared/timezones";
+import { dateKeyInTimeZone, formatTimeInTimeZone, isDateKeyInPast, isLocalDateTimeElapsed, zonedDateTimeToUtc } from "../../shared/timezones";
 import { normalizeEmail, normalizeGeorgianPhone } from "../lib/normalization";
 import { ENV } from "../_core/env";
 import { mediaUrl } from "../lib/media";
@@ -42,6 +42,11 @@ async function appointmentForPublicToken(db: Awaited<ReturnType<typeof requireDb
 
 export function canCustomerManage(appointment: { status: string; startsAt: Date }, cutoffMinutes: number, now = Date.now()) {
   return (appointment.status === "PENDING" || appointment.status === "CONFIRMED") && appointment.startsAt.getTime() - now > cutoffMinutes * 60_000;
+}
+
+export function assertWaitlistFuturePreference(input: { requestedDate: string; preferredStartLocalTime?: string }, timeZone: string, reference = new Date()) {
+  if (isDateKeyInPast(input.requestedDate, timeZone, reference)) throw new Error("გასული თარიღისთვის waitlist მოთხოვნას ვერ დატოვებთ.");
+  if (input.preferredStartLocalTime && isLocalDateTimeElapsed(input.requestedDate, input.preferredStartLocalTime, timeZone, reference)) throw new Error("გასული დროის არჩევა შეუძლებელია. აირჩიეთ მოქმედი ან მომავალი საათი.");
 }
 
 type MultiServiceSnapshot = { id: string; nameKa: string; durationMinutes: number; priceTetri: number; bufferBeforeMinutes: number; bufferAfterMinutes: number };
@@ -710,6 +715,7 @@ export const publicRouter = router({
     if (existingRequest) return { id: existingRequest.id, replayed: true };
     const [location] = await db.select().from(locations).where(and(eq(locations.publicSlug, input.slug), eq(locations.status, "ACTIVE"), eq(locations.bookingEnabled, true))).limit(1);
     if (!location) throw new Error("ეს ჩაწერის ბმული აღარ არის აქტიური.");
+    assertWaitlistFuturePreference(input, location.timezone);
     const [service] = await db.select().from(services).where(and(eq(services.id, input.serviceId), eq(services.organizationId, location.organizationId), eq(services.status, "ACTIVE"), eq(services.onlineBookingEnabled, true))).limit(1);
     if (!service) throw new Error("არჩეული სერვისი ონლაინ ჩაწერისთვის მიუწვდომელია.");
     if (input.staffProfileId) {
