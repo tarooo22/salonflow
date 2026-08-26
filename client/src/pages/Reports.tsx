@@ -1,5 +1,6 @@
 import { RevenueTrendChart, CommissionDistributionChart } from "@/components/reports/ReportsCharts";
 import { BookingForecastPanel, PeakHourHeatmapPanel, RetentionCohortPanel, WeekComparisonPanel } from "@/components/reports/AdvancedAnalyticsPanels";
+import { FeedbackConsentInsights } from "@/components/reports/FeedbackConsentInsights";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -60,6 +61,7 @@ export default function Reports() {
   const bookingHistoryInput = useMemo(() => ({ ...reportInput, limit: HISTORY_PAGE_SIZE, offset }), [offset, reportInput]);
   const report = trpc.reporting.revenueSummary.useQuery(reportInput, { enabled: Boolean(organization?.id) });
   const analytics = trpc.reporting.analytics.useQuery(reportInput, { enabled: Boolean(organization?.id) });
+  const feedbackInsights = trpc.reporting.feedbackInsights.useQuery(reportInput, { enabled: Boolean(organization?.id) });
   const bookingHistory = trpc.reporting.bookingHistory.useQuery(bookingHistoryInput, { enabled: Boolean(organization?.id) });
   const commissions = trpc.reporting.commissionSummary.useQuery(reportInput, { enabled: Boolean(organization?.id) && canManageFinance });
   const commissionRules = trpc.finance.listCommissionRules.useQuery({ organizationId: organization?.id ?? "" }, { enabled: Boolean(organization?.id) && canManageFinance });
@@ -157,6 +159,12 @@ export default function Reports() {
             <WorkspaceMetric icon={WalletCards} label="დარჩენილი ბალანსი" value={report.isLoading ? "…" : gel(summary?.unpaidBalanceTetri ?? 0)} helper="ჯავშნებზე გადასახდელი თანხა" tone="terracotta" />
             <WorkspaceMetric icon={ReceiptText} label="ხარჯები" value={report.isLoading ? "…" : gel(summary?.expensesTetri ?? 0)} helper="აქტიური ხარჯები არჩეულ პერიოდში" tone="violet" />
           </div>
+
+          <WorkspaceSection title="შეფასებები და თანხმობები" description="რეალური feedback-ის სტატისტიკა და კლიენტების მიმდინარე consent არჩევანები aggregate დონეზე. კომენტარი, კლიენტის სახელი და საკონტაქტო მონაცემი ამ ხედში არ ჩანს.">
+            {feedbackInsights.isLoading ? <SectionLoading title="Feedback და consent მონაცემები იტვირთება…" /> : null}
+            {feedbackInsights.isError ? <WorkspaceState kind="error" title="Feedback და consent მონაცემები დროებით მიუწვდომელია" /> : null}
+            {!feedbackInsights.isLoading && !feedbackInsights.isError && feedbackInsights.data ? <FeedbackConsentInsights data={feedbackInsights.data} /> : null}
+          </WorkspaceSection>
 
           <div className="grid gap-4 xl:grid-cols-[.9fr_1.1fr]">
             <WorkspaceSection title="კვირის შედარება" description="ეს კვირის აქტიური ჯავშნები წინა კვირის იმავე კალენდარულ ფანჯარასთან.">

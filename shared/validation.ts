@@ -112,7 +112,10 @@ export const feedbackEscalateSchema = feedbackModerationSchema.extend({
 
 export const feedbackPlatformListSchema = paginationSchema.extend({
   openOnly: z.boolean().default(true),
+  status: z.enum(["PENDING", "APPROVED", "HIDDEN", "REJECTED"]).optional(),
 });
+
+export const feedbackPlatformAuditSchema = z.object({ feedbackId: opaqueIdSchema });
 
 export const feedbackPlatformDecisionSchema = z.object({
   feedbackId: opaqueIdSchema,
@@ -120,6 +123,11 @@ export const feedbackPlatformDecisionSchema = z.object({
   moderationNote: z.string().trim().max(500).optional(),
 }).superRefine((input, ctx) => {
   if (input.status !== "APPROVED" && !input.moderationNote) ctx.addIssue({ code: "custom", path: ["moderationNote"], message: "დამალვის ან უარყოფისას საჭიროა მოკლე დასაბუთება." });
+});
+
+export const feedbackPlatformRestoreSchema = z.object({
+  feedbackId: opaqueIdSchema,
+  moderationNote: z.string().trim().min(2).max(500),
 });
 
 export const localRegistrationSchema = z.object({

@@ -326,3 +326,7 @@
 - [x] Add opt-in consent-based conversion analytics using non-identifying aggregated events, revocable preference state and a public privacy explanation.
 - [x] Add factual route-aware SEO metadata, robots directives and a dynamic sitemap limited to eligible public routes/approved public salon profiles.
 - [x] Add focused privacy/security tests, run full validation and create the review-analytics-SEO release checkpoint.
+- [x] Audit moderation events, platform-admin review routes, customer consent records and existing reporting primitives for reuse.
+- [x] Add a platform-admin moderation audit panel for hidden/escalated feedback, queue filters, decision context and immutable event history without exposing private booking data.
+- [x] Add organization-scoped feedback and consent analytics with real aggregate metrics, trend/distribution visualizations and no client-level data exposure.
+- [x] Add role/privacy regressions, responsive QA, full validation and an admin-analytics release checkpoint.

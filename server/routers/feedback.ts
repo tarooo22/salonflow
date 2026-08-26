@@ -1,8 +1,8 @@
-import { and, desc, eq, ne } from "drizzle-orm";
+import { and, asc, desc, eq, ne } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { nanoid } from "nanoid";
 import { clients, customerFeedback, customerFeedbackEvents, locations, organizations } from "../../drizzle/schema";
-import { feedbackEscalateSchema, feedbackModerationListSchema, feedbackModerationSchema, feedbackPlatformDecisionSchema, feedbackPlatformListSchema } from "../../shared/validation";
+import { feedbackEscalateSchema, feedbackModerationListSchema, feedbackModerationSchema, feedbackPlatformAuditSchema, feedbackPlatformDecisionSchema, feedbackPlatformListSchema, feedbackPlatformRestoreSchema } from "../../shared/validation";
 import { requireOrganizationRole } from "../access";
 import { requireDb } from "../db";
 import { protectedProcedure, router } from "../_core/trpc";
@@ -67,9 +67,53 @@ export const feedbackRouter = router({
     const rows = await db.select({ feedback: customerFeedback, locationName: locations.name, organizationName: organizations.name }).from(customerFeedback)
       .innerJoin(locations, eq(customerFeedback.locationId, locations.id))
       .innerJoin(organizations, eq(customerFeedback.organizationId, organizations.id))
-      .where(input.openOnly ? eq(customerFeedback.platformReviewOpen, true) : undefined)
+      .where(and(
+        input.openOnly ? eq(customerFeedback.platformReviewOpen, true) : undefined,
+        input.status ? eq(customerFeedback.status, input.status) : undefined,
+      ))
       .orderBy(desc(customerFeedback.platformReviewRequestedAt)).limit(input.limit).offset(input.offset);
-    return rows.map(row => ({ ...row.feedback, locationName: row.locationName, organizationName: row.organizationName }));
+    return rows.map(row => ({
+      id: row.feedback.id,
+      organizationName: row.organizationName,
+      locationName: row.locationName,
+      rating: row.feedback.rating,
+      comment: row.feedback.comment,
+      status: row.feedback.status,
+      moderationNote: row.feedback.moderationNote,
+      platformReviewOpen: row.feedback.platformReviewOpen,
+      platformReviewReason: row.feedback.platformReviewReason,
+      platformReviewNote: row.feedback.platformReviewNote,
+      platformReviewRequestedAt: row.feedback.platformReviewRequestedAt,
+      submittedAt: row.feedback.submittedAt,
+      moderatedAt: row.feedback.moderatedAt,
+    }));
+  }),
+
+  platformAudit: protectedProcedure.input(feedbackPlatformAuditSchema).query(async ({ ctx, input }) => {
+    requirePlatformAdmin(ctx.user.role);
+    const db = await requireDb();
+    const rows = await db.select({ feedback: customerFeedback, locationName: locations.name, organizationName: organizations.name }).from(customerFeedback)
+      .innerJoin(locations, eq(customerFeedback.locationId, locations.id))
+      .innerJoin(organizations, eq(customerFeedback.organizationId, organizations.id))
+      .where(eq(customerFeedback.id, input.feedbackId)).limit(1);
+    const item = rows[0];
+    if (!item) throw new TRPCError({ code: "NOT_FOUND", message: "შეფასება ვერ მოიძებნა." });
+    const events = await db.select({ eventType: customerFeedbackEvents.eventType, metadata: customerFeedbackEvents.metadata, createdAt: customerFeedbackEvents.createdAt }).from(customerFeedbackEvents)
+      .where(eq(customerFeedbackEvents.feedbackId, input.feedbackId)).orderBy(asc(customerFeedbackEvents.createdAt));
+    return {
+      feedback: {
+        id: item.feedback.id,
+        organizationName: item.organizationName,
+        locationName: item.locationName,
+        rating: item.feedback.rating,
+        comment: item.feedback.comment,
+        status: item.feedback.status,
+        moderationNote: item.feedback.moderationNote,
+        submittedAt: item.feedback.submittedAt,
+        moderatedAt: item.feedback.moderatedAt,
+      },
+      events,
+    };
   }),
 
   platformDecide: protectedProcedure.input(feedbackPlatformDecisionSchema).mutation(async ({ ctx, input }) => {
@@ -88,5 +132,18 @@ export const feedbackRouter = router({
       await tx.insert(customerFeedbackEvents).values({ id: nanoid(21), feedbackId: input.feedbackId, eventType: `PLATFORM_DECIDED_${input.status}`, actorUserId: ctx.user.id, metadata: { moderationNote: input.moderationNote ?? null } });
     });
     return { decided: true };
+  }),
+
+  platformRestore: protectedProcedure.input(feedbackPlatformRestoreSchema).mutation(async ({ ctx, input }) => {
+    requirePlatformAdmin(ctx.user.role);
+    const db = await requireDb();
+    const restoredAt = new Date();
+    await db.transaction(async tx => {
+      const result = await tx.update(customerFeedback).set({ status: "APPROVED", moderationNote: input.moderationNote, moderatedByUserId: ctx.user.id, moderatedAt: restoredAt })
+        .where(and(eq(customerFeedback.id, input.feedbackId), eq(customerFeedback.status, "HIDDEN"), eq(customerFeedback.platformReviewOpen, false)));
+      if (result[0]?.affectedRows !== 1) throw new TRPCError({ code: "CONFLICT", message: "ეს დამალული შეფასება უკვე შეიცვალა ან აღდგენისთვის მიუწვდომელია." });
+      await tx.insert(customerFeedbackEvents).values({ id: nanoid(21), feedbackId: input.feedbackId, eventType: "PLATFORM_RESTORED_APPROVED", actorUserId: ctx.user.id, metadata: { moderationNote: input.moderationNote } });
+    });
+    return { restored: true };
   }),
 });

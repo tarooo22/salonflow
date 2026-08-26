@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { appointmentRescheduleSchema, attendanceClockSchema, calendarRangeSchema, clientBeforeAfterCreateSchema, feedbackEscalateSchema, feedbackPlatformDecisionSchema, marketplaceOwnerMapPointConfirmSchema, marketplacePromotionCancelSchema, publicFeedbackSubmitSchema, retailSaleCreateSchema, tipCreateSchema, trialAdminQueueSchema } from "./validation";
+import { appointmentRescheduleSchema, attendanceClockSchema, calendarRangeSchema, clientBeforeAfterCreateSchema, feedbackEscalateSchema, feedbackPlatformDecisionSchema, feedbackPlatformRestoreSchema, marketplaceOwnerMapPointConfirmSchema, marketplacePromotionCancelSchema, publicFeedbackSubmitSchema, retailSaleCreateSchema, tipCreateSchema, trialAdminQueueSchema } from "./validation";
 
 const scope = {
   organizationId: "organization_2026_abcd",
@@ -98,5 +98,7 @@ describe("verified feedback validation", () => {
     expect(feedbackPlatformDecisionSchema.parse({ feedbackId: scope.feedbackId, status: "APPROVED" })).toMatchObject({ status: "APPROVED" });
     expect(() => feedbackPlatformDecisionSchema.parse({ feedbackId: scope.feedbackId, status: "HIDDEN" })).toThrow("დამალვის ან უარყოფისას საჭიროა მოკლე დასაბუთება.");
     expect(feedbackPlatformDecisionSchema.parse({ feedbackId: scope.feedbackId, status: "REJECTED", moderationNote: "პირადი ნომერია მითითებული" })).toMatchObject({ status: "REJECTED" });
+    expect(() => feedbackPlatformRestoreSchema.parse({ feedbackId: scope.feedbackId, moderationNote: "x" })).toThrow();
+    expect(feedbackPlatformRestoreSchema.parse({ feedbackId: scope.feedbackId, moderationNote: "Policy შესაბამისი აღდგენის მიზეზი" })).toMatchObject({ feedbackId: scope.feedbackId });
   });
 });

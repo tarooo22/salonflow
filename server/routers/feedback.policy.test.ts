@@ -9,6 +9,10 @@ describe("feedback moderation policy", () => {
     expect(source).toContain("requestPlatformReview");
     expect(source).toContain("requirePlatformAdmin(ctx.user.role)");
     expect(source).toContain("PLATFORM_DECIDED_");
+    expect(source).toContain("platformAudit");
+    expect(source).toContain("platformRestore");
+    expect(source).toContain('eq(customerFeedback.status, "HIDDEN")');
+    expect(source).toContain("PLATFORM_RESTORED_APPROVED");
     expect(source).not.toContain("moderate:");
   });
 });

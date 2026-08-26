@@ -27,6 +27,7 @@ function reportDb(queryRows: unknown[][]) {
       const rows = queryRows.shift() ?? [];
       const chain = {
         from: () => chain,
+        innerJoin: () => chain,
         where: (condition: unknown) => { wheres.push(condition); return chain; },
         then: <TResult1 = unknown[], TResult2 = never>(onfulfilled?: ((value: unknown[]) => TResult1 | PromiseLike<TResult1>) | null, onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null) => Promise.resolve(rows).then(onfulfilled, onrejected),
       };
@@ -61,5 +62,26 @@ describe("reporting.exportCsv", () => {
       expect.objectContaining({ kind: "gte", value: startsAt }),
       expect.objectContaining({ kind: "lte", value: endsAt }),
     ]) });
+  });
+});
+
+describe("reporting.feedbackInsights", () => {
+  it("returns organization-scoped aggregates without client identifiers or feedback text", async () => {
+    mocked.requireOrganizationAction.mockResolvedValue({ role: "OWNER" });
+    const db = reportDb([
+      [{ rating: 5, status: "APPROVED", submittedAt: new Date("2026-08-01T09:00:00.000Z") }, { rating: 3, status: "HIDDEN", submittedAt: new Date("2026-08-02T09:00:00.000Z") }],
+      [{ clientId: "client_a", consentType: "MARKETING_EMAIL", granted: true, withdrawnAt: null, createdAt: new Date("2026-08-01T09:00:00.000Z") }, { clientId: "client_a", consentType: "MARKETING_SMS", granted: false, withdrawnAt: new Date("2026-08-02T09:00:00.000Z") }],
+    ]);
+    mocked.db = db;
+    const startsAt = new Date("2026-08-01T00:00:00.000Z");
+    const endsAt = new Date("2026-08-03T23:59:59.999Z");
+
+    const result = await reportingRouter.createCaller({ user } as never).feedbackInsights({ organizationId: "organization_0001", startsAt, endsAt });
+
+    expect(mocked.requireOrganizationAction).toHaveBeenCalledWith(user, "organization_0001", "reports:view");
+    expect(result.feedback).toMatchObject({ total: 2, averageRating: 4, ratings: expect.arrayContaining([{ rating: 5, count: 1 }]) });
+    expect(result.consent).toMatchObject({ currentOptIns: { marketingEmail: 1, marketingSms: 0 }, activity: { granted: 1, withdrawn: 1 } });
+    expect(JSON.stringify(result)).not.toContain("client_a");
+    expect(db.wheres[0]).toMatchObject({ kind: "and", conditions: expect.arrayContaining([expect.objectContaining({ kind: "eq", value: "organization_0001" })]) });
   });
 });

@@ -1,5 +1,5 @@
 import { and, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
-import { appointmentServices, appointments, commissionEntries, expenses, organizations, payments, staffProfiles } from "../../drizzle/schema";
+import { appointmentServices, appointments, clientConsents, clients, commissionEntries, customerFeedback, expenses, organizations, payments, staffProfiles } from "../../drizzle/schema";
 import { bookingHistorySchema, reportingRangeSchema } from "../../shared/validation";
 import { requireOrganizationAction } from "../access";
 import { requireDb } from "../db";
@@ -76,6 +76,59 @@ export const reportingRouter = router({
     const futurePayments = futureIds.length ? await db.select({ appointmentId: payments.appointmentId, amountTetri: payments.amountTetri, refundedTetri: payments.refundedTetri, status: payments.status }).from(payments).where(inArray(payments.appointmentId, futureIds)) : [];
     const advanced = summarizeAdvancedReportingAnalytics({ selectedRangeAppointments: appointmentRows, weeklyAppointments, cohortAppointments, futureAppointments, futurePayments, timeZone: organization.defaultTimezone, reference: now });
     return { ...analytics, ...advanced, bookedRevenueTetri, expensesTetri, expensePressureBasisPoints: expensePressureBasisPoints(expensesTetri, bookedRevenueTetri) };
+  }),
+
+  feedbackInsights: protectedProcedure.input(reportingRangeSchema).query(async ({ ctx, input }) => {
+    await requireOrganizationAction(ctx.user, input.organizationId, "reports:view");
+    const db = await requireDb();
+    const [feedbackRows, consentRows] = await Promise.all([
+      db.select({ rating: customerFeedback.rating, status: customerFeedback.status, submittedAt: customerFeedback.submittedAt }).from(customerFeedback).where(and(
+        eq(customerFeedback.organizationId, input.organizationId),
+        gte(customerFeedback.submittedAt, input.startsAt),
+        lte(customerFeedback.submittedAt, input.endsAt),
+      )),
+      db.select({ clientId: clientConsents.clientId, consentType: clientConsents.consentType, granted: clientConsents.granted, withdrawnAt: clientConsents.withdrawnAt, createdAt: clientConsents.createdAt }).from(clientConsents)
+        .innerJoin(clients, eq(clientConsents.clientId, clients.id))
+        .where(and(eq(clients.organizationId, input.organizationId), lte(clientConsents.createdAt, input.endsAt))),
+    ]);
+    const ratings = [1, 2, 3, 4, 5].map(rating => ({ rating, count: feedbackRows.filter(row => row.rating === rating).length }));
+    const statuses = ["PENDING", "APPROVED", "HIDDEN", "REJECTED"].map(status => ({ status, count: feedbackRows.filter(row => row.status === status).length }));
+    const byDate = new Map<string, number>();
+    for (const row of feedbackRows) {
+      const day = row.submittedAt.toISOString().slice(0, 10);
+      byDate.set(day, (byDate.get(day) ?? 0) + 1);
+    }
+    const latestConsent = new Map<string, { consentType: "MARKETING_SMS" | "MARKETING_EMAIL" | "BOOKING_TERMS"; granted: boolean; withdrawnAt: Date | null; createdAt: Date }>();
+    const consentActivity = { granted: 0, withdrawn: 0 };
+    for (const row of consentRows) {
+      const occurredAt = row.createdAt ?? row.withdrawnAt;
+      const createdAtMs = occurredAt instanceof Date ? occurredAt.getTime() : occurredAt ? Date.parse(String(occurredAt)) : Number.NaN;
+      if (createdAtMs >= input.startsAt.getTime() && createdAtMs <= input.endsAt.getTime()) {
+        if (row.granted && !row.withdrawnAt) consentActivity.granted += 1;
+        else consentActivity.withdrawn += 1;
+      }
+      const key = `${row.clientId}:${row.consentType}`;
+      const current = latestConsent.get(key);
+      if (!current || current.createdAt < row.createdAt) latestConsent.set(key, row);
+    }
+    const currentOptIns = { marketingSms: 0, marketingEmail: 0, bookingTerms: 0 };
+    for (const consent of Array.from(latestConsent.values())) {
+      if (!consent.granted || consent.withdrawnAt) continue;
+      if (consent.consentType === "MARKETING_SMS") currentOptIns.marketingSms += 1;
+      if (consent.consentType === "MARKETING_EMAIL") currentOptIns.marketingEmail += 1;
+      if (consent.consentType === "BOOKING_TERMS") currentOptIns.bookingTerms += 1;
+    }
+    const total = feedbackRows.length;
+    return {
+      feedback: {
+        total,
+        averageRating: total ? Math.round((feedbackRows.reduce((sum, row) => sum + row.rating, 0) / total) * 100) / 100 : null,
+        ratings,
+        statuses,
+        trend: Array.from(byDate, ([date, count]) => ({ date, count })).sort((left, right) => left.date.localeCompare(right.date)),
+      },
+      consent: { currentOptIns, activity: consentActivity },
+    };
   }),
 
   commissionSummary: protectedProcedure.input(reportingRangeSchema).query(async ({ ctx, input }) => {
