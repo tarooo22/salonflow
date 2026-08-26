@@ -32,6 +32,7 @@ const MarketplaceDirectory = lazy(() => import("./pages/MarketplaceDirectory"));
 const MarketplaceMap = lazy(() => import("./pages/MarketplaceMap"));
 const MarketplaceAdmin = lazy(() => import("./pages/MarketplaceAdmin"));
 const FeedbackModeration = lazy(() => import("./pages/FeedbackModeration"));
+const FeedbackAdmin = lazy(() => import("./pages/FeedbackAdmin"));
 const TrialRequest = lazy(() => import("./pages/TrialRequest"));
 const TrialStatus = lazy(() => import("./pages/TrialStatus"));
 const TrialAdmin = lazy(() => import("./pages/TrialAdmin"));
@@ -44,6 +45,7 @@ const PricingPage = lazy(() => import("./pages/MarketingPages").then(module => (
 const DemoPage = lazy(() => import("./pages/MarketingPages").then(module => ({ default: module.DemoPage })));
 const FaqPage = lazy(() => import("./pages/MarketingPages").then(module => ({ default: module.FaqPage })));
 const ContactPage = lazy(() => import("./pages/MarketingPages").then(module => ({ default: module.ContactPage })));
+const Privacy = lazy(() => import("./pages/Privacy"));
 
 function RouteLoading() {
   return <main className="sf-public-page grid min-h-screen place-items-center px-4" role="status" aria-live="polite"><div className="sf-luxury-panel flex w-full max-w-sm items-center gap-3 rounded-[var(--sf-radius-surface)] p-5"><span className="sf-skeleton size-9 rounded-xl" aria-hidden="true" /><p className="text-sm font-semibold">SalonFlow იტვირთება…</p></div></main>;
@@ -60,6 +62,7 @@ function Router() {
       <Route path={"/demo"} component={DemoPage} />
       <Route path={"/faq"} component={FaqPage} />
       <Route path={"/contact"} component={ContactPage} />
+      <Route path={"/privacy"} component={Privacy} />
       <Route path={"/partner"} component={PartnerLanding} />
       <Route path={"/book"} component={Book} />
       <Route path={"/book/:slug"} component={BookingFlow} />
@@ -87,6 +90,7 @@ function Router() {
       <Route path={"/app/marketplace"} component={MarketplaceSetup} />
       <Route path={"/app/marketplace-admin"} component={MarketplaceAdmin} />
       <Route path={"/app/feedback"} component={FeedbackModeration} />
+      <Route path={"/app/feedback-admin"} component={FeedbackAdmin} />
       <Route path={"/app/trial-request"} component={TrialRequest} />
       <Route path={"/app/trial-status"} component={TrialStatus} />
       <Route path={"/app/trial-admin"} component={TrialAdmin} />

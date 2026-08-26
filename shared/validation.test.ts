@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { appointmentRescheduleSchema, attendanceClockSchema, calendarRangeSchema, clientBeforeAfterCreateSchema, marketplaceOwnerMapPointConfirmSchema, marketplacePromotionCancelSchema, publicFeedbackSubmitSchema, retailSaleCreateSchema, tipCreateSchema, trialAdminQueueSchema } from "./validation";
+import { appointmentRescheduleSchema, attendanceClockSchema, calendarRangeSchema, clientBeforeAfterCreateSchema, feedbackEscalateSchema, feedbackPlatformDecisionSchema, marketplaceOwnerMapPointConfirmSchema, marketplacePromotionCancelSchema, publicFeedbackSubmitSchema, retailSaleCreateSchema, tipCreateSchema, trialAdminQueueSchema } from "./validation";
 
 const scope = {
   organizationId: "organization_2026_abcd",
@@ -89,5 +89,14 @@ describe("verified feedback validation", () => {
     expect(() => publicFeedbackSubmitSchema.parse({ token, rating: 6, comment: "ძალიან კარგი მომსახურება", publicNameConsent: false })).toThrow();
     expect(() => publicFeedbackSubmitSchema.parse({ token, rating: 4, comment: "კი", publicNameConsent: false })).toThrow();
     expect(() => publicFeedbackSubmitSchema.parse({ token, rating: 4, comment: "ძალიან კარგი მომსახურება", publicNameConsent: true })).toThrow("საჯარო სახელის გამოსაჩენად მიუთითეთ სახელი.");
+  });
+
+  it("requires a factual reason for platform escalation and an explanation for hiding or rejecting feedback", () => {
+    const scope = { organizationId: "organization_2026_abcdefgh", feedbackId: "feedback_2026_abcdefgh" };
+    expect(feedbackEscalateSchema.parse({ ...scope, reason: "PERSONAL_DATA" })).toMatchObject({ reason: "PERSONAL_DATA" });
+    expect(() => feedbackEscalateSchema.parse({ ...scope, reason: "OTHER" })).toThrow("სხვა მიზეზისთვის მიუთითეთ მოკლე განმარტება.");
+    expect(feedbackPlatformDecisionSchema.parse({ feedbackId: scope.feedbackId, status: "APPROVED" })).toMatchObject({ status: "APPROVED" });
+    expect(() => feedbackPlatformDecisionSchema.parse({ feedbackId: scope.feedbackId, status: "HIDDEN" })).toThrow("დამალვის ან უარყოფისას საჭიროა მოკლე დასაბუთება.");
+    expect(feedbackPlatformDecisionSchema.parse({ feedbackId: scope.feedbackId, status: "REJECTED", moderationNote: "პირადი ნომერია მითითებული" })).toMatchObject({ status: "REJECTED" });
   });
 });

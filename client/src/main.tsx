@@ -7,6 +7,7 @@ import superjson from "superjson";
 import App from "./App";
 import "./index.css";
 import { PublicLocaleProvider } from "./contexts/PublicLocaleContext";
+import { PublicAnalyticsConsentProvider } from "./contexts/PublicAnalyticsConsentContext";
 
 if (import.meta.env.PROD && "serviceWorker" in navigator) {
   window.addEventListener("load", () => { void navigator.serviceWorker.register("/service-worker.js"); });
@@ -65,7 +66,7 @@ const trpcClient = trpc.createClient({
 createRoot(document.getElementById("root")!).render(
   <trpc.Provider client={trpcClient} queryClient={queryClient}>
     <QueryClientProvider client={queryClient}>
-      <PublicLocaleProvider><App /></PublicLocaleProvider>
+      <PublicLocaleProvider><PublicAnalyticsConsentProvider><App /></PublicAnalyticsConsentProvider></PublicLocaleProvider>
     </QueryClientProvider>
   </trpc.Provider>
 );

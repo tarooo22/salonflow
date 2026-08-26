@@ -591,6 +591,11 @@ export const customerFeedback = mysqlTable("customer_feedback", {
   moderationNote: varchar("moderationNote", { length: 500 }),
   moderatedByUserId: int("moderatedByUserId").references(() => users.id),
   moderatedAt: timestamp("moderatedAt"),
+  platformReviewOpen: boolean("platformReviewOpen").default(false).notNull(),
+  platformReviewReason: varchar("platformReviewReason", { length: 64 }),
+  platformReviewNote: varchar("platformReviewNote", { length: 500 }),
+  platformReviewRequestedByUserId: int("platformReviewRequestedByUserId").references(() => users.id),
+  platformReviewRequestedAt: timestamp("platformReviewRequestedAt"),
   submittedAt: timestamp("submittedAt").defaultNow().notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -598,6 +603,7 @@ export const customerFeedback = mysqlTable("customer_feedback", {
   uniqueIndex("customer_feedback_appointment_uq").on(table.appointmentId),
   index("customer_feedback_public_location_idx").on(table.locationId, table.status, table.submittedAt),
   index("customer_feedback_org_status_idx").on(table.organizationId, table.status, table.submittedAt),
+  index("customer_feedback_platform_queue_idx").on(table.platformReviewOpen, table.platformReviewRequestedAt),
 ]);
 
 /** Immutable audit trail for feedback submission and salon-side moderation. */
@@ -609,6 +615,18 @@ export const customerFeedbackEvents = mysqlTable("customer_feedback_events", {
   metadata: json("metadata"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, table => [index("customer_feedback_events_feedback_created_idx").on(table.feedbackId, table.createdAt)]);
+
+/** Consent-gated public funnel events. No user identity, query text, booking data, IP address or device fingerprint is persisted. */
+export const publicConversionEvents = mysqlTable("public_conversion_events", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  eventName: varchar("eventName", { length: 64 }).notNull(),
+  routePath: varchar("routePath", { length: 180 }).notNull(),
+  consentVersion: varchar("consentVersion", { length: 32 }).notNull(),
+  occurredAt: timestamp("occurredAt").defaultNow().notNull(),
+}, table => [
+  index("public_conversion_events_name_time_idx").on(table.eventName, table.occurredAt),
+  index("public_conversion_events_route_time_idx").on(table.routePath, table.occurredAt),
+]);
 
 export const clientMerges = mysqlTable("client_merges", {
   id: varchar("id", { length: 36 }).primaryKey(),

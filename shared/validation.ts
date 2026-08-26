@@ -89,11 +89,37 @@ export const feedbackModerationListSchema = paginationSchema.extend({
   status: z.enum(["PENDING", "APPROVED", "HIDDEN", "REJECTED"]).optional(),
 });
 
+export const feedbackEscalationReasonSchema = z.enum([
+  "HARASSMENT_OR_HATE",
+  "PERSONAL_DATA",
+  "SPAM_OR_PROMOTION",
+  "CONFLICT_OF_INTEREST",
+  "LEGAL_OR_SAFETY",
+  "OTHER",
+]);
+
 export const feedbackModerationSchema = z.object({
   organizationId: opaqueIdSchema,
   feedbackId: opaqueIdSchema,
+});
+
+export const feedbackEscalateSchema = feedbackModerationSchema.extend({
+  reason: feedbackEscalationReasonSchema,
+  note: z.string().trim().max(500).optional(),
+}).superRefine((input, ctx) => {
+  if (input.reason === "OTHER" && !input.note) ctx.addIssue({ code: "custom", path: ["note"], message: "სხვა მიზეზისთვის მიუთითეთ მოკლე განმარტება." });
+});
+
+export const feedbackPlatformListSchema = paginationSchema.extend({
+  openOnly: z.boolean().default(true),
+});
+
+export const feedbackPlatformDecisionSchema = z.object({
+  feedbackId: opaqueIdSchema,
   status: z.enum(["APPROVED", "HIDDEN", "REJECTED"]),
   moderationNote: z.string().trim().max(500).optional(),
+}).superRefine((input, ctx) => {
+  if (input.status !== "APPROVED" && !input.moderationNote) ctx.addIssue({ code: "custom", path: ["moderationNote"], message: "დამალვის ან უარყოფისას საჭიროა მოკლე დასაბუთება." });
 });
 
 export const localRegistrationSchema = z.object({

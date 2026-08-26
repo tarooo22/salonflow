@@ -321,3 +321,8 @@
 - [x] Standardize factual owner registration, manual approval and 7-day trial messaging across Home and Partner public routes.
 - [x] Add route-aware public metadata/accessibility/performance improvements without enabling unapproved tracking, private data exposure or unsupported SEO claims.
 - [x] Add/update focused coverage, complete public responsive/keyboard QA, run full validation and create the public-experience release checkpoint.
+- [x] Audit existing verified-visit feedback, moderation permissions, consent surfaces, analytics endpoint use and public route sitemap eligibility.
+- [x] Add a real review moderation queue with publish/hide decisions, reasoned audit events and strict verified-visit/platform-admin boundaries; never create or seed reviews.
+- [x] Add opt-in consent-based conversion analytics using non-identifying aggregated events, revocable preference state and a public privacy explanation.
+- [x] Add factual route-aware SEO metadata, robots directives and a dynamic sitemap limited to eligible public routes/approved public salon profiles.
+- [x] Add focused privacy/security tests, run full validation and create the review-analytics-SEO release checkpoint.

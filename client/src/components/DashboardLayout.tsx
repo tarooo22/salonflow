@@ -50,6 +50,7 @@ const menuGroups = ["დღის მართვა", "კლიენტებ
 const platformAdminItems = [
   { icon: ListChecks, label: "Trial requests", path: "/app/trial-admin" },
   { icon: ReceiptText, label: "Billing payments", path: "/app/billing-admin" },
+  { icon: MessageSquareText, label: "Review moderation", path: "/app/feedback-admin" },
 ] as const;
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
