@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { appointmentRescheduleSchema, attendanceClockSchema, calendarRangeSchema, clientBeforeAfterCreateSchema, feedbackEscalateSchema, feedbackPlatformDecisionSchema, feedbackPlatformRestoreSchema, marketplaceOwnerMapPointConfirmSchema, marketplacePromotionCancelSchema, publicFeedbackSubmitSchema, retailSaleCreateSchema, tipCreateSchema, trialAdminQueueSchema } from "./validation";
+import { appointmentRescheduleSchema, attendanceClockSchema, calendarRangeSchema, clientBeforeAfterCreateSchema, feedbackEscalateSchema, feedbackPlatformDecisionSchema, feedbackPlatformRestoreSchema, locationSettingsUpdateSchema, marketplaceOwnerMapPointConfirmSchema, marketplacePromotionCancelSchema, publicFeedbackSubmitSchema, retailSaleCreateSchema, tipCreateSchema, trialAdminQueueSchema } from "./validation";
 
 const scope = {
   organizationId: "organization_2026_abcd",
@@ -40,6 +40,14 @@ describe("daily operations validation", () => {
     const input = { organizationId: scope.organizationId, locationId: scope.locationId, method: "CARD_TERMINAL" as const, lines: [{ productId: "product_2026_abcdefgh", quantity: 2 }] };
     expect(retailSaleCreateSchema.parse(input).lines).toHaveLength(1);
     expect(() => retailSaleCreateSchema.parse({ ...input, lines: [input.lines[0], input.lines[0]] })).toThrow();
+  });
+});
+
+describe("location settings validation", () => {
+  it("accepts bounded branch and booking-rule changes while rejecting empty or unsafe updates", () => {
+    expect(locationSettingsUpdateSchema.parse({ organizationId: scope.organizationId, locationId: scope.locationId, bookingEnabled: false, slotIntervalMinutes: 15 })).toMatchObject({ bookingEnabled: false, slotIntervalMinutes: 15 });
+    expect(() => locationSettingsUpdateSchema.parse({ organizationId: scope.organizationId, locationId: scope.locationId })).toThrow("ერთი პარამეტრი მაინც უნდა შეიცვალოს");
+    expect(() => locationSettingsUpdateSchema.parse({ organizationId: scope.organizationId, locationId: scope.locationId, maximumAdvanceDays: 0 })).toThrow();
   });
 });
 

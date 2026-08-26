@@ -193,6 +193,21 @@ export const locationCreateSchema = z.object({
   cancellationCutoffMinutes: z.number().int().min(0).max(10_080).default(120),
 });
 
+export const locationSettingsUpdateSchema = z.object({
+  organizationId: opaqueIdSchema,
+  locationId: opaqueIdSchema,
+  name: z.string().trim().min(2).max(160).optional(),
+  timezone: timezoneSchema.optional(),
+  address: z.string().trim().max(1200).optional(),
+  phone: z.string().trim().max(32).optional(),
+  email: z.string().trim().email().max(320).optional(),
+  bookingEnabled: z.boolean().optional(),
+  slotIntervalMinutes: z.number().int().min(5).max(120).optional(),
+  minimumNoticeMinutes: z.number().int().min(0).max(10_080).optional(),
+  maximumAdvanceDays: z.number().int().min(1).max(365).optional(),
+  cancellationCutoffMinutes: z.number().int().min(0).max(10_080).optional(),
+}).refine(input => Object.entries(input).some(([key, value]) => !["organizationId", "locationId"].includes(key) && value !== undefined), "ერთი პარამეტრი მაინც უნდა შეიცვალოს.");
+
 export const workspaceSetupSchema = z.object({
   organization: organizationCreateSchema,
   location: locationCreateSchema.omit({ organizationId: true }),

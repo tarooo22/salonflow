@@ -365,6 +365,7 @@ export const dashboardUserPreferences = mysqlTable("dashboard_user_preferences",
   userId: int("userId").notNull().references(() => users.id),
   metricKeys: json("metricKeys"),
   dismissedNotificationKeys: json("dismissedNotificationKeys"),
+  settings: json("settings"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, table => [

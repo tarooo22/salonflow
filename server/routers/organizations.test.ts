@@ -4,6 +4,7 @@ const mocked = vi.hoisted(() => ({
   db: null as unknown,
   nanoid: vi.fn(),
   requireApprovedTrialForWorkspaceCreation: vi.fn(async () => ({ id: "trial_workspace_001" })),
+  requireOrganizationRole: vi.fn(async () => ({ id: "membership_owner_01", role: "OWNER" })),
 }));
 
 vi.mock("../db", () => ({
@@ -12,6 +13,7 @@ vi.mock("../db", () => ({
 
 vi.mock("nanoid", () => ({ nanoid: mocked.nanoid }));
 vi.mock("../lib/trialAccess", () => ({ requireApprovedTrialForWorkspaceCreation: mocked.requireApprovedTrialForWorkspaceCreation }));
+vi.mock("../access", () => ({ requireOrganizationRole: mocked.requireOrganizationRole }));
 
 import { organizationRouter } from "./organizations";
 
@@ -101,5 +103,27 @@ describe("organizations.createWorkspace", () => {
       actorUserId: user.id,
       metadata: { organizationId: "organization_setup_001", locationId: "location_setup_00001" },
     }));
+  });
+});
+
+describe("organizations.updateLocationSettings", () => {
+  it("requires OWNER role and constrains the update to the selected organization and active location", async () => {
+    const where = vi.fn(async () => [{ affectedRows: 1 }]);
+    const set = vi.fn(() => ({ where }));
+    const update = vi.fn(() => ({ set }));
+    mocked.db = { update };
+
+    const result = await organizationRouter.createCaller({ user } as never).updateLocationSettings({
+      organizationId: "organization_0001",
+      locationId: "location_00000001",
+      bookingEnabled: false,
+      minimumNoticeMinutes: 180,
+      maximumAdvanceDays: 45,
+    });
+
+    expect(result).toEqual({ success: true });
+    expect(mocked.requireOrganizationRole).toHaveBeenCalledWith(user, "organization_0001", ["OWNER"]);
+    expect(set).toHaveBeenCalledWith(expect.objectContaining({ bookingEnabled: false, minimumNoticeMinutes: 180, maximumAdvanceDays: 45 }));
+    expect(where).toHaveBeenCalledOnce();
   });
 });

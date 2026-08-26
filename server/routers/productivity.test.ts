@@ -9,6 +9,10 @@ describe("productivity router boundaries", () => {
     expect(source).toContain("requireOrganizationRole(ctx.user, input.organizationId, [...closeRoles])");
     expect(source).toContain("requireLocationInOrganization(input.organizationId, input.locationId)");
     expect(source).toContain("dismissedNotificationKeys");
+    expect(source).toContain("personalSettingsSchema");
+    expect(source).toContain("inAppAlertCategories");
+    expect(source).toContain("dashboardUserPreferences.userId, ctx.user.id");
+    expect(source).toContain("settings: parsePersonalSettings");
     expect(source).toContain("businessDate");
     expect(source).toContain("savedViewPayload");
     expect(source).toContain("workspaceSavedViews.userId, ctx.user.id");

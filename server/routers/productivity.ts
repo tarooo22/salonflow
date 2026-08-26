@@ -11,9 +11,22 @@ const workspaceRoles = ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"] as const;
 const closeRoles = ["OWNER", "MANAGER", "RECEPTIONIST"] as const;
 const scopeSchema = z.object({ organizationId: z.string().min(1) });
 const dateKey = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const personalSettingsSchema = z.object({
+  density: z.enum(["COMFORTABLE", "COMPACT"]).default("COMFORTABLE"),
+  reducedMotion: z.boolean().default(false),
+  defaultRoute: z.enum(["/app/today", "/app/calendar", "/app/reports"]).default("/app/today"),
+  inAppAlertCategories: z.array(z.enum(["OPERATIONAL", "MODERATION", "ACCESS"])).max(3).default(["OPERATIONAL", "MODERATION", "ACCESS"]),
+});
+type PersonalSettings = z.infer<typeof personalSettingsSchema>;
+const defaultPersonalSettings: PersonalSettings = { density: "COMFORTABLE", reducedMotion: false, defaultRoute: "/app/today", inAppAlertCategories: ["OPERATIONAL", "MODERATION", "ACCESS"] };
+function parsePersonalSettings(value: unknown): PersonalSettings {
+  const parsed = personalSettingsSchema.safeParse(value);
+  return parsed.success ? parsed.data : defaultPersonalSettings;
+}
 const preferenceSchema = scopeSchema.extend({
   metricKeys: z.array(z.enum(["BOOKINGS", "PENDING", "SCHEDULED", "OUTSTANDING", "UP_NEXT"])).min(2).max(4).optional(),
   dismissedNotificationKeys: z.array(z.string().min(1).max(120)).max(40).optional(),
+  settings: personalSettingsSchema.optional(),
 });
 const dailyCloseSchema = scopeSchema.extend({
   locationId: z.string().min(1),
@@ -57,6 +70,7 @@ export const productivityRouter = router({
     return {
       metricKeys: Array.isArray(record?.metricKeys) ? record.metricKeys.filter((key): key is string => typeof key === "string") : null,
       dismissedNotificationKeys: Array.isArray(record?.dismissedNotificationKeys) ? record.dismissedNotificationKeys.filter((key): key is string => typeof key === "string") : [],
+      settings: parsePersonalSettings(record?.settings),
     };
   }),
 
@@ -69,13 +83,15 @@ export const productivityRouter = router({
     )).limit(1);
     const metricKeys = input.metricKeys ?? (Array.isArray(existing?.metricKeys) ? existing.metricKeys : null);
     const dismissedNotificationKeys = input.dismissedNotificationKeys ?? (Array.isArray(existing?.dismissedNotificationKeys) ? existing.dismissedNotificationKeys : []);
+    const settings = input.settings ?? parsePersonalSettings(existing?.settings);
     await db.insert(dashboardUserPreferences).values({
       id: nanoid(21),
       organizationId: input.organizationId,
       userId: ctx.user.id,
       metricKeys,
       dismissedNotificationKeys,
-    }).onDuplicateKeyUpdate({ set: { metricKeys, dismissedNotificationKeys, updatedAt: new Date() } });
+      settings,
+    }).onDuplicateKeyUpdate({ set: { metricKeys, dismissedNotificationKeys, settings, updatedAt: new Date() } });
     return { success: true };
   }),
 

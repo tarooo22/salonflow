@@ -5,7 +5,7 @@ import { requireOrganizationRole } from "../access";
 import { requireDb } from "../db";
 import { normalizeEmail, normalizeGeorgianPhone } from "../lib/normalization";
 import { requireApprovedTrialForWorkspaceCreation } from "../lib/trialAccess";
-import { locationCreateSchema, organizationCreateSchema, organizationScopeSchema, workspaceSetupSchema } from "../../shared/validation";
+import { locationCreateSchema, locationSettingsUpdateSchema, organizationCreateSchema, organizationScopeSchema, workspaceSetupSchema } from "../../shared/validation";
 import { protectedProcedure, router } from "../_core/trpc";
 
 export const organizationRouter = router({
@@ -118,6 +118,20 @@ export const organizationRouter = router({
       cancellationCutoffMinutes: input.cancellationCutoffMinutes,
     });
     return { id: locationId };
+  }),
+
+  updateLocationSettings: protectedProcedure.input(locationSettingsUpdateSchema).mutation(async ({ ctx, input }) => {
+    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER"]);
+    const db = await requireDb();
+    const { organizationId, locationId, phone, email, ...changes } = input;
+    const result = await db.update(locations).set({
+      ...changes,
+      ...(phone !== undefined ? { phone: normalizeGeorgianPhone(phone) } : {}),
+      ...(email !== undefined ? { email: normalizeEmail(email) } : {}),
+      updatedAt: new Date(),
+    }).where(and(eq(locations.id, locationId), eq(locations.organizationId, organizationId), eq(locations.status, "ACTIVE")));
+    if (result[0]?.affectedRows !== 1) throw new Error("ფილიალი ვერ მოიძებნა ან აქტიური არ არის.");
+    return { success: true };
   }),
 
   listLocations: protectedProcedure.input(organizationScopeSchema).query(async ({ ctx, input }) => {

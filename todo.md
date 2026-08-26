@@ -330,3 +330,7 @@
 - [x] Add a platform-admin moderation audit panel for hidden/escalated feedback, queue filters, decision context and immutable event history without exposing private booking data.
 - [x] Add organization-scoped feedback and consent analytics with real aggregate metrics, trend/distribution visualizations and no client-level data exposure.
 - [x] Add role/privacy regressions, responsive QA, full validation and an admin-analytics release checkpoint.
+- [x] Reorganize Settings into reusable operational configuration sections with role-safe navigation, action states and secondary readiness disclosure.
+- [x] Add server-enforced owner-only updates for existing location and online-booking-rule fields, keeping trial entitlement and public booking guards intact.
+- [x] Add Settings controls for truthful public-profile/media navigation, privacy/review guidance and user-scoped appearance/notification preferences without delivery automation.
+- [x] Add owner/manager/staff access regressions, responsive/keyboard QA, full validation and a Settings release checkpoint.

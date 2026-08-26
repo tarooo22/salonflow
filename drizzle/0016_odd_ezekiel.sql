@@ -1,0 +1,1 @@
+ALTER TABLE `dashboard_user_preferences` ADD `settings` json;
