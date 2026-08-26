@@ -316,3 +316,8 @@
 - [x] Refine owner conversion with factual registration → approval → 7-day trial → setup narrative and compact progressive product proof.
 - [x] Improve Home metadata, accessibility, responsive performance and motion while retaining localized public routes and avoiding fabricated social proof.
 - [x] Add/update focused coverage, complete responsive/keyboard QA, run full validation and create the Home page release checkpoint.
+- [x] Improve Home-to-directory search/category/map handoff and marketplace decision context using only existing review-approved public data.
+- [x] Refine public salon profile trust and booking handoff without revealing private billing/access data or fabricating reviews/availability.
+- [x] Standardize factual owner registration, manual approval and 7-day trial messaging across Home and Partner public routes.
+- [x] Add route-aware public metadata/accessibility/performance improvements without enabling unapproved tracking, private data exposure or unsupported SEO claims.
+- [x] Add/update focused coverage, complete public responsive/keyboard QA, run full validation and create the public-experience release checkpoint.

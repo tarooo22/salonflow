@@ -1,5 +1,6 @@
 import { marketplaceDiscoveryFilters, marketplaceDiscoveryHref, MarketplaceCategoryRail, MarketplaceListingCard } from "@/components/public/MarketplaceDiscovery";
 import { PublicFooter, PublicHeader } from "@/components/public/PublicPrimitives";
+import { usePublicMeta } from "@/components/public/PublicMeta";
 import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
 import { Crown, Map, Search, ShieldCheck, Sparkles, X } from "lucide-react";
@@ -12,15 +13,18 @@ function PromotionSection({ title, description, icon, items, tone }: { title: st
 }
 
 export default function MarketplaceDirectory() {
+  usePublicMeta({ title: "სალონების კატალოგი | SalonFlow", description: "იპოვეთ მხოლოდ დამტკიცებული სალონები კატეგორიის, სახელის ან უბნის მიხედვით და გადადით მათ რეალურ public profile-ზე.", canonicalPath: "/salons" });
   const [location, setLocation] = useLocation();
   const initial = () => marketplaceDiscoveryFilters(typeof window === "undefined" ? "" : window.location.search);
   const [categorySlug, setCategorySlug] = useState<string | undefined>(() => initial().categorySlug);
   const [search, setSearch] = useState(() => initial().search);
-  useEffect(() => { const filters = initial(); setCategorySlug(filters.categorySlug); setSearch(filters.search); }, [location]);
+  const [searchDraft, setSearchDraft] = useState(() => initial().search);
+  useEffect(() => { const filters = initial(); setCategorySlug(filters.categorySlug); setSearch(filters.search); setSearchDraft(filters.search); }, [location]);
+  useEffect(() => { const timer = window.setTimeout(() => { const nextSearch = searchDraft.trim(); if (nextSearch === search) return; setSearch(nextSearch); setLocation(marketplaceDiscoveryHref("/salons", categorySlug, nextSearch)); }, 250); return () => window.clearTimeout(timer); }, [searchDraft, search, categorySlug, setLocation]);
   const input = useMemo(() => ({ limit: 48, offset: 0, categorySlug, search: search.trim() || undefined }), [categorySlug, search]);
   const directory = trpc.marketplace.directory.useQuery(input);
-  const chooseCategory = (nextCategory?: string) => { setCategorySlug(nextCategory); setLocation(marketplaceDiscoveryHref("/salons", nextCategory, search)); };
-  const clearFilters = () => { setSearch(""); chooseCategory(undefined); };
+  const chooseCategory = (nextCategory?: string) => { setCategorySlug(nextCategory); setLocation(marketplaceDiscoveryHref("/salons", nextCategory, searchDraft)); };
+  const clearFilters = () => { setSearchDraft(""); setSearch(""); setCategorySlug(undefined); setLocation("/salons"); };
   const items: any[] = directory.data?.items ?? [];
   const vipItems = items.filter(item => item.promotion?.tier === "VIP");
   const recommendedItems = items.filter(item => item.promotion?.tier === "RECOMMENDED");
@@ -29,7 +33,7 @@ export default function MarketplaceDirectory() {
   const mapHref = marketplaceDiscoveryHref("/salons/map", categorySlug, search);
 
   return <div className="sf-public-page"><PublicHeader /><main id="main-content" className="sf-salon-section min-h-screen"><div className="sf-public-container py-10 sm:py-14"><div className="max-w-3xl"><p className="sf-salon-eyebrow">SALONFLOW MARKETPLACE</p><h1 className="sf-display mt-4 text-4xl font-semibold leading-tight sm:text-6xl">იპოვეთ სწორი სალონი — სერვისის, სტილისა და ადგილის მიხედვით.</h1><p className="mt-5 max-w-2xl text-base leading-7 text-[var(--sf-muted)]">აირჩიეთ კატეგორია ან მოძებნეთ სახელითა და უბნით. „რეკომენდებული“ და „VIP / რეკლამა“ არის ფასიანი გამორჩეული განთავსების მკაფიო ნიშანი — არა მომხმარებლის რეიტინგი.</p></div>
-    <div className="mt-8 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]"><label className="relative"><span className="sr-only">სალონის ან უბნის ძიება</span><Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-[var(--sf-muted)]" aria-hidden="true" /><Input value={search} onChange={event => setSearch(event.target.value)} placeholder="მოძებნეთ სალონი ან უბანი" className="h-12 rounded-2xl border-[var(--sf-line)] bg-[var(--sf-surface-raised)] pl-11" /></label><Link href={mapHref} className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-[var(--sf-line)] bg-[var(--sf-surface-raised)] px-5 text-sm font-semibold transition hover:border-[var(--sf-salon-warm)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sf-accent-strong)]"><Map className="size-4 text-[var(--sf-salon-warm)]" aria-hidden="true" />რუკაზე ნახვა</Link></div>
+    <div className="mt-8 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]"><label className="relative"><span className="sr-only">სალონის ან უბნის ძიება</span><Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-[var(--sf-muted)]" aria-hidden="true" /><Input value={searchDraft} onChange={event => setSearchDraft(event.target.value)} placeholder="მოძებნეთ სალონი ან უბანი" className="h-12 rounded-2xl border-[var(--sf-line)] bg-[var(--sf-surface-raised)] pl-11" /></label><Link href={mapHref} className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-[var(--sf-line)] bg-[var(--sf-surface-raised)] px-5 text-sm font-semibold transition hover:border-[var(--sf-salon-warm)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sf-accent-strong)]"><Map className="size-4 text-[var(--sf-salon-warm)]" aria-hidden="true" />რუკაზე ნახვა</Link></div>
     <div className="mt-4"><MarketplaceCategoryRail selectedSlug={categorySlug} onSelect={chooseCategory} /></div>
     {filterSummary ? <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--sf-line)] bg-[var(--sf-surface-raised)] px-4 py-3" aria-live="polite"><p className="text-sm font-medium">ფილტრი აქტიურია: {search.trim() ? `„${search.trim()}“` : "არჩეული კატეგორია"}</p><button type="button" onClick={clearFilters} className="inline-flex min-h-10 items-center gap-1.5 text-sm font-semibold text-[var(--sf-salon-warm)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sf-accent-strong)]"><X className="size-4" aria-hidden="true" />ფილტრის გასუფთავება</button></div> : null}
     <div className="mt-8 flex items-center gap-2 text-xs text-[var(--sf-muted)]"><ShieldCheck className="size-4 text-[var(--sf-jade)]" aria-hidden="true" />კატალოგში ჩანს მხოლოდ დამტკიცებული listing; availability საბოლოოდ booking flow-ში მოწმდება.</div>

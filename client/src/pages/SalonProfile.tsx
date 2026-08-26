@@ -1,10 +1,11 @@
 import { Link, useRoute } from "wouter";
-import { CalendarDays, ChevronRight, ExternalLink, Instagram, MapPin, Phone, Sparkles, Star, UsersRound } from "lucide-react";
+import { CalendarDays, ChevronRight, ExternalLink, Instagram, MapPin, Phone, ShieldCheck, Sparkles, Star, UsersRound } from "lucide-react";
 import { useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { WorkspaceState } from "@/components/workspace/WorkspacePrimitives";
 import { PublicLanguageSelector } from "@/components/public/PublicPrimitives";
+import { usePublicMeta } from "@/components/public/PublicMeta";
 import { usePublicLocale } from "@/contexts/PublicLocaleContext";
 
 const labels = {
@@ -29,7 +30,7 @@ export default function SalonProfile() {
   const marketplace = trpc.marketplace.listingBySlug.useQuery(slug, { enabled: Boolean(slug) });
   const money = (tetri: number) => new Intl.NumberFormat(locale === "ka" ? "ka-GE" : locale === "ru" ? "ru-RU" : "en-US", { style: "currency", currency: "GEL" }).format(tetri / 100);
 
-  useEffect(() => { if (profile.data) document.title = `${profile.data.salon.name} | SalonFlow`; }, [profile.data]);
+  usePublicMeta({ title: profile.data ? `${profile.data.salon.name} | SalonFlow` : "სალონის პროფილი | SalonFlow", description: profile.data?.salon.publicDescription || "დამტკიცებული სალონის public პროფილი, მომსახურებები, გუნდი და online booking გზა.", canonicalPath: `/salon/${slug}` });
 
   if (profile.isLoading) return <main className="sf-public-page grid min-h-screen place-items-center px-4"><WorkspaceState kind="loading" title={ui.loading} /></main>;
   if (profile.isError) return <main className="sf-public-page grid min-h-screen place-items-center px-4"><WorkspaceState kind="error" title={ui.unavailable} description={ui.retry} /></main>;
@@ -43,7 +44,7 @@ export default function SalonProfile() {
     <header className="sticky top-0 z-30 border-b border-[var(--sf-salon-hairline)] bg-[color-mix(in_srgb,var(--sf-bg)_84%,transparent)] backdrop-blur-xl">
       <div className="sf-public-container flex min-h-18 items-center justify-between gap-3 py-3">
         <Link href="/" className="flex items-center gap-2 font-semibold"><span className="sf-brand-mark" aria-hidden="true"><i /><i /><i /></span>SalonFlow</Link>
-        <div className="flex items-center gap-2"><PublicLanguageSelector /><Link href="/book"><Button variant="publicSecondary" size="sm">{ui.all}</Button></Link></div>
+        <div className="flex items-center gap-2"><PublicLanguageSelector /><Link href="/salons"><Button variant="publicSecondary" size="sm">{ui.all}</Button></Link></div>
       </div>
     </header>
 
@@ -58,14 +59,15 @@ export default function SalonProfile() {
         <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-sm text-[var(--sf-muted)]">
           {salon.address ? <span className="inline-flex items-center gap-2"><MapPin className="size-4 text-[var(--sf-salon-warm)]" />{salon.address}</span> : null}
           {salon.phone ? <a href={`tel:${salon.phone}`} className="inline-flex items-center gap-2 hover:text-[var(--sf-ink)]"><Phone className="size-4 text-[var(--sf-salon-warm)]" />{salon.phone}</a> : null}
+          {marketplaceListing ? <span className="inline-flex items-center gap-2"><ShieldCheck className="size-4 text-[var(--sf-jade)]" aria-hidden="true" />{locale === "ka" ? "დამტკიცებული საჯარო პროფილი" : locale === "ru" ? "Одобренный публичный профиль" : "Approved public profile"}</span> : null}
         </div>
         <div className="sf-salon-cta-row mt-8">
           {salon.bookingEnabled ? <Link href={`/book/${salon.publicSlug}`}><Button variant="public" size="lg"><CalendarDays className="mr-2 size-4" />{ui.book}</Button></Link> : null}
           {social.instagram ? <a href={social.instagram} target="_blank" rel="noreferrer"><Button size="lg" variant="publicSecondary"><Instagram className="mr-2 size-4" />Instagram</Button></a> : null}
           {social.website ? <a href={social.website} target="_blank" rel="noreferrer"><Button size="lg" variant="publicSecondary"><ExternalLink className="mr-2 size-4" />{ui.website}</Button></a> : null}
         </div>
-        {salon.bookingUnavailableReason === "TRIAL_EXPIRED" ? <p className="mt-5 max-w-3xl rounded-xl border border-[color-mix(in_srgb,var(--sf-salon-warm)_35%,transparent)] bg-[color-mix(in_srgb,var(--sf-salon-warm)_8%,transparent)] p-4 text-sm leading-6 text-[var(--sf-muted)]" role="status">{locale === "ka" ? ui.bookingPaused : "Online booking is temporarily unavailable. The salon profile remains available; please contact the salon for details."}</p> : null}
-        {salon.bookingEnabled ? <div className="sf-salon-note mt-8 max-w-3xl"><CalendarDays className="mt-0.5 size-4 shrink-0 text-[var(--sf-salon-warm)]" aria-hidden="true" /><div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sf-salon-warm)]">{bookingPath.title}</p><ol className="mt-3 grid gap-2 sm:grid-cols-4">{bookingPath.steps.map((item, index) => <li key={item} className="flex items-center gap-2 text-sm"><span className="grid size-6 shrink-0 place-items-center rounded-full bg-[color-mix(in_srgb,var(--sf-salon-warm)_16%,transparent)] text-xs font-bold text-[var(--sf-salon-warm)]">{index + 1}</span>{item}</li>)}</ol></div></div> : null}
+        {!salon.bookingEnabled ? <p className="mt-5 max-w-3xl rounded-xl border border-[color-mix(in_srgb,var(--sf-salon-warm)_35%,transparent)] bg-[color-mix(in_srgb,var(--sf-salon-warm)_8%,transparent)] p-4 text-sm leading-6 text-[var(--sf-muted)]" role="status">{ui.bookingPaused}</p> : null}
+        {salon.bookingEnabled ? <div className="sf-salon-note mt-8 max-w-3xl"><ShieldCheck className="mt-0.5 size-4 shrink-0 text-[var(--sf-jade)]" aria-hidden="true" /><div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sf-salon-warm)]">{bookingPath.title}</p><ol className="mt-3 grid gap-2 sm:grid-cols-4">{bookingPath.steps.map((item, index) => <li key={item} className="flex items-center gap-2 text-sm"><span className="grid size-6 shrink-0 place-items-center rounded-full bg-[color-mix(in_srgb,var(--sf-salon-warm)_16%,transparent)] text-xs font-bold text-[var(--sf-salon-warm)]">{index + 1}</span>{item}</li>)}</ol><p className="mt-4 text-sm leading-6 text-[var(--sf-muted)]">{locale === "ka" ? "დრო საბოლოოდ მოწმდება ჩაწერის დადასტურებისას." : locale === "ru" ? "Время окончательно проверяется при подтверждении записи." : "Availability is checked again when the booking is confirmed."}</p></div></div> : null}
       </div>
     </section>
 

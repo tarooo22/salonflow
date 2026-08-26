@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { PublicEyebrow, PublicFooter, PublicHeader } from "@/components/public/PublicPrimitives";
 import { SalonFlowHeroScene } from "@/components/public/SalonFlowHeroScene";
 import { MarketplaceHighlights } from "@/components/public/MarketplaceDiscovery";
+import { usePublicMeta } from "@/components/public/PublicMeta";
 import { useReveal } from "@/hooks/useReveal";
 import { ArrowRight, CalendarCheck2, CheckCircle2, ChevronRight, CreditCard, LockKeyhole, Search, Sparkles, Store, UsersRound } from "lucide-react";
 import { Link } from "wouter";
@@ -46,6 +47,7 @@ const faq = [
 
 export default function Home() {
   const revealRef = useReveal<HTMLElement>();
+  usePublicMeta({ title: "SalonFlow — იპოვეთ სალონი. მართეთ თქვენი დღე.", description: "იპოვეთ დამტკიცებული სალონი და online booking გზა, ან მართეთ თქვენი სალონის ჩაწერები, გუნდი და დღე ერთ ქართულ სამუშაო სივრცეში.", canonicalPath: "/" });
   return <div className="sf-public-page"><PublicHeader />
     <main id="main-content" ref={revealRef} tabIndex={-1}>
       <section className="sf-salon-section"><div className="sf-public-container relative grid gap-12 pb-20 pt-14 lg:grid-cols-[1.03fr_.97fr] lg:items-center lg:pb-28 lg:pt-24">

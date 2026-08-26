@@ -22,5 +22,13 @@ describe("SalonProfile booking handoff", () => {
   it("surfaces Marketplace categories only through the approved public listing query", () => {
     expect(source).toContain("marketplace.listingBySlug");
     expect(source).toContain("marketplaceListing?.categories.length");
+    expect(source).toContain("დამტკიცებული საჯარო პროფილი");
+    expect(source).toContain('Link href="/salons"');
+  });
+
+  it("keeps inactive booking explanation public while communicating a second availability check when enabled", () => {
+    expect(source).toContain("{!salon.bookingEnabled ?");
+    expect(source).toContain("დრო საბოლოოდ მოწმდება ჩაწერის დადასტურებისას");
+    expect(source).not.toContain("billingCode");
   });
 });
