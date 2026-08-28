@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canTransitionMarketplaceListing, isPromotionVisible, marketplaceDirectoryPublicListing, marketplacePromotionLifecycleStatus, marketplacePublicMapPoint, normalizeMarketplaceGeocodeCandidates } from "./marketplace";
+import { canTransitionMarketplaceListing, isPromotionVisible, marketplaceDirectoryPublicListing, marketplaceLaunchReadiness, marketplacePromotionLifecycleStatus, marketplacePublicMapPoint, normalizeMarketplaceGeocodeCandidates } from "./marketplace";
 
 describe("Marketplace governance helpers", () => {
   it("allows owners to submit only editable listing states", () => {
@@ -56,5 +56,14 @@ describe("Marketplace governance helpers", () => {
     const candidates = normalizeMarketplaceGeocodeCandidates({ status: "OK", results: [{ place_id: "place-1", formatted_address: "თბილისი", address_components: [], types: [], geometry: { location: { lat: 41.7151, lng: 44.8271 }, location_type: "ROOFTOP", viewport: { northeast: { lat: 41.8, lng: 44.9 }, southwest: { lat: 41.6, lng: 44.7 } } } }, { place_id: "bad", formatted_address: "გარეთ", address_components: [], types: [], geometry: { location: { lat: 91, lng: 44.8 }, location_type: "APPROXIMATE", viewport: { northeast: { lat: 91, lng: 45 }, southwest: { lat: 90, lng: 44 } } } }] });
     expect(candidates).toEqual([{ placeId: "place-1", formattedAddress: "თბილისი", latitudeE6: 41715100, longitudeE6: 44827100 }]);
     expect(normalizeMarketplaceGeocodeCandidates({ status: "ZERO_RESULTS", results: [] })).toEqual([]);
+  });
+
+  it("reports public listing readiness without treating a missing cover as an approved media asset", () => {
+    const incomplete = marketplaceLaunchReadiness({ hasCoverImage: false, hasCoverAlt: false, hasPublicDescription: true, hasOnlineServices: true, hasCategoryLinks: true, bookingEnabled: true, mapVisibility: false, hasConfirmedMapPoint: false });
+    expect(incomplete.readyForReview).toBe(false);
+    expect(incomplete.items.find(item => item.key === "cover")?.complete).toBe(false);
+    expect(incomplete.items.find(item => item.key === "map")?.complete).toBe(true);
+    const complete = marketplaceLaunchReadiness({ hasCoverImage: true, hasCoverAlt: true, hasPublicDescription: true, hasOnlineServices: true, hasCategoryLinks: true, bookingEnabled: true, mapVisibility: true, hasConfirmedMapPoint: true });
+    expect(complete.readyForReview).toBe(true);
   });
 });

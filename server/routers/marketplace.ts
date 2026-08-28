@@ -52,6 +52,18 @@ export function marketplacePublicMapPoint(input: { mapVisibility: boolean; latit
   return input.mapVisibility && input.latitudeE6 !== null && input.longitudeE6 !== null ? { latitudeE6: input.latitudeE6, longitudeE6: input.longitudeE6 } : null;
 }
 
+export function marketplaceLaunchReadiness(input: { hasCoverImage: boolean; hasCoverAlt: boolean; hasPublicDescription: boolean; hasOnlineServices: boolean; hasCategoryLinks: boolean; bookingEnabled: boolean; mapVisibility: boolean; hasConfirmedMapPoint: boolean }) {
+  const items = [
+    { key: "cover", label: "cover ფოტო", complete: input.hasCoverImage, action: "დაამატეთ რეალური cover „მედია და პროფილი“ გვერდიდან." },
+    { key: "alt", label: "ფოტოს აღწერა", complete: input.hasCoverImage && input.hasCoverAlt, action: "დაამატეთ cover ფოტოს მოკლე ქართული აღწერა." },
+    { key: "description", label: "საჯარო აღწერა", complete: input.hasPublicDescription, action: "დაამატეთ მოკლე, ფაქტობრივი საჯარო აღწერა." },
+    { key: "booking", label: "online booking", complete: input.bookingEnabled && input.hasOnlineServices, action: "ჩართეთ booking და დატოვეთ მინიმუმ ერთი აქტიური online-bookable სერვისი." },
+    { key: "categories", label: "Marketplace კატეგორია", complete: input.hasCategoryLinks, action: "დააკავშირეთ კატეგორია რეალურ online-bookable სერვისთან." },
+    { key: "map", label: "რუკის თანხმობა", complete: !input.mapVisibility || input.hasConfirmedMapPoint, action: "რუკაზე გამოჩენისთვის ჯერ დაადასტურეთ location point." },
+  ];
+  return { items, completed: items.filter(item => item.complete).length, total: items.length, readyForReview: items.every(item => item.complete) };
+}
+
 export type MarketplaceGeocodeCandidate = {
   placeId: string;
   formattedAddress: string;
@@ -206,7 +218,17 @@ export const marketplaceRouter = router({
     const links = await db.select({ categoryId: marketplaceLocationCategories.categoryId, serviceId: marketplaceLocationCategoryServices.serviceId }).from(marketplaceLocationCategories)
       .leftJoin(marketplaceLocationCategoryServices, and(eq(marketplaceLocationCategories.locationId, marketplaceLocationCategoryServices.locationId), eq(marketplaceLocationCategories.categoryId, marketplaceLocationCategoryServices.categoryId)))
       .where(eq(marketplaceLocationCategories.locationId, location.id));
-    return { location, profile: profile ?? null, categoryServiceLinks: links };
+    const launchReadiness = marketplaceLaunchReadiness({
+      hasCoverImage: Boolean(location.coverImageKey),
+      hasCoverAlt: Boolean(location.coverImageAltKa?.trim()),
+      hasPublicDescription: Boolean(location.publicDescription?.trim()),
+      hasOnlineServices: links.some(link => Boolean(link.serviceId)),
+      hasCategoryLinks: links.some(link => Boolean(link.serviceId)),
+      bookingEnabled: location.bookingEnabled,
+      mapVisibility: profile?.mapVisibility ?? false,
+      hasConfirmedMapPoint: Boolean(profile?.geocodeConfirmedAt) && location.latitudeE6 !== null && location.longitudeE6 !== null,
+    });
+    return { location, profile: profile ?? null, categoryServiceLinks: links, launchReadiness };
   }),
 
   geocodeOwnLocation: protectedProcedure.input(marketplaceOwnerGeocodeSchema).mutation(async ({ ctx, input }) => {
@@ -295,6 +317,10 @@ export const marketplaceRouter = router({
       organizationName: organizations.name,
       locationName: locations.name,
       publicSlug: locations.publicSlug,
+      coverImageKey: locations.coverImageKey,
+      coverImageAltKa: locations.coverImageAltKa,
+      publicDescription: locations.publicDescription,
+      bookingEnabled: locations.bookingEnabled,
       listingStatus: locationMarketplaceProfiles.status,
       ownerSubmittedAt: locationMarketplaceProfiles.ownerSubmittedAt,
       approvedAt: locationMarketplaceProfiles.approvedAt,
@@ -317,7 +343,12 @@ export const marketplaceRouter = router({
       rowsForLocation.push({ ...promotion, effectiveStatus: marketplacePromotionLifecycleStatus(promotion, now) });
       promotionsByLocation.set(promotion.locationId, rowsForLocation);
     }
-    return { items: rows.map(row => ({ ...row, promotions: promotionsByLocation.get(row.locationId) ?? [] })) };
+    return { items: rows.map(row => ({
+      ...row,
+      mediaReadiness: !row.coverImageKey ? "COVER_MISSING" : !row.coverImageAltKa?.trim() ? "ALT_MISSING" : "DECLARED",
+      publicProfileReady: Boolean(row.publicDescription?.trim()) && row.bookingEnabled,
+      promotions: promotionsByLocation.get(row.locationId) ?? [],
+    })) };
   }),
 
   schedulePromotion: protectedProcedure.input(marketplacePromotionScheduleSchema).mutation(async ({ ctx, input }) => {

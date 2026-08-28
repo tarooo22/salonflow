@@ -342,3 +342,8 @@
 - [x] Create reusable Georgian calendar and time-of-day picker primitives that disable past dates and past times for the current Asia/Tbilisi day.
 - [x] Replace Waitlist native date/time controls and align ManageBooking date controls with the new picker while retaining server-side validation.
 - [x] Add timezone-boundary/accessibility regressions, responsive QA, full validation and a date-time picker release checkpoint.
+- [x] Complete a full product, journey, security/privacy, responsive/accessibility and runtime audit; publish a prioritized implementation roadmap before changing additional functionality.
+- [x] Reconfirm public test listing/media state and preserve existing platform marketplace governance before remediation.
+- [x] Remove public exposure of the existing test listing through the approved moderation path and add owner/admin media-health readiness checks without creating placeholder or fabricated content.
+- [x] Polish remaining public localization and add a factual launch-readiness checklist for public salon profiles.
+- [x] Document dependency remediation scope and an authenticated owner/manager/receptionist/staff/platform-admin acceptance checklist; run complete validation and save the trust-cleanup release checkpoint.
