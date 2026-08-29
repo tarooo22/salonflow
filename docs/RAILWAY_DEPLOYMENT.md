@@ -25,8 +25,10 @@ The following values must be configured in Railway's Variables panel. Never comm
 |---|---:|---|---|
 | `DATABASE_URL` | Yes | MySQL/TiDB connection used by Drizzle and local auth/workspace data | Railway MySQL reference or external MySQL/TiDB URL |
 | `JWT_SECRET` | Yes | Signs local SalonFlow sessions | A new long random secret; do not reuse a development value |
-| `BUILT_IN_FORGE_API_URL` | Yes for current media/billing flows | Current storage adapter's presign and signed-URL endpoint | A Railway-reachable compatible Forge/storage service URL |
-| `BUILT_IN_FORGE_API_KEY` | Yes for current media/billing flows | Server-side authorization for the current storage adapter | Secret key for the compatible storage service |
+| `R2_ACCOUNT_ID` | Yes for media/billing flows | Cloudflare account identifier used to construct the S3 endpoint | Cloudflare Account ID |
+| `R2_BUCKET_NAME` | Yes for media/billing flows | Private object bucket | `salonflow-media` |
+| `R2_ACCESS_KEY_ID` | Yes for media/billing flows | R2 Account API Token access key | Cloudflare R2 Access Key ID |
+| `R2_SECRET_ACCESS_KEY` | Yes for media/billing flows | R2 Account API Token secret | Cloudflare R2 Secret Access Key |
 | `CANONICAL_ORIGIN` | Recommended | Canonical origin used by server-rendered/static metadata | `https://<railway-domain>` or the final custom domain |
 | `PUBLIC_SITE_URL` | Recommended | Public SEO/sitemap origin | Same final public origin as above |
 | `VITE_APP_TITLE` | Recommended | Browser/application title | `SalonFlow` |
@@ -48,13 +50,13 @@ The Railway application service and the database are separate concerns. A new Ra
 
 Do not use `pnpm db:push` in production. Generate and review Drizzle migrations first, apply them in dependency order, and take a database backup before any destructive or structural operation. The current Railway configuration intentionally does not run migrations automatically during deploy, because automatic migration can make a release fail or create an irreversible schema change without an operator review.
 
-## File storage limitation and required decision
+## File storage configuration
 
-The current `server/storage.ts` adapter uses the Manus Forge storage presign API and returns `/manus-storage/...` URLs. Those credentials are provided by Manus WebDev and are not automatically portable to an unrelated Railway project. If the Railway deployment does not have a Railway-reachable compatible Forge endpoint, media-dependent flows will fail: salon covers, staff avatars, client before/after images, feed media, and billing receipts.
+The storage adapter now uses Cloudflare R2 through its S3-compatible API. Uploads are written to the private `salonflow-media` bucket, while public salon cover/avatar/feed routes are served through a narrow signed redirect proxy. Protected client before/after media and billing receipts are not allowed through that public proxy; they are returned only as short-lived signed URLs after the existing organization/role checks.
 
-Before Railway production cutover, replace or adapt this storage layer to an S3-compatible provider. Keep only object metadata and keys in the database, use private buckets for receipts/client media, and issue authorization-checked signed download URLs. Do not put file bytes in MySQL/TiDB and do not use a Railway volume as the primary source of truth for user media. A Railway volume is persistent only for that service and is not a substitute for durable, access-controlled object storage.
+Keep only object metadata and keys in MySQL/TiDB. Do not put file bytes in the database and do not use a Railway volume as the primary source of truth for user media. A Railway volume is not a substitute for durable, access-controlled object storage.
 
-This migration is deliberately not guessed or auto-implemented here because it requires a confirmed provider, bucket/region policy, public/private object rules, and credentials. The existing Manus deployment continues to use its current storage path until that decision is made.
+The R2 Account API Token should have `Object Read & Write` permission scoped only to `salonflow-media`. Rotate the token if it is exposed, and never commit it to GitHub, a Dockerfile, a screenshot, or a client-side variable.
 
 ## Production verification checklist
 

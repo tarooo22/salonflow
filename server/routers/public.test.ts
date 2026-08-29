@@ -1,12 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 
-const mocked = vi.hoisted(() => ({ db: null as unknown, ids: [] as string[], isOrganizationTrialPublicBookingActive: vi.fn(async () => true) }));
+const mocked = vi.hoisted(() => ({ db: null as unknown, ids: [] as string[], isOrganizationTrialPublicBookingActive: vi.fn(async () => true), storageGetSignedUrl: vi.fn(async (key: string) => `https://r2.test/${key}`) }));
 
 vi.mock("../db", () => ({
   requireDb: vi.fn(async () => mocked.db),
 }));
 vi.mock("nanoid", () => ({ nanoid: vi.fn(() => mocked.ids.shift() ?? "generated_id_000000001") }));
 vi.mock("../lib/trialAccess", () => ({ isOrganizationTrialPublicBookingActive: mocked.isOrganizationTrialPublicBookingActive }));
+vi.mock("../storage", () => ({ storageGetSignedUrl: mocked.storageGetSignedUrl }));
 
 import { assertWaitlistFuturePreference, canCustomerManage, publicRouter } from "./public";
 
@@ -145,7 +146,7 @@ describe("public booking router safeguards", () => {
     expect(result?.salon).toMatchObject({ name: "გლდანი", coverImageUrl: "/manus-storage/salons/org/cover.webp" });
     expect(result?.team[0]).toMatchObject({ avatarUrl: "/manus-storage/salons/org/staff.webp", experienceYears: 8 });
     expect(result?.feed[0]).toMatchObject({ mediaUrl: "/manus-storage/salons/org/feed.webp" });
-    expect(result?.gallery[0]).toEqual({ id: "set_001", before: { mediaUrl: "/manus-storage/salons/org/before.webp", altTextKa: "მანამდე" }, after: { mediaUrl: "/manus-storage/salons/org/after.webp", altTextKa: "შემდეგ" } });
+    expect(result?.gallery[0]).toEqual({ id: "set_001", before: { mediaUrl: "https://r2.test/salons/org/before.webp", altTextKa: "მანამდე" }, after: { mediaUrl: "https://r2.test/salons/org/after.webp", altTextKa: "შემდეგ" } });
     expect(result?.feedback).toEqual([]);
     expect(JSON.stringify(result)).not.toContain("private_client");
     expect(JSON.stringify(result)).not.toContain("private_appointment");

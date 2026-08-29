@@ -10,6 +10,7 @@ import { dateKeyInTimeZone, formatTimeInTimeZone, isDateKeyInPast, isLocalDateTi
 import { normalizeEmail, normalizeGeorgianPhone } from "../lib/normalization";
 import { ENV } from "../_core/env";
 import { mediaUrl } from "../lib/media";
+import { storageGetSignedUrl } from "../storage";
 import { publicProcedure, router } from "../_core/trpc";
 import { isOrganizationTrialPublicBookingActive } from "../lib/trialAccess";
 
@@ -187,6 +188,15 @@ export const publicRouter = router({
     ]);
     const gallerySetIds = gallerySets.map(set => set.id);
     const galleryItems = gallerySetIds.length ? await db.select().from(clientMediaItems).where(inArray(clientMediaItems.setId, gallerySetIds)) : [];
+    const publicGallery = await Promise.all(gallerySets.map(async set => {
+      const before = galleryItems.find(item => item.setId === set.id && item.stage === "BEFORE");
+      const after = galleryItems.find(item => item.setId === set.id && item.stage === "AFTER");
+      return {
+        id: set.id,
+        before: before ? { mediaUrl: await storageGetSignedUrl(before.mediaKey), altTextKa: before.altTextKa } : null,
+        after: after ? { mediaUrl: await storageGetSignedUrl(after.mediaKey), altTextKa: after.altTextKa } : null,
+      };
+    }));
     return {
       salon: {
         organizationName: record.organizationName,
@@ -205,11 +215,7 @@ export const publicRouter = router({
       services: serviceRows,
       team: teamRows.map(member => ({ ...member, avatarUrl: member.avatarKey ? mediaUrl(member.avatarKey) : null })),
       feed: feedRows.map(post => ({ id: post.id, titleKa: post.titleKa, captionKa: post.captionKa, altTextKa: post.altTextKa, mediaUrl: mediaUrl(post.mediaKey), publishedAt: post.publishedAt })),
-      gallery: gallerySets.map(set => ({
-        id: set.id,
-        before: galleryItems.find(item => item.setId === set.id && item.stage === "BEFORE") ? (() => { const item = galleryItems.find(entry => entry.setId === set.id && entry.stage === "BEFORE")!; return { mediaUrl: mediaUrl(item.mediaKey), altTextKa: item.altTextKa }; })() : null,
-        after: galleryItems.find(item => item.setId === set.id && item.stage === "AFTER") ? (() => { const item = galleryItems.find(entry => entry.setId === set.id && entry.stage === "AFTER")!; return { mediaUrl: mediaUrl(item.mediaKey), altTextKa: item.altTextKa }; })() : null,
-      })).filter(set => set.before && set.after),
+      gallery: publicGallery.filter(set => set.before && set.after),
       feedback: feedbackRows.map(item => ({ id: item.id, rating: item.rating, comment: item.comment, authorName: item.publicNameConsent && item.displayName ? item.displayName : "დადასტურებული კლიენტი", submittedAt: item.submittedAt })),
     };
   }),

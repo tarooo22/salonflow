@@ -352,3 +352,8 @@
 - [x] Add Railway deployment and environment setup documentation, including database and S3 storage trade-offs
 - [x] Validate production build, TypeScript, tests, and Railway-oriented health/start behavior
 - [x] Review and mark Railway preparation items complete before checkpoint
+- [x] Audit current Manus Forge storage adapter and every media/receipt URL contract before R2 migration
+- [x] Add secure Cloudflare R2 configuration and S3-compatible storage adapter
+- [x] Preserve private receipt/client media authorization and signed download behavior on R2
+- [x] Add R2 media, receipt, URL, failure, and privacy regression coverage
+- [x] Update Railway deployment documentation and validate R2-backed build/tests/health

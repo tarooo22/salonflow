@@ -5,7 +5,7 @@ import { clientBeforeAfterCreateSchema, clientMediaDeleteSchema, clientMediaList
 import { requireOrganizationRole } from "../access";
 import { requireDb } from "../db";
 import { mediaUrl, parseImageDataUrl } from "../lib/media";
-import { storagePut } from "../storage";
+import { storageGetSignedUrl, storagePut } from "../storage";
 import { protectedProcedure, router } from "../_core/trpc";
 
 const profileManagers = ["OWNER"] as const;
@@ -74,7 +74,13 @@ export const mediaRouter = router({
     const sets = await db.select().from(clientMediaSets).where(and(eq(clientMediaSets.organizationId, input.organizationId), eq(clientMediaSets.clientId, input.clientId))).orderBy(desc(clientMediaSets.createdAt));
     const setIds = sets.map(set => set.id);
     const items = setIds.length ? await db.select().from(clientMediaItems).where(inArray(clientMediaItems.setId, setIds)) : [];
-    return sets.map(set => ({ set, items: items.filter(item => item.setId === set.id).map(item => ({ ...item, url: mediaUrl(item.mediaKey) })) }));
+    return Promise.all(sets.map(async set => ({
+      set,
+      items: await Promise.all(items.filter(item => item.setId === set.id).map(async item => ({
+        ...item,
+        url: await storageGetSignedUrl(item.mediaKey),
+      }))),
+    })));
   }),
 
   createClientBeforeAfter: protectedProcedure.input(clientBeforeAfterCreateSchema).mutation(async ({ ctx, input }) => {
