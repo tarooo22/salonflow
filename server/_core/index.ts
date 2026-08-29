@@ -31,6 +31,12 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 async function startServer() {
   const app = express();
   const server = createServer(app);
+  // Railway terminates TLS at its proxy; trust the first proxy for secure cookie/protocol handling.
+  app.set("trust proxy", 1);
+  // Lightweight process-readiness endpoint for Railway and external uptime checks.
+  app.get("/health", (_req, res) => {
+    res.status(200).json({ ok: true, service: "salonflow" });
+  });
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
@@ -51,15 +57,16 @@ async function startServer() {
     serveStatic(app);
   }
 
-  const preferredPort = parseInt(process.env.PORT || "3000");
-  const port = await findAvailablePort(preferredPort);
-
+  const preferredPort = Number.parseInt(process.env.PORT || "3000", 10);
+  const isDevelopment = process.env.NODE_ENV === "development";
+  // In production, never move away from the platform-assigned port.
+  // The development fallback keeps local HMR resilient when port 3000 is occupied.
+  const port = isDevelopment ? await findAvailablePort(preferredPort) : preferredPort;
   if (port !== preferredPort) {
     console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
   }
-
-  server.listen(port, () => {
-    console.log(`Server running on http://localhost:${port}/`);
+  server.listen(port, "0.0.0.0", () => {
+    console.log(`Server running on http://0.0.0.0:${port}/`);
   });
 }
 

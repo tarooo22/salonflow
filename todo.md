@@ -347,3 +347,8 @@
 - [x] Remove public exposure of the existing test listing through the approved moderation path and add owner/admin media-health readiness checks without creating placeholder or fabricated content.
 - [x] Polish remaining public localization and add a factual launch-readiness checklist for public salon profiles.
 - [x] Document dependency remediation scope and an authenticated owner/manager/receptionist/staff/platform-admin acceptance checklist; run complete validation and save the trust-cleanup release checkpoint.
+- [x] Audit Railway deployment contract, runtime scripts, PORT binding, health endpoint, and environment variables
+- [x] Add Railway service configuration without replacing Manus hosting behavior
+- [x] Add Railway deployment and environment setup documentation, including database and S3 storage trade-offs
+- [x] Validate production build, TypeScript, tests, and Railway-oriented health/start behavior
+- [x] Review and mark Railway preparation items complete before checkpoint
