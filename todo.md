@@ -357,3 +357,9 @@
 - [x] Preserve private receipt/client media authorization and signed download behavior on R2
 - [x] Add R2 media, receipt, URL, failure, and privacy regression coverage
 - [x] Update Railway deployment documentation and validate R2-backed build/tests/health
+- [x] Confirm Railway MySQL service variable name and connect it to SalonFlow as DATABASE_URL
+- [x] Generate and review the initial Drizzle MySQL migration for an empty Railway database
+- [x] Document the safe empty-database bootstrap and separate existing-Manus-data migration path
+- [x] Revalidate Railway public API, sitemap, authentication, and R2 after database configuration
+- [x] Fix MySQL identifier-length incompatibility in the Railway schema export
+- [x] Prepare a safe recovery path for the partially executed empty Railway schema
