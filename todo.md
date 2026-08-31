@@ -370,3 +370,6 @@
 - [x] Preserve normal owner/trial redirect and workspace restriction behavior for non-admin users
 - [x] Add regression coverage for admin and ordinary-user login redirect decisions
 - [x] Validate the fix with TypeScript, tests, production build, and Railway smoke checks
+- [x] Confirm whether the Railway screenshot is using the promoted platform-admin account or an ordinary salon owner account
+- [x] Confirm Railway is running the checkpoint containing the admin-specific login redirect fix
+- [x] Revalidate admin panel access without changing ordinary owner trial onboarding
