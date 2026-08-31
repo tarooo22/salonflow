@@ -28,10 +28,11 @@ export default function LocalAuth({ mode }: { mode: "login" | "register" | "clai
   const [error, setError] = useState("");
   const isRegister = mode === "register";
   const isClaim = mode === "claim";
-  const finish = async (user: { id: number; openId: string; name: string | null; email: string | null }, destination = returnTo) => {
+  const finish = async (user: { id: number; openId: string; name: string | null; email: string | null; role?: "user" | "admin" }, destination = returnTo) => {
     utils.auth.me.setData(undefined, user as never);
     await utils.auth.me.invalidate();
-    setLocation(destination);
+    const safeDestination = user.role === "admin" && (destination === "/app/trial-status" || destination === "/app/trial-request") ? "/app/trial-admin" : destination;
+    setLocation(safeDestination);
   };
   const register = trpc.auth.register.useMutation({ onSuccess: user => finish(user, "/app/trial-request"), onError: cause => setError(cause.message) });
   const login = trpc.auth.login.useMutation({ onSuccess: user => finish(user), onError: cause => setError(cause.message) });

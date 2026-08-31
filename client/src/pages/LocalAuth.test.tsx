@@ -10,4 +10,11 @@ describe("local auth Salon House shell", () => {
     expect(source).toContain("sf-salon-eyebrow");
     expect(source).not.toContain("Manus OAuth");
   });
+
+  it("routes platform admins away from trial onboarding while preserving the default trial destination", () => {
+    expect(source).toContain('user.role === "admin"');
+    expect(source).toContain('destination === "/app/trial-status"');
+    expect(source).toContain('"/app/trial-admin"');
+    expect(source).toContain('const returnTo = useMemo(getReturnTo, []);');
+  });
 });

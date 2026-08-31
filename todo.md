@@ -363,3 +363,10 @@
 - [x] Revalidate Railway public API, sitemap, authentication, and R2 after database configuration
 - [x] Fix MySQL identifier-length incompatibility in the Railway schema export
 - [x] Prepare a safe recovery path for the partially executed empty Railway schema
+- [x] Audit Railway local registration redirect and platform-admin role contract for the requested admin account
+- [x] Prepare a single-account, normalized-email admin promotion command without changing other users
+- [x] Validate admin-only trial request access and ordinary-owner redirect isolation on the Railway database
+- [x] Fix Railway platform-admin login redirect so admin users do not enter trial-status onboarding
+- [x] Preserve normal owner/trial redirect and workspace restriction behavior for non-admin users
+- [x] Add regression coverage for admin and ordinary-user login redirect decisions
+- [x] Validate the fix with TypeScript, tests, production build, and Railway smoke checks
