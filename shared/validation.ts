@@ -730,3 +730,29 @@ export const bookingHistorySchema = reportingRangeSchema.merge(paginationSchema)
   locationId: opaqueIdSchema.optional(),
   status: z.enum(["PENDING", "CONFIRMED", "CHECKED_IN", "IN_SERVICE", "COMPLETED", "CANCELLED", "NO_SHOW"]).optional(),
 });
+
+
+export const organizationGovernanceListSchema = paginationSchema.extend({
+  search: z.string().trim().min(1).max(160).optional(),
+  accessStatus: z.enum(["ACTIVE", "SUSPENDED"]).optional(),
+  publicVisible: z.boolean().optional(),
+});
+
+export const organizationGovernanceActionSchema = z.object({
+  organizationId: opaqueIdSchema,
+  action: z.enum(["SUSPEND", "RESTORE", "HIDE_PUBLIC", "SHOW_PUBLIC", "GRANT_DAYS"]),
+  reasonKa: z.string().trim().min(2).max(500),
+  days: z.number().int().min(1).max(365).optional(),
+}).superRefine((input, ctx) => {
+  if (input.action === "GRANT_DAYS" && input.days === undefined) {
+    ctx.addIssue({ code: "custom", path: ["days"], message: "დღეების რაოდენობა აუცილებელია." });
+  }
+  if (input.action !== "GRANT_DAYS" && input.days !== undefined) {
+    ctx.addIssue({ code: "custom", path: ["days"], message: "დღეები მხოლოდ ვადის დამატებისთვის გამოიყენება." });
+  }
+});
+
+export const organizationGovernanceAuditSchema = z.object({
+  organizationId: opaqueIdSchema,
+  limit: z.number().int().min(1).max(100).default(50),
+});

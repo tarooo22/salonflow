@@ -1,7 +1,7 @@
-import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { createHash, createHmac } from "node:crypto";
 import { nanoid } from "nanoid";
-import { appointmentServices, appointments, appointmentStatusHistory, clientConsents, clientMediaItems, clientMediaSets, clients, customerFeedback, customerFeedbackEvents, locationFeedPosts, locations, organizations, scheduleLocks, serviceCategories, services, staffLocations, staffProfiles, staffServices, waitlistEntries, workingHourRules } from "../../drizzle/schema";
+import { appointmentServices, appointments, appointmentStatusHistory, clientConsents, clientMediaItems, clientMediaSets, clients, customerFeedback, customerFeedbackEvents, locationFeedPosts, locations, organizationGovernance, organizations, scheduleLocks, serviceCategories, services, staffLocations, staffProfiles, staffServices, waitlistEntries, workingHourRules } from "../../drizzle/schema";
 import { requireDb } from "../db";
 import { publicAvailabilityCheckSchema, publicAvailableSlotsSchema, publicBookingCancelSchema, publicBookingCommitSchema, publicBookingRescheduleSchema, publicBookingTokenSchema, publicFeedbackSubmitSchema, publicFeedbackTokenSchema, publicMultiAvailabilityCheckSchema, publicMultiAvailableSlotsSchema, publicMultiBookingCommitSchema, publicWaitlistCreateSchema, slugSchema } from "../../shared/validation";
 import { appointmentBlocksInterval, intervalsOverlap } from "../lib/appointments";
@@ -95,7 +95,11 @@ export const publicRouter = router({
       address: locations.address,
       phone: locations.phone,
       email: locations.email,
-    }).from(locations).where(and(eq(locations.status, "ACTIVE"), eq(locations.bookingEnabled, true))).orderBy(asc(locations.name));
+    }).from(locations)
+      .innerJoin(organizations, eq(locations.organizationId, organizations.id))
+      .leftJoin(organizationGovernance, eq(organizationGovernance.organizationId, organizations.id))
+      .where(and(eq(locations.status, "ACTIVE"), eq(locations.bookingEnabled, true), eq(organizations.status, "ACTIVE"), or(isNull(organizationGovernance.organizationId), eq(organizationGovernance.publicVisible, true))))
+      .orderBy(asc(locations.name));
     const bookingLocations = (await Promise.all(locationRows.map(async location => ({ location, bookingActive: await isOrganizationTrialPublicBookingActive(location.organizationId) })))).filter(item => item.bookingActive).map(item => item.location);
     const organizationIds = Array.from(new Set(bookingLocations.map(location => location.organizationId)));
     const categoryRows = organizationIds.length ? await db.select({ organizationId: services.organizationId, nameKa: serviceCategories.nameKa }).from(services)
@@ -131,11 +135,16 @@ export const publicRouter = router({
 
   bookingCatalog: publicProcedure.input(slugSchema).query(async ({ input: slug }) => {
     const db = await requireDb();
-    const [location] = await db.select().from(locations).where(and(
-      eq(locations.publicSlug, slug),
-      eq(locations.status, "ACTIVE"),
-      eq(locations.bookingEnabled, true),
-    )).limit(1);
+    const [location] = await db.select({ location: locations }).from(locations)
+      .innerJoin(organizations, eq(locations.organizationId, organizations.id))
+      .leftJoin(organizationGovernance, eq(organizationGovernance.organizationId, organizations.id))
+      .where(and(
+        eq(locations.publicSlug, slug),
+        eq(locations.status, "ACTIVE"),
+        eq(locations.bookingEnabled, true),
+        eq(organizations.status, "ACTIVE"),
+        or(isNull(organizationGovernance.organizationId), eq(organizationGovernance.publicVisible, true)),
+      )).limit(1).then(rows => rows.map(row => row.location));
     if (!location) return null;
     const onlineBookingAvailable = await isOrganizationTrialPublicBookingActive(location.organizationId);
     if (!onlineBookingAvailable) return { location: { publicSlug: location.publicSlug, name: location.name, timezone: location.timezone, address: location.address, phone: location.phone, email: location.email, publicDescription: location.publicDescription, workingHours: [] }, catalog: [], team: [], onlineBookingAvailable: false as const, bookingUnavailableReason: "TRIAL_EXPIRED" as const };
@@ -170,7 +179,8 @@ export const publicRouter = router({
     const db = await requireDb();
     const [record] = await db.select({ location: locations, organizationName: organizations.name }).from(locations)
       .innerJoin(organizations, eq(locations.organizationId, organizations.id))
-      .where(and(eq(locations.publicSlug, slug), eq(locations.status, "ACTIVE"))).limit(1);
+      .leftJoin(organizationGovernance, eq(organizationGovernance.organizationId, organizations.id))
+      .where(and(eq(locations.publicSlug, slug), eq(locations.status, "ACTIVE"), eq(organizations.status, "ACTIVE"), or(isNull(organizationGovernance.organizationId), eq(organizationGovernance.publicVisible, true)))).limit(1);
     if (!record) return null;
     const location = record.location;
     const onlineBookingAvailable = location.bookingEnabled && await isOrganizationTrialPublicBookingActive(location.organizationId);

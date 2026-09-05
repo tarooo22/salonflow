@@ -23,6 +23,7 @@ import { trialAccessRouter } from "./routers/trialAccess";
 import { billingRouter } from "./routers/billing";
 import { productivityRouter } from "./routers/productivity";
 import { publicAnalyticsRouter } from "./routers/publicAnalytics";
+import { governanceRouter } from "./routers/governance";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -49,6 +50,7 @@ export const appRouter = router({
   billing: billingRouter,
   productivity: productivityRouter,
   publicAnalytics: publicAnalyticsRouter,
+  governance: governanceRouter,
   public: publicRouter,
 });
 

@@ -46,6 +46,7 @@ function publicCatalogDb(queryRows: unknown[][]) {
     const chain = {
       from: () => chain,
       innerJoin: () => chain,
+      leftJoin: () => chain,
       where: () => chain,
       orderBy: () => chain,
       limit: async () => rows,
@@ -60,6 +61,7 @@ function queuedChain(rows: unknown[]) {
   const chain = {
     from: () => chain,
     innerJoin: () => chain,
+    leftJoin: () => chain,
     where: () => chain,
     orderBy: async () => rows,
     limit: async () => rows,
@@ -118,7 +120,7 @@ describe("public booking router safeguards", () => {
 
   it("returns real contact context and clearly scoped specialist availability hours for a booking catalog", async () => {
     mocked.db = publicCatalogDb([
-      [{ id: ids.locationId, organizationId: ids.organizationId, publicSlug: "gldani-beauty", name: "გლდანი", timezone: "Asia/Tbilisi", address: "გლდანი", phone: "+995555000000", email: "hello@example.com", publicDescription: "მზრუნველი მომსახურება" }],
+      [{ location: { id: ids.locationId, organizationId: ids.organizationId, publicSlug: "gldani-beauty", name: "გლდანი", timezone: "Asia/Tbilisi", address: "გლდანი", phone: "+995555000000", email: "hello@example.com", publicDescription: "მზრუნველი მომსახურება" } }],
       [{ service: { id: ids.serviceId, nameKa: "თმის შეჭრა", defaultDurationMinutes: 60, priceTetri: 4_000 }, category: { nameKa: "თმის მოვლა" } }],
       [{ id: ids.staffProfileId, name: "ლელა", specialty: "სტილისტი", bio: null, serviceId: ids.serviceId }],
       [{ weekday: 0, startLocalTime: "09:00", endLocalTime: "18:00" }],

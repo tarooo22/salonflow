@@ -49,6 +49,7 @@ const menuItems = [
 const menuGroups = ["დღის მართვა", "კლიენტები და გაყიდვა", "სალონის მართვა"] as const;
 const platformAdminItems = [
   { icon: ListChecks, label: "Trial requests", path: "/app/trial-admin" },
+  { icon: Store, label: "სალონების კონტროლი", path: "/app/organization-governance" },
   { icon: ReceiptText, label: "Billing payments", path: "/app/billing-admin" },
   { icon: MessageSquareText, label: "Review moderation", path: "/app/feedback-admin" },
 ] as const;

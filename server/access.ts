@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
-import { organizationMemberships, type User } from "../drizzle/schema";
+import { organizationGovernance, organizationMemberships, type User } from "../drizzle/schema";
 import { requireDb } from "./db";
 import { requireActiveTrialForOrganization } from "./lib/trialAccess";
 
@@ -27,6 +27,10 @@ export async function requireOrganizationRole(user: User | null, organizationId:
   )).limit(1);
   if (!membership || !allowedRoles.includes(membership.role)) {
     throw new TRPCError({ code: "FORBIDDEN", message: "ამ მოქმედებისთვის წვდომა არ გაქვთ" });
+  }
+  const [governance] = await db.select({ accessStatus: organizationGovernance.accessStatus }).from(organizationGovernance).where(eq(organizationGovernance.organizationId, organizationId)).limit(1);
+  if (governance?.accessStatus === "SUSPENDED") {
+    throw new TRPCError({ code: "FORBIDDEN", message: "ამ სალონის წვდომა platform admin-ის მიერ დროებით შეჩერებულია." });
   }
   await requireActiveTrialForOrganization(organizationId);
   return membership;

@@ -47,6 +47,7 @@ export const trialAccessStatusValues = ["PENDING", "APPROVED", "REJECTED", "EXPI
 export const billingSubmissionStatusValues = ["DRAFT", "SUBMITTED", "UNDER_REVIEW", "APPROVED", "REJECTED", "CANCELLED"] as const;
 export const accessGrantStatusValues = ["ACTIVE", "REVOKED", "EXPIRED"] as const;
 export const accessGrantSourceValues = ["MONTHLY_MANUAL", "BONUS_DAYS"] as const;
+export const organizationGovernanceStatusValues = ["ACTIVE", "SUSPENDED"] as const;
 
 export const membershipRole = mysqlEnum("membership_role", membershipRoleValues);
 export const membershipStatus = mysqlEnum("membership_status", membershipStatusValues);
@@ -73,6 +74,7 @@ export const trialAccessStatus = mysqlEnum("trial_access_status", trialAccessSta
 export const billingSubmissionStatus = mysqlEnum("billing_submission_status", billingSubmissionStatusValues);
 export const accessGrantStatus = mysqlEnum("access_grant_status", accessGrantStatusValues);
 export const accessGrantSource = mysqlEnum("access_grant_source", accessGrantSourceValues);
+export const organizationGovernanceStatus = mysqlEnum("organization_governance_status", organizationGovernanceStatusValues);
 
 /**
  * Secure platform identity synchronized by Manus OAuth. Business roles live in
@@ -113,6 +115,26 @@ export const organizations = mysqlTable("organizations", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, table => [uniqueIndex("organizations_slug_uq").on(table.slug), uniqueIndex("organizations_billing_code_uq").on(table.billingCode)]);
+
+/** Platform-admin controls for access and public discovery; never deletes organization data. */
+export const organizationGovernance = mysqlTable("organization_governance", {
+  organizationId: varchar("organizationId", { length: 36 }).primaryKey().references(() => organizations.id),
+  accessStatus: organizationGovernanceStatus.default("ACTIVE").notNull(),
+  publicVisible: boolean("publicVisible").default(true).notNull(),
+  controlNoteKa: varchar("controlNoteKa", { length: 500 }),
+  updatedByUserId: int("updatedByUserId").references(() => users.id),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+/** Immutable platform-admin governance history for every organization control action. */
+export const organizationGovernanceEvents = mysqlTable("organization_governance_events", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  organizationId: varchar("organizationId", { length: 36 }).notNull().references(() => organizations.id),
+  eventType: varchar("eventType", { length: 80 }).notNull(),
+  actorUserId: int("actorUserId").notNull().references(() => users.id),
+  metadata: json("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => [index("org_governance_events_org_created_idx").on(table.organizationId, table.createdAt)]);
 
 /** Platform-admin managed manual bank-transfer details. There is exactly one active configuration row. */
 export const billingConfigurations = mysqlTable("billing_configurations", {

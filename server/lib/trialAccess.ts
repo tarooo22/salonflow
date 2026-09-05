@@ -1,7 +1,7 @@
 import { and, desc, eq, gt } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { nanoid } from "nanoid";
-import { organizationAccessGrants, trialAccessEvents, trialAccessRequests } from "../../drizzle/schema";
+import { organizationAccessGrants, organizationGovernance, trialAccessEvents, trialAccessRequests } from "../../drizzle/schema";
 import { requireDb } from "../db";
 
 type TrialRequest = typeof trialAccessRequests.$inferSelect;
@@ -34,6 +34,10 @@ export async function requireApprovedTrialForWorkspaceCreation(userId: number) {
 
 export async function requireActiveTrialForOrganization(organizationId: string) {
   const db = await requireDb();
+  const [governance] = await db.select({ accessStatus: organizationGovernance.accessStatus }).from(organizationGovernance).where(eq(organizationGovernance.organizationId, organizationId)).limit(1);
+  if (governance?.accessStatus === "SUSPENDED") {
+    throw new TRPCError({ code: "FORBIDDEN", message: "ამ სალონის წვდომა platform admin-ის მიერ დროებით შეჩერებულია." });
+  }
   const [trial] = await db.select().from(trialAccessRequests).where(eq(trialAccessRequests.organizationId, organizationId)).limit(1);
   if (!trial) return null;
   const current = await markExpired(trial);

@@ -373,3 +373,10 @@
 - [x] Confirm whether the Railway screenshot is using the promoted platform-admin account or an ordinary salon owner account
 - [x] Confirm Railway is running the checkpoint containing the admin-specific login redirect fix
 - [x] Revalidate admin panel access without changing ordinary owner trial onboarding
+
+- [x] Add additive organization governance status, public visibility, and immutable admin event schema
+- [x] Add platform-admin-only organization inventory, audit, suspend/restore, public visibility, and grant-days API
+- [x] Enforce suspended/public-hidden governance state in protected organization access and public discovery/booking
+- [x] Add Georgian responsive Platform Admin salon-control page and permanent admin navigation link
+- [x] Add governance and public-router regression coverage
+- [x] Validate governance migration recovery, TypeScript, full tests, and production build

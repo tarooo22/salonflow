@@ -9,6 +9,8 @@ describe("dashboard role-safe navigation groups", () => {
     expect(source).toContain("კლიენტები და გაყიდვა");
     expect(source).toContain("სალონის მართვა");
     expect(source).toContain("Trial requests");
+    expect(source).toContain("სალონების კონტროლი");
+    expect(source).toContain("/app/organization-governance");
     expect(source).toContain("platformAdminItems");
     expect(source).toContain('user?.role === "admin"');
     expect(source).toContain("visibleMenuItems.filter");
