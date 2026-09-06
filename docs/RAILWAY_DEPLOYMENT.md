@@ -81,3 +81,9 @@ Keep the Manus deployment available until Railway has passed the complete smoke 
 
 [1]: https://docs.railway.com/config-as-code/reference "Railway Config as Code reference"
 [2]: https://docs.railway.com/variables/reference "Railway Variables Reference"
+
+## Platform Admin Governance on a new Railway database
+
+If the Railway database was bootstrapped before the governance release, run the additive file `drizzle/railway-governance-migration.sql` from the MySQL service Console. It creates only `organization_governance` and `organization_governance_events` with short MySQL-compatible constraint names. It does not delete or alter organization data. After the SQL completes, redeploy the SalonFlow service and sign in with a platform-admin account to verify the `სალონების კონტროლი` route.
+
+For an already migrated database, the file is idempotent through `CREATE TABLE IF NOT EXISTS`; do not run destructive cleanup commands. A normal owner should continue to see only their trial/workspace flow, while a platform admin can inventory organizations, suspend or restore operational access, hide or restore public visibility, grant additional days, and inspect immutable governance events.

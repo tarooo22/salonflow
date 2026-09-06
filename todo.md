@@ -380,3 +380,7 @@
 - [x] Add Georgian responsive Platform Admin salon-control page and permanent admin navigation link
 - [x] Add governance and public-router regression coverage
 - [x] Validate governance migration recovery, TypeScript, full tests, and production build
+
+- [ ] Audit Railway initial schema export for Platform Admin Governance tables and columns
+- [ ] Prepare a safe additive Railway migration for organization governance and governance events
+- [ ] Update Railway deployment documentation and validate admin governance routes after migration
