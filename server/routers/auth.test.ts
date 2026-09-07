@@ -24,7 +24,7 @@ vi.mock("../lib/passwords", () => ({ hashPassword: mocks.hashPassword, verifyPas
 
 import { authRouter } from "./auth";
 
-const localUser = { id: 44, openId: "local_test_user_00001", name: "თამარი", email: "tamari@example.com", passwordHash: "stored-hash", accountStatus: "ACTIVE", loginMethod: "local" };
+const localUser = { id: 44, openId: "local_test_user_00001", name: "თამარი", email: "tamari@example.com", passwordHash: "stored-hash", accountStatus: "ACTIVE", loginMethod: "local", role: "user" as const };
 
 function context() {
   const cookie = vi.fn();
@@ -44,7 +44,7 @@ describe("local auth router", () => {
     mocks.createLocalUser.mockResolvedValue(localUser);
     const { ctx, cookie } = context();
 
-    await expect(authRouter.createCaller(ctx).register({ name: "თამარი", email: "tamari@example.com", password: "ძლიერი-პაროლი-123" })).resolves.toEqual({ id: 44, openId: "local_test_user_00001", name: "თამარი", email: "tamari@example.com" });
+    await expect(authRouter.createCaller(ctx).register({ name: "თამარი", email: "tamari@example.com", password: "ძლიერი-პაროლი-123" })).resolves.toEqual({ id: 44, openId: "local_test_user_00001", name: "თამარი", email: "tamari@example.com", role: "user" });
     expect(mocks.createLocalUser).toHaveBeenCalledWith(expect.objectContaining({ name: "თამარი", email: "tamari@example.com", passwordHash: "scrypt$hashed" }));
     expect(cookie).toHaveBeenCalledWith("app_session_id", "signed-local-session", expect.objectContaining({ httpOnly: true, sameSite: "lax" }));
   });
@@ -68,7 +68,7 @@ describe("local auth router", () => {
     mocks.requireDb.mockResolvedValue({ update: vi.fn().mockReturnValue({ set }) });
     const { ctx, cookie } = context();
 
-    await expect(authRouter.createCaller(ctx).claimLegacyLocal({ openId: legacyUser.openId, email: "legacy@example.com", password: "ძლიერი-პაროლი-123" })).resolves.toEqual({ id: 44, openId: legacyUser.openId, name: null, email: "legacy@example.com" });
+    await expect(authRouter.createCaller(ctx).claimLegacyLocal({ openId: legacyUser.openId, email: "legacy@example.com", password: "ძლიერი-პაროლი-123" })).resolves.toEqual({ id: 44, openId: legacyUser.openId, name: null, email: "legacy@example.com", role: "user" });
     expect(where).toHaveBeenCalled();
     expect(cookie).toHaveBeenCalledWith("app_session_id", "signed-local-session", expect.any(Object));
   });
@@ -83,7 +83,7 @@ describe("local auth router", () => {
     mocks.requireDb.mockResolvedValue({ update: vi.fn().mockReturnValue({ set }) });
     const { ctx, cookie } = context();
 
-    await expect(authRouter.createCaller(ctx).claimLegacyLocal({ recoveryCode: "SF-1234-5678-9ABC", email: "legacy@example.com", password: "ძლიერი-პაროლი-123" })).resolves.toEqual({ id: 44, openId: legacyUser.openId, name: null, email: "legacy@example.com" });
+    await expect(authRouter.createCaller(ctx).claimLegacyLocal({ recoveryCode: "SF-1234-5678-9ABC", email: "legacy@example.com", password: "ძლიერი-პაროლი-123" })).resolves.toEqual({ id: 44, openId: legacyUser.openId, name: null, email: "legacy@example.com", role: "user" });
     expect(mocks.getIncompleteLocalUserByRecoveryCode).toHaveBeenCalledWith("SF-1234-5678-9ABC");
     expect(mocks.getUserByOpenId).not.toHaveBeenCalled();
     expect(cookie).toHaveBeenCalledWith("app_session_id", "signed-local-session", expect.any(Object));
@@ -100,3 +100,13 @@ describe("local auth router", () => {
     expect(cookie).not.toHaveBeenCalled();
   });
 });
+
+  it("returns the platform-admin role on login so admin redirects can bypass trial status", async () => {
+    const adminUser = { ...localUser, role: "admin" as const };
+    mocks.getUserByNormalizedEmail.mockResolvedValue(adminUser);
+    mocks.verifyPassword.mockResolvedValue(true);
+    mocks.requireDb.mockResolvedValue({ update: vi.fn(() => ({ set: vi.fn(() => ({ where: vi.fn().mockResolvedValue([{ affectedRows: 1 }]) })) })) });
+    const { ctx } = context();
+
+    await expect(authRouter.createCaller(ctx).login({ email: "tamari@example.com", password: "ძლიერი-პაროლი-123" })).resolves.toMatchObject({ email: "tamari@example.com", role: "admin" });
+  });

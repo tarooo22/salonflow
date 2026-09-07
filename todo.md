@@ -384,3 +384,7 @@
 - [ ] Audit Railway initial schema export for Platform Admin Governance tables and columns
 - [ ] Prepare a safe additive Railway migration for organization governance and governance events
 - [ ] Update Railway deployment documentation and validate admin governance routes after migration
+
+- [x] Audit all Manus admin login redirects and trial/expired workspace guards for platform-admin bypass coverage
+- [x] Fix platform-admin bypass at every relevant client/server guard while preserving ordinary owner restrictions
+- [x] Add admin-versus-owner regression tests and validate the production redirect fix

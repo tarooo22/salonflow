@@ -11,8 +11,8 @@ import { normalizeEmail } from "../lib/normalization";
 import { createLocalSessionToken } from "../lib/localSessions";
 import { hashPassword, verifyPassword } from "../lib/passwords";
 
-function safeUser(user: { id: number; openId: string; name: string | null; email: string | null }) {
-  return { id: user.id, openId: user.openId, name: user.name, email: user.email };
+function safeUser(user: { id: number; openId: string; name: string | null; email: string | null; role: "user" | "admin" }) {
+  return { id: user.id, openId: user.openId, name: user.name, email: user.email, role: user.role };
 }
 
 async function issueSession(ctx: { req: any; res: any }, user: { openId: string; name: string | null }) {
