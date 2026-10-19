@@ -11,7 +11,7 @@ describe("reporting analytics", () => {
       { appointmentId: "a1", serviceNameSnapshot: "თმის შეჭრა", priceTetriSnapshot: 12_500 },
       { appointmentId: "a2", serviceNameSnapshot: "ფენი", priceTetriSnapshot: 8_000 },
       { appointmentId: "a3", serviceNameSnapshot: "მასაჟი", priceTetriSnapshot: 7_000 },
-    ], [{ id: "s1", publicDisplayName: "ლელა" }, { id: "s2", publicDisplayName: "ნინო" }]);
+    ], [{ id: "s1", publicDisplayName: "ლელა" }, { id: "s2", publicDisplayName: "ნინო" }], "Asia/Tbilisi");
 
     expect(result.revenueTrend).toEqual([{ date: "2026-08-01", revenueTetri: 20_500 }]);
     expect(result.serviceMix).toEqual([{ serviceName: "თმის შეჭრა", bookingCount: 1, revenueTetri: 12_500 }, { serviceName: "ფენი", bookingCount: 1, revenueTetri: 8_000 }]);
@@ -53,5 +53,13 @@ describe("reporting analytics", () => {
     expect(result.peakHourHeatmap.maxBookingCount).toBe(1);
     expect(result.bookingForecast.scheduledTetri).toBe(10_000);
     expect(result.bookingForecast.expectedCollectionTetri).toBe(6_000);
+  });
+});
+
+describe("reporting revenue days", () => {
+  it("groups revenue by the business's local day, not the UTC day", () => {
+    // 22:30 UTC on 1 Aug is 02:30 on 2 Aug in Tbilisi (UTC+4).
+    const result = summarizeReportingAnalytics([{ id: "late", staffProfileId: "s1", startsAt: new Date("2026-08-01T22:30:00.000Z"), status: "COMPLETED", totalTetri: 5_000 }], [], [], "Asia/Tbilisi");
+    expect(result.revenueTrend).toEqual([{ date: "2026-08-02", revenueTetri: 5_000 }]);
   });
 });

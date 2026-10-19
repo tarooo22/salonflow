@@ -57,11 +57,11 @@ export const reportingRouter = router({
     const staffIds = Array.from(new Set(appointmentRows.map(appointment => appointment.staffProfileId)));
     const serviceRows = appointmentIds.length ? await db.select({ appointmentId: appointmentServices.appointmentId, serviceNameSnapshot: appointmentServices.serviceNameSnapshot, priceTetriSnapshot: appointmentServices.priceTetriSnapshot }).from(appointmentServices).where(inArray(appointmentServices.appointmentId, appointmentIds)) : [];
     const staffRows = staffIds.length ? await db.select({ id: staffProfiles.id, publicDisplayName: staffProfiles.publicDisplayName }).from(staffProfiles).where(inArray(staffProfiles.id, staffIds)) : [];
-    const analytics = summarizeReportingAnalytics(appointmentRows, serviceRows, staffRows);
-    const bookedRevenueTetri = analytics.staffMetrics.reduce((total, metric) => total + metric.bookedRevenueTetri, 0);
-    const expensesTetri = expenseRows.reduce((total, expense) => total + expense.amountTetri, 0);
     const [organization] = await db.select({ defaultTimezone: organizations.defaultTimezone }).from(organizations).where(eq(organizations.id, input.organizationId)).limit(1);
     if (!organization) throw new Error("ორგანიზაცია ვერ მოიძებნა");
+    const analytics = summarizeReportingAnalytics(appointmentRows, serviceRows, staffRows, organization.defaultTimezone);
+    const bookedRevenueTetri = analytics.staffMetrics.reduce((total, metric) => total + metric.bookedRevenueTetri, 0);
+    const expensesTetri = expenseRows.reduce((total, expense) => total + expense.amountTetri, 0);
     const now = new Date();
     const week = localWeekRange(organization.defaultTimezone, now);
     const forecast = nextSevenDaysRange(organization.defaultTimezone, now);

@@ -9,17 +9,18 @@ export function expensePressureBasisPoints(expensesTetri: number, bookedRevenueT
   return bookedRevenueTetri > 0 ? Math.round((expensesTetri * 10_000) / bookedRevenueTetri) : null;
 }
 
-export function summarizeReportingAnalytics(appointments: AnalyticsAppointment[], services: AnalyticsService[], staff: AnalyticsStaff[]) {
+/** Revenue days are the business's local calendar days in `timeZone`, not UTC days. */
+export function summarizeReportingAnalytics(appointments: AnalyticsAppointment[], services: AnalyticsService[], staff: AnalyticsStaff[], timeZone: string) {
   const activeAppointments = appointments.filter(appointment => appointment.status !== "CANCELLED");
   const revenueByDay = new Map<string, number>();
   for (const appointment of activeAppointments) {
-    const date = appointment.startsAt.toISOString().slice(0, 10);
+    const date = dateKeyInTimeZone(appointment.startsAt, timeZone);
     revenueByDay.set(date, (revenueByDay.get(date) ?? 0) + appointment.totalTetri);
   }
   const serviceMix = new Map<string, { serviceName: string; bookingCount: number; revenueTetri: number }>();
+  const activeIds = new Set(activeAppointments.map(appointment => appointment.id));
   for (const service of services) {
-    const appointment = activeAppointments.find(row => row.id === service.appointmentId);
-    if (!appointment) continue;
+    if (!activeIds.has(service.appointmentId)) continue;
     const current = serviceMix.get(service.serviceNameSnapshot) ?? { serviceName: service.serviceNameSnapshot, bookingCount: 0, revenueTetri: 0 };
     current.bookingCount += 1;
     current.revenueTetri += service.priceTetriSnapshot;
