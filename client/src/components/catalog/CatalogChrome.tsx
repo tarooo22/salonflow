@@ -6,11 +6,11 @@ import React, { useState } from "react";
 import { Link } from "wouter";
 import "./catalog.css";
 
-const navigation: Array<{ href: string; label: "catalog" | "map" | "products" | "vacancies" | "forBusiness"; soon?: boolean }> = [
+const navigation: Array<{ href: string; label: "catalog" | "map" | "products" | "vacancies" | "forBusiness" }> = [
   { href: "/salons", label: "catalog" },
   { href: "/salons/map", label: "map" },
-  { href: "/products", label: "products", soon: true },
-  { href: "/vacancies", label: "vacancies", soon: true },
+  { href: "/products", label: "products" },
+  { href: "/vacancies", label: "vacancies" },
   { href: "/partner", label: "forBusiness" },
 ];
 
@@ -23,7 +23,6 @@ export function CatalogWordmark() {
 
 function NavItem({ item, onNavigate }: { item: (typeof navigation)[number]; onNavigate?: () => void }) {
   const { t } = usePublicLocale();
-  if (item.soon) return <span className="cw-navlink cursor-default opacity-70" aria-disabled="true">{t(item.label)}<span className="cw-soon">{t("soon")}</span></span>;
   return <Link href={item.href} className="cw-navlink" onClick={onNavigate}>{t(item.label)}</Link>;
 }
 
@@ -60,6 +59,8 @@ export function CatalogFooter() {
         <ul className="mt-3 grid gap-2 text-sm">
           <li><Link href="/salons" className="hover:underline">კატალოგი</Link></li>
           <li><Link href="/salons/map" className="hover:underline">რუკა</Link></li>
+          <li><Link href="/products" className="hover:underline">პროდუქტები</Link></li>
+          <li><Link href="/vacancies" className="hover:underline">ვაკანსიები</Link></li>
           <li><Link href="/faq" className="hover:underline">ხშირი კითხვები</Link></li>
         </ul>
       </div>

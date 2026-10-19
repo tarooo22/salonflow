@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { WorkspacePageHeader, WorkspaceSection, WorkspaceState, WorkspaceStatusPill } from "@/components/workspace/WorkspacePrimitives";
+import { AdminVacanciesSection } from "@/components/workspace/AdminVacanciesSection";
 import { trpc } from "@/lib/trpc";
 import { BadgeCheck, Ban, CalendarClock, CreditCard, EyeOff, ShieldCheck, Star, XCircle } from "lucide-react";
 import React, { useMemo, useState } from "react";
@@ -84,6 +85,7 @@ export default function MarketplaceAdmin() {
         {!loading && user?.role !== "admin" ? <WorkspaceState kind="empty" title="Platform admin წვდომა აუცილებელია" description="ეს კონტროლები არ არის salon workspace-ის მფლობელის ფუნქცია. დაუბრუნდით Marketplace listing-ს და გაგზავნეთ ინფორმაცია review-ზე." /> : null}
 
         {user?.role === "admin" ? <>
+          <AdminVacanciesSection />
           <WorkspaceSection title="უსაფრთხოების ზღვარი" description="Review და promotion არის ადმინისტრაციული ოპერაცია. გადახდა, recurring subscription, ფასის გამოთვლა და თანხის ჩამოჭრა ამ კონსოლში განზრახ არ არსებობს.">
             <div className="grid gap-3 md:grid-cols-3">
               <AdminFact icon={<ShieldCheck />} title="ცალკე platform role" body="`users.role=admin` საჭიროა; salon OWNER საკმარისი არ არის." />

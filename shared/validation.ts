@@ -764,3 +764,122 @@ export const organizationGovernanceAuditSchema = z.object({
   organizationId: opaqueIdSchema,
   limit: z.number().int().min(1).max(100).default(50),
 });
+
+// ---- Vacancies and products catalog ----
+export const vacancyEmploymentTypeSchema = z.enum(["FULL_TIME", "PART_TIME", "CHAIR_RENTAL", "FREELANCE"]);
+export const catalogVerticalSchema = z.enum(["beauty", "dental", "aesthetics"]);
+export const DEFAULT_VACANCY_DAYS = 30;
+
+const vacancyFieldsShape = {
+  title: z.string().trim().min(3).max(160),
+  roleCategory: marketplaceCategorySlugSchema.nullable().optional(),
+  employmentType: vacancyEmploymentTypeSchema,
+  salaryFromTetri: z.number().int().min(0).max(100_000_000).nullable().optional(),
+  salaryToTetri: z.number().int().min(0).max(100_000_000).nullable().optional(),
+  description: z.string().trim().min(10).max(4000),
+  contactPhone: z.string().trim().min(6).max(32).nullable().optional(),
+  contactEmail: z.string().trim().toLowerCase().email().max(320).nullable().optional(),
+};
+
+export const vacancyCreateSchema = organizationScopeSchema.extend({
+  locationId: opaqueIdSchema,
+  ...vacancyFieldsShape,
+  publish: z.boolean().default(false),
+  durationDays: z.number().int().min(1).max(90).default(DEFAULT_VACANCY_DAYS),
+}).superRefine((input, ctx) => {
+  if (!input.contactPhone && !input.contactEmail) ctx.addIssue({ code: "custom", path: ["contactPhone"], message: "მიუთითეთ ტელეფონი ან ელფოსტა." });
+  if (input.salaryFromTetri != null && input.salaryToTetri != null && input.salaryFromTetri > input.salaryToTetri) ctx.addIssue({ code: "custom", path: ["salaryToTetri"], message: "მაქსიმალური ანაზღაურება მინიმალურზე ნაკლები ვერ იქნება." });
+});
+
+/** Partial update; the server re-checks the merged contact and salary rules. */
+export const vacancyUpdateSchema = organizationScopeSchema.extend({
+  id: opaqueIdSchema,
+  locationId: opaqueIdSchema.optional(),
+  title: vacancyFieldsShape.title.optional(),
+  roleCategory: vacancyFieldsShape.roleCategory,
+  employmentType: vacancyEmploymentTypeSchema.optional(),
+  salaryFromTetri: vacancyFieldsShape.salaryFromTetri,
+  salaryToTetri: vacancyFieldsShape.salaryToTetri,
+  description: vacancyFieldsShape.description.optional(),
+  contactPhone: vacancyFieldsShape.contactPhone,
+  contactEmail: vacancyFieldsShape.contactEmail,
+});
+
+export const vacancyPublishSchema = organizationScopeSchema.extend({
+  id: opaqueIdSchema,
+  durationDays: z.number().int().min(1).max(90).default(DEFAULT_VACANCY_DAYS),
+});
+export const vacancyCloseSchema = organizationScopeSchema.extend({ id: opaqueIdSchema });
+
+export const vacancyOwnerListSchema = paginationSchema.extend({
+  organizationId: opaqueIdSchema,
+  locationId: opaqueIdSchema.optional(),
+  status: z.enum(["DRAFT", "PUBLISHED", "CLOSED"]).optional(),
+});
+
+export const vacancyPublicListSchema = z.object({
+  vertical: catalogVerticalSchema.optional(),
+  category: marketplaceCategorySlugSchema.optional(),
+  area: z.string().trim().min(1).max(160).optional(),
+  limit: z.number().int().min(1).max(60).default(24),
+  offset: z.number().int().min(0).default(0),
+});
+export const vacancyPublicVipListSchema = z.object({
+  vertical: catalogVerticalSchema.optional(),
+  limit: z.number().int().min(1).max(12).default(6),
+});
+export const vacancyPublicDetailSchema = z.object({ id: opaqueIdSchema });
+
+export const vacancyAdminListSchema = paginationSchema.extend({
+  status: z.enum(["DRAFT", "PUBLISHED", "CLOSED"]).optional(),
+  vipOnly: z.boolean().optional(),
+});
+// Capped at a year: VIP is a paid placement, and MySQL TIMESTAMP overflows in 2038.
+export const vacancyVipSchema = z.object({ id: opaqueIdSchema, vipUntil: z.date().refine(date => date.getTime() <= Date.now() + 366 * 86_400_000, "VIP ვადა მაქსიმუმ ერთი წელია.").nullable() });
+
+const productFieldsShape = {
+  name: z.string().trim().min(2).max(160),
+  brand: z.string().trim().max(120).nullable().optional(),
+  description: z.string().trim().max(600).nullable().optional(),
+  priceTetri: z.number().int().min(0).max(100_000_000),
+  inStock: z.boolean(),
+  sortOrder: z.number().int().min(0).max(10_000),
+  imageDataUrl: imageDataUrlSchema.optional(),
+  imageAltKa: imageAltTextSchema.optional(),
+};
+
+export const productCreateSchema = organizationScopeSchema.extend({
+  locationId: opaqueIdSchema,
+  ...productFieldsShape,
+  inStock: productFieldsShape.inStock.default(true),
+  sortOrder: productFieldsShape.sortOrder.default(0),
+}).refine(input => !input.imageDataUrl || !!input.imageAltKa, { path: ["imageAltKa"], message: "ფოტოს მოკლე აღწერა აუცილებელია." });
+
+export const productUpdateSchema = organizationScopeSchema.extend({
+  id: opaqueIdSchema,
+  locationId: opaqueIdSchema.optional(),
+  name: productFieldsShape.name.optional(),
+  brand: productFieldsShape.brand,
+  description: productFieldsShape.description,
+  priceTetri: productFieldsShape.priceTetri.optional(),
+  inStock: productFieldsShape.inStock.optional(),
+  sortOrder: productFieldsShape.sortOrder.optional(),
+  status: z.enum(["ACTIVE", "ARCHIVED"]).optional(),
+  imageDataUrl: productFieldsShape.imageDataUrl,
+  imageAltKa: productFieldsShape.imageAltKa,
+  removeImage: z.boolean().optional(),
+}).refine(input => !input.imageDataUrl || !!input.imageAltKa, { path: ["imageAltKa"], message: "ფოტოს მოკლე აღწერა აუცილებელია." });
+
+export const productOwnerListSchema = z.object({
+  organizationId: opaqueIdSchema,
+  locationId: opaqueIdSchema.optional(),
+  includeArchived: z.boolean().default(false),
+});
+export const productPublicListSchema = z.object({
+  vertical: catalogVerticalSchema.optional(),
+  category: marketplaceCategorySlugSchema.optional(),
+  area: z.string().trim().min(1).max(160).optional(),
+  limit: z.number().int().min(1).max(60).default(24),
+  offset: z.number().int().min(0).default(0),
+});
+export const productByLocationSchema = z.object({ publicSlug: slugSchema });

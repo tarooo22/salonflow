@@ -1,4 +1,5 @@
 import { CatalogFooter, CatalogHeader } from "@/components/catalog/CatalogChrome";
+import { ProductGrid } from "@/components/catalog/Commerce";
 import { cssVars } from "@/components/catalog/Tickets";
 import "@/components/catalog/profile.css";
 import { usePublicMeta } from "@/components/public/PublicMeta";
@@ -22,7 +23,7 @@ const copy = {
     missing: "ბიზნესი ვერ მოიძებნა", missingLead: "ბმული შეიძლება შეიცვალა ან გვერდი აღარ არის ხელმისაწვდომი.", all: "მთელი კატალოგი",
     noDescription: "ბიზნესის აღწერა მალე დაემატება.", bookingPaused: "ონლაინ ჩაწერა ამ ბიზნესისთვის დროებით მიუწვდომელია. ინფორმაცია და საჯარო გვერდი შენარჩუნებულია; დეტალებისთვის დაუკავშირდით ბიზნესს.",
     website: "ვებგვერდი", verified: "დამტკიცებული პროფილი", ad: "რეკლამა", recommended: "რჩეული",
-    tabs: "პროფილის განყოფილებები", tabServices: "სერვისები", tabTeam: "გუნდი", tabHours: "სამუშაო საათები",
+    tabs: "პროფილის განყოფილებები", tabServices: "სერვისები", tabTeam: "გუნდი", tabHours: "სამუშაო საათები", productsTitle: "პროდუქტები", productsNote: "შეძენა ხდება უშუალოდ ბიზნესში; ონლაინ გადახდა არ არის.",
     searchLabel: "მომსახურების ძებნა", searchPlaceholder: "სახელი ან კატეგორია", found: "ნაპოვნია", nothingFound: "ამ მოთხოვნით მომსახურება ვერ მოიძებნა.", minutes: "წთ", noServices: "საჯარო მომსახურებები ჯერ არ არის დამატებული.",
     toggleGroup: "კატეგორიის გახსნა ან დახურვა", limit: `ერთდროულად მაქსიმუმ ${MAX_SELECTED_SERVICES} მომსახურების არჩევა შეგიძლიათ.`, selectService: "მომსახურების არჩევა",
     team: "გუნდი", specialist: "სპეციალისტი", noTeam: "საჯარო გუნდის პროფილები ჯერ არ არის დამატებული.", experience: "წლის გამოცდილება",
@@ -40,7 +41,7 @@ const copy = {
     missing: "Business not found", missingLead: "The link may have changed or the page is no longer available.", all: "Whole catalog",
     noDescription: "A business description will be added soon.", bookingPaused: "Online booking is temporarily unavailable. The profile remains available; please contact the business for details.",
     website: "Website", verified: "Approved profile", ad: "Advertisement", recommended: "Recommended",
-    tabs: "Profile sections", tabServices: "Services", tabTeam: "Team", tabHours: "Opening hours",
+    tabs: "Profile sections", tabServices: "Services", tabTeam: "Team", tabHours: "Opening hours", productsTitle: "Products", productsNote: "Purchased at the business itself; there is no online checkout.",
     searchLabel: "Search services", searchPlaceholder: "Name or category", found: "Found", nothingFound: "No service matches your search.", minutes: "min", noServices: "No public services have been added yet.",
     toggleGroup: "Expand or collapse category", limit: `You can select up to ${MAX_SELECTED_SERVICES} services at once.`, selectService: "Select service",
     team: "Team", specialist: "Specialist", noTeam: "No public team profiles have been added yet.", experience: "years of experience",
@@ -58,7 +59,7 @@ const copy = {
     missing: "Бизнес не найден", missingLead: "Ссылка могла измениться или страница больше не доступна.", all: "Весь каталог",
     noDescription: "Описание будет добавлено позже.", bookingPaused: "Онлайн-запись временно недоступна. Профиль остаётся доступным; свяжитесь с бизнесом для деталей.",
     website: "Сайт", verified: "Одобренный профиль", ad: "Реклама", recommended: "Рекомендуем",
-    tabs: "Разделы профиля", tabServices: "Услуги", tabTeam: "Команда", tabHours: "Часы работы",
+    tabs: "Разделы профиля", tabServices: "Услуги", tabTeam: "Команда", tabHours: "Часы работы", productsTitle: "Товары", productsNote: "Покупка — непосредственно в заведении; онлайн-оплаты нет.",
     searchLabel: "Поиск услуг", searchPlaceholder: "Название или категория", found: "Найдено", nothingFound: "По вашему запросу услуг не найдено.", minutes: "мин", noServices: "Публичные услуги ещё не добавлены.",
     toggleGroup: "Развернуть или свернуть категорию", limit: `Одновременно можно выбрать не более ${MAX_SELECTED_SERVICES} услуг.`, selectService: "Выбрать услугу",
     team: "Команда", specialist: "Специалист", noTeam: "Публичные профили команды ещё не добавлены.", experience: "лет опыта",
@@ -188,6 +189,7 @@ function ProfileView({ data, slug, ui, locale, categories, promotion, approved }
   const lead = verticalsForListing(categories)[0];
   const tone = lead ? verticalStyle(lead) : null;
   const catalog = trpc.public.bookingCatalog.useQuery(slug, { enabled: bookable && Boolean(slug) });
+  const products = trpc.products.byLocation.useQuery({ publicSlug: slug }, { enabled: Boolean(slug) }).data ?? [];
   const workingHours = catalog.data?.location.workingHours ?? [];
   const timezone = catalog.data?.location.timezone ?? "";
 
@@ -291,6 +293,12 @@ function ProfileView({ data, slug, ui, locale, categories, promotion, approved }
           {key === "team" ? <TeamPanel team={team} ui={ui} /> : null}
           {key === "hours" ? <HoursPanel ui={ui} bookable={bookable} loading={catalog.isLoading} failed={catalog.isError} hours={workingHours} timezone={timezone} now={now} /> : null}
         </div>)}
+
+        {products.length ? <section className="cwp-block" aria-labelledby="products-title">
+          <div className="cwp-block-head"><h2 id="products-title" className="text-xl font-extrabold [font-stretch:85%]">{ui.productsTitle}</h2></div>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--cw-ink-soft)]">{ui.productsNote}</p>
+          <div className="mt-5"><ProductGrid items={products} /></div>
+        </section> : null}
 
         <section className="cwp-block" aria-labelledby="feedback-title">
           <div className="cwp-block-head"><h2 id="feedback-title" className="text-xl font-extrabold [font-stretch:85%]">{ui.feedbackTitle}</h2></div>

@@ -1,0 +1,38 @@
+/* Vacancies and products on the appointment-card world (components/catalog/Commerce.tsx).
+   Uses only `cw-` tokens from catalog.css; classes here are namespaced `cwx-`. */
+
+.cwx-filter-row { display: grid; gap: 0.75rem; }
+@media (min-width: 640px) { .cwx-filter-row { grid-template-columns: 1fr auto; align-items: stretch; } }
+
+.cwx-chips .cw-chip { min-height: 2.75rem; }
+.cwx-tag { display: inline-flex; align-items: center; min-height: 1.75rem; padding: 0 0.5rem; border: 1px solid var(--cw-rule-strong); border-radius: 3px; background: var(--cw-paper); font-size: 0.8rem; font-weight: 700; color: var(--cw-ink); }
+
+/* Products: sheets in a grid; one column on phones, more as room allows. */
+.cwx-grid { display: grid; gap: 1rem; grid-template-columns: 1fr; list-style: none; padding: 0; margin: 0; }
+@media (min-width: 560px) { .cwx-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 900px) { .cwx-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 1200px) { .cwx-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+.cwx-product { display: flex; flex-direction: column; height: 100%; background: #fff; border: 1.5px solid var(--cw-rule); border-radius: 4px; overflow: hidden; transition: transform 260ms var(--cw-ease), box-shadow 260ms var(--cw-ease), border-color 260ms var(--cw-ease); }
+.cwx-product:hover { transform: translateY(-3px); border-color: var(--cw-rule-strong); box-shadow: 0 14px 24px -18px rgba(35, 35, 94, 0.6); }
+.cwx-product-img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-bottom: 1.5px solid var(--cw-rule); background: var(--cw-paper); }
+.cwx-product-blank { display: grid; place-items: center; color: var(--cw-rule-strong); background-image: repeating-linear-gradient(to bottom, transparent 0 1.9rem, var(--cw-rule) 1.9rem calc(1.9rem + 1px)); }
+.cwx-product-body { display: flex; flex: 1; flex-direction: column; padding: 1rem; }
+.cwx-product-body > .cwx-biz { margin-top: auto; }
+.cwx-stock { display: inline-flex; align-items: center; min-height: 1.75rem; padding: 0 0.5rem; border-radius: 3px; font-size: 0.8rem; font-weight: 800; border: 1.5px solid var(--cw-ink); color: var(--cw-ink); }
+.cwx-stock[data-in-stock="false"] { border-style: dashed; border-color: var(--cw-rule-strong); color: var(--cw-ink-soft); }
+.cwx-biz { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; min-height: 2.75rem; margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px dashed var(--cw-rule-strong); font-size: 0.875rem; font-weight: 800; color: var(--cw-stamp); text-decoration: underline; text-underline-offset: 0.2em; }
+.cwx-biz:hover { color: var(--cw-stamp-hover); }
+
+.cwx-empty { border: 2px dashed var(--cw-rule-strong); border-radius: 4px; padding: 1.5rem; }
+
+/* Vacancy detail: a ruled sheet with a key/value ledger. */
+.cwx-facts { display: grid; gap: 0; border: 1.5px solid var(--cw-ink); border-radius: 4px; background: #fff; }
+.cwx-fact { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.25rem 1rem; padding: 0.8rem 1rem; border-top: 1px solid var(--cw-rule); }
+.cwx-fact:first-child { border-top: 0; }
+.cwx-prose { white-space: pre-line; overflow-wrap: anywhere; line-height: 1.7; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cwx-product { transition: none; }
+  .cwx-product:hover { transform: none; }
+}

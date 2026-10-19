@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "82c77eb3-76c1-45fe-8d7c-64505f9d1a88",
+  "id": "35b58ee8-5c7c-4e5e-a774-31c5d1c74308",
   "prevId": "a262d251-2313-4ada-af26-c88b35a29743",
   "tables": {
     "appointment_services": {
@@ -4840,8 +4840,8 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "org_gov_org_fk": {
-          "name": "org_gov_org_fk",
+        "organization_governance_organizationId_organizations_id_fk": {
+          "name": "organization_governance_organizationId_organizations_id_fk",
           "tableFrom": "organization_governance",
           "tableTo": "organizations",
           "columnsFrom": [
@@ -4853,8 +4853,8 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "org_gov_actor_fk": {
-          "name": "org_gov_actor_fk",
+        "organization_governance_updatedByUserId_users_id_fk": {
+          "name": "organization_governance_updatedByUserId_users_id_fk",
           "tableFrom": "organization_governance",
           "tableTo": "users",
           "columnsFrom": [
@@ -4936,8 +4936,8 @@
         }
       },
       "foreignKeys": {
-        "org_gov_evt_org_fk": {
-          "name": "org_gov_evt_org_fk",
+        "organization_governance_events_organizationId_organizations_id_fk": {
+          "name": "organization_governance_events_organizationId_organizations_id_fk",
           "tableFrom": "organization_governance_events",
           "tableTo": "organizations",
           "columnsFrom": [
@@ -4949,8 +4949,8 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "org_gov_evt_actor_fk": {
-          "name": "org_gov_evt_actor_fk",
+        "organization_governance_events_actorUserId_users_id_fk": {
+          "name": "organization_governance_events_actorUserId_users_id_fk",
           "tableFrom": "organization_governance_events",
           "tableTo": "users",
           "columnsFrom": [
@@ -5474,6 +5474,171 @@
       "compositePrimaryKeys": {
         "payments_id": {
           "name": "payments_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "products": {
+      "name": "products",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "organizationId": {
+          "name": "organizationId",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "locationId": {
+          "name": "locationId",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "brand": {
+          "name": "brand",
+          "type": "varchar(120)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "description": {
+          "name": "description",
+          "type": "varchar(600)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "priceTetri": {
+          "name": "priceTetri",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "inStock": {
+          "name": "inStock",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
+        "imageKey": {
+          "name": "imageKey",
+          "type": "varchar(512)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "imageAltKa": {
+          "name": "imageAltKa",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "record_status": {
+          "name": "record_status",
+          "type": "enum('ACTIVE','ARCHIVED')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'ACTIVE'"
+        },
+        "sortOrder": {
+          "name": "sortOrder",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "products_location_status_idx": {
+          "name": "products_location_status_idx",
+          "columns": [
+            "locationId",
+            "record_status"
+          ],
+          "isUnique": false
+        },
+        "products_organization_idx": {
+          "name": "products_organization_idx",
+          "columns": [
+            "organizationId",
+            "record_status"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "products_organizationId_organizations_id_fk": {
+          "name": "products_organizationId_organizations_id_fk",
+          "tableFrom": "products",
+          "tableTo": "organizations",
+          "columnsFrom": [
+            "organizationId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "products_locationId_locations_id_fk": {
+          "name": "products_locationId_locations_id_fk",
+          "tableFrom": "products",
+          "tableTo": "locations",
+          "columnsFrom": [
+            "locationId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "products_id": {
+          "name": "products_id",
           "columns": [
             "id"
           ]
@@ -8109,6 +8274,237 @@
           ]
         }
       },
+      "checkConstraint": {}
+    },
+    "vacancies": {
+      "name": "vacancies",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "organizationId": {
+          "name": "organizationId",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "locationId": {
+          "name": "locationId",
+          "type": "varchar(36)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "title": {
+          "name": "title",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "roleCategory": {
+          "name": "roleCategory",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "vacancy_employment_type": {
+          "name": "vacancy_employment_type",
+          "type": "enum('FULL_TIME','PART_TIME','CHAIR_RENTAL','FREELANCE')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "salaryFromTetri": {
+          "name": "salaryFromTetri",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "salaryToTetri": {
+          "name": "salaryToTetri",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "contactPhone": {
+          "name": "contactPhone",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "contactEmail": {
+          "name": "contactEmail",
+          "type": "varchar(320)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "vacancy_status": {
+          "name": "vacancy_status",
+          "type": "enum('DRAFT','PUBLISHED','CLOSED')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'DRAFT'"
+        },
+        "publishedAt": {
+          "name": "publishedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "expiresAt": {
+          "name": "expiresAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "vipUntil": {
+          "name": "vipUntil",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "vipSetByUserId": {
+          "name": "vipSetByUserId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdByUserId": {
+          "name": "createdByUserId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "vacancies_public_idx": {
+          "name": "vacancies_public_idx",
+          "columns": [
+            "vacancy_status",
+            "expiresAt"
+          ],
+          "isUnique": false
+        },
+        "vacancies_location_idx": {
+          "name": "vacancies_location_idx",
+          "columns": [
+            "locationId"
+          ],
+          "isUnique": false
+        },
+        "vacancies_organization_idx": {
+          "name": "vacancies_organization_idx",
+          "columns": [
+            "organizationId",
+            "vacancy_status"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "vacancies_organizationId_organizations_id_fk": {
+          "name": "vacancies_organizationId_organizations_id_fk",
+          "tableFrom": "vacancies",
+          "tableTo": "organizations",
+          "columnsFrom": [
+            "organizationId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "vacancies_locationId_locations_id_fk": {
+          "name": "vacancies_locationId_locations_id_fk",
+          "tableFrom": "vacancies",
+          "tableTo": "locations",
+          "columnsFrom": [
+            "locationId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "vacancies_vipSetByUserId_users_id_fk": {
+          "name": "vacancies_vipSetByUserId_users_id_fk",
+          "tableFrom": "vacancies",
+          "tableTo": "users",
+          "columnsFrom": [
+            "vipSetByUserId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "vacancies_createdByUserId_users_id_fk": {
+          "name": "vacancies_createdByUserId_users_id_fk",
+          "tableFrom": "vacancies",
+          "tableTo": "users",
+          "columnsFrom": [
+            "createdByUserId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "vacancies_id": {
+          "name": "vacancies_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
       "checkConstraint": {}
     },
     "verification_codes": {

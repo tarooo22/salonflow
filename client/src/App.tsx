@@ -15,6 +15,8 @@ const WaitlistQueue = lazy(() => import("./pages/WaitlistQueue"));
 const Calendar = lazy(() => import("./pages/Calendar"));
 const Reports = lazy(() => import("./pages/Reports"));
 const Staff = lazy(() => import("./pages/Staff"));
+const PanelVacancies = lazy(() => import("./pages/PanelVacancies"));
+const PanelProducts = lazy(() => import("./pages/PanelProducts"));
 const Services = lazy(() => import("./pages/Services"));
 const Clients = lazy(() => import("./pages/Clients"));
 const Today = lazy(() => import("./pages/Today"));
@@ -29,6 +31,9 @@ const Media = lazy(() => import("./pages/Media"));
 const ClientGallery = lazy(() => import("./pages/ClientGallery"));
 const MarketplaceSetup = lazy(() => import("./pages/MarketplaceSetup"));
 const MarketplaceDirectory = lazy(() => import("./pages/MarketplaceDirectory"));
+const Vacancies = lazy(() => import("./pages/Vacancies"));
+const VacancyDetail = lazy(() => import("./pages/VacancyDetail"));
+const Products = lazy(() => import("./pages/Products"));
 const MarketplaceMap = lazy(() => import("./pages/MarketplaceMap"));
 const MarketplaceAdmin = lazy(() => import("./pages/MarketplaceAdmin"));
 const FeedbackModeration = lazy(() => import("./pages/FeedbackModeration"));
@@ -72,6 +77,9 @@ function Router() {
       <Route path={"/salons/map"} component={MarketplaceMap} />
       <Route path={"/salons"} component={MarketplaceDirectory} />
       <Route path={"/salon/:slug"} component={SalonProfile} />
+      <Route path={"/vacancies"} component={Vacancies} />
+      <Route path={"/vacancies/:id"} component={VacancyDetail} />
+      <Route path={"/products"} component={Products} />
       <Route path={"/login"}>{() => <LocalAuth mode="login" />}</Route>
       <Route path={"/register"}>{() => <LocalAuth mode="register" />}</Route>
       <Route path={"/claim-account"}>{() => <LocalAuth mode="claim" />}</Route>
@@ -82,6 +90,8 @@ function Router() {
       <Route path={"/app/clients"} component={Clients} />
       <Route path={"/app/services"} component={Services} />
       <Route path={"/app/staff"} component={Staff} />
+      <Route path={"/app/vacancies"} component={PanelVacancies} />
+      <Route path={"/app/products"} component={PanelProducts} />
       <Route path={"/app/reports"} component={Reports} />
       <Route path={"/app/settings"} component={Settings} />
       <Route path={"/app/operations"} component={Operations} />

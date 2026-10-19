@@ -1,11 +1,12 @@
 import { CatalogFooter, CatalogHeader } from "@/components/catalog/CatalogChrome";
+import { CommerceEmpty, LoadingGrid, ProductGrid, VacancyTicket } from "@/components/catalog/Commerce";
 import { cssVars, EmptyTickets, listingMatchesVertical, NEW_LISTING_DAYS, newestListings, TicketShelf, type CatalogCategory as Category, type CatalogListing as Listing } from "@/components/catalog/Tickets";
 import { marketplaceDiscoveryHref } from "@/components/public/MarketplaceDiscovery";
 import { usePublicMeta } from "@/components/public/PublicMeta";
 import { trpc } from "@/lib/trpc";
 import { VERTICALS, verticalForCategory, verticalStyle, type Vertical } from "@/lib/verticals";
 import { BRAND } from "@shared/brand";
-import { ArrowRight, Briefcase, CalendarCheck, Globe, MapPin, Search, ShoppingBag, UsersRound, Wallet } from "lucide-react";
+import { ArrowRight, CalendarCheck, Globe, MapPin, Search, UsersRound, Wallet } from "lucide-react";
 import { type FormEvent, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
 
@@ -167,20 +168,48 @@ function Cities() {
   </section>;
 }
 
-function ComingSoon() {
-  const items = [
-    { icon: ShoppingBag, title: "პროდუქტები", text: "სალონების და კლინიკების პროდუქტები და შეთავაზებები ერთ ვიტრინაში." },
-    { icon: Briefcase, title: "ვაკანსიები", text: "სამუშაო ადგილები ოსტატებისთვის, კოსმეტოლოგებისთვის და ექიმებისთვის." },
-  ];
-  return <section className="cw-section cw-rule-top" aria-label="მალე">
-    <div className="cw-container grid gap-4 md:grid-cols-2">
-      {items.map(item => <div key={item.title} className="flex gap-4 rounded-[4px] border-2 border-dashed border-[var(--cw-rule-strong)] p-6">
-        <item.icon className="mt-1 size-6 shrink-0" aria-hidden="true" />
-        <div>
-          <p className="flex items-center gap-3 text-xl font-extrabold [font-stretch:85%]">{item.title}<span className="cw-stamp-mark">მალე</span></p>
-          <p className="mt-2 text-[var(--cw-ink-soft)]">{item.text}</p>
-        </div>
-      </div>)}
+function StripHead({ id, title, lede, href, cta }: { id: string; title: string; lede: string; href: string; cta: string }) {
+  return <div className="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h2 id={id} className="cw-h2">{title}</h2>
+      <p className="cw-lede mt-2">{lede}</p>
+    </div>
+    <Link href={href} className="cw-btn cw-btn-line min-h-11 text-[var(--cw-ink)]">{cta} <ArrowRight className="size-4" aria-hidden="true" /></Link>
+  </div>;
+}
+
+function VacancyStrip({ vertical }: { vertical: Vertical | null }) {
+  const vip = trpc.vacancies.publicVipList.useQuery({ vertical: vertical ?? undefined, limit: 6 });
+  const items = vip.data ?? [];
+  return <section className="cw-section cw-rule-top" aria-labelledby="cw-vacancies-title">
+    <div className="cw-container">
+      <StripHead id="cw-vacancies-title" title="ვაკანსიები" lede="სამუშაო ადგილები ოსტატებისთვის, კოსმეტოლოგებისთვის და ექიმებისთვის. აქ ჩანს VIP განცხადებები (ფასიანი განთავსება)." href="/vacancies" cta="ყველა ვაკანსია" />
+      <div className="mt-10">
+        {vip.isLoading ? <LoadingGrid />
+          : vip.isError ? <p role="alert" className="text-[var(--cw-ink-soft)]">ვაკანსიების ჩატვირთვა ვერ მოხერხდა. <Link href="/vacancies" className="font-bold text-[var(--cw-stamp)] underline">გახსენით ვაკანსიების გვერდი</Link>.</p>
+          : items.length ? <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{items.map((item, index) => <VacancyTicket key={item.id} item={item} number={index + 1} />)}</div>
+          : <CommerceEmpty title="VIP ვაკანსია ამჟამად არ არის." text="ყველა ღია ვაკანსია ნახე სრულ სიაში.">
+            <Link href="/vacancies" className="cw-btn cw-btn-stamp">ყველა ვაკანსია</Link>
+          </CommerceEmpty>}
+      </div>
+    </div>
+  </section>;
+}
+
+function ProductStrip({ vertical }: { vertical: Vertical | null }) {
+  const products = trpc.products.publicList.useQuery({ vertical: vertical ?? undefined, limit: 8, offset: 0 });
+  const items = products.data?.items ?? [];
+  return <section className="cw-section cw-rule-top" aria-labelledby="cw-products-title">
+    <div className="cw-container">
+      <StripHead id="cw-products-title" title="პროდუქტები" lede="სალონების და კლინიკების პროდუქტები ერთ ვიტრინაში. შეძენა ხდება უშუალოდ ბიზნესში." href="/products" cta="ყველა პროდუქტი" />
+      <div className="mt-10">
+        {products.isLoading ? <LoadingGrid ticket={false} />
+          : products.isError ? <p role="alert" className="text-[var(--cw-ink-soft)]">პროდუქტების ჩატვირთვა ვერ მოხერხდა. <Link href="/products" className="font-bold text-[var(--cw-stamp)] underline">გახსენით პროდუქტების გვერდი</Link>.</p>
+          : items.length ? <ProductGrid items={items} />
+          : <CommerceEmpty title="პროდუქტები ჯერ არ არის დამატებული." text="როცა დამტკიცებული ბიზნესი პროდუქტებს დაამატებს, აქ გამოჩნდება.">
+            <Link href="/products" className="cw-btn cw-btn-stamp">პროდუქტების გვერდი</Link>
+          </CommerceEmpty>}
+      </div>
     </div>
   </section>;
 }
@@ -235,7 +264,8 @@ export default function Home() {
       <CategoryLedger vertical={vertical} />
       <HowItWorks />
       <Cities />
-      <ComingSoon />
+      <VacancyStrip vertical={vertical} />
+      <ProductStrip vertical={vertical} />
       <BusinessBand />
     </main>
     <CatalogFooter />

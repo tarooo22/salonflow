@@ -19,10 +19,18 @@ describe("catalog home", () => {
     expect(source).toContain("ფასიანი განთავსება");
   });
 
-  it("marks dental, products and vacancies as coming soon", () => {
+  it("keeps dental as coming soon", () => {
     expect(source).toContain("სტომატოლოგიური კლინიკები მალე დაემატება.");
-    expect(source).toContain("პროდუქტები");
-    expect(source).toContain("ვაკანსიები");
+  });
+
+  it("shows real VIP vacancies and products with honest empty states and links to the full pages", () => {
+    expect(source).toContain("trpc.vacancies.publicVipList.useQuery");
+    expect(source).toContain("trpc.products.publicList.useQuery");
+    expect(source).toContain('href="/vacancies"');
+    expect(source).toContain('href="/products"');
+    expect(source).toContain("VIP ვაკანსია ამჟამად არ არის.");
+    expect(source).toContain("პროდუქტები ჯერ არ არის დამატებული.");
+    expect(source).not.toContain("ComingSoon");
   });
 
   it("uses the shared brand constant instead of a hard-coded name", () => {

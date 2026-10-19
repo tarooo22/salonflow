@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, inArray, like, lte, or } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, isNull, like, lte, or } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import {
   locationMarketplaceProfiles,
@@ -8,6 +8,7 @@ import {
   marketplaceLocationCategories,
   marketplaceLocationCategoryServices,
   marketplacePromotions,
+  organizationGovernance,
   organizations,
   services,
 } from "../../drizzle/schema";
@@ -98,6 +99,21 @@ export function marketplaceDirectoryPublicListing<T extends { address: unknown; 
     ...listing,
     ...(includeMapPoint ? { mapPoint: marketplacePublicMapPoint({ mapVisibility, latitudeE6, longitudeE6 }) } : {}),
   };
+}
+
+/**
+ * Public-visibility rule for anything attached to a location (vacancies, products): approved marketplace profile,
+ * active bookable branch, active organization not hidden by governance. The query must join locations,
+ * locationMarketplaceProfiles, organizations and (left) organizationGovernance.
+ */
+export function approvedPublicLocationCondition() {
+  return and(
+    eq(locationMarketplaceProfiles.status, "APPROVED"),
+    eq(locations.status, "ACTIVE"),
+    eq(locations.bookingEnabled, true),
+    eq(organizations.status, "ACTIVE"),
+    or(isNull(organizationGovernance.organizationId), eq(organizationGovernance.publicVisible, true)),
+  );
 }
 
 function requireMarketplaceAdmin(user: { role: string } | null) {

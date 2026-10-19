@@ -20,7 +20,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
-import { BarChart3, CalendarDays, CalendarHeart, ChevronDown, CircleHelp, Clock3, Images, LayoutDashboard, ListChecks, LogOut, MessageSquareText, MoreHorizontal, PanelLeft, ReceiptText, Scissors, Search, Settings2, Store, Users } from "lucide-react";
+import { BarChart3, BriefcaseBusiness, Package,CalendarDays, CalendarHeart, ChevronDown, CircleHelp, Clock3, Images, LayoutDashboard, ListChecks, LogOut, MessageSquareText, MoreHorizontal, PanelLeft, ReceiptText, Scissors, Search, Settings2, Store, Users } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -42,6 +42,8 @@ const menuItems = [
   { icon: BarChart3, label: "ანგარიშები", path: "/app/reports", group: "სალონის მართვა", roles: ["OWNER"] },
   { icon: Images, label: "მედია და პროფილი", path: "/app/media", group: "სალონის მართვა", roles: ["OWNER"] },
   { icon: Store, label: "Marketplace", path: "/app/marketplace", group: "სალონის მართვა", roles: ["OWNER"] },
+  { icon: BriefcaseBusiness, label: "ვაკანსიები", path: "/app/vacancies", group: "სალონის მართვა", roles: ["OWNER", "MANAGER"] },
+  { icon: Package, label: "პროდუქტები", path: "/app/products", group: "სალონის მართვა", roles: ["OWNER", "MANAGER"] },
   { icon: MessageSquareText, label: "შეფასებები", path: "/app/feedback", group: "სალონის მართვა", roles: ["OWNER", "MANAGER"] },
   { icon: Settings2, label: "პარამეტრები", path: "/app/settings", group: "სალონის მართვა", roles: ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"] },
 ] as const;

@@ -119,3 +119,11 @@ describe("openStatus", () => {
     expect(openStatus(hours, "", at("2026-10-19T06:30:00Z"))).toBeNull();
   });
 });
+
+describe("SalonProfile products", () => {
+  it("lists the location's products only when there are some", () => {
+    expect(source).toContain("trpc.products.byLocation.useQuery");
+    expect(source).toContain("{products.length ? <section");
+    expect(source).toContain("<ProductGrid items={products} />");
+  });
+});

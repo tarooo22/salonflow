@@ -1034,3 +1034,61 @@ export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 export type OrganizationMembership = typeof organizationMemberships.$inferSelect;
 export type Appointment = typeof appointments.$inferSelect;
+
+export const vacancyEmploymentTypeValues = ["FULL_TIME", "PART_TIME", "CHAIR_RENTAL", "FREELANCE"] as const;
+export const vacancyStatusValues = ["DRAFT", "PUBLISHED", "CLOSED"] as const;
+export const vacancyEmploymentType = mysqlEnum("vacancy_employment_type", vacancyEmploymentTypeValues);
+export const vacancyStatus = mysqlEnum("vacancy_status", vacancyStatusValues);
+
+/** Job opening posted by a business; candidates contact the business directly, so no applications or CVs are stored. */
+export const vacancies = mysqlTable("vacancies", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  organizationId: varchar("organizationId", { length: 36 }).notNull().references(() => organizations.id),
+  locationId: varchar("locationId", { length: 36 }).notNull().references(() => locations.id),
+  title: varchar("title", { length: 160 }).notNull(),
+  /** marketplace_categories.slug */
+  roleCategory: varchar("roleCategory", { length: 64 }),
+  employmentType: vacancyEmploymentType.notNull(),
+  salaryFromTetri: int("salaryFromTetri"),
+  salaryToTetri: int("salaryToTetri"),
+  description: text("description").notNull(),
+  contactPhone: varchar("contactPhone", { length: 32 }),
+  contactEmail: varchar("contactEmail", { length: 320 }),
+  status: vacancyStatus.default("DRAFT").notNull(),
+  publishedAt: timestamp("publishedAt"),
+  expiresAt: timestamp("expiresAt"),
+  /** Paid VIP placement, set by a platform admin only (no checkout). */
+  vipUntil: timestamp("vipUntil"),
+  vipSetByUserId: int("vipSetByUserId").references(() => users.id),
+  createdByUserId: int("createdByUserId").notNull().references(() => users.id),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [
+  index("vacancies_public_idx").on(table.status, table.expiresAt),
+  index("vacancies_location_idx").on(table.locationId),
+  index("vacancies_organization_idx").on(table.organizationId, table.status),
+]);
+
+/** Catalog-only product listing (no cart, checkout or payments). Archived, never deleted. */
+export const products = mysqlTable("products", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  organizationId: varchar("organizationId", { length: 36 }).notNull().references(() => organizations.id),
+  locationId: varchar("locationId", { length: 36 }).notNull().references(() => locations.id),
+  name: varchar("name", { length: 160 }).notNull(),
+  brand: varchar("brand", { length: 120 }),
+  description: varchar("description", { length: 600 }),
+  priceTetri: int("priceTetri").notNull(),
+  inStock: boolean("inStock").default(true).notNull(),
+  imageKey: varchar("imageKey", { length: 512 }),
+  imageAltKa: varchar("imageAltKa", { length: 255 }),
+  status: recordStatus.default("ACTIVE").notNull(),
+  sortOrder: int("sortOrder").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => [
+  index("products_location_status_idx").on(table.locationId, table.status),
+  index("products_organization_idx").on(table.organizationId, table.status),
+]);
+
+export type Vacancy = typeof vacancies.$inferSelect;
+export type Product = typeof products.$inferSelect;
