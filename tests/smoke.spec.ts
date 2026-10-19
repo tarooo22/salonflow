@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { BRAND } from '../shared/brand';
 
 // Read-only smoke checks — safe to run against production. Never submit forms or create data here.
 
@@ -17,7 +18,8 @@ for (const path of publicPages) {
 
     const res = await page.goto(path);
     expect(res?.status()).toBeLessThan(400);
-    await expect(page).toHaveTitle(/SalonFlow/);
+    // Rename in progress: the home page uses the new brand, other pages still say SalonFlow.
+    await expect(page).toHaveTitle(new RegExp(`SalonFlow|${BRAND.name}`));
     await expect(page.locator('#root')).not.toBeEmpty();
     expect(errors).toEqual([]);
   });
