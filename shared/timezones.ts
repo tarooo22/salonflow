@@ -92,3 +92,15 @@ export function businessDayRange(timeZone: string, reference = new Date()): { st
 export function formatTimeInTimeZone(value: Date, timeZone: string): string {
   return new Intl.DateTimeFormat("ka-GE", { timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(value);
 }
+
+/** `<input type="datetime-local">` value ("YYYY-MM-DDTHH:mm") read as wall-clock time in `timeZone`. Invalid input gives an Invalid Date. */
+export function localInputToUtc(value: string, timeZone: string): Date {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value);
+  if (!match) return new Date(Number.NaN);
+  const [, year, month, day, hour, minute] = match.map(Number) as number[];
+  return zonedDateTimeToUtc({ year, month, day, hour, minute, second: 0 }, timeZone);
+}
+
+export function utcToLocalInput(value: Date, timeZone: string): string {
+  return `${dateKeyInTimeZone(value, timeZone)}T${timeKeyInTimeZone(value, timeZone)}`;
+}

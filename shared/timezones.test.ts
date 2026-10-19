@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { businessDayRange, dateKeyInTimeZone, isDateKeyInPast, isLocalDateTimeElapsed, zonedDateTimeToUtc } from "./timezones";
+import { businessDayRange, dateKeyInTimeZone, isDateKeyInPast, isLocalDateTimeElapsed, localInputToUtc, utcToLocalInput, zonedDateTimeToUtc } from "./timezones";
 
 describe("IANA business-day helpers", () => {
   it("maps Asia/Tbilisi's local day back to the correct UTC bounds", () => {
@@ -25,5 +25,14 @@ describe("IANA business-day helpers", () => {
     expect(isLocalDateTimeElapsed("2026-08-27", "12:00", "Asia/Tbilisi", reference)).toBe(true);
     expect(isLocalDateTimeElapsed("2026-08-27", "13:00", "Asia/Tbilisi", reference)).toBe(false);
     expect(isLocalDateTimeElapsed("2026-08-28", "08:00", "Asia/Tbilisi", reference)).toBe(false);
+  });
+});
+
+describe("datetime-local input in a business time zone", () => {
+  it("reads the input as location wall-clock time and round-trips it", () => {
+    const utc = localInputToUtc("2026-10-20T09:30", "Asia/Tbilisi");
+    expect(utc.toISOString()).toBe("2026-10-20T05:30:00.000Z");
+    expect(utcToLocalInput(utc, "Asia/Tbilisi")).toBe("2026-10-20T09:30");
+    expect(Number.isNaN(localInputToUtc("", "Asia/Tbilisi").getTime())).toBe(true);
   });
 });

@@ -27,9 +27,9 @@ export default function ManageBooking() {
   const timezone = detail.data?.location.timezone ?? "Asia/Tbilisi";
   const serviceId = detail.data?.services[0]?.serviceId ?? undefined;
   useEffect(() => { if (detail.data?.appointment.startsAt && !selectedDate) setSelectedDate(dateKeyInTimeZone(detail.data.appointment.startsAt, timezone)); }, [detail.data?.appointment.startsAt, selectedDate, timezone]);
-  const slots = trpc.public.availableSlots.useQuery({ slug: detail.data?.location.publicSlug ?? "pending-location", serviceId: serviceId ?? "pending-service", staffProfileId: detail.data?.appointment.staffProfileId ?? "pending-staff", date: selectedDate || "1970-01-01" }, { enabled: Boolean(detail.data?.appointment.canManage && serviceId && selectedDate) });
+  const slots = trpc.public.rescheduleSlots.useQuery({ token, date: selectedDate || "1970-01-01" }, { enabled: Boolean(detail.data?.appointment.canManage && selectedDate) });
   const cancel = trpc.public.cancelBookingByToken.useMutation({ onSuccess: async () => { setFeedback("ჯავშანი გაუქმდა."); setCancelConfirm(false); await utils.public.bookingByToken.invalidate({ token }); }, onError: error => setFeedback(error.message) });
-  const reschedule = trpc.public.rescheduleBookingByToken.useMutation({ onSuccess: async () => { setFeedback("ახალი დრო შენახულია."); setSelectedSlot(""); await utils.public.bookingByToken.invalidate({ token }); await utils.public.availableSlots.invalidate(); }, onError: error => setFeedback(error.message) });
+  const reschedule = trpc.public.rescheduleBookingByToken.useMutation({ onSuccess: async () => { setFeedback("ახალი დრო შენახულია."); setSelectedSlot(""); await utils.public.bookingByToken.invalidate({ token }); await utils.public.rescheduleSlots.invalidate(); }, onError: error => setFeedback(error.message) });
   const todayKey = useMemo(() => dateKeyInTimeZone(new Date(), timezone), [timezone]);
   const days = useMemo(() => Array.from({ length: DAYS_AHEAD }, (_, index) => ({ key: addDaysKey(todayKey, index) })), [todayKey]);
   const slotList = slots.data?.slots ?? [];

@@ -3,7 +3,7 @@ import { createHash, createHmac } from "node:crypto";
 import { nanoid } from "nanoid";
 import { appointmentServices, appointments, appointmentStatusHistory, clientConsents, clientMediaItems, clientMediaSets, clients, customerFeedback, customerFeedbackEvents, locationFeedPosts, locations, organizationGovernance, organizations, scheduleExceptions, scheduleLocks, serviceCategories, services, staffLocations, staffProfiles, staffServices, waitlistEntries, workingHourRules } from "../../drizzle/schema";
 import { requireDb } from "../db";
-import { publicAvailabilityCheckSchema, publicAvailableSlotsSchema, publicBookingCancelSchema, publicBookingCommitSchema, publicBookingRescheduleSchema, publicBookingTokenSchema, publicFeedbackSubmitSchema, publicFeedbackTokenSchema, publicMultiAvailabilityCheckSchema, publicMultiAvailableSlotsSchema, publicMultiBookingCommitSchema, publicWaitlistCreateSchema, slugSchema } from "../../shared/validation";
+import { publicAvailabilityCheckSchema, publicAvailableSlotsSchema, publicBookingCancelSchema, publicBookingCommitSchema, publicBookingRescheduleSchema, publicBookingTokenSchema, publicRescheduleSlotsSchema, publicFeedbackSubmitSchema, publicFeedbackTokenSchema, publicMultiAvailabilityCheckSchema, publicMultiAvailableSlotsSchema, publicMultiBookingCommitSchema, publicWaitlistCreateSchema, slugSchema } from "../../shared/validation";
 import { appointmentBlocksInterval, intervalsOverlap } from "../lib/appointments";
 import { generateAvailableSlots, type BusyInterval } from "../lib/availability";
 import { dateKeyInTimeZone, formatTimeInTimeZone, isDateKeyInPast, isLocalDateTimeElapsed, zonedDateTimeToUtc } from "../../shared/timezones";
@@ -89,6 +89,46 @@ function exceptionBlocks(exception: Pick<ScheduleExceptionRow, "staffProfileId" 
   // A staff exception (leave, sick day) follows the person to every location; location scope only narrows closures.
   const applies = exception.staffProfileId != null ? exception.staffProfileId === staffProfileId : (exception.locationId == null || exception.locationId === locationId);
   return applies && intervalsOverlap(startsAt, endsAt, exception.startsAt, exception.endsAt);
+}
+
+// Slots offered on one local date: at least one candidate is inside working hours, clear of other bookings
+// (except `ignoreAppointmentId`, the booking being moved) and of blocking exceptions. Shared by every slot list.
+type SlotCandidate = { id: string; durationMinutes: number; bufferBeforeMinutes: number; bufferAfterMinutes: number };
+async function daySlots(db: PublicDb, location: typeof locations.$inferSelect, date: string, candidates: SlotCandidate[], ignoreAppointmentId?: string) {
+  const timeZone = location.timezone;
+  const now = new Date();
+  const minimumStart = new Date(now.getTime() + location.minimumNoticeMinutes * 60_000);
+  const maximumStart = new Date(now.getTime() + location.maximumAdvanceDays * 86_400_000);
+  // Weekday of the requested local date (schema weekday: 0=Monday … 6=Sunday).
+  const [year, month, day] = date.split("-").map(Number) as [number, number, number];
+  const weekday = (new Date(Date.UTC(year, month - 1, day)).getUTCDay() + 6) % 7;
+  const staffIds = candidates.map(candidate => candidate.id);
+  const hourRows = await db.select({ staffProfileId: workingHourRules.staffProfileId, startLocalTime: workingHourRules.startLocalTime, endLocalTime: workingHourRules.endLocalTime }).from(workingHourRules)
+    .where(and(eq(workingHourRules.locationId, location.id), eq(workingHourRules.weekday, weekday), inArray(workingHourRules.staffProfileId, staffIds)));
+  if (!hourRows.length) return { timezone: timeZone, slots: [] as Array<{ startsAt: string; label: string }> };
+  const existing = await db.select({ id: appointments.id, staffProfileId: appointments.staffProfileId, startsAt: appointments.startsAt, endsAt: appointments.endsAt, bufferBeforeMinutes: appointments.bufferBeforeMinutes, bufferAfterMinutes: appointments.bufferAfterMinutes, status: appointments.status }).from(appointments)
+    .where(and(eq(appointments.organizationId, location.organizationId), inArray(appointments.staffProfileId, staffIds)));
+  const busyByStaff = new Map<string, BusyInterval[]>();
+  for (const appointment of existing) {
+    if (appointment.id === ignoreAppointmentId || !appointmentBlocksInterval(appointment.status)) continue;
+    const intervals = busyByStaff.get(appointment.staffProfileId) ?? [];
+    intervals.push({ startsAt: new Date(appointment.startsAt.getTime() - appointment.bufferBeforeMinutes * 60_000), endsAt: new Date(appointment.endsAt.getTime() + appointment.bufferAfterMinutes * 60_000) });
+    busyByStaff.set(appointment.staffProfileId, intervals);
+  }
+  const atTime = (value: string) => { const [hour, minute] = value.split(":").map(Number); return zonedDateTimeToUtc({ year, month, day, hour: hour ?? 0, minute: minute ?? 0, second: 0 }, timeZone); };
+  const dayStart = zonedDateTimeToUtc({ year, month, day, hour: 0, minute: 0, second: 0 }, timeZone);
+  const exceptions = await fetchBlockingExceptions(db, location, dayStart, new Date(dayStart.getTime() + 86_400_000));
+  const offered = new Set<number>();
+  for (const candidate of candidates) {
+    for (const rule of hourRows.filter(row => row.staffProfileId === candidate.id)) {
+      const slots = generateAvailableSlots({ openingStart: atTime(rule.startLocalTime), openingEnd: atTime(rule.endLocalTime), durationMinutes: candidate.durationMinutes, slotIntervalMinutes: location.slotIntervalMinutes, bufferBeforeMinutes: candidate.bufferBeforeMinutes, bufferAfterMinutes: candidate.bufferAfterMinutes, minimumStart, busyIntervals: busyByStaff.get(candidate.id) ?? [] });
+      for (const slot of slots) {
+        if (slot.startsAt > maximumStart || exceptions.some(exception => exceptionBlocks(exception, location.id, candidate.id, slot.startsAt, slot.endsAt))) continue;
+        offered.add(slot.startsAt.getTime());
+      }
+    }
+  }
+  return { timezone: timeZone, slots: Array.from(offered).sort((a, b) => a - b).map(timestamp => { const value = new Date(timestamp); return { startsAt: value.toISOString(), label: formatTimeInTimeZone(value, timeZone) }; }) };
 }
 
 // Commit-time twin of availableSlots: the start must sit on the staff member's working-hour slot grid
@@ -399,63 +439,7 @@ export const publicRouter = router({
     }
     if (!candidates.length) return { ...empty, timezone: location.timezone };
 
-    const now = new Date();
-    const minimumStart = new Date(now.getTime() + location.minimumNoticeMinutes * 60_000);
-    const maximumStart = new Date(now.getTime() + location.maximumAdvanceDays * 86_400_000);
-
-    // Weekday of the requested local date (schema weekday: 0=Monday … 6=Sunday).
-    const [year, month, day] = input.date.split("-").map(Number) as [number, number, number];
-    const weekday = (new Date(Date.UTC(year, month - 1, day)).getUTCDay() + 6) % 7;
-
-    const staffIds = candidates.map(candidate => candidate.id);
-    const hourRows = await db.select({ staffProfileId: workingHourRules.staffProfileId, startLocalTime: workingHourRules.startLocalTime, endLocalTime: workingHourRules.endLocalTime }).from(workingHourRules)
-      .where(and(eq(workingHourRules.locationId, location.id), eq(workingHourRules.weekday, weekday), inArray(workingHourRules.staffProfileId, staffIds)));
-    if (!hourRows.length) return { ...empty, timezone: location.timezone };
-
-    const existing = await db.select({ staffProfileId: appointments.staffProfileId, startsAt: appointments.startsAt, endsAt: appointments.endsAt, bufferBeforeMinutes: appointments.bufferBeforeMinutes, bufferAfterMinutes: appointments.bufferAfterMinutes, status: appointments.status }).from(appointments)
-      .where(and(eq(appointments.organizationId, location.organizationId), inArray(appointments.staffProfileId, staffIds)));
-    const busyByStaff = new Map<string, BusyInterval[]>();
-    for (const appointment of existing) {
-      if (!appointmentBlocksInterval(appointment.status)) continue;
-      const intervals = busyByStaff.get(appointment.staffProfileId) ?? [];
-      intervals.push({ startsAt: new Date(appointment.startsAt.getTime() - appointment.bufferBeforeMinutes * 60_000), endsAt: new Date(appointment.endsAt.getTime() + appointment.bufferAfterMinutes * 60_000) });
-      busyByStaff.set(appointment.staffProfileId, intervals);
-    }
-
-    const parseTime = (value: string) => { const [h, m] = value.split(":").map(Number); return { hour: h ?? 0, minute: m ?? 0 }; };
-    const timeZone = location.timezone;
-    const dayStart = zonedDateTimeToUtc({ year, month, day, hour: 0, minute: 0, second: 0 }, timeZone);
-    const exceptions = await fetchBlockingExceptions(db, location, dayStart, new Date(dayStart.getTime() + 86_400_000));
-    // A start time is offered if at least one eligible specialist is free for it.
-    const offered = new Set<number>();
-    for (const candidate of candidates) {
-      for (const rule of hourRows.filter(row => row.staffProfileId === candidate.id)) {
-        const start = parseTime(rule.startLocalTime);
-        const end = parseTime(rule.endLocalTime);
-        const openingStart = zonedDateTimeToUtc({ year, month, day, hour: start.hour, minute: start.minute, second: 0 }, timeZone);
-        const openingEnd = zonedDateTimeToUtc({ year, month, day, hour: end.hour, minute: end.minute, second: 0 }, timeZone);
-        const slots = generateAvailableSlots({
-          openingStart,
-          openingEnd,
-          durationMinutes: candidate.durationMinutes,
-          slotIntervalMinutes: location.slotIntervalMinutes,
-          bufferBeforeMinutes: service.bufferBeforeMinutes,
-          bufferAfterMinutes: service.bufferAfterMinutes,
-          minimumStart,
-          busyIntervals: busyByStaff.get(candidate.id) ?? [],
-        });
-        for (const slot of slots) {
-          if (slot.startsAt > maximumStart || exceptions.some(exception => exceptionBlocks(exception, location.id, candidate.id, slot.startsAt, slot.endsAt))) continue;
-          offered.add(slot.startsAt.getTime());
-        }
-      }
-    }
-
-    const slots = Array.from(offered).sort((a, b) => a - b).map(timestamp => {
-      const value = new Date(timestamp);
-      return { startsAt: value.toISOString(), label: formatTimeInTimeZone(value, timeZone) };
-    });
-    return { timezone: timeZone, slots };
+    return daySlots(db, location, input.date, candidates.map(candidate => ({ ...candidate, bufferBeforeMinutes: service.bufferBeforeMinutes, bufferAfterMinutes: service.bufferAfterMinutes })));
   }),
 
   checkMultiAvailability: publicProcedure.input(publicMultiAvailabilityCheckSchema).query(async ({ input }) => {
@@ -485,36 +469,7 @@ export const publicRouter = router({
     if (!await isOrganizationTrialPublicBookingActive(location.organizationId)) return { ...empty, timezone: location.timezone };
     const candidates = await resolveMultiCandidates(db, location, input.serviceIds, input.staffProfileId);
     if (!candidates.length) return { ...empty, timezone: location.timezone };
-    const now = new Date();
-    const minimumStart = new Date(now.getTime() + location.minimumNoticeMinutes * 60_000);
-    const maximumStart = new Date(now.getTime() + location.maximumAdvanceDays * 86_400_000);
-    const [year, month, day] = input.date.split("-").map(Number) as [number, number, number];
-    const weekday = (new Date(Date.UTC(year, month - 1, day)).getUTCDay() + 6) % 7;
-    const staffIds = candidates.map(candidate => candidate.id);
-    const hourRows = await db.select({ staffProfileId: workingHourRules.staffProfileId, startLocalTime: workingHourRules.startLocalTime, endLocalTime: workingHourRules.endLocalTime }).from(workingHourRules).where(and(eq(workingHourRules.locationId, location.id), eq(workingHourRules.weekday, weekday), inArray(workingHourRules.staffProfileId, staffIds)));
-    if (!hourRows.length) return { ...empty, timezone: location.timezone };
-    const existing = await db.select({ staffProfileId: appointments.staffProfileId, startsAt: appointments.startsAt, endsAt: appointments.endsAt, bufferBeforeMinutes: appointments.bufferBeforeMinutes, bufferAfterMinutes: appointments.bufferAfterMinutes, status: appointments.status }).from(appointments).where(and(eq(appointments.organizationId, location.organizationId), inArray(appointments.staffProfileId, staffIds)));
-    const busyByStaff = new Map<string, BusyInterval[]>();
-    for (const appointment of existing) {
-      if (!appointmentBlocksInterval(appointment.status)) continue;
-      const intervals = busyByStaff.get(appointment.staffProfileId) ?? [];
-      intervals.push({ startsAt: new Date(appointment.startsAt.getTime() - appointment.bufferBeforeMinutes * 60_000), endsAt: new Date(appointment.endsAt.getTime() + appointment.bufferAfterMinutes * 60_000) });
-      busyByStaff.set(appointment.staffProfileId, intervals);
-    }
-    const parseTime = (value: string) => { const [h, m] = value.split(":").map(Number); return { hour: h ?? 0, minute: m ?? 0 }; };
-    const dayStart = zonedDateTimeToUtc({ year, month, day, hour: 0, minute: 0, second: 0 }, location.timezone);
-    const exceptions = await fetchBlockingExceptions(db, location, dayStart, new Date(dayStart.getTime() + 86_400_000));
-    const offered = new Set<number>();
-    for (const candidate of candidates) {
-      for (const rule of hourRows.filter(row => row.staffProfileId === candidate.id)) {
-        const start = parseTime(rule.startLocalTime); const end = parseTime(rule.endLocalTime);
-        const openingStart = zonedDateTimeToUtc({ year, month, day, hour: start.hour, minute: start.minute, second: 0 }, location.timezone);
-        const openingEnd = zonedDateTimeToUtc({ year, month, day, hour: end.hour, minute: end.minute, second: 0 }, location.timezone);
-        const generated = generateAvailableSlots({ openingStart, openingEnd, durationMinutes: candidate.durationMinutes, slotIntervalMinutes: location.slotIntervalMinutes, bufferBeforeMinutes: candidate.bufferBeforeMinutes, bufferAfterMinutes: candidate.bufferAfterMinutes, minimumStart, busyIntervals: busyByStaff.get(candidate.id) ?? [] });
-        for (const slot of generated) if (slot.startsAt <= maximumStart && !exceptions.some(exception => exceptionBlocks(exception, location.id, candidate.id, slot.startsAt, slot.endsAt))) offered.add(slot.startsAt.getTime());
-      }
-    }
-    return { timezone: location.timezone, slots: Array.from(offered).sort((a, b) => a - b).map(timestamp => { const startsAt = new Date(timestamp); return { startsAt: startsAt.toISOString(), label: formatTimeInTimeZone(startsAt, location.timezone) }; }) };
+    return daySlots(db, location, input.date, candidates);
   }),
 
   commitMultiBooking: publicProcedure.input(publicMultiBookingCommitSchema).mutation(async ({ input }) => {
@@ -733,6 +688,17 @@ export const publicRouter = router({
       await tx.insert(appointmentStatusHistory).values({ id: nanoid(21), appointmentId: appointment.id, oldStatus: appointment.status, newStatus: "CANCELLED", reason: input.reason, metadata: { source: "PUBLIC_TOKEN", event: "CUSTOMER_CANCELLED" } });
     });
     return { success: true };
+  }),
+
+  // Slots for moving this booking: same staff, its stored total duration and buffers, itself not counted as busy.
+  rescheduleSlots: publicProcedure.input(publicRescheduleSlotsSchema).query(async ({ input }) => {
+    const db = await requireDb();
+    const appointment = await appointmentForPublicToken(db, input.token);
+    const [location] = await db.select().from(locations).where(and(eq(locations.id, appointment.locationId), eq(locations.status, "ACTIVE"), eq(locations.bookingEnabled, true))).limit(1);
+    if (!location) return { timezone: "Asia/Tbilisi", slots: [] as Array<{ startsAt: string; label: string }> };
+    if (!canCustomerManage(appointment, location.cancellationCutoffMinutes)) return { timezone: location.timezone, slots: [] };
+    const durationMinutes = (appointment.endsAt.getTime() - appointment.startsAt.getTime()) / 60_000;
+    return daySlots(db, location, input.date, [{ id: appointment.staffProfileId, durationMinutes, bufferBeforeMinutes: appointment.bufferBeforeMinutes, bufferAfterMinutes: appointment.bufferAfterMinutes }], appointment.id);
   }),
 
   rescheduleBookingByToken: publicProcedure.input(publicBookingRescheduleSchema).mutation(async ({ input }) => {

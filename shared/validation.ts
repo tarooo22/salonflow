@@ -671,6 +671,10 @@ export const publicBookingCancelSchema = publicBookingTokenSchema.extend({
   reason: z.string().trim().min(2).max(255).optional(),
 });
 
+export const publicRescheduleSlotsSchema = publicBookingTokenSchema.extend({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+});
+
 export const publicBookingRescheduleSchema = publicBookingTokenSchema.extend({
   startsAt: z.coerce.date(),
 });

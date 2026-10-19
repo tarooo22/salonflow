@@ -272,6 +272,16 @@ describe("public booking router safeguards", () => {
     expect(await run([{ ...closure, locationId: "location_other_01" }])).toContain(localStart(12).toISOString());
   });
 
+  it("offers reschedule slots for the whole booking and does not count the booking itself as busy", async () => {
+    const booking = { id: "appt_self_000001", staffProfileId: "staff_any_01", locationId: ids.locationId, status: "CONFIRMED", startsAt: localStart(10), endsAt: new Date(localStart(10).getTime() + 90 * 60_000), bufferBeforeMinutes: 0, bufferAfterMinutes: 0, publicTokenExpiresAt: new Date(Date.now() + 30 * 86_400_000) };
+    mocked.db = publicCatalogDb([[booking], [{ ...activeLocation, cancellationCutoffMinutes: 0 }], [{ staffProfileId: "staff_any_01", ...workingRule }], [booking], []]);
+    const date = dateKeyInTimeZone(localStart(10), "Asia/Tbilisi");
+    const slots = (await caller().rescheduleSlots({ token: "t".repeat(40), date })).slots.map(slot => slot.startsAt);
+    expect(slots).toContain(localStart(10).toISOString());
+    expect(slots).toContain(new Date(localStart(16).getTime() + 30 * 60_000).toISOString());
+    expect(slots).not.toContain(localStart(17).toISOString()); // 90 min from 17:00 runs past the 18:00 close
+  });
+
   it("rejects invalid public phone input before touching the booking transaction", async () => {
     mocked.db = {};
     await expect(caller().commitBooking({

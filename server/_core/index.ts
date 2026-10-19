@@ -8,6 +8,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { registerPublicSeoRoutes } from "../publicSeo";
+import { AUTH_PROCEDURES, PUBLIC_BOOKING_WRITE_PROCEDURES, rateLimit } from "./rateLimit";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -37,6 +38,10 @@ async function startServer() {
   app.get("/health", (_req, res) => {
     res.status(200).json({ ok: true, service: "salonflow" });
   });
+  // Rate limits run before body parsing so rejected requests never cost a 50mb parse.
+  app.use("/api", rateLimit({ windowMs: 60 * 1000, max: 300 }));
+  app.use("/api", rateLimit({ windowMs: 15 * 60 * 1000, max: 10, procedures: AUTH_PROCEDURES }));
+  app.use("/api", rateLimit({ windowMs: 10 * 60 * 1000, max: 20, procedures: PUBLIC_BOOKING_WRITE_PROCEDURES }));
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
