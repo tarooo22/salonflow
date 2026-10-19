@@ -1,7 +1,7 @@
-import { and, asc, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
 import { createHash, createHmac } from "node:crypto";
 import { nanoid } from "nanoid";
-import { appointmentServices, appointments, appointmentStatusHistory, clientConsents, clientMediaItems, clientMediaSets, clients, customerFeedback, customerFeedbackEvents, locationFeedPosts, locations, organizationGovernance, organizations, scheduleLocks, serviceCategories, services, staffLocations, staffProfiles, staffServices, waitlistEntries, workingHourRules } from "../../drizzle/schema";
+import { appointmentServices, appointments, appointmentStatusHistory, clientConsents, clientMediaItems, clientMediaSets, clients, customerFeedback, customerFeedbackEvents, locationFeedPosts, locations, organizationGovernance, organizations, scheduleExceptions, scheduleLocks, serviceCategories, services, staffLocations, staffProfiles, staffServices, waitlistEntries, workingHourRules } from "../../drizzle/schema";
 import { requireDb } from "../db";
 import { publicAvailabilityCheckSchema, publicAvailableSlotsSchema, publicBookingCancelSchema, publicBookingCommitSchema, publicBookingRescheduleSchema, publicBookingTokenSchema, publicFeedbackSubmitSchema, publicFeedbackTokenSchema, publicMultiAvailabilityCheckSchema, publicMultiAvailableSlotsSchema, publicMultiBookingCommitSchema, publicWaitlistCreateSchema, slugSchema } from "../../shared/validation";
 import { appointmentBlocksInterval, intervalsOverlap } from "../lib/appointments";
@@ -75,6 +75,35 @@ async function resolveMultiCandidates(db: Awaited<ReturnType<typeof requireDb>>,
     });
     return { id: candidate.id, name: candidate.name, services: selected, durationMinutes: selected.reduce((sum, service) => sum + service.durationMinutes, 0), totalTetri: selected.reduce((sum, service) => sum + service.priceTetri, 0), bufferBeforeMinutes: selected[0]?.bufferBeforeMinutes ?? 0, bufferAfterMinutes: selected.at(-1)?.bufferAfterMinutes ?? 0 };
   });
+}
+
+type PublicDb = Awaited<ReturnType<typeof requireDb>>;
+type PublicTx = Parameters<Parameters<PublicDb["transaction"]>[0]>[0];
+
+// One blocking-exception rule for the read side (availableSlots) and the commit side (isStartOffered).
+type ScheduleExceptionRow = typeof scheduleExceptions.$inferSelect;
+function fetchBlockingExceptions(db: Pick<PublicDb, "select">, location: typeof locations.$inferSelect, from: Date, to: Date) {
+  return db.select().from(scheduleExceptions).where(and(eq(scheduleExceptions.organizationId, location.organizationId), ne(scheduleExceptions.type, "EXTENDED_WORKING_TIME"), lt(scheduleExceptions.startsAt, to), gt(scheduleExceptions.endsAt, from)));
+}
+function exceptionBlocks(exception: Pick<ScheduleExceptionRow, "staffProfileId" | "locationId" | "startsAt" | "endsAt">, locationId: string, staffProfileId: string, startsAt: Date, endsAt: Date) {
+  // A staff exception (leave, sick day) follows the person to every location; location scope only narrows closures.
+  const applies = exception.staffProfileId != null ? exception.staffProfileId === staffProfileId : (exception.locationId == null || exception.locationId === locationId);
+  return applies && intervalsOverlap(startsAt, endsAt, exception.startsAt, exception.endsAt);
+}
+
+// Commit-time twin of availableSlots: the start must sit on the staff member's working-hour slot grid
+// and clear every closure/exception. Appointment overlap is checked separately by the caller.
+async function isStartOffered(tx: PublicTx, location: typeof locations.$inferSelect, staffProfileId: string, startsAt: Date, durationMinutes: number, bufferBeforeMinutes: number, bufferAfterMinutes: number) {
+  const [year, month, day] = dateKeyInTimeZone(startsAt, location.timezone).split("-").map(Number) as [number, number, number];
+  const weekday = (new Date(Date.UTC(year, month - 1, day)).getUTCDay() + 6) % 7;
+  const rules = await tx.select({ startLocalTime: workingHourRules.startLocalTime, endLocalTime: workingHourRules.endLocalTime }).from(workingHourRules)
+    .where(and(eq(workingHourRules.staffProfileId, staffProfileId), eq(workingHourRules.locationId, location.id), eq(workingHourRules.weekday, weekday)));
+  const atTime = (value: string) => { const [hour, minute] = value.split(":").map(Number); return zonedDateTimeToUtc({ year, month, day, hour: hour ?? 0, minute: minute ?? 0, second: 0 }, location.timezone); };
+  const onGrid = rules.some(rule => generateAvailableSlots({ openingStart: atTime(rule.startLocalTime), openingEnd: atTime(rule.endLocalTime), durationMinutes, slotIntervalMinutes: location.slotIntervalMinutes, bufferBeforeMinutes, bufferAfterMinutes, busyIntervals: [] }).some(slot => slot.startsAt.getTime() === startsAt.getTime()));
+  if (!onGrid) return false;
+  const endsAt = new Date(startsAt.getTime() + durationMinutes * 60_000);
+  const exceptions = await fetchBlockingExceptions(tx, location, startsAt, endsAt);
+  return !exceptions.some(exception => exceptionBlocks(exception, location.id, staffProfileId, startsAt, endsAt));
 }
 
 function multiCandidateAvailability(candidate: MultiCandidate, startsAt: Date) {
@@ -288,7 +317,7 @@ export const publicRouter = router({
         const endsAt = new Date(input.startsAt.getTime() + durationMinutes * 60_000);
         const protectedStart = new Date(input.startsAt.getTime() - service.bufferBeforeMinutes * 60_000);
         const protectedEnd = new Date(endsAt.getTime() + service.bufferAfterMinutes * 60_000);
-        const existing = await db.select().from(appointments).where(and(eq(appointments.staffProfileId, candidate.id), eq(appointments.locationId, location.id)));
+        const existing = await db.select().from(appointments).where(and(eq(appointments.organizationId, location.organizationId), eq(appointments.staffProfileId, candidate.id)));
         const conflict = existing.some(appointment => appointmentBlocksInterval(appointment.status) && intervalsOverlap(protectedStart, protectedEnd, new Date(appointment.startsAt.getTime() - appointment.bufferBeforeMinutes * 60_000), new Date(appointment.endsAt.getTime() + appointment.bufferAfterMinutes * 60_000)));
         if (!conflict) return { available: true, startsAt: input.startsAt, endsAt, staffProfileId: candidate.id, staffName: candidate.name };
       }
@@ -321,8 +350,8 @@ export const publicRouter = router({
     const protectedStart = new Date(input.startsAt.getTime() - service.bufferBeforeMinutes * 60_000);
     const protectedEnd = new Date(endsAt.getTime() + service.bufferAfterMinutes * 60_000);
     const existing = await db.select().from(appointments).where(and(
+      eq(appointments.organizationId, location.organizationId),
       eq(appointments.staffProfileId, staff.id),
-      eq(appointments.locationId, location.id),
     ));
     const conflict = existing.some(appointment => appointmentBlocksInterval(appointment.status) && intervalsOverlap(
       protectedStart,
@@ -384,7 +413,7 @@ export const publicRouter = router({
     if (!hourRows.length) return { ...empty, timezone: location.timezone };
 
     const existing = await db.select({ staffProfileId: appointments.staffProfileId, startsAt: appointments.startsAt, endsAt: appointments.endsAt, bufferBeforeMinutes: appointments.bufferBeforeMinutes, bufferAfterMinutes: appointments.bufferAfterMinutes, status: appointments.status }).from(appointments)
-      .where(and(eq(appointments.locationId, location.id), inArray(appointments.staffProfileId, staffIds)));
+      .where(and(eq(appointments.organizationId, location.organizationId), inArray(appointments.staffProfileId, staffIds)));
     const busyByStaff = new Map<string, BusyInterval[]>();
     for (const appointment of existing) {
       if (!appointmentBlocksInterval(appointment.status)) continue;
@@ -395,6 +424,8 @@ export const publicRouter = router({
 
     const parseTime = (value: string) => { const [h, m] = value.split(":").map(Number); return { hour: h ?? 0, minute: m ?? 0 }; };
     const timeZone = location.timezone;
+    const dayStart = zonedDateTimeToUtc({ year, month, day, hour: 0, minute: 0, second: 0 }, timeZone);
+    const exceptions = await fetchBlockingExceptions(db, location, dayStart, new Date(dayStart.getTime() + 86_400_000));
     // A start time is offered if at least one eligible specialist is free for it.
     const offered = new Set<number>();
     for (const candidate of candidates) {
@@ -414,7 +445,7 @@ export const publicRouter = router({
           busyIntervals: busyByStaff.get(candidate.id) ?? [],
         });
         for (const slot of slots) {
-          if (slot.startsAt > maximumStart) continue;
+          if (slot.startsAt > maximumStart || exceptions.some(exception => exceptionBlocks(exception, location.id, candidate.id, slot.startsAt, slot.endsAt))) continue;
           offered.add(slot.startsAt.getTime());
         }
       }
@@ -439,7 +470,7 @@ export const publicRouter = router({
     if (!candidates.length) return { available: false, reason: "STAFF_UNAVAILABLE" as const };
     for (const candidate of candidates) {
       const { endsAt, protectedStart, protectedEnd } = multiCandidateAvailability(candidate, input.startsAt);
-      const existing = await db.select().from(appointments).where(and(eq(appointments.staffProfileId, candidate.id), eq(appointments.locationId, location.id)));
+      const existing = await db.select().from(appointments).where(and(eq(appointments.organizationId, location.organizationId), eq(appointments.staffProfileId, candidate.id)));
       const conflict = existing.some(appointment => appointmentBlocksInterval(appointment.status) && intervalsOverlap(protectedStart, protectedEnd, new Date(appointment.startsAt.getTime() - appointment.bufferBeforeMinutes * 60_000), new Date(appointment.endsAt.getTime() + appointment.bufferAfterMinutes * 60_000)));
       if (!conflict) return { available: true, startsAt: input.startsAt, endsAt, staffProfileId: candidate.id, staffName: candidate.name, totalTetri: candidate.totalTetri };
     }
@@ -462,7 +493,7 @@ export const publicRouter = router({
     const staffIds = candidates.map(candidate => candidate.id);
     const hourRows = await db.select({ staffProfileId: workingHourRules.staffProfileId, startLocalTime: workingHourRules.startLocalTime, endLocalTime: workingHourRules.endLocalTime }).from(workingHourRules).where(and(eq(workingHourRules.locationId, location.id), eq(workingHourRules.weekday, weekday), inArray(workingHourRules.staffProfileId, staffIds)));
     if (!hourRows.length) return { ...empty, timezone: location.timezone };
-    const existing = await db.select({ staffProfileId: appointments.staffProfileId, startsAt: appointments.startsAt, endsAt: appointments.endsAt, bufferBeforeMinutes: appointments.bufferBeforeMinutes, bufferAfterMinutes: appointments.bufferAfterMinutes, status: appointments.status }).from(appointments).where(and(eq(appointments.locationId, location.id), inArray(appointments.staffProfileId, staffIds)));
+    const existing = await db.select({ staffProfileId: appointments.staffProfileId, startsAt: appointments.startsAt, endsAt: appointments.endsAt, bufferBeforeMinutes: appointments.bufferBeforeMinutes, bufferAfterMinutes: appointments.bufferAfterMinutes, status: appointments.status }).from(appointments).where(and(eq(appointments.organizationId, location.organizationId), inArray(appointments.staffProfileId, staffIds)));
     const busyByStaff = new Map<string, BusyInterval[]>();
     for (const appointment of existing) {
       if (!appointmentBlocksInterval(appointment.status)) continue;
@@ -471,6 +502,8 @@ export const publicRouter = router({
       busyByStaff.set(appointment.staffProfileId, intervals);
     }
     const parseTime = (value: string) => { const [h, m] = value.split(":").map(Number); return { hour: h ?? 0, minute: m ?? 0 }; };
+    const dayStart = zonedDateTimeToUtc({ year, month, day, hour: 0, minute: 0, second: 0 }, location.timezone);
+    const exceptions = await fetchBlockingExceptions(db, location, dayStart, new Date(dayStart.getTime() + 86_400_000));
     const offered = new Set<number>();
     for (const candidate of candidates) {
       for (const rule of hourRows.filter(row => row.staffProfileId === candidate.id)) {
@@ -478,7 +511,7 @@ export const publicRouter = router({
         const openingStart = zonedDateTimeToUtc({ year, month, day, hour: start.hour, minute: start.minute, second: 0 }, location.timezone);
         const openingEnd = zonedDateTimeToUtc({ year, month, day, hour: end.hour, minute: end.minute, second: 0 }, location.timezone);
         const generated = generateAvailableSlots({ openingStart, openingEnd, durationMinutes: candidate.durationMinutes, slotIntervalMinutes: location.slotIntervalMinutes, bufferBeforeMinutes: candidate.bufferBeforeMinutes, bufferAfterMinutes: candidate.bufferAfterMinutes, minimumStart, busyIntervals: busyByStaff.get(candidate.id) ?? [] });
-        for (const slot of generated) if (slot.startsAt <= maximumStart) offered.add(slot.startsAt.getTime());
+        for (const slot of generated) if (slot.startsAt <= maximumStart && !exceptions.some(exception => exceptionBlocks(exception, location.id, candidate.id, slot.startsAt, slot.endsAt))) offered.add(slot.startsAt.getTime());
       }
     }
     return { timezone: location.timezone, slots: Array.from(offered).sort((a, b) => a - b).map(timestamp => { const startsAt = new Date(timestamp); return { startsAt: startsAt.toISOString(), label: formatTimeInTimeZone(startsAt, location.timezone) }; }) };
@@ -507,7 +540,8 @@ export const publicRouter = router({
       for (const candidate of candidates) {
         const interval = multiCandidateAvailability(candidate, input.startsAt);
         for (const dateKey of enumerateUtcDates(input.startsAt, interval.endsAt)) await tx.insert(scheduleLocks).values({ id: `${candidate.id}:${dateKey}`, staffProfileId: candidate.id, localDate: new Date(`${dateKey}T00:00:00.000Z`) }).onDuplicateKeyUpdate({ set: { createdAt: new Date() } });
-        const existing = await tx.select().from(appointments).where(and(eq(appointments.staffProfileId, candidate.id), eq(appointments.locationId, location.id)));
+        if (!await isStartOffered(tx, location, candidate.id, input.startsAt, candidate.durationMinutes, candidate.bufferBeforeMinutes, candidate.bufferAfterMinutes)) continue;
+        const existing = await tx.select().from(appointments).where(and(eq(appointments.organizationId, location.organizationId), eq(appointments.staffProfileId, candidate.id)));
         if (!existing.some(appointment => appointmentBlocksInterval(appointment.status) && intervalsOverlap(interval.protectedStart, interval.protectedEnd, new Date(appointment.startsAt.getTime() - appointment.bufferBeforeMinutes * 60_000), new Date(appointment.endsAt.getTime() + appointment.bufferAfterMinutes * 60_000)))) { assigned = candidate; endsAt = interval.endsAt; break; }
       }
       if (!assigned || !endsAt) throw new Error("ეს დრო ახლახან დაიკავეს. აირჩიეთ სხვა თავისუფალი დრო.");
@@ -518,7 +552,7 @@ export const publicRouter = router({
       await tx.insert(appointmentServices).values(assigned.services.map((service, sortOrder) => ({ id: nanoid(21), appointmentId, serviceId: service.id, staffProfileId: assigned!.id, serviceNameSnapshot: service.nameKa, durationMinutesSnapshot: service.durationMinutes, bufferBeforeMinutesSnapshot: service.bufferBeforeMinutes, bufferAfterMinutesSnapshot: service.bufferAfterMinutes, priceTetriSnapshot: service.priceTetri, sortOrder })));
       await tx.insert(appointmentStatusHistory).values({ id: nanoid(21), appointmentId, oldStatus: null, newStatus: "PENDING", metadata: { source: "PUBLIC_WEB", idempotencyKey: input.idempotencyKey, serviceCount: assigned.services.length } });
       await tx.insert(clientConsents).values({ id: nanoid(21), clientId, consentType: "BOOKING_TERMS", granted: true, source: "PUBLIC_WEB", grantedAt: new Date() });
-    });
+    }, { isolationLevel: "read committed" }); // re-reads after each scheduleLocks upsert must see rows committed meanwhile
     return { confirmed: true, replayed: false, confirmationToken, assignedStaffName: assigned?.name, endsAt: endsAt! };
   }),
 
@@ -588,7 +622,8 @@ export const publicRouter = router({
         const protectedStart = new Date(input.startsAt.getTime() - service.bufferBeforeMinutes * 60_000);
         const protectedEnd = new Date(endsAt.getTime() + service.bufferAfterMinutes * 60_000);
         for (const dateKey of enumerateUtcDates(protectedStart, protectedEnd)) await tx.insert(scheduleLocks).values({ id: `${candidate.id}:${dateKey}`, staffProfileId: candidate.id, localDate: new Date(`${dateKey}T00:00:00.000Z`) }).onDuplicateKeyUpdate({ set: { createdAt: new Date() } });
-        const concurrent = await tx.select().from(appointments).where(and(eq(appointments.staffProfileId, candidate.id), eq(appointments.locationId, location.id), inArray(appointments.status, ["PENDING", "CONFIRMED", "CHECKED_IN", "IN_SERVICE", "COMPLETED", "NO_SHOW"])));
+        if (!await isStartOffered(tx, location, candidate.id, input.startsAt, durationMinutes, service.bufferBeforeMinutes, service.bufferAfterMinutes)) continue;
+        const concurrent = await tx.select().from(appointments).where(and(eq(appointments.organizationId, location.organizationId), eq(appointments.staffProfileId, candidate.id), inArray(appointments.status, ["PENDING", "CONFIRMED", "CHECKED_IN", "IN_SERVICE", "COMPLETED", "NO_SHOW"])));
         const conflict = concurrent.some(appointment => intervalsOverlap(protectedStart, protectedEnd, new Date(appointment.startsAt.getTime() - appointment.bufferBeforeMinutes * 60_000), new Date(appointment.endsAt.getTime() + appointment.bufferAfterMinutes * 60_000)));
         if (!conflict) { assigned = { id: candidate.id, name: candidate.name, durationMinutes, endsAt }; break; }
       }
@@ -659,7 +694,7 @@ export const publicRouter = router({
         source: "PUBLIC_WEB",
         grantedAt: new Date(),
       });
-    });
+    }, { isolationLevel: "read committed" }); // see commitMultiBooking
 
     const [persistedAppointment] = await db.select({ id: appointments.id, endsAt: appointments.endsAt }).from(appointments)
       .where(eq(appointments.idempotencyKey, input.idempotencyKey)).limit(1);
@@ -714,7 +749,8 @@ export const publicRouter = router({
     const protectedEnd = new Date(endsAt.getTime() + appointment.bufferAfterMinutes * 60_000);
     await db.transaction(async tx => {
       for (const dateKey of enumerateUtcDates(input.startsAt, endsAt)) await tx.insert(scheduleLocks).values({ id: `${appointment.staffProfileId}:${dateKey}`, staffProfileId: appointment.staffProfileId, localDate: new Date(`${dateKey}T00:00:00.000Z`) }).onDuplicateKeyUpdate({ set: { createdAt: new Date() } });
-      const existing = await tx.select().from(appointments).where(and(eq(appointments.staffProfileId, appointment.staffProfileId), eq(appointments.locationId, appointment.locationId)));
+      if (!await isStartOffered(tx, location, appointment.staffProfileId, input.startsAt, durationMs / 60_000, appointment.bufferBeforeMinutes, appointment.bufferAfterMinutes)) throw new Error("ეს დრო ახლახან დაიკავეს. აირჩიეთ სხვა თავისუფალი დრო.");
+      const existing = await tx.select().from(appointments).where(and(eq(appointments.organizationId, appointment.organizationId), eq(appointments.staffProfileId, appointment.staffProfileId)));
       if (existing.some(item => item.id !== appointment.id && appointmentBlocksInterval(item.status) && intervalsOverlap(protectedStart, protectedEnd, new Date(item.startsAt.getTime() - item.bufferBeforeMinutes * 60_000), new Date(item.endsAt.getTime() + item.bufferAfterMinutes * 60_000)))) throw new Error("ეს დრო ახლახან დაიკავეს. აირჩიეთ სხვა თავისუფალი დრო.");
       await tx.update(appointments).set({ startsAt: input.startsAt, endsAt }).where(eq(appointments.id, appointment.id));
       await tx.insert(appointmentStatusHistory).values({ id: nanoid(21), appointmentId: appointment.id, oldStatus: appointment.status, newStatus: appointment.status, reason: "CUSTOMER_RESCHEDULED", metadata: { source: "PUBLIC_TOKEN", event: "CUSTOMER_RESCHEDULED", previousStartsAt: appointment.startsAt.toISOString(), previousEndsAt: appointment.endsAt.toISOString(), startsAt: input.startsAt.toISOString(), endsAt: endsAt.toISOString() } });

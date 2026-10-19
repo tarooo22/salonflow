@@ -1,3 +1,4 @@
+import { MySqlDialect } from "drizzle-orm/mysql-core";
 import { describe, expect, it, vi } from "vitest";
 
 const mocked = vi.hoisted(() => ({ db: null as unknown, ids: [] as string[], isOrganizationTrialPublicBookingActive: vi.fn(async () => true), storageGetSignedUrl: vi.fn(async (key: string) => `https://r2.test/${key}`) }));
@@ -9,6 +10,7 @@ vi.mock("nanoid", () => ({ nanoid: vi.fn(() => mocked.ids.shift() ?? "generated_
 vi.mock("../lib/trialAccess", () => ({ isOrganizationTrialPublicBookingActive: mocked.isOrganizationTrialPublicBookingActive }));
 vi.mock("../storage", () => ({ storageGetSignedUrl: mocked.storageGetSignedUrl }));
 
+import { dateKeyInTimeZone, zonedDateTimeToUtc } from "../../shared/timezones";
 import { assertWaitlistFuturePreference, canCustomerManage, publicRouter } from "./public";
 
 const ids = {
@@ -78,8 +80,16 @@ function anyAvailableCommitDb(outerRows: unknown[][], transactionRows: unknown[]
   return { select: () => queuedChain(outerRows.shift() ?? []), transaction, values };
 }
 
-const activeLocation = { id: ids.locationId, organizationId: ids.organizationId, minimumNoticeMinutes: 0, maximumAdvanceDays: 365 };
+const activeLocation = { id: ids.locationId, organizationId: ids.organizationId, minimumNoticeMinutes: 0, maximumAdvanceDays: 365, timezone: "Asia/Tbilisi", slotIntervalMinutes: 30 };
 const activeService = { id: ids.serviceId, organizationId: ids.organizationId, defaultDurationMinutes: 60, bufferBeforeMinutes: 0, bufferAfterMinutes: 0 };
+
+// A start at the given Tbilisi hour two days ahead, so it is always in the future and on the 30-minute grid.
+function localStart(hour: number) {
+  const key = dateKeyInTimeZone(new Date(Date.now() + 2 * 86_400_000), "Asia/Tbilisi");
+  const [year, month, day] = key.split("-").map(Number) as [number, number, number];
+  return zonedDateTimeToUtc({ year, month, day, hour, minute: 0, second: 0 }, "Asia/Tbilisi");
+}
+const workingRule = { startLocalTime: "09:00", endLocalTime: "18:00" };
 
 function availabilityInput() {
   return { slug: "gldani-beauty", serviceId: ids.serviceId, staffProfileId: ids.staffProfileId, startsAt: new Date(Date.now() + 7_200_000) };
@@ -192,10 +202,10 @@ describe("public booking router safeguards", () => {
     const persistedEndsAt = new Date("2026-08-20T09:45:00.000Z");
     const db = anyAvailableCommitDb([
       [], [activeLocation], [activeService], [{ id: "staff_any_01", name: "ნინო", durationOverrideMinutes: null }], [{ id: "appointment_any_001", endsAt: persistedEndsAt }],
-    ], [[], [], [], []]);
+    ], [[], [workingRule], [], [], []]);
     mocked.db = db;
     mocked.ids.splice(0, mocked.ids.length, "appointment_any_001", "client_any_001", "appointment_service_any_001", "history_any_001", "consent_any_001");
-    const input = { ...availabilityInput(), staffProfileId: "ANY_AVAILABLE" as const, firstName: "თამარი", phone: "+995 555 12 34 56", bookingTermsConsent: true as const, idempotencyKey: "booking_any_available_001" };
+    const input = { ...availabilityInput(), startsAt: localStart(10), staffProfileId: "ANY_AVAILABLE" as const, firstName: "თამარი", phone: "+995 555 12 34 56", bookingTermsConsent: true as const, idempotencyKey: "booking_any_available_001" };
     const result = await caller().commitBooking(input);
     expect(result).toMatchObject({ confirmed: true, replayed: false, assignedStaffName: "ნინო", endsAt: persistedEndsAt });
     expect(db.values).toHaveBeenCalledWith(expect.objectContaining({ staffProfileId: "staff_any_01" }));
@@ -207,15 +217,59 @@ describe("public booking router safeguards", () => {
   });
 
   it("falls back to the next eligible any-available candidate after final transactional conflict re-check", async () => {
-    const startsAt = new Date(Date.now() + 7_200_000);
+    const startsAt = localStart(10);
     const conflictingAppointment = { status: "CONFIRMED", startsAt, endsAt: new Date(startsAt.getTime() + 3_600_000), bufferBeforeMinutes: 0, bufferAfterMinutes: 0 };
     const db = anyAvailableCommitDb([
       [], [activeLocation], [activeService], [{ id: "staff_any_busy", name: "ანა", durationOverrideMinutes: null }, { id: "staff_any_free", name: "ნინო", durationOverrideMinutes: null }], [{ id: "persisted_any_02" }],
-    ], [[], [conflictingAppointment], [], [], []]);
+    ], [[], [workingRule], [], [conflictingAppointment], [workingRule], [], [], []]);
     mocked.db = db;
     const result = await caller().commitBooking({ slug: "gldani-beauty", serviceId: ids.serviceId, staffProfileId: "ANY_AVAILABLE", startsAt, firstName: "თამარი", phone: "+995 555 12 34 56", bookingTermsConsent: true, idempotencyKey: "booking_any_available_003" });
     expect(result).toMatchObject({ confirmed: true, assignedStaffName: "ნინო" });
     expect(db.values).toHaveBeenCalledWith(expect.objectContaining({ staffProfileId: "staff_any_free" }));
+  });
+
+  it.each([
+    ["outside the staff working hours", localStart(3), []],
+    ["on a closure or exception", localStart(10), [{ staffProfileId: null, locationId: null, startsAt: localStart(9), endsAt: localStart(18) }]],
+  ])("rejects a public commit %s", async (_label, startsAt, exceptions) => {
+    const db = anyAvailableCommitDb([
+      [], [activeLocation], [activeService], [{ id: "staff_any_01", name: "ნინო", durationOverrideMinutes: null }],
+    ], [[], [workingRule], exceptions, [], []]);
+    mocked.db = db;
+    await expect(caller().commitBooking({ ...availabilityInput(), startsAt, staffProfileId: "ANY_AVAILABLE", firstName: "თამარი", phone: "+995 555 12 34 56", bookingTermsConsent: true, idempotencyKey: "booking_hours_guard_001" })).rejects.toThrow("The selected time is no longer available");
+    expect(db.values).not.toHaveBeenCalledWith(expect.objectContaining({ source: "PUBLIC_WEB" }));
+  });
+
+  it("treats an appointment of the same specialist at another location as blocking", async () => {
+    const wheres: unknown[] = [];
+    const otherLocationAppointment = { status: "CONFIRMED", locationId: "location_other_01", staffProfileId: ids.staffProfileId, startsAt: localStart(10), endsAt: localStart(11), bufferBeforeMinutes: 0, bufferAfterMinutes: 0 };
+    const rows: unknown[][] = [[activeLocation], [activeService], [{ id: "staff-location" }], [{ id: ids.staffProfileId }], [{ id: "eligibility", durationOverrideMinutes: null }], [otherLocationAppointment]];
+    mocked.db = { select: () => ({ from: () => ({ where: (condition: unknown) => {
+      wheres.push(condition);
+      const result = rows.shift() ?? [];
+      return { limit: async () => result, then: (resolve: (value: unknown[]) => unknown) => Promise.resolve(result).then(resolve) };
+    } }) }) };
+    await expect(caller().checkAvailability({ ...availabilityInput(), startsAt: localStart(10) })).resolves.toEqual({ available: false, reason: "SLOT_UNAVAILABLE" });
+    const appointmentQuery = new MySqlDialect().sqlToQuery(wheres[5] as never).sql;
+    expect(appointmentQuery).toContain("`staffProfileId`");
+    expect(appointmentQuery).not.toContain("`locationId`");
+  });
+
+  it("drops a slot from availableSlots when a closure covers it", async () => {
+    const closure = { staffProfileId: null, locationId: null, startsAt: localStart(12), endsAt: localStart(13) };
+    const run = async (exceptions: unknown[]) => {
+      mocked.db = publicCatalogDb([[activeLocation], [activeService], [{ id: "staff_any_01", durationOverrideMinutes: null }], [{ staffProfileId: "staff_any_01", ...workingRule }], [], exceptions]);
+      const date = dateKeyInTimeZone(localStart(10), "Asia/Tbilisi");
+      return (await caller().availableSlots({ slug: "gldani-beauty", serviceId: ids.serviceId, staffProfileId: "ANY_AVAILABLE", date })).slots.map(slot => slot.startsAt);
+    };
+    expect(await run([])).toContain(localStart(12).toISOString());
+    const blocked = await run([closure]);
+    expect(blocked).not.toContain(localStart(12).toISOString());
+    expect(blocked).toContain(localStart(11).toISOString());
+    expect(blocked).toContain(localStart(13).toISOString());
+    // Staff leave entered for another location still blocks the person here; another location's closure does not.
+    expect(await run([{ ...closure, staffProfileId: "staff_any_01", locationId: "location_other_01" }])).not.toContain(localStart(12).toISOString());
+    expect(await run([{ ...closure, locationId: "location_other_01" }])).toContain(localStart(12).toISOString());
   });
 
   it("rejects invalid public phone input before touching the booking transaction", async () => {
