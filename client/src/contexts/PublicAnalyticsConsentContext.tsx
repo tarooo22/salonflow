@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useLocation } from "wouter";
+import "@/components/catalog/catalog.css";
 
 const STORAGE_KEY = "salonflow-public-conversion-consent-v1";
 const CONSENT_VERSION = "public-conversion-v1" as const;
@@ -71,5 +72,5 @@ export function AnalyticsConsentPreferencesButton({ className = "" }: { classNam
 function AnalyticsConsentSurface() {
   const { choice, setChoice } = usePublicAnalyticsConsent();
   if (choice !== null) return null;
-  return <section className="fixed inset-x-3 bottom-3 z-50 mx-auto max-w-xl rounded-2xl border border-[var(--sf-line)] bg-[var(--sf-surface-raised)] p-4 shadow-xl md:bottom-5" aria-label="Analytics თანხმობა"><p className="text-sm font-semibold text-[var(--sf-ink)]">გვეხმარებით კონვერსიის გაუმჯობესებაში?</p><p className="mt-1 text-sm leading-6 text-[var(--sf-muted)]">თანხმობის შემთხვევაში ვინახავთ მხოლოდ ანონიმურ event ტიპს, გვერდის გზას და დროს. არ ვინახავთ სახელს, საკონტაქტო მონაცემს, ძიების ტექსტს, booking დეტალს ან device fingerprint-ს.</p><div className="mt-3 flex flex-wrap items-center gap-2"><Button size="sm" onClick={() => setChoice("accepted")}>თანხმობა</Button><Button size="sm" variant="outline" onClick={() => setChoice("declined")}>უარის თქმა</Button><a href="/privacy" className="min-h-9 px-1 text-sm font-medium text-[var(--sf-muted)] underline underline-offset-4 hover:text-[var(--sf-ink)]">დეტალურად</a></div></section>;
+  return <section className="cw fixed inset-x-3 bottom-3 z-50 mx-auto max-w-2xl rounded-[4px] border-[1.5px] border-[var(--cw-ink)] p-3 shadow-[0_14px_30px_-16px_rgba(8,7,32,0.6)] sm:flex sm:items-center sm:gap-4 md:bottom-5" aria-label="ანალიტიკის თანხმობა"><p className="text-sm leading-6 text-[var(--cw-ink)]"><strong>ანონიმური სტატისტიკა?</strong> ვინახავთ მხოლოდ გვერდს და დროს — არა სახელს, ტელეფონს ან ჯავშნის დეტალებს. <a href="/privacy#analytics" className="font-bold text-[var(--cw-stamp)] underline">დეტალურად</a></p><div className="mt-2 flex shrink-0 gap-2 sm:mt-0"><button type="button" className="cw-btn cw-btn-stamp min-h-10 px-4 text-sm" onClick={() => setChoice("accepted")}>თანხმობა</button><button type="button" className="cw-btn cw-btn-line min-h-10 px-4 text-sm" onClick={() => setChoice("declined")}>უარი</button></div></section>;
 }

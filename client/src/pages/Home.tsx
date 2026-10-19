@@ -1,35 +1,15 @@
 import { CatalogFooter, CatalogHeader } from "@/components/catalog/CatalogChrome";
+import { cssVars, EmptyTickets, listingMatchesVertical, NEW_LISTING_DAYS, newestListings, TicketShelf, type CatalogCategory as Category, type CatalogListing as Listing } from "@/components/catalog/Tickets";
 import { marketplaceDiscoveryHref } from "@/components/public/MarketplaceDiscovery";
 import { usePublicMeta } from "@/components/public/PublicMeta";
 import { trpc } from "@/lib/trpc";
-import { VERTICALS, verticalForCategory, verticalsForListing, verticalStyle, type Vertical } from "@/lib/verticals";
+import { VERTICALS, verticalForCategory, verticalStyle, type Vertical } from "@/lib/verticals";
 import { BRAND } from "@shared/brand";
-import { ArrowRight, Briefcase, Check, MapPin, Search, ShoppingBag } from "lucide-react";
-import { type CSSProperties, type FormEvent, useMemo, useState } from "react";
+import { ArrowRight, Briefcase, CalendarCheck, Globe, MapPin, Search, ShoppingBag, UsersRound, Wallet } from "lucide-react";
+import { type FormEvent, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
 
-type Category = { id: string; slug: string; nameKa: string; iconKey: string };
-type Listing = {
-  publicSlug: string;
-  name: string;
-  areaLabelKa: string | null;
-  publicDescription: string | null;
-  coverImageUrl: string | null;
-  coverImageAltKa: string | null;
-  categories: Category[];
-  promotion: { tier: string; disclosure: string | null } | null;
-};
-
 const CITIES = ["თბილისი", "ბათუმი", "ქუთაისი", "რუსთავი", "ზუგდიდი", "თელავი", "გორი", "ფოთი"];
-
-export function listingMatchesVertical(listing: Pick<Listing, "categories">, vertical: Vertical | null) {
-  if (!vertical) return true;
-  return verticalsForListing(listing.categories).includes(vertical);
-}
-
-function cssVars(vars: Record<string, string>) {
-  return vars as CSSProperties;
-}
 
 function SearchCard({ vertical, onVertical }: { vertical: Vertical | null; onVertical: (next: Vertical | null) => void }) {
   const [, setLocation] = useLocation();
@@ -94,63 +74,13 @@ function SearchCard({ vertical, onVertical }: { vertical: Vertical | null; onVer
   </div>;
 }
 
-function Ticket({ item, number }: { item: Listing; number: number }) {
-  const verticals = verticalsForListing(item.categories);
-  const lead = verticalStyle(verticals[0] ?? "beauty");
-  const promoted = item.promotion?.tier === "VIP" ? "VIP" : item.promotion?.tier === "RECOMMENDED" ? "რჩეული" : null;
-  return <Link href={`/salon/${item.publicSlug}`} className="cw-ticket group" style={cssVars({ "--stub-bg": lead.bg, "--stub-ink": lead.ink })}>
-    <div className="cw-ticket-stub" aria-hidden="true">
-      <span className="cw-num">№ {String(number).padStart(3, "0")}</span>
-      <span className="text-[0.72rem] font-extrabold [writing-mode:vertical-rl] rotate-180">{lead.label}</span>
-    </div>
-    <div className="flex min-w-0 gap-4 p-4">
-      <div className="min-w-0 flex-1">
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="truncate text-lg font-extrabold [font-stretch:85%]">{item.name}</h3>
-          {promoted ? <span className="cw-stamp-mark shrink-0" title={item.promotion?.disclosure ?? "რეკლამა"}>{promoted}<span className="sr-only"> — რეკლამა</span></span> : null}
-        </div>
-        {item.areaLabelKa ? <p className="mt-1 flex items-center gap-1 text-sm text-[var(--cw-ink-soft)]"><MapPin className="size-3.5 shrink-0" aria-hidden="true" />{item.areaLabelKa}</p> : null}
-        {item.categories.length ? <p className="mt-2 line-clamp-1 text-sm text-[var(--cw-ink-soft)]">{item.categories.map(category => category.nameKa).join(" · ")}</p> : null}
-        <span className="mt-3 inline-flex items-center gap-1 text-sm font-extrabold text-[var(--cw-stamp)]">ჩაწერა <ArrowRight className="size-4 transition-transform duration-200 group-hover:translate-x-1" aria-hidden="true" /></span>
-      </div>
-      {item.coverImageUrl ? <img src={item.coverImageUrl} alt={item.coverImageAltKa ?? ""} loading="lazy" className="hidden size-24 shrink-0 rounded-[3px] object-cover sm:block" /> : null}
-    </div>
-  </Link>;
-}
-
-// Unfilled tickets: the live state until the first businesses are approved.
-function EmptyTickets({ message, vertical }: { message: string; vertical: Vertical | null }) {
-  const tone = verticalStyle(vertical ?? "beauty");
-  return <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-    {[1, 2, 3].map(number => <div key={number} className={`cw-ticket ${number > 1 ? "cw-ticket-extra" : ""}`} style={cssVars({ "--stub-bg": tone.bg, "--stub-ink": tone.ink })}>
-      <div className="cw-ticket-stub" aria-hidden="true"><span className="cw-num">№ {String(number).padStart(3, "0")}</span></div>
-      {number === 1
-        ? <div className="flex flex-col justify-between gap-3 p-4">
-          <p className="font-extrabold leading-6">{message}</p>
-          <p className="text-sm text-[var(--cw-ink-soft)]">ბიზნესი გაქვს? <Link href="/partner" className="font-extrabold text-[var(--cw-stamp)] underline">დაამატე შენი ადგილი</Link></p>
-        </div>
-        : <div className="cw-ticket-blank m-4" aria-hidden="true" />}
-    </div>)}
-  </div>;
-}
-
-function TicketShelf({ title, note, items, startAt }: { title: string; note?: string; items: Listing[]; startAt: number }) {
-  if (!items.length) return null;
-  return <div className="mt-12 first:mt-0">
-    <div className="flex flex-wrap items-baseline justify-between gap-2 border-b-[1.5px] border-[var(--cw-ink)] pb-3">
-      <h3 className="text-xl font-extrabold [font-stretch:85%]">{title}</h3>
-      {note ? <p className="text-sm text-[var(--cw-ink-soft)]">{note}</p> : null}
-    </div>
-    <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">{items.map((item, index) => <Ticket key={item.publicSlug} item={item} number={startAt + index} />)}</div>
-  </div>;
-}
-
 function Listings({ vertical }: { vertical: Vertical | null }) {
   const directory = trpc.marketplace.directory.useQuery({ limit: 24, offset: 0 });
   const items = ((directory.data?.items ?? []) as Listing[]).filter(item => listingMatchesVertical(item, vertical));
   const vip = items.filter(item => item.promotion?.tier === "VIP");
   const recommended = items.filter(item => item.promotion?.tier === "RECOMMENDED");
-  const rest = items.filter(item => !item.promotion);
+  const fresh = newestListings(items.filter(item => !item.promotion));
+  const rest = items.filter(item => !item.promotion && !fresh.includes(item));
   const verticalLabel = vertical ? verticalStyle(vertical).label : null;
 
   return <section className="cw-section" aria-labelledby="cw-listings-title">
@@ -167,8 +97,9 @@ function Listings({ vertical }: { vertical: Vertical | null }) {
           : directory.isError ? <p role="alert" className="text-[var(--cw-ink-soft)]">ადგილების ჩატვირთვა ვერ მოხერხდა. განაახლეთ გვერდი ან <Link href="/salons" className="font-bold text-[var(--cw-stamp)] underline">გახსენით კატალოგი</Link>.</p>
           : items.length ? <>
             <TicketShelf title="VIP" note="ფასიანი განთავსება" items={vip} startAt={1} />
-            <TicketShelf title="რჩეული" note="ფასიანი განთავსება" items={recommended} startAt={vip.length + 1} />
-            <TicketShelf title={vip.length || recommended.length ? "ყველა ადგილი" : "ახლა კატალოგში"} items={rest} startAt={vip.length + recommended.length + 1} />
+            <TicketShelf title="რეკომენდებული" note="ფასიანი განთავსება" items={recommended} startAt={vip.length + 1} />
+            <TicketShelf title={`სიახლე ${BRAND.nameKa}-ზე`} note={`ბოლო ${NEW_LISTING_DAYS} დღეში დამატებული`} items={fresh} startAt={vip.length + recommended.length + 1} />
+            <TicketShelf title={vip.length || recommended.length || fresh.length ? "ყველა ადგილი" : "ახლა კატალოგში"} items={rest} startAt={vip.length + recommended.length + fresh.length + 1} />
           </>
           : <EmptyTickets message={vertical === "dental" ? "სტომატოლოგიური კლინიკები მალე დაემატება." : verticalLabel ? `${verticalLabel} — პირველი ადგილები მალე გამოჩნდება.` : "პირველი გადამოწმებული ადგილები მალე გამოჩნდება."} vertical={vertical} />}
       </div>
@@ -254,18 +185,34 @@ function ComingSoon() {
   </section>;
 }
 
+const BUSINESS_FEATURES = [
+  { icon: CalendarCheck, title: "ონლაინ ჯავშნები", text: "კლიენტი თავად ირჩევს სერვისს, სპეციალისტს და თავისუფალ დროს — ზარების გარეშე." },
+  { icon: UsersRound, title: "კლიენტები და გუნდი", text: "კლიენტების ბაზა ისტორიით, თანამშრომლების გრაფიკები და როლები." },
+  { icon: Wallet, title: "გადახდები და ანგარიშები", text: "POS გადახდები, შემოსავლები, ხარჯები და საკომისიოები ერთ ადგილას." },
+  { icon: Globe, title: "საკუთარი საჯარო გვერდი", text: "პროფილი ფასებით, გუნდით და სამუშაო საათებით, ჯავშნის ბმულით." },
+];
+
 function BusinessBand() {
   return <section className="cw-desk" aria-labelledby="cw-business-title">
-    <div className="cw-container grid gap-8 py-16 lg:grid-cols-[1.3fr_1fr] lg:items-center lg:py-20">
-      <div>
-        <h2 id="cw-business-title" className="cw-h2 text-white">სალონი, ესთეტიკის ცენტრი თუ კლინიკა გაქვს?</h2>
-        <p className="mt-4 max-w-xl leading-7 text-[var(--cw-on-desk-soft)]">დაამატე შენი ადგილი კატალოგში, მიიღე ონლაინ ჯავშნები და მართე დღე პანელიდან, რომელიც შენს სფეროზეა მორგებული.</p>
-        <ul className="mt-5 flex flex-wrap gap-2">{VERTICALS.map(item => <li key={item.id} className="rounded-[3px] px-3 py-1 text-sm font-extrabold" style={{ background: item.bg, color: item.ink }}>{item.label}</li>)}</ul>
+    <div className="cw-container py-16 lg:py-20">
+      <div className="grid gap-8 lg:grid-cols-[1.3fr_1fr] lg:items-end">
+        <div>
+          <h2 id="cw-business-title" className="cw-h2 text-white">ბიზნესის მფლობელი ხარ?</h2>
+          <p className="mt-4 max-w-xl leading-7 text-[var(--cw-on-desk-soft)]">მართვის პროგრამა სალონებისთვის, ესთეტიკის ცენტრებისთვის და სტომატოლოგიური კლინიკებისთვის — თითოეულს თავის სფეროზე მორგებული პანელით. დაამატე შენი ადგილი კატალოგში და მიიღე ჯავშნები ონლაინ.</p>
+          <ul className="mt-5 flex flex-wrap gap-2">{VERTICALS.map(item => <li key={item.id} className="rounded-[3px] px-3 py-1 text-sm font-extrabold" style={{ background: item.bg, color: item.ink }}>{item.label}{item.id === "dental" ? " · მალე" : ""}</li>)}</ul>
+        </div>
+        <div className="flex flex-wrap gap-3 lg:justify-end">
+          <Link href="/partner" className="cw-btn cw-btn-paper">მართვის პროგრამა <ArrowRight className="size-4" aria-hidden="true" /></Link>
+          <Link href="/register" className="cw-btn cw-btn-line text-white">რეგისტრაცია</Link>
+        </div>
       </div>
-      <div className="flex flex-wrap gap-3 lg:justify-end">
-        <Link href="/partner" className="cw-btn cw-btn-paper">გაიგე მეტი <ArrowRight className="size-4" aria-hidden="true" /></Link>
-        <Link href="/register" className="cw-btn cw-btn-line text-white"><Check className="size-4" aria-hidden="true" />რეგისტრაცია</Link>
-      </div>
+      <ul className="mt-12 grid gap-px overflow-hidden rounded-[4px] border border-[var(--cw-desk-soft)] bg-[var(--cw-desk-soft)] sm:grid-cols-2 lg:grid-cols-4">
+        {BUSINESS_FEATURES.map(item => <li key={item.title} className="bg-[var(--cw-desk)] p-5">
+          <item.icon className="size-5 text-[var(--cw-aesthetics)]" aria-hidden="true" />
+          <p className="mt-3 font-extrabold text-white [font-stretch:85%]">{item.title}</p>
+          <p className="mt-1 text-sm leading-6 text-[var(--cw-on-desk-soft)]">{item.text}</p>
+        </li>)}
+      </ul>
     </div>
   </section>;
 }

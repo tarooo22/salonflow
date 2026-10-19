@@ -1,6 +1,10 @@
 import { z } from "zod";
 
 export const opaqueIdSchema = z.string().trim().min(12).max(36).regex(/^[A-Za-z0-9_-]+$/);
+
+// Most services a customer can pick for one visit (profile picker and ?services= link).
+export const MAX_SELECTED_SERVICES = 6;
+
 export const slugSchema = z.string().trim().toLowerCase().min(3).max(96).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
 export const timezoneSchema = z.string().trim().min(3).max(64).refine(value => {
   try {

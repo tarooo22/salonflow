@@ -1,0 +1,65 @@
+/* Public marketing + auth pages in the appointment-card world.
+   Builds on the `cw-` tokens declared in catalog.css; nothing here redefines them. */
+
+/* Lede on the indigo desk (the base .cw-lede is Faded Ink, which is for paper). */
+.cw-lede-desk { color: var(--cw-on-desk-soft); font-size: 1.05rem; line-height: 1.6; max-width: 40rem; }
+
+/* Inline action link: the stamp ink, underlined. */
+.cw-link { color: var(--cw-stamp); font-weight: 700; text-decoration: underline; }
+.cw-link:hover { color: var(--cw-stamp-hover); }
+
+/* Not-yet-available things are shown honestly as a dashed outline. */
+.cw-dashed { border: 2px dashed var(--cw-rule-strong); border-radius: 4px; }
+
+/* Plain ledger row: padding and the pale divider only, so layout comes from utilities.
+   (catalog.css is unlayered and beats Tailwind utilities, so .cw-ledger-row cannot be re-laid-out.) */
+.cw-row { padding: 0.9rem 1rem; border-top: 1px solid var(--cw-rule); }
+.cw-row:first-child { border-top: 0; }
+
+/* Neutral ledger head (a ledger that does not belong to a vertical). */
+.cw-ledger-neutral { --ledger-bg: var(--cw-on-desk); --ledger-ink: var(--cw-ink); }
+
+/* FAQ rows: native details/summary on a ledger. */
+.cw-faq summary { list-style: none; cursor: pointer; }
+.cw-faq summary::-webkit-details-marker { display: none; }
+.cw-faq summary svg { transition: transform 200ms var(--cw-ease); }
+.cw-faq details[open] summary svg { transform: rotate(90deg); }
+
+/* Form fields on the auth card. Extends .cw-field with a row for an inline button. */
+.cw-field-row { display: flex; align-items: center; gap: 0.5rem; }
+.cw-field-row input { flex: 1; min-width: 0; }
+.cw-field-btn { display: grid; place-items: center; width: 2.25rem; height: 2.25rem; flex-shrink: 0; margin-top: 0.1rem; border-radius: 3px; color: var(--cw-ink); transition: background-color 160ms var(--cw-ease); }
+.cw-field-btn:hover { background: var(--cw-rule); }
+.cw-field:has(input[aria-invalid="true"]) { border-color: #b3261e; }
+.cw-field input[readonly] { color: var(--cw-ink-soft); }
+
+/* Error message box. Colours checked at 7:1+ on their ground. */
+.cw-alert { border: 1.5px solid #b3261e; border-radius: 3px; background: #fdf0ee; color: #8f1d16; padding: 0.7rem 0.9rem; font-size: 0.95rem; line-height: 1.5; font-weight: 600; }
+
+/* Carbon copies peeking out from behind the auth card. */
+.cw-auth-wrap { position: relative; margin-right: 18px; margin-bottom: 18px; }
+.cw-auth-sheet { position: absolute; inset: 0; border-radius: 4px; }
+.cw-auth-sheet:nth-child(1) { background: var(--cw-dental); transform: translate(18px, 18px); }
+.cw-auth-sheet:nth-child(2) { background: var(--cw-aesthetics); transform: translate(12px, 12px); }
+.cw-auth-sheet:nth-child(3) { background: var(--cw-beauty); transform: translate(6px, 6px); }
+@media (max-width: 640px) {
+  .cw-auth-wrap { margin-right: 10px; margin-bottom: 10px; }
+  .cw-auth-sheet:nth-child(1) { transform: translate(10px, 10px); }
+  .cw-auth-sheet:nth-child(2) { transform: translate(7px, 7px); }
+  .cw-auth-sheet:nth-child(3) { transform: translate(4px, 4px); }
+}
+
+/* 404: a ticket whose lower edge has been torn off. The shadow sits on the wrapper so it follows the tear. */
+.cw-torn-wrap { filter: drop-shadow(0 10px 18px rgba(35, 35, 94, 0.25)); transform: rotate(-1deg); }
+.cw-torn { background: #fff; border: 1.5px solid var(--cw-ink); border-bottom: 0; border-radius: 4px 4px 0 0; padding-bottom: 1.5rem;
+  -webkit-mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 20px 100%;
+  mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 20px 100%; }
+.cw-torn-stub { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.6rem 1rem; background: var(--cw-ink); color: var(--cw-on-desk); border-bottom: 2px dashed var(--cw-rule-strong); }
+
+@media (prefers-reduced-motion: reduce) {
+  .cw-faq summary svg, .cw-field-btn { transition: none; }
+}
+
+.cw-faq .cw-row { padding-block: 0; }
+
+.cw-btn:disabled { opacity: 0.65; cursor: not-allowed; transform: none; }

@@ -1,7 +1,8 @@
-import { Button } from "@/components/ui/button";
-import { PublicEyebrow, PublicFooter, PublicHeader } from "@/components/public/PublicPrimitives";
+import { CatalogFooter, CatalogHeader } from "@/components/catalog/CatalogChrome";
+import "@/components/catalog/marketing.css";
 import { usePublicMeta } from "@/components/public/PublicMeta";
-import { ArrowRight, CalendarDays, CheckCircle2, CreditCard, KeyRound, LayoutDashboard, ShieldCheck, UsersRound } from "lucide-react";
+import { BRAND } from "@shared/brand";
+import { ArrowRight, CalendarDays, CheckCircle2, ChevronRight, CreditCard, KeyRound, LayoutDashboard, ShieldCheck, UsersRound } from "lucide-react";
 import React from "react";
 import { Link } from "wouter";
 
@@ -13,26 +14,142 @@ const groups = [
 ];
 
 const faq = [
-  ["ვისთვის არის SalonFlow?", "SalonFlow შექმნილია სალონების, სპა სივრცეების და მომსახურებაზე დაფუძნებული გუნდების ყოველდღიური ოპერაციების სამართავად."],
+  [`ვისთვის არის ${BRAND.name}?`, `${BRAND.name} შექმნილია სალონების, ესთეტიკის ცენტრების, სპა სივრცეების და მომსახურებაზე დაფუძნებული გუნდების ყოველდღიური ოპერაციების სამართავად. სტომატოლოგიური კლინიკებისთვის — მალე.`],
   ["არის თუ არა მრავალფილიალიანი მხარდაჭერა?", "დიახ. სამუშაო სივრცე ორგანიზაციასა და აქტიურ ფილიალებს აერთიანებს IANA timezone და public booking slug კონტექსტით."],
   ["როგორ მუშაობს ონლაინ ჩაწერა?", "სტუმარი ირჩევს აქტიურ მომსახურებას, სპეციალისტს ან თავისუფალ არჩევანს, დროსა და საჭირო კონტაქტს. საბოლოო ჩაწერამდე სისტემა ხელმისაწვდომობას ხელახლა ამოწმებს."],
   ["იგზავნება თუ არა შეტყობინებები?", "ავტომატური email/SMS მიწოდება ჯერ არ არის ჩართული, რადგან verified sender domain და provider configuration ჯერ არ არის დამატებული."],
 ];
 
 function MarketingLayout({ eyebrow, title, description, canonicalPath, children }: { eyebrow: string; title: string; description: string; canonicalPath: string; children: React.ReactNode }) {
-  usePublicMeta({ title: `${eyebrow} | SalonFlow`, description, canonicalPath });
-  return <div className="sf-public-page"><PublicHeader /><main id="main-content" tabIndex={-1}><section className="sf-salon-section"><div className="sf-public-container pb-12 pt-14 sm:pb-16 sm:pt-20"><p className="sf-salon-eyebrow">{eyebrow}</p><div className="sf-editorial-rule mt-5" /><h1 className="sf-display mt-5 max-w-4xl text-[2.4rem] leading-[1.02] sm:text-6xl">{title}</h1><p className="mt-6 max-w-2xl text-lg leading-8 text-[var(--sf-muted)]">{description}</p></div></section>{children}</main><PublicFooter /></div>;
+  usePublicMeta({ title: `${eyebrow} | ${BRAND.name}`, description, canonicalPath });
+  return <div className="cw min-h-screen">
+    <CatalogHeader />
+    <main id="main-content" tabIndex={-1}>
+      <section className="cw-desk pb-14 pt-10 sm:pb-20 sm:pt-16" aria-labelledby="marketing-title">
+        <div className="cw-container">
+          <p className="cw-caption">{eyebrow}</p>
+          <div className="mt-3 border-t-[1.5px] border-[var(--cw-on-desk-soft)] pt-6">
+            <h1 id="marketing-title" className="cw-display max-w-4xl text-[clamp(1.95rem,4.6vw,3.6rem)]">{title}</h1>
+            <p className="cw-lede-desk mt-5">{description}</p>
+          </div>
+        </div>
+      </section>
+      {children}
+    </main>
+    <CatalogFooter />
+  </div>;
 }
 
-function PageCTA({ title, description, secondary = true }: { title: string; description: string; secondary?: boolean }) { return <section className="sf-public-container pb-20 pt-10 sm:pb-28"><div className="sf-salon-media-frame sf-grain relative px-6 py-12 text-white shadow-[var(--sf-glow-brand)] sm:px-10 sm:py-16" style={{ background: "var(--sf-gradient-brand)" }}><span className="sf-blob" style={{ width: "22rem", height: "22rem", top: "-7rem", right: "-4rem", background: "rgba(255,255,255,0.32)", opacity: 0.5, animation: "sf-blob-morph 16s ease-in-out infinite" }} aria-hidden="true" /><div className="relative max-w-2xl"><p className="text-xs font-bold uppercase tracking-[0.13em] text-white/75">SalonFlow</p><h2 className="sf-display mt-3 text-3xl leading-tight sm:text-5xl">{title}</h2><p className="mt-4 leading-7 text-white/85">{description}</p><div className="sf-salon-cta-row mt-7"><Button asChild size="lg" className="bg-white text-[var(--sf-accent-strong)] hover:bg-white/90 hover:-translate-y-0.5"><Link href="/register">სამუშაო სივრცის გახსნა <ArrowRight className="size-4" /></Link></Button>{secondary ? <Button asChild variant="outline" size="lg" className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white"><Link href="/book">ონლაინ ჩაწერის ნახვა</Link></Button> : null}</div></div></div></section>; }
+function PageCTA({ title, description, secondary = true }: { title: string; description: string; secondary?: boolean }) {
+  return <section className="cw-desk py-14 sm:py-20" aria-labelledby="marketing-cta-title">
+    <div className="cw-container">
+      <div className="cw-card">
+        <div className="cw-card-band" />
+        <div className="cw-card-inner">
+          <p className="cw-caption">{BRAND.name}</p>
+          <h2 id="marketing-cta-title" className="cw-h2 mt-3 max-w-3xl">{title}</h2>
+          <p className="cw-lede mt-4">{description}</p>
+          <div className="mt-7 flex flex-wrap gap-3">
+            <Link href="/register" className="cw-btn cw-btn-stamp">სამუშაო სივრცის გახსნა <ArrowRight className="size-5" aria-hidden="true" /></Link>
+            {secondary ? <Link href="/book" className="cw-btn cw-btn-line text-[var(--cw-ink)]">ონლაინ ჩაწერის ნახვა</Link> : null}
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>;
+}
 
-export function FeaturesPage() { return <MarketingLayout eyebrow="შესაძლებლობები" title="ერთი workflow — ჩაწერებიდან ანგარიშებამდე." description="SalonFlow აერთიანებს მხოლოდ იმ ოპერაციულ მოდულებს, რომლებიც უკვე მხარდაჭერილია პროდუქტში და რეალურ role/organization საზღვრებს იცავს." canonicalPath="/features"><section className="sf-salon-section"><div className="sf-public-container grid gap-4 py-14 md:grid-cols-2 lg:py-20">{groups.map(({ icon: Icon, title, text, items }) => <article key={title} className="sf-salon-panel p-6 sm:p-7"><span className="grid size-11 place-items-center rounded-xl bg-[color-mix(in_srgb,var(--sf-salon-warm)_13%,transparent)] text-[var(--sf-salon-warm)]"><Icon className="size-5" /></span><h2 className="mt-5 text-2xl font-semibold tracking-tight">{title}</h2><p className="mt-3 leading-7 text-[var(--sf-muted)]">{text}</p><ul className="sf-salon-ready-list mt-6 text-sm">{items.map(item => <li key={item}><CheckCircle2 className="mt-0.5 size-4 shrink-0 text-[var(--sf-jade)]" />{item}</li>)}</ul></article>)}</div></section><PageCTA title="თქვენი ყოველდღიური პროცესები უფრო მშვიდ workflow-ში." description="შექმენით სამუშაო სივრცე, დაამატეთ პირველი ფილიალი და დაიწყეთ არსებული, დაცული ფუნქციებით." /></MarketingLayout>; }
+function LedgerHead({ icon: Icon, title, index }: { icon: typeof LayoutDashboard; title: string; index?: number }) {
+  return <div className="cw-ledger-head">
+    <h2 className="flex items-center gap-3 text-lg font-extrabold [font-stretch:85%] sm:text-xl"><Icon className="size-5 shrink-0" aria-hidden="true" />{title}</h2>
+    {index ? <span className="cw-num text-xs" aria-hidden="true">{String(index).padStart(2, "0")}</span> : null}
+  </div>;
+}
 
-export function PricingPage() { return <MarketingLayout eyebrow="ტარიფები" title="ფასები უნდა იყოს ისეთივე მკაფიო, როგორც თქვენი ოპერაციები." description="SalonFlow-ის ამ deployment-ში subscription გეგმები, billing rules და გამოქვეყნებული ფასები ჯერ არ არის კონფიგურირებული. ამიტომ არ ვაჩვენებთ გამოგონილ ტარიფებს ან პირობებს." canonicalPath="/pricing"><section className="sf-public-container pb-14"><div className="sf-salon-panel max-w-3xl p-7 sm:p-10"><span className="grid size-11 place-items-center rounded-xl bg-[color-mix(in_srgb,var(--sf-amber)_16%,transparent)] text-[var(--sf-amber)]"><CreditCard className="size-5" /></span><h2 className="mt-5 text-2xl font-semibold">გამჭვირვალე ინფორმაცია გამოქვეყნდება მხოლოდ რეალური billing configuration-ის შემდეგ.</h2><p className="mt-4 max-w-2xl leading-7 text-[var(--sf-muted)]">მანამდე შეგიძლიათ შექმნათ local ანგარიში და გაეცნოთ არსებულ სამუშაო/booking გამოცდილებას. ეს გვერდი შეგნებულად არ ასახელებს გეგმებს, რეკომენდაციებს, ფასებს ან ვალდებულებებს, რომლებიც სისტემაში ჯერ არ არსებობს.</p><div className="sf-salon-note mt-6"><ShieldCheck className="mt-0.5 size-4 shrink-0 text-[var(--sf-salon-leaf)]" aria-hidden="true" /><p>ამ გვერდზე არ ჩნდება subscription ან გადახდის ვალდებულება, სანამ billing წესები რეალურად არ კონფიგურდება.</p></div><Button asChild variant="public" size="lg" className="mt-7"><Link href="/register">ანგარიშის შექმნა <ArrowRight className="size-4" /></Link></Button></div></section><PageCTA title="პროდუქტის შემოწმება რეალური workflow-ით დაიწყეთ." description="შექმენით საკუთარი დაცული სამუშაო სივრცე და ნახეთ არსებული ოპერაციული გამოცდილება." secondary={false} /></MarketingLayout>; }
+export function FeaturesPage() {
+  return <MarketingLayout eyebrow="შესაძლებლობები" title="ერთი workflow — ჩაწერებიდან ანგარიშებამდე." description={`${BRAND.name} აერთიანებს მხოლოდ იმ ოპერაციულ მოდულებს, რომლებიც უკვე მხარდაჭერილია პროდუქტში და რეალურ role/organization საზღვრებს იცავს.`} canonicalPath="/features">
+    <section className="cw-section" aria-label="მოდულები">
+      <div className="cw-container grid gap-5 md:grid-cols-2">
+        {groups.map(({ icon, title, text, items }, index) => <article key={title} className="cw-ledger cw-ledger-neutral">
+          <LedgerHead icon={icon} title={title} index={index + 1} />
+          <p className="cw-row leading-7 text-[var(--cw-ink-soft)]">{text}</p>
+          <ul>{items.map(item => <li key={item} className="cw-row flex items-start gap-3 text-sm font-semibold"><CheckCircle2 className="mt-0.5 size-4 shrink-0" aria-hidden="true" />{item}</li>)}</ul>
+        </article>)}
+      </div>
+    </section>
+    <PageCTA title="თქვენი ყოველდღიური პროცესები უფრო მშვიდ workflow-ში." description="შექმენით სამუშაო სივრცე, დაამატეთ პირველი ფილიალი და დაიწყეთ არსებული, დაცული ფუნქციებით." />
+  </MarketingLayout>;
+}
 
-export function DemoPage() { return <MarketingLayout eyebrow="პროდუქტის დათვალიერება" title="იხილეთ workflow, არა გამოგონილი dashboard." description="საჯარო ვიზუალები ასახავს SalonFlow-ის მხარდაჭერილ კალენდრის, კლიენტის, გუნდის, ანგარიშების და ონლაინ ჩაწერის კონცეფტებს; საჯარო shared demo workspace არ არის ჩართული, რათა რეალური მონაცემის კონფიდენციალურობა შენარჩუნდეს." canonicalPath="/demo"><section className="sf-public-container grid gap-4 pb-14 md:grid-cols-3"><DemoTile icon={LayoutDashboard} title="ოპერაციები" text="Today queue, სტატუსები და სწრაფი მოქმედებები." /><DemoTile icon={CalendarDays} title="კალენდარი" text="სპეციალისტების დრო, ხელმისაწვდომობა და უსაფრთხო გადატანა." /><DemoTile icon={KeyRound} title="ონლაინ ჩაწერა" text="მომსახურება, სპეციალისტი, დრო და დადასტურება." /></section><PageCTA title="თქვენი რეალური მონაცემი თქვენს სივრცეში." description="რეგისტრაციისა და onboarding-ის შემდეგ SalonFlow ქმნის ორგანიზაციას, პირველ ფილიალსა და დაცულ სამუშაო კონტექსტს." /></MarketingLayout>; }
-function DemoTile({ icon: Icon, title, text }: { icon: typeof LayoutDashboard; title: string; text: string }) { return <article className="sf-salon-panel p-6"><Icon className="size-5 text-[var(--sf-salon-warm)]" /><h2 className="mt-5 text-xl font-semibold">{title}</h2><p className="mt-3 text-sm leading-6 text-[var(--sf-muted)]">{text}</p></article>; }
+export function PricingPage() {
+  return <MarketingLayout eyebrow="ტარიფები" title="ფასები უნდა იყოს ისეთივე მკაფიო, როგორც თქვენი ოპერაციები." description={`${BRAND.name}-ის ამ deployment-ში subscription გეგმები, billing rules და გამოქვეყნებული ფასები ჯერ არ არის კონფიგურირებული. ამიტომ არ ვაჩვენებთ გამოგონილ ტარიფებს ან პირობებს.`} canonicalPath="/pricing">
+    <section className="cw-section" aria-labelledby="pricing-note-title">
+      <div className="cw-container">
+        <div className="cw-dashed max-w-3xl p-6 sm:p-10">
+          <CreditCard className="size-7" aria-hidden="true" />
+          <h2 id="pricing-note-title" className="cw-h2 mt-5">გამჭვირვალე ინფორმაცია გამოქვეყნდება მხოლოდ რეალური billing configuration-ის შემდეგ.</h2>
+          <p className="mt-4 max-w-2xl leading-7 text-[var(--cw-ink-soft)]">მანამდე შეგიძლიათ შექმნათ local ანგარიში და გაეცნოთ არსებულ სამუშაო/booking გამოცდილებას. ეს გვერდი შეგნებულად არ ასახელებს გეგმებს, რეკომენდაციებს, ფასებს ან ვალდებულებებს, რომლებიც სისტემაში ჯერ არ არსებობს.</p>
+          <p className="mt-6 flex items-start gap-3 border-t-[1.5px] border-[var(--cw-ink)] pt-4 text-sm font-semibold leading-6"><ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden="true" />ამ გვერდზე არ ჩნდება subscription ან გადახდის ვალდებულება, სანამ billing წესები რეალურად არ კონფიგურდება.</p>
+          <Link href="/register" className="cw-btn cw-btn-stamp mt-7">ანგარიშის შექმნა <ArrowRight className="size-5" aria-hidden="true" /></Link>
+        </div>
+      </div>
+    </section>
+    <PageCTA title="პროდუქტის შემოწმება რეალური workflow-ით დაიწყეთ." description="შექმენით საკუთარი დაცული სამუშაო სივრცე და ნახეთ არსებული ოპერაციული გამოცდილება." secondary={false} />
+  </MarketingLayout>;
+}
 
-export function FaqPage() { return <MarketingLayout eyebrow="ხშირი კითხვები" title="სანამ დაიწყებთ, პასუხები ხელთ გქონდეთ." description="SalonFlow-ის მიმდინარე ხელმისაწვდომი ფუნქციები, უსაფრთხოება და შეგნებულად გადადებული ინტეგრაციები აღწერილია პირდაპირ — ზედმეტი დაპირებების გარეშე." canonicalPath="/faq"><section className="sf-public-container pb-16"><div className="sf-salon-panel divide-y divide-[var(--sf-line)] overflow-hidden">{faq.map(([question, answer]) => <details key={question} className="group px-6 py-5"><summary className="flex cursor-pointer list-none items-center justify-between gap-5 font-semibold"><span>{question}</span><ArrowRight className="size-4 shrink-0 text-[var(--sf-salon-warm)] transition-transform group-open:rotate-90" /></summary><p className="mt-3 max-w-3xl text-sm leading-7 text-[var(--sf-muted)]">{answer}</p></details>)}</div></section><PageCTA title="თუ მზად ხართ, დაიწყეთ პირველი ფილიალით." description="SalonFlow-ის setup flow ნაბიჯ-ნაბიჯ აგროვებს მხოლოდ იმ მონაცემს, რომელიც თქვენს პირველ ოპერაციულ დღეს სჭირდება." /></MarketingLayout>; }
+export function DemoPage() {
+  return <MarketingLayout eyebrow="პროდუქტის დათვალიერება" title="იხილეთ workflow, არა გამოგონილი dashboard." description={`საჯარო ვიზუალები ასახავს ${BRAND.name}-ის მხარდაჭერილ კალენდრის, კლიენტის, გუნდის, ანგარიშების და ონლაინ ჩაწერის კონცეფტებს; საჯარო shared demo workspace არ არის ჩართული, რათა რეალური მონაცემის კონფიდენციალურობა შენარჩუნდეს.`} canonicalPath="/demo">
+    <section className="cw-section" aria-label="დათვალიერება">
+      <div className="cw-container grid gap-5 md:grid-cols-3">
+        <DemoTile icon={LayoutDashboard} title="ოპერაციები" text="Today queue, სტატუსები და სწრაფი მოქმედებები." index={1} />
+        <DemoTile icon={CalendarDays} title="კალენდარი" text="სპეციალისტების დრო, ხელმისაწვდომობა და უსაფრთხო გადატანა." index={2} />
+        <DemoTile icon={KeyRound} title="ონლაინ ჩაწერა" text="მომსახურება, სპეციალისტი, დრო და დადასტურება." index={3} />
+      </div>
+    </section>
+    <PageCTA title="თქვენი რეალური მონაცემი თქვენს სივრცეში." description={`რეგისტრაციისა და onboarding-ის შემდეგ ${BRAND.name} ქმნის ორგანიზაციას, პირველ ფილიალსა და დაცულ სამუშაო კონტექსტს.`} />
+  </MarketingLayout>;
+}
 
-export function ContactPage() { return <MarketingLayout eyebrow="კონტაქტი" title="კონტაქტის არხი უნდა იყოს რეალური, არა დეკორაცია." description="ამ ეტაპზე SalonFlow-ში არ არის კონფიგურირებული საჯარო მხარდაჭერის ფორმა, email მისამართი ან ticketing integration. ამიტომ ეს გვერდი არ გვაჩვენებს გამოგონილ საკონტაქტო არხს." canonicalPath="/contact"><section className="sf-public-container pb-16"><div className="sf-salon-panel max-w-3xl p-7 sm:p-10"><span className="grid size-11 place-items-center rounded-xl bg-[color-mix(in_srgb,var(--sf-salon-leaf)_14%,transparent)] text-[var(--sf-salon-leaf)]"><ShieldCheck className="size-5" /></span><h2 className="mt-5 text-2xl font-semibold">უსაფრთხო ანგარიშის გამოცდილება უკვე ხელმისაწვდომია.</h2><p className="mt-4 leading-7 text-[var(--sf-muted)]">შექმენით ან შედით თქვენს ადგილობრივ ანგარიშში, რათა გახსნათ საკუთარი სამუშაო სივრცე. საჯარო საკონტაქტო არხები დაემატება მხოლოდ მაშინ, როდესაც მათი რეალური მომსახურების პროცესი და პასუხის პასუხისმგებელი მხარე განსაზღვრული იქნება.</p><div className="sf-salon-note mt-6"><ShieldCheck className="mt-0.5 size-4 shrink-0 text-[var(--sf-salon-leaf)]" aria-hidden="true" /><p>არასოდეს ვაჩვენებთ email-ს ან ფორმას, რომელსაც რეალური პასუხის პროცესი არ აქვს.</p></div><div className="sf-salon-cta-row mt-7"><Button asChild variant="public" size="lg"><Link href="/register">რეგისტრაცია <ArrowRight className="size-4" /></Link></Button><Button asChild variant="publicSecondary" size="lg"><Link href="/login">არსებულ ანგარიშში შესვლა</Link></Button></div></div></section></MarketingLayout>; }
+function DemoTile({ icon, title, text, index }: { icon: typeof LayoutDashboard; title: string; text: string; index: number }) {
+  return <article className="cw-ledger cw-ledger-neutral">
+    <LedgerHead icon={icon} title={title} index={index} />
+    <p className="cw-row text-sm leading-6 text-[var(--cw-ink-soft)]">{text}</p>
+  </article>;
+}
+
+export function FaqPage() {
+  return <MarketingLayout eyebrow="ხშირი კითხვები" title="სანამ დაიწყებთ, პასუხები ხელთ გქონდეთ." description={`${BRAND.name}-ის მიმდინარე ხელმისაწვდომი ფუნქციები, უსაფრთხოება და შეგნებულად გადადებული ინტეგრაციები აღწერილია პირდაპირ — ზედმეტი დაპირებების გარეშე.`} canonicalPath="/faq">
+    <section className="cw-section" aria-label="კითხვები და პასუხები">
+      <div className="cw-container">
+        <div className="cw-ledger cw-faq max-w-4xl">
+          {faq.map(([question, answer]) => <details key={question} className="cw-row">
+            <summary className="flex min-h-14 items-center justify-between gap-4 py-3 font-extrabold [font-stretch:90%]"><span>{question}</span><ChevronRight className="size-4 shrink-0" aria-hidden="true" /></summary>
+            <p className="max-w-3xl pb-4 leading-7 text-[var(--cw-ink-soft)]">{answer}</p>
+          </details>)}
+        </div>
+      </div>
+    </section>
+    <PageCTA title="თუ მზად ხართ, დაიწყეთ პირველი ფილიალით." description={`${BRAND.name}-ის setup flow ნაბიჯ-ნაბიჯ აგროვებს მხოლოდ იმ მონაცემს, რომელიც თქვენს პირველ ოპერაციულ დღეს სჭირდება.`} />
+  </MarketingLayout>;
+}
+
+export function ContactPage() {
+  return <MarketingLayout eyebrow="კონტაქტი" title="კონტაქტის არხი უნდა იყოს რეალური, არა დეკორაცია." description={`ამ ეტაპზე ${BRAND.name}-ში არ არის კონფიგურირებული საჯარო მხარდაჭერის ფორმა, email მისამართი ან ticketing integration. ამიტომ ეს გვერდი არ გვაჩვენებს გამოგონილ საკონტაქტო არხს.`} canonicalPath="/contact">
+    <section className="cw-section" aria-labelledby="contact-note-title">
+      <div className="cw-container">
+        <div className="cw-ledger cw-ledger-neutral max-w-3xl">
+          <div className="cw-ledger-head"><h2 id="contact-note-title" className="flex items-center gap-3 text-lg font-extrabold [font-stretch:85%] sm:text-xl"><ShieldCheck className="size-5 shrink-0" aria-hidden="true" />უსაფრთხო ანგარიშის გამოცდილება უკვე ხელმისაწვდომია.</h2></div>
+          <div className="p-5 sm:p-8">
+            <p className="leading-7 text-[var(--cw-ink-soft)]">შექმენით ან შედით თქვენს ადგილობრივ ანგარიშში, რათა გახსნათ საკუთარი სამუშაო სივრცე. საჯარო საკონტაქტო არხები დაემატება მხოლოდ მაშინ, როდესაც მათი რეალური მომსახურების პროცესი და პასუხის პასუხისმგებელი მხარე განსაზღვრული იქნება.</p>
+            <p className="mt-6 flex items-start gap-3 border-t-[1.5px] border-[var(--cw-ink)] pt-4 text-sm font-semibold leading-6"><ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden="true" />არასოდეს ვაჩვენებთ email-ს ან ფორმას, რომელსაც რეალური პასუხის პროცესი არ აქვს.</p>
+            <div className="mt-7 flex flex-wrap gap-3">
+              <Link href="/register" className="cw-btn cw-btn-stamp">რეგისტრაცია <ArrowRight className="size-5" aria-hidden="true" /></Link>
+              <Link href="/login" className="cw-btn cw-btn-line text-[var(--cw-ink)]">არსებულ ანგარიშში შესვლა</Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </MarketingLayout>;
+}

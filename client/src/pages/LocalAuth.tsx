@@ -1,9 +1,9 @@
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { SalonFlowMark } from "@/components/public/PublicPrimitives";
+import { CatalogFooter, CatalogHeader } from "@/components/catalog/CatalogChrome";
+import "@/components/catalog/marketing.css";
+import { usePublicMeta } from "@/components/public/PublicMeta";
 import { trpc } from "@/lib/trpc";
-import { CheckCircle2, Eye, EyeOff, KeyRound, LockKeyhole, Mail, ShieldCheck, UserRound } from "lucide-react";
+import { BRAND } from "@shared/brand";
+import { Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
 
@@ -14,7 +14,16 @@ function getReturnTo() {
 
 function PasswordField({ value, onChange, autoComplete, minLength, error }: { value: string; onChange: (value: string) => void; autoComplete: string; minLength: number; error?: string }) {
   const [visible, setVisible] = useState(false);
-  return <div className="space-y-2"><Label htmlFor="auth-password">პაროლი</Label><div className="relative"><LockKeyhole className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--sf-muted)]" aria-hidden="true" /><Input id="auth-password" className="h-11 bg-[var(--sf-surface)] pl-10 pr-12" value={value} onChange={event => onChange(event.target.value)} autoComplete={autoComplete} minLength={minLength} type={visible ? "text" : "password"} aria-invalid={Boolean(error)} required /><Button type="button" variant="publicQuiet" size="icon-sm" className="absolute right-1 top-1/2 -translate-y-1/2" aria-label={visible ? "პაროლის დამალვა" : "პაროლის ჩვენება"} onClick={() => setVisible(current => !current)}>{visible ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}</Button></div>{minLength >= 10 ? <p className="text-xs text-[var(--sf-muted)]">მინიმუმ 10 სიმბოლო.</p> : null}</div>;
+  return <div>
+    <div className="cw-field">
+      <label htmlFor="auth-password" className="cw-caption block">პაროლი</label>
+      <div className="cw-field-row">
+        <input id="auth-password" value={value} onChange={event => onChange(event.target.value)} autoComplete={autoComplete} minLength={minLength} type={visible ? "text" : "password"} aria-invalid={Boolean(error)} aria-describedby={minLength >= 10 ? "auth-password-hint" : undefined} required />
+        <button type="button" className="cw-field-btn" aria-label={visible ? "პაროლის დამალვა" : "პაროლის ჩვენება"} aria-pressed={visible} onClick={() => setVisible(current => !current)}>{visible ? <EyeOff className="size-5" aria-hidden="true" /> : <Eye className="size-5" aria-hidden="true" />}</button>
+      </div>
+    </div>
+    {minLength >= 10 ? <p id="auth-password-hint" className="mt-1.5 text-sm text-[var(--cw-ink-soft)]">მინიმუმ 10 სიმბოლო.</p> : null}
+  </div>;
 }
 
 export default function LocalAuth({ mode }: { mode: "login" | "register" | "claim" }) {
@@ -56,10 +65,65 @@ export default function LocalAuth({ mode }: { mode: "login" | "register" | "clai
   const alternate = isRegister ? "/login" : "/register";
   const alternateLabel = isRegister ? "უკვე გაქვთ ანგარიში? შედით" : "ჯერ არ გაქვთ ანგარიში? დარეგისტრირდით";
   const title = isRegister ? "შექმენით თქვენი სამუშაო სივრცის ანგარიში" : isClaim ? "აღადგინეთ ძველი ანგარიში" : "კეთილი იყოს თქვენი დაბრუნება";
-  const description = isRegister ? "რეგისტრაციის შემდეგ შეიტანთ სალონის საცდელ მოთხოვნას; 7-დღიანი წვდომა გაიხსნება მხოლოდ SalonFlow platform admin-ის ხელით დამტკიცების შემდეგ." : isClaim ? "შეიყვანეთ SalonFlow-ისგან მიღებული აღდგენის კოდი, თქვენი მიმდინარე პაროლი და ახალი ელფოსტა." : "შედით თქვენი SalonFlow ელფოსტითა და პაროლით.";
+  const description = isRegister ? `რეგისტრაციის შემდეგ შეიტანთ სალონის საცდელ მოთხოვნას; 7-დღიანი წვდომა გაიხსნება მხოლოდ ${BRAND.name} platform admin-ის ხელით დამტკიცების შემდეგ.` : isClaim ? `შეიყვანეთ ${BRAND.name}-ისგან მიღებული აღდგენის კოდი, თქვენი მიმდინარე პაროლი და ახალი ელფოსტა.` : `შედით თქვენი ${BRAND.name} ელფოსტითა და პაროლით.`;
   const submitLabel = isRegister ? "ანგარიშის შექმნა" : isClaim ? "ანგარიშის აღდგენა" : "შესვლა";
+  const modeLabel = isRegister ? "ახალი სივრცე" : isClaim ? "უსაფრთხო აღდგენა" : "დაცული შესვლა";
 
-  return <main className="sf-public-page sf-auth-shell grid min-h-screen lg:grid-cols-[.92fr_1.08fr]"><section className="sf-auth-hero hidden p-10 text-[var(--sf-surface)] lg:flex lg:flex-col lg:justify-between"><SalonFlowMark inverted /><div className="max-w-md"><p className="sf-salon-eyebrow text-[var(--sf-salon-champagne)]">თქვენი მშვიდი სამუშაო დღე</p><h1 className="sf-display mt-4 text-5xl font-semibold leading-[1.02]">სალონის ოპერაციები — ნაკლები ქაოსით.</h1><p className="mt-6 text-base leading-7 text-white/70">ონლაინ ჩაწერა, დღიური queue, გუნდი და კონტროლი ერთ დაცულ სისტემაში.</p></div><div className="grid gap-3 text-sm text-white/70"><AuthPromise text="ადგილობრივი ელფოსტა და პაროლი" /><AuthPromise text="როლზე და ორგანიზაციაზე დაფუძნებული წვდომა" /><AuthPromise text="ქართული-first სამუშაო სივრცე" /></div></section><section className="flex min-h-screen items-center justify-center px-4 py-8 sm:px-6"><div className="w-full max-w-md"><div className="mb-8 lg:hidden"><SalonFlowMark /></div><div className="sf-auth-card sf-salon-panel overflow-hidden"><div className="border-b border-[var(--sf-salon-hairline)] bg-[color-mix(in_srgb,var(--sf-salon-warm)_5%,transparent)] px-6 py-6 sm:px-8"><div className="flex items-center justify-between gap-3"><p className="sf-salon-eyebrow">SalonFlow ანგარიში</p><span className="rounded-full border border-[var(--sf-salon-hairline)] bg-[var(--sf-surface-elevated)] px-2.5 py-1 text-[0.68rem] font-semibold text-[var(--sf-muted)]">{isRegister ? "ახალი სივრცე" : isClaim ? "უსაფრთხო აღდგენა" : "დაცული შესვლა"}</span></div><h2 className="mt-3 text-2xl font-bold tracking-tight">{title}</h2><p className="mt-3 text-sm leading-6 text-[var(--sf-muted)]">{description}</p></div><div className="px-6 py-7 sm:px-8"><form className="space-y-5" onSubmit={submit} noValidate>{isRegister ? <div className="space-y-2"><Label htmlFor="auth-name">სახელი</Label><div className="relative"><UserRound className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--sf-muted)]" aria-hidden="true" /><Input id="auth-name" className="h-11 bg-[var(--sf-surface)] pl-10" value={name} onChange={event => setName(event.target.value)} autoComplete="name" minLength={2} autoFocus required /></div></div> : null}{isClaim ? <div className="rounded-xl border border-[color-mix(in_srgb,var(--sf-salon-warm)_25%,transparent)] bg-[color-mix(in_srgb,var(--sf-salon-warm)_5%,transparent)] p-4"><Label htmlFor="recovery-code">აღდგენის კოდი</Label><div className="relative mt-2"><KeyRound className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--sf-salon-warm)]" aria-hidden="true" /><Input id="recovery-code" className="h-11 bg-[var(--sf-surface)] pl-10 font-mono tracking-[0.1em]" value={recoveryCode} onChange={event => setRecoveryCode(event.target.value.toUpperCase())} placeholder="SF-1234-5678-9ABC" autoComplete="one-time-code" autoFocus required /></div><p className="mt-2 text-xs leading-5 text-[var(--sf-muted)]">კოდი არ არის თქვენი პაროლი. თუ ის არ მიგიღიათ, მიმართეთ SalonFlow მხარდაჭერას.</p></div> : null}<div className="space-y-2"><Label htmlFor="auth-email">ელფოსტა</Label><div className="relative"><Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--sf-muted)]" aria-hidden="true" /><Input id="auth-email" className="h-11 bg-[var(--sf-surface)] pl-10" value={email} onChange={event => setEmail(event.target.value)} autoComplete="email" type="email" autoFocus={!isRegister && !isClaim} aria-invalid={Boolean(error)} required /></div></div><PasswordField value={password} onChange={setPassword} autoComplete={isRegister ? "new-password" : "current-password"} minLength={isRegister || isClaim ? 10 : 1} error={error} />{error ? <p role="alert" className="rounded-xl border border-[color-mix(in_srgb,var(--sf-danger)_30%,transparent)] bg-[color-mix(in_srgb,var(--sf-danger)_6%,transparent)] p-3 text-sm leading-6 text-[var(--sf-danger)]">{error}</p> : null}<Button type="submit" variant="public" size="lg" className="w-full" disabled={pending}>{pending ? "მიმდინარეობს…" : submitLabel}</Button></form><div className="mt-6 border-t border-[var(--sf-line)] pt-5 text-center text-sm text-[var(--sf-muted)]"><Link href={`${alternate}?returnTo=${encodeURIComponent(returnTo)}`} className="font-semibold text-[var(--sf-salon-warm)] underline-offset-4 hover:underline">{alternateLabel}</Link>{!isClaim ? <p className="mt-3 text-xs"><Link href={`/claim-account?returnTo=${encodeURIComponent(returnTo)}`} className="underline-offset-4 hover:text-[var(--sf-salon-warm)] hover:underline">ძველი ანგარიშის პრობლემა გაქვთ?</Link></p> : <p className="mt-3 text-xs"><Link href={`/login?returnTo=${encodeURIComponent(returnTo)}`} className="underline-offset-4 hover:text-[var(--sf-salon-warm)] hover:underline">დაბრუნდით შესვლაზე</Link></p>}</div></div></div></div></section></main>;
+  usePublicMeta({ title: `${isRegister ? "რეგისტრაცია" : isClaim ? "ანგარიშის აღდგენა" : "შესვლა"} | ${BRAND.name}`, description, canonicalPath: isRegister ? "/register" : isClaim ? "/claim-account" : "/login", robots: "noindex,nofollow" });
+
+  return <div className="cw min-h-screen">
+    <CatalogHeader />
+    <main id="main-content" tabIndex={-1} className="cw-desk pb-16 pt-6 sm:pb-24 sm:pt-12">
+      <div className="cw-container">
+        <div className="cw-auth-wrap mx-auto max-w-[30rem]">
+          <span className="cw-auth-sheet" aria-hidden="true" />
+          <span className="cw-auth-sheet" aria-hidden="true" />
+          <span className="cw-auth-sheet" aria-hidden="true" />
+          <div className="cw-card">
+            <div className="cw-card-band" />
+            <div className="cw-card-inner">
+              <div className="cw-card-head"><span className="cw-caption">{BRAND.name} · {modeLabel}</span><span className="cw-num text-xs">{BRAND.domain}</span></div>
+              <h1 className="cw-display mt-6 text-[clamp(1.6rem,4vw,2.2rem)]">{title}</h1>
+              <p className="mt-3 text-sm leading-6 text-[var(--cw-ink-soft)]">{description}</p>
+              <form className="mt-6 grid gap-3" onSubmit={submit} noValidate>
+                {isRegister ? <div className="cw-field">
+                  <label htmlFor="auth-name" className="cw-caption block">სახელი</label>
+                  <input id="auth-name" value={name} onChange={event => setName(event.target.value)} autoComplete="name" minLength={2} autoFocus required />
+                </div> : null}
+                {isClaim ? <div>
+                  <div className="cw-field">
+                    <label htmlFor="recovery-code" className="cw-caption block">აღდგენის კოდი</label>
+                    <input id="recovery-code" className="cw-num" value={recoveryCode} onChange={event => setRecoveryCode(event.target.value.toUpperCase())} placeholder="SF-1234-5678-9ABC" autoComplete="one-time-code" aria-describedby="recovery-code-hint" autoFocus required />
+                  </div>
+                  <p id="recovery-code-hint" className="mt-1.5 text-sm leading-5 text-[var(--cw-ink-soft)]">კოდი არ არის თქვენი პაროლი. თუ ის არ მიგიღიათ, მიმართეთ {BRAND.name}-ის მხარდაჭერას.</p>
+                </div> : null}
+                <div className="cw-field">
+                  <label htmlFor="auth-email" className="cw-caption block">ელფოსტა</label>
+                  <input id="auth-email" value={email} onChange={event => setEmail(event.target.value)} autoComplete="email" type="email" autoFocus={!isRegister && !isClaim} aria-invalid={Boolean(error)} required />
+                </div>
+                <PasswordField value={password} onChange={setPassword} autoComplete={isRegister ? "new-password" : "current-password"} minLength={isRegister || isClaim ? 10 : 1} error={error} />
+                {error ? <p role="alert" className="cw-alert">{error}</p> : null}
+                <button type="submit" className="cw-btn cw-btn-stamp mt-1 w-full" disabled={pending}>{pending ? "მიმდინარეობს…" : submitLabel}</button>
+              </form>
+              <div className="cw-perf-line mt-6" />
+              <div className="mt-5 grid gap-2 text-center text-sm">
+                <Link href={`${alternate}?returnTo=${encodeURIComponent(returnTo)}`} className="cw-link">{alternateLabel}</Link>
+                {!isClaim
+                  ? <Link href={`/claim-account?returnTo=${encodeURIComponent(returnTo)}`} className="text-[var(--cw-ink-soft)] underline">ძველი ანგარიშის პრობლემა გაქვთ?</Link>
+                  : <Link href={`/login?returnTo=${encodeURIComponent(returnTo)}`} className="text-[var(--cw-ink-soft)] underline">დაბრუნდით შესვლაზე</Link>}
+              </div>
+              <ul className="mt-5 grid gap-1.5 text-sm text-[var(--cw-ink-soft)]">
+                <AuthPromise text="ადგილობრივი ელფოსტა და პაროლი" />
+                <AuthPromise text="როლზე და ორგანიზაციაზე დაფუძნებული წვდომა" />
+                <AuthPromise text="ქართული-first სამუშაო სივრცე" />
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+    <CatalogFooter />
+  </div>;
 }
 
-function AuthPromise({ text }: { text: string }) { return <p className="flex items-center gap-2"><ShieldCheck className="size-4 text-[var(--sf-jade)]" aria-hidden="true" />{text}</p>; }
+function AuthPromise({ text }: { text: string }) { return <li className="flex items-center gap-2"><ShieldCheck className="size-4 shrink-0" aria-hidden="true" />{text}</li>; }

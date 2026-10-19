@@ -1,7 +1,7 @@
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { BookingConfirmation, formatGel, getBookingValidationIssue, getEligibleTeam, LocationContext, StaffStep } from "./BookingFlow";
+import { BookingConfirmation, formatGel, getBookingValidationIssue, getEligibleTeam, LocationContext, parseRequestedServiceIds, StaffStep } from "./BookingFlow";
 import { BookingChoiceCard, BookingSlotGroup } from "@/components/public/BookingPrimitives";
 
 vi.mock("wouter", () => ({ Link: ({ children, href }: { children: React.ReactNode; href: string }) => <a href={href}>{children}</a> }));
@@ -32,7 +32,8 @@ describe("public booking conversion helpers", () => {
     const markup = renderToStaticMarkup(<LocationContext location={{ name: "სილამაზის სივრცე", timezone: "Asia/Tbilisi", address: "ვაკე", phone: "+995555000000", email: "hello@example.com", publicDescription: "მზრუნველი მომსახურება", workingHours: [{ weekday: 0, startLocalTime: "09:00", endLocalTime: "18:00" }] }} />);
     expect(markup).toContain("მზრუნველი მომსახურება");
     expect(markup).toContain("ხელმისაწვდომი სპეციალისტების საათები");
-    expect(markup).toContain("ორშაბათი · 09:00–18:00");
+    expect(markup).toContain("ორშაბათი");
+    expect(markup).toContain("09:00–18:00");
     expect(markup).toContain("+995555000000");
     expect(markup).toContain("hello@example.com");
   });
@@ -63,7 +64,7 @@ describe("public booking conversion helpers", () => {
     expect(markup).toContain("თქვენი სპეციალისტი:");
     expect(markup).toContain("ნინო");
     expect(markup).toContain("კალენდარში დამატება");
-    expect(markup).toContain("sf-booking-confirmation");
+    expect(markup).toContain("ჩაწერილია");
     expect(markup).toContain("/manage-booking/safe-confirmation");
     expect(markup).toContain("ელოდება სალონის დადასტურებას");
   });
@@ -74,5 +75,10 @@ describe("public booking conversion helpers", () => {
     expect(timeIssue).toMatchObject({ kind: "time", title: "დაამატეთ სასურველი თარიღი და დრო" });
     expect(contactIssue).toMatchObject({ kind: "contact", title: "მიუთითეთ მობილურის ნომერი" });
     expect(contactIssue?.description).not.toContain("tRPC");
+  });
+
+  it("reads comma-separated preselected service ids from ?services= and drops blanks and duplicates", () => {
+    expect(parseRequestedServiceIds("?services=a,b,,a")).toEqual(["a", "b"]);
+    expect(parseRequestedServiceIds("")).toEqual([]);
   });
 });

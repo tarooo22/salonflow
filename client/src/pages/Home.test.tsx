@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { verticalForCategory, verticalsForListing } from "@/lib/verticals";
-import { listingMatchesVertical } from "./Home";
+import { isNewListing, listingMatchesVertical, newestListings } from "@/components/catalog/Tickets";
 
 const source = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8");
 
@@ -44,5 +44,15 @@ describe("verticals", () => {
     expect(listingMatchesVertical(listing as never, "aesthetics")).toBe(true);
     expect(listingMatchesVertical(listing as never, "dental")).toBe(false);
     expect(listingMatchesVertical(listing as never, null)).toBe(true);
+  });
+
+  it("treats listings approved in the last 30 days as new, newest first", () => {
+    const now = new Date("2026-10-19T12:00:00Z");
+    const older = { approvedAt: "2026-09-01T00:00:00Z" };
+    const recent = { approvedAt: "2026-10-10T00:00:00Z" };
+    const newest = { approvedAt: "2026-10-18T00:00:00Z" };
+    expect(isNewListing(older, now)).toBe(false);
+    expect(isNewListing({ approvedAt: null }, now)).toBe(false);
+    expect(newestListings([older, recent, newest], now)).toEqual([newest, recent]);
   });
 });

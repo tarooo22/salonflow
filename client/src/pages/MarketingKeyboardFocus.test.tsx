@@ -1,25 +1,40 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-const css = readFileSync(new URL("../index.css", import.meta.url), "utf8");
-const home = readFileSync(new URL("./Home.tsx", import.meta.url), "utf8");
-const marketing = readFileSync(new URL("./MarketingPages.tsx", import.meta.url), "utf8");
-const primitives = readFileSync(new URL("../components/public/PublicPrimitives.tsx", import.meta.url), "utf8");
-const localeContext = readFileSync(new URL("../contexts/PublicLocaleContext.tsx", import.meta.url), "utf8");
+const catalogCss = readFileSync(new URL("../components/catalog/catalog.css", import.meta.url), "utf8");
+const marketingCss = readFileSync(new URL("../components/catalog/marketing.css", import.meta.url), "utf8");
+const chrome = readFileSync(new URL("../components/catalog/CatalogChrome.tsx", import.meta.url), "utf8");
+const pages = {
+  home: readFileSync(new URL("./Home.tsx", import.meta.url), "utf8"),
+  marketing: readFileSync(new URL("./MarketingPages.tsx", import.meta.url), "utf8"),
+  partner: readFileSync(new URL("./PartnerLanding.tsx", import.meta.url), "utf8"),
+  auth: readFileSync(new URL("./LocalAuth.tsx", import.meta.url), "utf8"),
+  notFound: readFileSync(new URL("./NotFound.tsx", import.meta.url), "utf8"),
+};
 
 describe("marketing keyboard-focus audit", () => {
-  it("offers the first keyboard stop as a Georgian skip-to-content link", () => {
-    expect(primitives).toContain('href="#main-content"');
-    expect(primitives).toContain('t("skip")');
-    expect(localeContext).toContain('skip: "ძირითად შინაარსზე გადასვლა"');
-    expect(primitives).toContain('document.querySelector("main")');
-    expect(home).toContain('id="main-content"');
-    expect(marketing).toContain("id=\"main-content\"");
+  it("offers the first keyboard stop as a skip-to-content link on every public page", () => {
+    expect(chrome).toContain('href="#main-content"');
+    for (const [name, source] of Object.entries(pages)) {
+      expect(source, name).toContain('id="main-content"');
+      // The skip link comes from the catalog header (withSkipLink defaults to true).
+      expect(source, name).toContain("<CatalogHeader />");
+    }
   });
 
   it("keeps focused public controls visibly distinguishable and unobscured", () => {
-    expect(css).toContain(":focus-visible { outline: 3px solid var(--sf-focus)");
-    expect(css).toContain(".sf-skip-link:focus-visible");
-    expect(css).toContain("#main-content { scroll-margin-top: 5.75rem; }");
+    expect(catalogCss).toContain(".cw :focus-visible { outline: 3px solid var(--cw-stamp)");
+    expect(catalogCss).toContain(".cw-desk :focus-visible { outline-color: #fff; }");
+    expect(marketingCss).not.toMatch(/outline:\s*none/);
+  });
+
+  it("makes the main landmark focusable so the skip link lands inside it", () => {
+    for (const name of ["marketing", "partner", "auth", "notFound"] as const) expect(pages[name], name).toContain('id="main-content" tabIndex={-1}');
+  });
+
+  it("uses native details/summary for the FAQ so it is keyboard operable", () => {
+    expect(pages.marketing).toContain("<details");
+    expect(pages.marketing).toContain("<summary");
+    expect(pages.partner).toContain("<summary");
   });
 });

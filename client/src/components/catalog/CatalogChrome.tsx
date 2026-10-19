@@ -2,16 +2,16 @@ import { PublicLanguageSelector } from "@/components/public/PublicPrimitives";
 import { usePublicLocale } from "@/contexts/PublicLocaleContext";
 import { BRAND } from "@shared/brand";
 import { LogIn, Menu, X } from "lucide-react";
-import { useState } from "react";
+import React, { useState } from "react";
 import { Link } from "wouter";
 import "./catalog.css";
 
-const navigation: Array<{ href: string; label: string; soon?: boolean }> = [
-  { href: "/salons", label: "კატალოგი" },
-  { href: "/salons/map", label: "რუკა" },
-  { href: "/products", label: "პროდუქტები", soon: true },
-  { href: "/vacancies", label: "ვაკანსიები", soon: true },
-  { href: "/partner", label: "ბიზნესისთვის" },
+const navigation: Array<{ href: string; label: "catalog" | "map" | "products" | "vacancies" | "forBusiness"; soon?: boolean }> = [
+  { href: "/salons", label: "catalog" },
+  { href: "/salons/map", label: "map" },
+  { href: "/products", label: "products", soon: true },
+  { href: "/vacancies", label: "vacancies", soon: true },
+  { href: "/partner", label: "forBusiness" },
 ];
 
 export function CatalogWordmark() {
@@ -22,27 +22,28 @@ export function CatalogWordmark() {
 }
 
 function NavItem({ item, onNavigate }: { item: (typeof navigation)[number]; onNavigate?: () => void }) {
-  if (item.soon) return <span className="cw-navlink cursor-default opacity-70" aria-disabled="true">{item.label}<span className="cw-soon">მალე</span></span>;
-  return <Link href={item.href} className="cw-navlink" onClick={onNavigate}>{item.label}</Link>;
+  const { t } = usePublicLocale();
+  if (item.soon) return <span className="cw-navlink cursor-default opacity-70" aria-disabled="true">{t(item.label)}<span className="cw-soon">{t("soon")}</span></span>;
+  return <Link href={item.href} className="cw-navlink" onClick={onNavigate}>{t(item.label)}</Link>;
 }
 
-export function CatalogHeader() {
+export function CatalogHeader({ withSkipLink = true }: { withSkipLink?: boolean }) {
   const [open, setOpen] = useState(false);
   const { t } = usePublicLocale();
   return <header className="cw-desk relative z-20">
-    <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-3 focus:z-50 focus:rounded focus:bg-white focus:px-4 focus:py-2 focus:text-[var(--cw-ink)]">{t("skip")}</a>
+    {withSkipLink ? <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-3 focus:z-50 focus:rounded focus:bg-white focus:px-4 focus:py-2 focus:text-[var(--cw-ink)]">{t("skip")}</a> : null}
     <div className="cw-container flex min-h-16 items-center justify-between gap-4 py-3">
       <Link href="/" aria-label={`${BRAND.nameKa} — მთავარი`}><CatalogWordmark /></Link>
-      <nav aria-label="მთავარი ნავიგაცია" className="hidden items-center gap-1 lg:flex">{navigation.map(item => <NavItem key={item.href} item={item} />)}</nav>
+      <nav aria-label={t("mainNav")} className="hidden items-center gap-1 lg:flex">{navigation.map(item => <NavItem key={item.href} item={item} />)}</nav>
       <div className="flex items-center gap-2">
         <span className="hidden sm:block"><PublicLanguageSelector /></span>
-        <Link href="/login" className="cw-btn cw-btn-paper min-h-10 px-3 text-sm sm:px-4"><LogIn className="size-4" aria-hidden="true" /><span className="max-sm:sr-only">შესვლა</span></Link>
-        <button type="button" className="cw-navlink lg:hidden" aria-expanded={open} aria-controls="cw-mobile-nav" aria-label={open ? "მენიუს დახურვა" : "მენიუს გახსნა"} onClick={() => setOpen(value => !value)}>
+        <Link href="/login" className="cw-btn cw-btn-paper min-h-10 px-3 text-sm sm:px-4"><LogIn className="size-4" aria-hidden="true" /><span className="max-sm:sr-only">{t("signIn")}</span></Link>
+        <button type="button" className="cw-navlink lg:hidden" aria-expanded={open} aria-controls="cw-mobile-nav" aria-label={open ? t("closeMenu") : t("openMenu")} onClick={() => setOpen(value => !value)}>
           {open ? <X className="size-5" aria-hidden="true" /> : <Menu className="size-5" aria-hidden="true" />}
         </button>
       </div>
     </div>
-    {open ? <nav id="cw-mobile-nav" aria-label="მობილური ნავიგაცია" className="cw-container grid gap-1 border-t border-[var(--cw-desk-soft)] pb-4 pt-2 lg:hidden">{navigation.map(item => <NavItem key={item.href} item={item} onNavigate={() => setOpen(false)} />)}</nav> : null}
+    {open ? <nav id="cw-mobile-nav" aria-label={t("mobileNav")} className="cw-container grid gap-1 border-t border-[var(--cw-desk-soft)] pb-4 pt-2 lg:hidden">{navigation.map(item => <NavItem key={item.href} item={item} onNavigate={() => setOpen(false)} />)}</nav> : null}
   </header>;
 }
 

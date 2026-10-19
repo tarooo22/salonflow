@@ -2,10 +2,11 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const source = readFileSync(new URL("./MarketplaceDirectory.tsx", import.meta.url), "utf8");
+const filters = readFileSync(new URL("../components/public/MarketplaceDiscovery.tsx", import.meta.url), "utf8");
 
 describe("Marketplace Directory discovery handoff", () => {
   it("keeps Home discovery filters URL-backed while debouncing text entry", () => {
-    expect(source).toContain('marketplaceDiscoveryHref("/salons", categorySlug, nextSearch, area)');
+    expect(source).toContain('marketplaceDiscoveryHref("/salons", categorySlug, nextSearch, nextArea)');
     expect(source).toContain("}, 250)");
     expect(source).toContain("searchDraft");
   });
@@ -20,8 +21,18 @@ describe("Marketplace Directory discovery handoff", () => {
     expect(source).toContain("area: area.trim() || undefined");
     expect(source).toContain('marketplaceDiscoveryHref("/salons", nextCategory, searchDraft, area)');
     expect(source).toContain("setArea(filters.area)");
-    expect(source).toContain("setArea(\"\"); setLocation(\"/salons\")");
-    expect(source).toContain("ადგილი: {area.trim()}");
-    expect(source).toContain('aria-label="ფილტრის მოხსნა"');
+    expect(source).toContain('setArea(""); setAreaDraft(""); setLocation(marketplaceDiscoveryHref("/salons", categorySlug, searchDraft))');
+    expect(filters).toContain("ადგილი: {area.trim()}");
+    expect(filters).toContain('aria-label="ფილტრის მოხსნა"');
+  });
+
+  it("lives in the catalog world: shared tickets in shelves, vertical tabs, Chawera meta", () => {
+    expect(source).toContain('<div className="cw min-h-screen">');
+    expect(source).toContain('<main id="main-content">');
+    expect(source).toContain("BRAND.name");
+    expect(source).not.toContain("SalonFlow");
+    for (const shelf of ['title="VIP"', 'title="რეკომენდებული"', "newestListings", "TicketShelf"]) expect(source).toContain(shelf);
+    expect(filters).toContain("verticalForCategory");
+    expect(filters).toContain('role="search"');
   });
 });

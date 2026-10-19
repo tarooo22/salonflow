@@ -21,9 +21,22 @@ describe("truthful public product-information routes", () => {
     expect(source).toContain("გამოგონილ საკონტაქტო არხს");
   });
 
-  it("uses shared Salon House panels and notes for public trust surfaces", () => {
-    expect(source).toContain("sf-salon-panel");
-    expect(source).toContain("sf-salon-note");
-    expect(source).toContain("sf-salon-media-frame");
+  it("uses the shared brand constant instead of the retired product name", () => {
+    expect(source).toContain("BRAND.name");
+    expect(source).not.toContain("SalonFlow");
+  });
+
+  it("renders every page in the cw appointment-card world", () => {
+    expect(source).toContain('<div className="cw min-h-screen">');
+    expect(source).toContain("cw-ledger");
+    expect(source).toContain("cw-btn-stamp");
+    expect(source).toContain("cw-dashed");
+    expect(source).toContain("CatalogHeader");
+    expect(source).toContain("CatalogFooter");
+    expect(source).not.toContain("sf-");
+  });
+
+  it("keeps the five marketing routes exported", () => {
+    for (const name of ["FeaturesPage", "PricingPage", "DemoPage", "FaqPage", "ContactPage"]) expect(source).toContain(`export function ${name}`);
   });
 });

@@ -46,7 +46,7 @@
 .cw-desk .cw-caption { color: var(--cw-on-desk-soft); }
 .cw-desk :focus-visible { outline-color: #fff; }
 /* Paper placed on the desk keeps paper colours. */
-.cw-desk .cw-card .cw-caption { color: var(--cw-ink-soft); }
+.cw-desk .cw-card .cw-caption, .cw-desk .cw-card .cw-lede { color: var(--cw-ink-soft); }
 .cw-desk .cw-card :focus-visible, .cw-desk .cw-tab:focus-visible { outline-color: var(--cw-stamp); }
 
 .cw-navlink { color: var(--cw-on-desk); font-size: 0.9rem; font-weight: 600; padding: 0.5rem 0.65rem; border-radius: 4px; transition: background-color 160ms var(--cw-ease); }

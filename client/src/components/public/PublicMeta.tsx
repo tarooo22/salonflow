@@ -1,3 +1,4 @@
+import { BRAND } from "@shared/brand";
 import { useEffect } from "react";
 
 type PublicMetaProps = { title: string; description: string; canonicalPath: string; robots?: "index,follow" | "noindex,nofollow" };
@@ -16,7 +17,7 @@ export function usePublicMeta({ title, description, canonicalPath, robots = "ind
     upsertMeta("property", "og:title", title);
     upsertMeta("property", "og:description", description);
     upsertMeta("property", "og:type", "website");
-    upsertMeta("property", "og:site_name", "SalonFlow");
+    upsertMeta("property", "og:site_name", BRAND.name);
     upsertMeta("property", "og:locale", "ka_GE");
     upsertMeta("name", "twitter:card", "summary");
     upsertMeta("name", "twitter:title", title);

@@ -1,17 +1,197 @@
-import { marketplaceDiscoveryFilters, marketplaceDiscoveryHref, MarketplaceCategoryRail, MarketplaceListingCard } from "@/components/public/MarketplaceDiscovery";
-import { PublicFooter, PublicHeader } from "@/components/public/PublicPrimitives";
+import { CatalogFooter, CatalogHeader } from "@/components/catalog/CatalogChrome";
+import { listingMatchesVertical, Ticket, type CatalogListing } from "@/components/catalog/Tickets";
+import { DiscoveryFilters, DiscoveryHero, marketplaceDiscoveryFilters, marketplaceDiscoveryHref } from "@/components/public/MarketplaceDiscovery";
 import { usePublicMeta } from "@/components/public/PublicMeta";
-import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
-import { ExternalLink, List, MapPin, Search, ShieldCheck, X } from "lucide-react";
+import { verticalForCategory, type Vertical } from "@/lib/verticals";
+import { BRAND } from "@shared/brand";
+import { ExternalLink, List, MapPin } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { Link, useLocation } from "wouter";
+import { Link, useLocation, useSearch } from "wouter";
 
 type MapPoint = { latitudeE6: number; longitudeE6: number };
 type MapListing = { locationId: string; name: string; publicSlug: string; mapPoint: MapPoint; [key: string]: unknown };
 
-export function marketplaceMapMarkerPosition(point: MapPoint, points: MapPoint[]) { const latitudes = points.map(item => item.latitudeE6); const longitudes = points.map(item => item.longitudeE6); const minLat = Math.min(...latitudes); const maxLat = Math.max(...latitudes); const minLng = Math.min(...longitudes); const maxLng = Math.max(...longitudes); return { left: `${maxLng === minLng ? 50 : 10 + ((point.longitudeE6 - minLng) / (maxLng - minLng)) * 80}%`, top: `${maxLat === minLat ? 50 : 10 + ((maxLat - point.latitudeE6) / (maxLat - minLat)) * 80}%` }; }
+export function marketplaceMapMarkerPosition(point: MapPoint, points: MapPoint[]) {
+  const latitudes = points.map(item => item.latitudeE6);
+  const longitudes = points.map(item => item.longitudeE6);
+  const minLat = Math.min(...latitudes);
+  const maxLat = Math.max(...latitudes);
+  const minLng = Math.min(...longitudes);
+  const maxLng = Math.max(...longitudes);
+  return {
+    left: `${maxLng === minLng ? 50 : 10 + ((point.longitudeE6 - minLng) / (maxLng - minLng)) * 80}%`,
+    top: `${maxLat === minLat ? 50 : 10 + ((maxLat - point.latitudeE6) / (maxLat - minLat)) * 80}%`,
+  };
+}
 
-function MarketplaceMapCanvas({ listings }: { listings: MapListing[] }) { const clusters = Array.from(listings.reduce((groups, listing) => { const key = `${listing.mapPoint.latitudeE6}:${listing.mapPoint.longitudeE6}`; const current = groups.get(key) ?? { key, point: listing.mapPoint, listings: [] as MapListing[] }; current.listings.push(listing); groups.set(key, current); return groups; }, new Map<string, { key: string; point: MapPoint; listings: MapListing[] }>()).values()); const [activeCluster, setActiveCluster] = useState<string | null>(clusters[0]?.key ?? null); const points = clusters.map(cluster => cluster.point); return <section className="relative min-h-80 overflow-hidden rounded-[var(--sf-radius-surface)] border border-[var(--sf-line)] bg-[radial-gradient(circle_at_20%_20%,color-mix(in_srgb,var(--sf-jade)_18%,transparent),transparent_22%),radial-gradient(circle_at_82%_78%,color-mix(in_srgb,var(--sf-salon-warm)_20%,transparent),transparent_30%),var(--sf-sidebar)] p-4 shadow-[var(--sf-shadow-soft)]" aria-labelledby="market-canvas-title"><div className="pointer-events-none absolute inset-0 opacity-25 [background-image:linear-gradient(color-mix(in_srgb,var(--sf-line)_80%,transparent)_1px,transparent_1px),linear-gradient(90deg,color-mix(in_srgb,var(--sf-line)_80%,transparent)_1px,transparent_1px)] [background-size:2rem_2rem]" aria-hidden="true" /><div className="relative"><div className="flex items-start justify-between gap-4"><div><p className="sf-salon-eyebrow">OWNER-SHARED LOCATIONS</p><h2 id="market-canvas-title" className="mt-2 text-lg font-semibold">სალონების რუკა</h2></div><span className="rounded-full border border-[var(--sf-line)] bg-[var(--sf-surface-raised)] px-3 py-1.5 text-xs text-[var(--sf-muted)]">{listings.length} სალონი · {clusters.length} მონიშვნა</span></div><p className="mt-3 max-w-xl text-sm leading-6 text-[var(--sf-muted)]">ეს არის გაზიარებული მდებარეობების ვიზუალური განლაგება. ერთ წერტილში რამდენიმე სალონი ერთ მონიშვნაში ჯგუფდება; ზუსტი მიმართულება იხსნება Google Maps-ში, ხოლო სრული ტექსტური სია ქვემოთ ხელმისაწვდომია.</p></div><div className="absolute inset-x-4 bottom-4 top-32" role="group" aria-label="რუკის მონიშვნები">{clusters.map(cluster => { const position = marketplaceMapMarkerPosition(cluster.point, points); const isActive = activeCluster === cluster.key; const count = cluster.listings.length; return <button key={cluster.key} type="button" onClick={() => setActiveCluster(cluster.key)} style={position} className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 p-2 shadow-lg transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sf-accent-strong)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--sf-sidebar)] ${isActive ? "border-white bg-[var(--sf-salon-warm)] text-white scale-110" : "border-[var(--sf-surface-raised)] bg-[var(--sf-jade)] text-white hover:scale-110"}`} aria-pressed={isActive} aria-label={`${count > 1 ? `${count} სალონი ერთ მონიშვნაში` : `${cluster.listings[0]?.name} რუკის მონიშვნა`}`}><MapPin className="size-4" aria-hidden="true" />{count > 1 ? <span className="absolute -right-2 -top-2 grid size-5 place-items-center rounded-full bg-[var(--sf-ink)] text-[10px] font-bold text-[var(--sf-surface)]">{count}</span> : null}</button>; })}</div></section>; }
+const ticketNumber = (index: number) => String(index + 1).padStart(3, "0");
 
-export default function MarketplaceMap() { usePublicMeta({ title: "სალონები რუკაზე | SalonFlow", description: "იხილეთ მხოლოდ იმ დამტკიცებული სალონების რუკა, რომლებმაც public მდებარეობის გაზიარებაზე დამოუკიდებლად განაცხადეს თანხმობა.", canonicalPath: "/salons/map" }); const [location, setLocation] = useLocation(); const readFilters = () => marketplaceDiscoveryFilters(typeof window === "undefined" ? "" : window.location.search); const [categorySlug, setCategorySlug] = useState<string | undefined>(() => readFilters().categorySlug); const [search, setSearch] = useState(() => readFilters().search); const [area, setArea] = useState(() => readFilters().area); useEffect(() => { const filters = readFilters(); setCategorySlug(filters.categorySlug); setSearch(filters.search); setArea(filters.area); }, [location]); const input = useMemo(() => ({ limit: 48, offset: 0, categorySlug, search: search.trim() || undefined, area: area.trim() || undefined }), [categorySlug, search, area]); const result = trpc.marketplace.mapResults.useQuery(input); const listings = (result.data?.items ?? []) as unknown as MapListing[]; const chooseCategory = (nextCategory?: string) => { setCategorySlug(nextCategory); setLocation(marketplaceDiscoveryHref("/salons/map", nextCategory, search, area)); }; const clearArea = () => { setArea(""); setLocation(marketplaceDiscoveryHref("/salons/map", categorySlug, search)); }; const clearFilters = () => { setSearch(""); setArea(""); setCategorySlug(undefined); setLocation("/salons/map"); }; const listHref = marketplaceDiscoveryHref("/salons", categorySlug, search, area); return <div className="sf-public-page"><PublicHeader /><main id="main-content" className="sf-salon-section min-h-screen"><div className="sf-public-container py-10 sm:py-14"><div className="max-w-3xl"><p className="sf-salon-eyebrow">SALONFLOW MARKETPLACE</p><h1 className="sf-display mt-4 text-4xl font-semibold leading-tight sm:text-6xl">სალონები რუკაზე</h1><p className="mt-5 text-base leading-7 text-[var(--sf-muted)]">აქ ჩანს მხოლოდ დამტკიცებული სალონები, რომელთა მფლობელმაც დამოუკიდებლად დაადასტურა მდებარეობის წერტილი და რუკაზე გამოჩენას დაეთანხმა.</p></div><div className="mt-8 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]"><label className="relative"><span className="sr-only">სალონის ან უბნის ძიება</span><Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-[var(--sf-muted)]" aria-hidden="true" /><Input value={search} onChange={event => setSearch(event.target.value)} placeholder="მოძებნეთ სალონი ან უბანი" className="h-12 rounded-2xl border-[var(--sf-line)] bg-[var(--sf-surface-raised)] pl-11" /></label><Link href={listHref} className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-[var(--sf-line)] bg-[var(--sf-surface-raised)] px-5 text-sm font-semibold transition hover:border-[var(--sf-salon-warm)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sf-accent-strong)]"><List className="size-4 text-[var(--sf-salon-warm)]" aria-hidden="true" />სიის ნახვა</Link></div><div className="mt-4"><MarketplaceCategoryRail selectedSlug={categorySlug} onSelect={chooseCategory} /></div>{area.trim() ? <div className="mt-4 flex"><span className="inline-flex min-h-10 items-center gap-2 rounded-full border border-[var(--sf-line)] bg-[var(--sf-surface-raised)] py-1 pl-4 pr-1 text-sm font-medium">ადგილი: {area.trim()}<button type="button" onClick={clearArea} aria-label="ფილტრის მოხსნა" className="grid size-8 place-items-center rounded-full text-[var(--sf-muted)] transition hover:text-[var(--sf-salon-warm)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sf-accent-strong)]"><X className="size-4" aria-hidden="true" /></button></span></div> : null}{categorySlug || search.trim() || area.trim() ? <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--sf-line)] bg-[var(--sf-surface-raised)] px-4 py-3" aria-live="polite"><p className="text-sm font-medium">ფილტრი აქტიურია: {search.trim() ? `„${search.trim()}“` : categorySlug ? "არჩეული კატეგორია" : `ადგილი: ${area.trim()}`}</p><button type="button" onClick={clearFilters} className="inline-flex min-h-10 items-center gap-1.5 text-sm font-semibold text-[var(--sf-salon-warm)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sf-accent-strong)]"><X className="size-4" aria-hidden="true" />ფილტრის გასუფთავება</button></div> : null}<div className="mt-7 flex items-center gap-2 text-xs text-[var(--sf-muted)]"><ShieldCheck className="size-4 text-[var(--sf-jade)]" aria-hidden="true" />რუკის წერტილი მხოლოდ explicit owner consent-ის შემდეგ ჩანს; ჩვეულებრივი directory კოორდინატებს არ აბრუნებს.</div>{result.isLoading ? <div className="mt-8 grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(18rem,0.8fr)]"><div className="sf-skeleton h-96 rounded-[var(--sf-radius-surface)]" /><div className="sf-skeleton h-96 rounded-[var(--sf-radius-surface)]" /></div> : null}{result.isError ? <section className="mt-8 rounded-[var(--sf-radius-surface)] border border-dashed p-8" role="alert"><h2 className="font-semibold">რუკა ახლა მიუწვდომელია</h2><p className="mt-2 text-sm text-[var(--sf-muted)]">ტექსტური სიისთვის დაბრუნდით სალონების კატალოგში და სცადეთ მოგვიანებით.</p><Link href={listHref} className="mt-4 inline-flex text-sm font-semibold text-[var(--sf-salon-warm)]">სალონების კატალოგში დაბრუნება</Link></section> : null}{!result.isLoading && !result.isError && !listings.length ? <section className="mt-8 rounded-[var(--sf-radius-surface)] border border-dashed bg-[var(--sf-surface-raised)] p-8"><h2 className="text-xl font-semibold">ამ ფილტრში რუკაზე გამოჩენილი სალონი ჯერ არ არის.</h2><p className="mt-2 max-w-xl text-sm leading-6 text-[var(--sf-muted)]">ეს შეიძლება ნიშნავდეს, რომ ჯერ არცერთმა დამტკიცებულმა სალონმა არ დაადასტურა წერტილი და არ მისცა რუკაზე გამოჩენის თანხმობა. არ ვაჩვენებთ გამოგონილ ან consent-ის გარეშე მონაცემებს.</p></section> : null}{listings.length ? <div className="mt-8 grid gap-6 xl:grid-cols-[minmax(0,1.05fr)_minmax(20rem,0.95fr)]"><MarketplaceMapCanvas listings={listings} /><section aria-labelledby="map-list-title"><h2 id="map-list-title" className="text-xl font-semibold">სია და მიმართულება</h2><p className="mt-1 text-sm text-[var(--sf-muted)]">სიის თითოეული ბარათი მიუთითებს სალონის public გვერდზე; მიმართულება იხსნება ცალკე რუკის სერვისში.</p><div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-1">{listings.map(item => <div key={item.locationId} className="space-y-2"><MarketplaceListingCard item={item} /><a href={`https://www.google.com/maps/search/?api=1&query=${item.mapPoint.latitudeE6 / 1_000_000},${item.mapPoint.longitudeE6 / 1_000_000}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--sf-salon-warm)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sf-accent-strong)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--sf-bg)]">Google Maps-ში მიმართულება <ExternalLink className="size-3.5" aria-hidden="true" /></a></div>)}</div></section></div> : null}</div></main><PublicFooter /></div>; }
+function MarketplaceMapCanvas({ listings }: { listings: MapListing[] }) {
+  const clusters = Array.from(listings.reduce((groups, listing) => {
+    const key = `${listing.mapPoint.latitudeE6}:${listing.mapPoint.longitudeE6}`;
+    const current = groups.get(key) ?? { key, point: listing.mapPoint, listings: [] as MapListing[] };
+    current.listings.push(listing);
+    groups.set(key, current);
+    return groups;
+  }, new Map<string, { key: string; point: MapPoint; listings: MapListing[] }>()).values());
+  const [activeCluster, setActiveCluster] = useState<string | null>(clusters[0]?.key ?? null);
+  const points = clusters.map(cluster => cluster.point);
+  const active = clusters.find(cluster => cluster.key === activeCluster) ?? null;
+
+  return <section className="cw-map-frame" aria-labelledby="market-canvas-title">
+    <div className="cw-map-head">
+      <h2 id="market-canvas-title" className="text-lg font-extrabold [font-stretch:85%]">ადგილები რუკაზე</h2>
+      <span className="cw-num text-xs text-[var(--cw-ink-soft)]">{listings.length} ადგილი · {clusters.length} მონიშვნა</span>
+    </div>
+    <p className="px-4 pt-3 text-sm leading-6 text-[var(--cw-ink-soft)]">ეს არის გაზიარებული მდებარეობების ვიზუალური განლაგება. ერთ წერტილში რამდენიმე ადგილი ერთ მონიშვნაში ჯგუფდება; ზუსტი მიმართულება იხსნება Google Maps-ში, ხოლო სრული ტექსტური სია გვერდითაა.</p>
+    <div className="mt-3 border-t-[1.5px] border-[var(--cw-ink)]">
+      <div className="cw-map-plane" role="group" aria-label="რუკის მონიშვნები">
+        {clusters.map(cluster => {
+          const position = marketplaceMapMarkerPosition(cluster.point, points);
+          const isActive = activeCluster === cluster.key;
+          const count = cluster.listings.length;
+          const first = cluster.listings[0]!;
+          return <button key={cluster.key} type="button" onClick={() => setActiveCluster(cluster.key)} style={position} className="cw-map-marker" aria-pressed={isActive}
+            aria-label={count > 1 ? `${count} ადგილი ერთ მონიშვნაში` : `${first.name} — რუკის მონიშვნა, № ${ticketNumber(listings.indexOf(first))}`}>
+            <MapPin className="size-4" aria-hidden="true" />
+            <span aria-hidden="true">{count > 1 ? `×${count}` : ticketNumber(listings.indexOf(first))}</span>
+          </button>;
+        })}
+      </div>
+    </div>
+    <div className="cw-map-foot" aria-live="polite">
+      {active ? <>
+        <p className="cw-caption">არჩეული მონიშვნა</p>
+        <ul className="mt-2 grid gap-1">{active.listings.map(item => <li key={item.locationId} className="flex flex-wrap items-baseline gap-x-3 text-sm">
+          <span className="cw-num text-xs text-[var(--cw-ink-soft)]">№ {ticketNumber(listings.indexOf(item))}</span>
+          <Link href={`/salon/${item.publicSlug}`} className="font-extrabold text-[var(--cw-stamp)] underline">{item.name}</Link>
+        </li>)}</ul>
+      </> : <p className="text-sm text-[var(--cw-ink-soft)]">აირჩიეთ მონიშვნა რუკაზე.</p>}
+    </div>
+  </section>;
+}
+
+export default function MarketplaceMap() {
+  usePublicMeta({ title: `ადგილები რუკაზე | ${BRAND.name}`, description: "იხილეთ მხოლოდ იმ დამტკიცებული ადგილების რუკა, რომლებმაც საჯარო მდებარეობის გაზიარებაზე დამოუკიდებლად განაცხადეს თანხმობა.", canonicalPath: "/salons/map" });
+  const [location, setLocation] = useLocation();
+  const urlSearch = useSearch();
+  const readFilters = () => marketplaceDiscoveryFilters(typeof window === "undefined" ? "" : window.location.search);
+  const [categorySlug, setCategorySlug] = useState<string | undefined>(() => readFilters().categorySlug);
+  const [search, setSearch] = useState(() => readFilters().search);
+  const [searchDraft, setSearchDraft] = useState(() => readFilters().search);
+  const [area, setArea] = useState(() => readFilters().area);
+  const [areaDraft, setAreaDraft] = useState(() => readFilters().area);
+  const [vertical, setVertical] = useState<Vertical | null>(() => (readFilters().categorySlug ? verticalForCategory(readFilters().categorySlug!) : null));
+  useEffect(() => {
+    const filters = readFilters();
+    setCategorySlug(filters.categorySlug);
+    setSearch(filters.search);
+    setSearchDraft(filters.search);
+    setArea(filters.area);
+    setAreaDraft(filters.area);
+    if (filters.categorySlug) setVertical(verticalForCategory(filters.categorySlug));
+  }, [location, urlSearch]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const nextSearch = searchDraft.trim();
+      const nextArea = areaDraft.trim();
+      if (nextSearch === search.trim() && nextArea === area.trim()) return;
+      setSearch(nextSearch);
+      setArea(nextArea);
+      setLocation(marketplaceDiscoveryHref("/salons/map", categorySlug, nextSearch, nextArea));
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [searchDraft, areaDraft, search, area, categorySlug, setLocation]);
+
+  const input = useMemo(() => ({ limit: 48, offset: 0, categorySlug, search: search.trim() || undefined, area: area.trim() || undefined }), [categorySlug, search, area]);
+  const result = trpc.marketplace.mapResults.useQuery(input);
+  const allListings = (result.data?.items ?? []) as unknown as MapListing[];
+  const listings = allListings.filter(item => listingMatchesVertical(item as unknown as CatalogListing, vertical));
+  const submitNow = () => {
+    const nextSearch = searchDraft.trim();
+    const nextArea = areaDraft.trim();
+    setSearch(nextSearch);
+    setArea(nextArea);
+    setLocation(marketplaceDiscoveryHref("/salons/map", categorySlug, nextSearch, nextArea));
+  };
+  const chooseCategory = (nextCategory?: string) => {
+    setCategorySlug(nextCategory);
+    if (nextCategory) setVertical(verticalForCategory(nextCategory));
+    setLocation(marketplaceDiscoveryHref("/salons/map", nextCategory, searchDraft, area));
+  };
+  const chooseVertical = (next: Vertical | null) => {
+    setVertical(next);
+    if (next && categorySlug && verticalForCategory(categorySlug) !== next) {
+      setCategorySlug(undefined);
+      setLocation(marketplaceDiscoveryHref("/salons/map", undefined, searchDraft, area));
+    }
+  };
+  const clearArea = () => { setArea(""); setAreaDraft(""); setLocation(marketplaceDiscoveryHref("/salons/map", categorySlug, searchDraft)); };
+  const clearFilters = () => { setSearchDraft(""); setSearch(""); setAreaDraft(""); setArea(""); setCategorySlug(undefined); setVertical(null); setLocation("/salons/map"); };
+  const queryFilters = Boolean(categorySlug || search.trim() || area.trim());
+  const hasFilters = queryFilters || vertical !== null;
+  const listHref = marketplaceDiscoveryHref("/salons", categorySlug, search, area);
+
+  return <div className="cw min-h-screen">
+    <CatalogHeader />
+    <main id="main-content">
+      <DiscoveryHero
+        title="ადგილები რუკაზე"
+        lede="აქ ჩანს მხოლოდ დამტკიცებული ადგილები, რომელთა მფლობელმაც დამოუკიდებლად დაადასტურა მდებარეობის წერტილი და რუკაზე გამოჩენას დაეთანხმა."
+        action={<Link href={listHref} className="cw-btn cw-btn-line min-h-11 text-white"><List className="size-5" aria-hidden="true" />სიის ნახვა</Link>}
+      >
+        <DiscoveryFilters
+          idPrefix="map"
+          vertical={vertical}
+          onVertical={chooseVertical}
+          what={searchDraft}
+          onWhat={setSearchDraft}
+          where={areaDraft}
+          onWhere={setAreaDraft}
+          onSubmit={submitNow}
+          categorySlug={categorySlug}
+          onCategory={chooseCategory}
+          area={area}
+          onClearArea={clearArea}
+          hasFilters={hasFilters}
+          onClear={clearFilters}
+        />
+      </DiscoveryHero>
+
+      <section className="cw-section" aria-label="რუკა და სია">
+        <div className="cw-container">
+          <p className="text-sm text-[var(--cw-ink-soft)]">რუკის წერტილი მხოლოდ მფლობელის აშკარა თანხმობის შემდეგ ჩანს; ჩვეულებრივი კატალოგი კოორდინატებს არ აბრუნებს.</p>
+          <div className="mt-6">
+            {result.isLoading ? <div className="grid gap-5 lg:grid-cols-[minmax(0,1.05fr)_minmax(20rem,0.95fr)]" aria-busy="true" aria-label="იტვირთება"><div className="h-96 animate-pulse rounded-[4px] border-[1.5px] border-[var(--cw-rule)] bg-white" /><div className="h-96 animate-pulse rounded-[4px] border-[1.5px] border-[var(--cw-rule)] bg-white" /></div> : null}
+            {result.isError ? <div className="cw-notice cw-notice-error" role="alert">
+              <h2 className="text-xl font-extrabold [font-stretch:85%]">რუკა ახლა მიუწვდომელია</h2>
+              <p className="mt-2">ტექსტური სიისთვის დაბრუნდით კატალოგში და სცადეთ მოგვიანებით.</p>
+              <Link href={listHref} className="cw-linkbtn mt-3">კატალოგში დაბრუნება</Link>
+            </div> : null}
+            {!result.isLoading && !result.isError && !listings.length ? <div className="cw-notice" role="status">
+              <h2 className="text-xl font-extrabold [font-stretch:85%]">ამ ფილტრში რუკაზე გამოჩენილი ადგილი ჯერ არ არის.</h2>
+              <p className="mt-2 max-w-xl text-[var(--cw-ink-soft)]">ეს შეიძლება ნიშნავდეს, რომ ჯერ არცერთმა დამტკიცებულმა ადგილმა არ დაადასტურა წერტილი და არ მისცა რუკაზე გამოჩენის თანხმობა. გამოგონილ ან თანხმობის გარეშე მონაცემებს არ ვაჩვენებთ.</p>
+              <div className="mt-4 flex flex-wrap gap-3">
+                {hasFilters ? <button type="button" className="cw-btn cw-btn-line min-h-11" onClick={clearFilters}>ფილტრის გასუფთავება</button> : null}
+                <Link href={listHref} className="cw-btn cw-btn-stamp min-h-11">კატალოგის სია</Link>
+              </div>
+            </div> : null}
+            {listings.length ? <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(20rem,0.95fr)]">
+              <div className="lg:sticky lg:top-4"><MarketplaceMapCanvas listings={listings} /></div>
+              <section aria-labelledby="map-list-title">
+                <h2 id="map-list-title" className="text-xl font-extrabold [font-stretch:85%]">სია და მიმართულება</h2>
+                <p className="mt-1 text-sm text-[var(--cw-ink-soft)]">თითოეული ბილეთი მიუთითებს ადგილის საჯარო გვერდზე; მიმართულება იხსნება ცალკე რუკის სერვისში.</p>
+                <div className="mt-4 grid gap-5">{listings.map((item, index) => <div key={item.locationId}>
+                  <Ticket item={item as unknown as CatalogListing} number={index + 1} />
+                  <a href={`https://www.google.com/maps/search/?api=1&query=${item.mapPoint.latitudeE6 / 1_000_000},${item.mapPoint.longitudeE6 / 1_000_000}`} target="_blank" rel="noreferrer" className="cw-loc-link mt-1">Google Maps-ში მიმართულება<span className="sr-only"> (ახალ ჩანართში)</span> <ExternalLink className="size-3.5" aria-hidden="true" /></a>
+                </div>)}</div>
+              </section>
+            </div> : null}
+          </div>
+        </div>
+      </section>
+    </main>
+    <CatalogFooter />
+  </div>;
+}

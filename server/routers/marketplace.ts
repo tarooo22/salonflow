@@ -123,6 +123,7 @@ async function approvedDirectoryRows(input: { categorySlug?: string; search?: st
     name: locations.name,
     address: locations.address,
     areaLabelKa: locationMarketplaceProfiles.areaLabelKa,
+    approvedAt: locationMarketplaceProfiles.approvedAt,
     publicDescription: locations.publicDescription,
     coverImageKey: locations.coverImageKey,
     coverImageAltKa: locations.coverImageAltKa,

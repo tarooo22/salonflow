@@ -11,9 +11,9 @@ describe("public multilingual navigation", () => {
     const english = renderToStaticMarkup(<PublicLocaleProvider initialLocale="en"><PublicHeader /></PublicLocaleProvider>);
     const russian = renderToStaticMarkup(<PublicLocaleProvider initialLocale="ru"><PublicHeader /></PublicLocaleProvider>);
 
-    expect(english).toContain("Online booking");
+    expect(english).toContain("Catalog");
     expect(english).toContain("Sign in");
-    expect(russian).toContain("Онлайн-запись");
+    expect(russian).toContain("Каталог");
     expect(russian).toContain("Войти");
   });
 });

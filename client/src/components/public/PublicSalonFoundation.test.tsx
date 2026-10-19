@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 const styles = readFileSync(new URL("../../index.css", import.meta.url), "utf8");
 const primitives = readFileSync(new URL("./PublicPrimitives.tsx", import.meta.url), "utf8");
+const chrome = readFileSync(new URL("../catalog/CatalogChrome.tsx", import.meta.url), "utf8");
 
 describe("Salon House public foundation", () => {
   it("defines semantic salon primitives without replacing the shared theme system", () => {
@@ -14,24 +15,13 @@ describe("Salon House public foundation", () => {
   });
 
   it("uses the Salon House header styles while retaining accessible public navigation", () => {
-    expect(primitives).toContain("sf-public-header");
-    expect(primitives).toContain("sf-public-nav-link");
-    expect(primitives).toContain("sf-public-booking-link");
-    expect(primitives).not.toContain('size-3.5" aria-hidden="true" />{t("onlineBooking")}');
-    expect(styles).toContain(".sf-public-booking-link:hover");
-    expect(styles).toContain(".sf-public-booking-link:focus-visible");
+    // The public header now delegates to the catalog chrome (DESIGN.md).
+    expect(primitives).toContain("<CatalogHeader withSkipLink={false} />");
     expect(primitives).toContain("sf-skip-link");
-    expect(primitives).toContain("aria-controls=\"public-mobile-menu\"");
-    expect(primitives).toContain("aria-current={location === item.href ? \"page\" : undefined}");
-    expect(primitives).toContain("min-[1600px]:flex");
-    expect(primitives).toContain("min-[1600px]:!hidden");
-    expect(primitives).toContain("sf-public-header--scrolled");
-    expect(primitives).toContain("sf-public-compact-booking");
-    expect(primitives).toContain("sf-public-discovery-shortcut");
-    expect(primitives).toContain("compact={isScrolled}");
+    expect(chrome).toContain('aria-controls="cw-mobile-nav"');
+    expect(chrome).toContain("aria-expanded={open}");
+    expect(chrome).toContain("<PublicLanguageSelector />");
     expect(primitives).toContain("DropdownMenuRadioGroup");
-    expect(primitives).toContain("sf-language-trigger");
-    expect(primitives).toContain("sf-language-menu");
     expect(primitives).not.toContain("<select value={locale}");
     expect(styles).toContain(".sf-public-nav-link--active");
     expect(styles).toContain(".sf-public-brand");

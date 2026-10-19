@@ -1,9 +1,32 @@
-import { Button } from "@/components/ui/button";
-import { PublicFooter, PublicHeader } from "@/components/public/PublicPrimitives";
-import { ArrowLeft, Compass, Home, Map } from "lucide-react";
-import { useLocation } from "wouter";
+import { CatalogFooter, CatalogHeader } from "@/components/catalog/CatalogChrome";
+import "@/components/catalog/marketing.css";
+import { usePublicMeta } from "@/components/public/PublicMeta";
+import { BRAND } from "@shared/brand";
+import { ArrowLeft, Home } from "lucide-react";
+import { Link } from "wouter";
 
 export default function NotFound() {
-  const [, setLocation] = useLocation();
-  return <div className="sf-public-page flex min-h-screen flex-col"><PublicHeader /><main className="sf-public-container flex flex-1 items-center py-14 sm:py-20"><section className="mx-auto w-full max-w-2xl text-center"><div className="sf-surface overflow-hidden"><div className="border-b border-[var(--sf-line)] bg-[color-mix(in_srgb,var(--sf-terracotta)_6%,transparent)] px-6 py-7 sm:px-10 sm:py-9"><span className="mx-auto grid size-14 place-items-center rounded-2xl bg-[color-mix(in_srgb,var(--sf-terracotta)_12%,transparent)] text-[var(--sf-terracotta)]"><Compass className="size-7" aria-hidden="true" /></span><p className="sf-kicker mt-5">404 · გზა ვერ მოიძებნა</p><h1 className="sf-display mt-3 text-4xl font-semibold leading-tight sm:text-5xl">ეს გვერდი ვერ ვიპოვეთ.</h1></div><div className="px-6 py-7 sm:px-10 sm:py-9"><p className="mx-auto max-w-lg text-sm leading-7 text-[var(--sf-muted)]">მისამართი შეიძლება არასწორია, შეიცვალა ან აღარ არსებობს. დაბრუნდით მთავარ გვერდზე ან გამოიყენეთ წინა გვერდი, რათა უსაფრთხოდ გააგრძელოთ.</p><div id="not-found-button-group" className="mt-7 flex flex-col justify-center gap-3 sm:flex-row"><Button variant="public" onClick={() => setLocation("/")}><Home className="size-4" aria-hidden="true" />მთავარ გვერდზე დაბრუნება</Button><Button variant="publicSecondary" onClick={() => window.history.back()}><ArrowLeft className="size-4" aria-hidden="true" />წინა გვერდი</Button></div><p className="mt-7 inline-flex items-center gap-2 text-xs text-[var(--sf-muted)]"><Map className="size-3.5" aria-hidden="true" />თუ ჩაწერის ბმულს ეძებდით, დაბრუნდით ფილიალების სიაში.</p></div></div></section></main><PublicFooter /></div>;
+  usePublicMeta({ title: `გვერდი ვერ მოიძებნა | ${BRAND.name}`, description: "მოთხოვნილი გვერდი ვერ მოიძებნა.", canonicalPath: "/404", robots: "noindex,nofollow" });
+  return <div className="cw flex min-h-screen flex-col">
+    <CatalogHeader />
+    <main id="main-content" tabIndex={-1} className="cw-container flex flex-1 items-center py-14 sm:py-20">
+      <section className="mx-auto w-full max-w-2xl" aria-labelledby="not-found-title">
+        <div className="cw-torn-wrap">
+          <div className="cw-torn">
+            <div className="cw-torn-stub"><span className="cw-num text-sm">№ 404</span><span className="cw-num text-xs">{BRAND.domain}</span></div>
+            <div className="p-6 sm:p-10">
+              <h1 id="not-found-title" className="cw-display text-[clamp(1.9rem,5vw,3.2rem)]">ეს გვერდი ვერ მოიძებნა</h1>
+              <p className="cw-lede mt-4">მისამართი შეიძლება არასწორია, შეიცვალა ან აღარ არსებობს. დაბრუნდით მთავარ გვერდზე ან გახსენით კატალოგი.</p>
+              <div id="not-found-button-group" className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                <Link href="/" className="cw-btn cw-btn-stamp"><Home className="size-5" aria-hidden="true" />მთავარ გვერდზე</Link>
+                <Link href="/salons" className="cw-btn cw-btn-line text-[var(--cw-ink)]">კატალოგი</Link>
+                <button type="button" className="cw-btn cw-btn-line text-[var(--cw-ink)]" onClick={() => window.history.back()}><ArrowLeft className="size-5" aria-hidden="true" />წინა გვერდი</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+    <CatalogFooter />
+  </div>;
 }

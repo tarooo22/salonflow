@@ -1,30 +1,131 @@
-import React, { type ReactNode } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Check, ChevronRight, Clock3, PencilLine, Sparkles } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, CircleAlert, CircleCheck } from "lucide-react";
+import React, { useRef, type ReactNode, type Ref } from "react";
+import "../catalog/booking.css";
 
-export type BookingSummaryRow = { label: string; value: string; ready: boolean; editStep?: number };
 export type BookingSlot = { startsAt: string; label: string };
 
-export function BookingStepHeader({ step, eyebrow, title, description, children }: { step: number; eyebrow?: string; title: string; description: string; children?: ReactNode }) {
-  return <CardHeader className="pb-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--sf-accent-strong)]">{eyebrow ?? `ნაბიჯი ${String(step).padStart(2, "0")}`}</p><CardTitle className="mt-2 text-xl">{title}</CardTitle><p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">{description}</p></div>{children}</div></CardHeader>;
+export const WEEKDAY_FULL = ["ორშაბათი", "სამშაბათი", "ოთხშაბათი", "ხუთშაბათი", "პარასკევი", "შაბათი", "კვირა"];
+const WEEKDAY_SHORT = ["ორშ", "სამ", "ოთხ", "ხუთ", "პარ", "შაბ", "კვ"];
+const MONTH_SHORT = ["იან", "თებ", "მარ", "აპრ", "მაი", "ივნ", "ივლ", "აგვ", "სექ", "ოქტ", "ნოე", "დეკ"];
+const MONTH_FULL = ["იანვარი", "თებერვალი", "მარტი", "აპრილი", "მაისი", "ივნისი", "ივლისი", "აგვისტო", "სექტემბერი", "ოქტომბერი", "ნოემბერი", "დეკემბერი"];
+
+// Date keys are "YYYY-MM-DD" strings in the location's timezone; arithmetic happens in UTC so it never drifts.
+export function addDaysKey(key: string, days: number) {
+  const [y, m, d] = key.split("-").map(Number) as [number, number, number];
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+}
+// Schema weekday: 0 = Monday ... 6 = Sunday.
+export function schemaWeekdayOf(key: string) {
+  const [y, m, d] = key.split("-").map(Number) as [number, number, number];
+  return (new Date(Date.UTC(y, m - 1, d)).getUTCDay() + 6) % 7;
+}
+export function formatDateKeyLong(key: string) {
+  const [, m, d] = key.split("-").map(Number) as [number, number, number];
+  return `${WEEKDAY_FULL[schemaWeekdayOf(key)]}, ${d} ${MONTH_FULL[m - 1]}`;
 }
 
-export function BookingChoiceCard({ selected, onSelect, children, tone = "brand", label, conversionEvent }: { selected: boolean; onSelect: () => void; children: ReactNode; tone?: "brand" | "availability"; label: string; conversionEvent?: string }) {
-  const selectedClass = tone === "availability" ? "border-[var(--sf-jade)] bg-[var(--sf-jade)]/7" : "border-[var(--sf-accent-strong)] bg-[var(--sf-accent-strong)]/5";
-  const accent = tone === "availability" ? "bg-[var(--sf-jade)]" : "bg-[var(--sf-accent-strong)]";
-  return <button type="button" data-conversion-event={conversionEvent} aria-label={label} aria-pressed={selected} onClick={onSelect} className={`sf-booking-choice relative w-full rounded-2xl border p-4 text-left shadow-sm transition-[transform,box-shadow,border-color,background-color] duration-200 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sf-accent-strong)] focus-visible:ring-offset-2 ${selected ? selectedClass : "border-[var(--sf-ink)]/10 bg-white hover:-translate-y-0.5 hover:border-[var(--sf-accent-strong)]/55 hover:shadow-md motion-reduce:hover:translate-y-0"}`}><span className={`absolute right-4 top-4 inline-flex size-6 items-center justify-center rounded-full text-white transition-opacity ${selected ? `${accent} opacity-100` : "bg-[var(--sf-ink)]/10 opacity-0"}`} aria-hidden="true"><Check className="size-3.5" /></span>{children}</button>;
+export function BookingStepHeader({ step, total = 4, title, description, headingRef }: { step: number; total?: number; title: string; description?: string; headingRef?: Ref<HTMLHeadingElement> }) {
+  return <header>
+    <span className="cw-caption cw-step-eyebrow">ნაბიჯი <span className="cw-num">{step} / {total}</span></span>
+    <h1 ref={headingRef} tabIndex={-1} className="cw-step-title">{title}</h1>
+    {description ? <p className="cw-step-lede">{description}</p> : null}
+  </header>;
 }
 
-export function BookingVisitSummary({ rows, onEdit, title = "თქვენი ვიზიტი", description = "არჩევანი განახლდება თითოეულ ნაბიჯზე." }: { rows: BookingSummaryRow[]; onEdit?: (step: number) => void; title?: string; description?: string }) {
-  return <Card className="border-[var(--sf-ink)]/10 bg-white shadow-sm"><CardHeader className="pb-3"><div className="flex items-center gap-3"><span className="grid size-10 place-items-center rounded-2xl bg-[var(--sf-accent-strong)]/10 text-[var(--sf-accent-strong)]"><Sparkles className="size-5" aria-hidden="true" /></span><div><CardTitle className="text-lg">{title}</CardTitle><p className="mt-0.5 text-xs leading-5 text-muted-foreground">{description}</p></div></div></CardHeader><CardContent className="space-y-2.5">{rows.map(row => { const editStep = row.editStep; return <div key={row.label} className={`group rounded-xl border p-3 ${row.ready ? "border-[var(--sf-ink)]/8 bg-[var(--sf-surface-hover)]/65" : "border-dashed border-[var(--sf-line)] bg-[var(--sf-surface-subtle)]/70"}`}><div className="flex gap-2"><div className="min-w-0 flex-1"><p className="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-[var(--sf-muted)]">{row.label}</p><p className={`mt-1 text-sm leading-5 ${row.ready ? "font-medium text-[var(--sf-ink)]" : "text-[var(--sf-muted)]"}`}>{row.value}</p></div>{row.ready && editStep !== undefined && onEdit ? <Button type="button" variant="ghost" size="icon" className="size-10 shrink-0" aria-label={`${row.label} შეცვლა`} onClick={() => onEdit(editStep)}><PencilLine className="size-4" aria-hidden="true" /></Button> : null}</div></div>; })}</CardContent></Card>;
+export function BookingRail({ steps, current, onGo, label }: { steps: string[]; current: number; onGo?: (index: number) => void; label: string }) {
+  return <ol className="cw-rail" aria-label={label}>{steps.map((name, index) => {
+    const state = index < current ? "done" : index === current ? "current" : "todo";
+    const inner = <>
+      <span className="cw-rail-box" aria-hidden="true">{state === "done" ? <Check className="size-4" /> : index + 1}</span>
+      <span className="cw-rail-label">{name}<span className="sr-only">{state === "done" ? " — შესრულებულია" : ""}</span></span>
+    </>;
+    return <li key={name} className="cw-rail-item" data-state={state} aria-current={state === "current" ? "step" : undefined}>
+      {state === "done" && onGo ? <button type="button" className="cw-rail-step" onClick={() => onGo(index)}>{inner}</button> : <span className="cw-rail-step">{inner}</span>}
+    </li>;
+  })}</ol>;
+}
+
+export function BookingBusinessStrip({ name, address, children }: { name: string; address?: string | null; children?: ReactNode }) {
+  return <>
+    <div className="cw-biz">
+      <span className="cw-biz-thumb" aria-hidden="true">{name.trim().charAt(0).toUpperCase() || "·"}</span>
+      <div className="min-w-0">
+        <p className="cw-biz-name">{name}</p>
+        {address ? <p className="mt-0.5 text-sm text-[var(--cw-ink-soft)]">{address}</p> : null}
+      </div>
+    </div>
+    {children}
+  </>;
+}
+
+// One row of a multi-select (checkbox) or single-select (radio) list. The input is native, so the
+// keyboard path (Space, arrow keys inside a radio group) and screen-reader semantics come for free.
+export function BookingChoiceCard({ selected, onSelect, children, label, conversionEvent, kind = "checkbox", name }: { selected: boolean; onSelect: () => void; children: ReactNode; label: string; conversionEvent?: string; kind?: "checkbox" | "radio"; name?: string }) {
+  return <label className="cw-choice" data-checked={selected}>
+    <input type={kind} className="cw-check" name={name} checked={selected} onChange={onSelect} aria-label={label} data-conversion-event={conversionEvent} />
+    <span className="min-w-0">{children}</span>
+  </label>;
 }
 
 export function BookingSlotGroup({ title, slots, selectedStartsAt, onSelect, conversionEvent }: { title: string; slots: BookingSlot[]; selectedStartsAt: string; onSelect: (startsAt: string) => void; conversionEvent?: string }) {
   if (!slots.length) return null;
-  return <section aria-label={`${title} საათები`}><div className="mb-2 flex items-center gap-2"><Clock3 className="size-4 text-[var(--sf-accent-strong)]" aria-hidden="true" /><h3 className="text-sm font-semibold">{title}</h3></div><div className="grid grid-cols-3 gap-2 sm:grid-cols-4">{slots.map(slot => { const active = selectedStartsAt === slot.startsAt; return <button key={slot.startsAt} type="button" data-conversion-event={conversionEvent} aria-pressed={active} onClick={() => onSelect(slot.startsAt)} className={`sf-interactive min-h-11 rounded-xl border px-2 py-2.5 text-sm font-semibold tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sf-accent-strong)] focus-visible:ring-offset-2 ${active ? "border-transparent text-white shadow-[var(--sf-glow-brand)] [background-image:var(--sf-gradient-brand)]" : "border-[var(--sf-line)] bg-[var(--sf-surface)] text-[var(--sf-ink)] hover:border-[color-mix(in_srgb,var(--sf-accent-strong)_45%,var(--sf-line))] hover:text-[var(--sf-accent-strong)]"}`}>{slot.label}</button>; })}</div></section>;
+  return <section className="cw-slot-group" aria-label={`${title} საათები`}>
+    <h3 className="cw-caption">{title}</h3>
+    <div className="cw-slots">{slots.map(slot => {
+      const active = selectedStartsAt === slot.startsAt;
+      return <button key={slot.startsAt} type="button" className="cw-slot" data-conversion-event={conversionEvent} aria-pressed={active} onClick={() => onSelect(slot.startsAt)}>{slot.label}</button>;
+    })}</div>
+  </section>;
 }
 
-export function BookingMobileAction({ step, label, detail, disabled, onContinue }: { step: number; label: string; detail: string; disabled: boolean; onContinue: () => void }) {
-  return <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border/90 bg-background/95 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-12px_30px_rgb(0_0_0_/_0.16)] backdrop-blur lg:hidden"><div className="mx-auto flex max-w-xl items-center gap-3"><div className="min-w-0 flex-1"><p className="text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground">ნაბიჯი {step + 1} / 4</p><p className="truncate text-xs font-medium text-foreground">{detail}</p></div><Button className="min-h-11 shrink-0" disabled={disabled} onClick={onContinue}>{label}<ChevronRight className="ml-1 size-4" aria-hidden="true" /></Button></div></div>;
+export type BookingDay = { key: string; closed?: boolean };
+
+// Horizontal date strip: weekday, day number, month. Today is marked, past and closed days are disabled.
+export function BookingDateStrip({ days, selected, todayKey, onSelect, label = "თარიღი" }: { days: BookingDay[]; selected: string; todayKey: string; onSelect: (key: string) => void; label?: string }) {
+  const scroller = useRef<HTMLDivElement>(null);
+  const scrollBy = (direction: 1 | -1) => {
+    const element = scroller.current;
+    if (!element) return;
+    const reduced = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    element.scrollBy({ left: direction * element.clientWidth * 0.8, behavior: reduced ? "auto" : "smooth" });
+  };
+  return <div className="cw-dates-wrap" role="group" aria-label={label}>
+    <button type="button" className="cw-date-nav" aria-label="წინა დღეები" onClick={() => scrollBy(-1)}><ChevronLeft className="size-5" aria-hidden="true" /></button>
+    <div className="cw-dates" ref={scroller}>{days.map(day => {
+      const [, month, dayNumber] = day.key.split("-").map(Number) as [number, number, number];
+      const past = day.key < todayKey;
+      const disabled = past || Boolean(day.closed);
+      const isToday = day.key === todayKey;
+      const weekday = schemaWeekdayOf(day.key);
+      const full = `${WEEKDAY_FULL[weekday]}, ${dayNumber} ${MONTH_FULL[month - 1]}${isToday ? ", დღეს" : ""}${past ? ", გასულია" : day.closed ? ", დახურულია" : ""}`;
+      return <button key={day.key} type="button" className="cw-date" disabled={disabled} aria-pressed={day.key === selected} aria-label={full} data-today={isToday} onClick={() => onSelect(day.key)}>
+        <span className="cw-date-weekday" aria-hidden="true">{WEEKDAY_SHORT[weekday]}</span>
+        <span className="cw-date-day" aria-hidden="true">{dayNumber}</span>
+        <span className="cw-date-month" aria-hidden="true">{MONTH_SHORT[month - 1]}</span>
+        {isToday ? <span className="cw-date-today" aria-hidden="true">დღეს</span> : null}
+      </button>;
+    })}</div>
+    <button type="button" className="cw-date-nav" aria-label="შემდეგი დღეები" onClick={() => scrollBy(1)}><ChevronRight className="size-5" aria-hidden="true" /></button>
+  </div>;
+}
+
+export function BookingNotice({ tone = "info", title, children, noticeRef, role }: { tone?: "info" | "error" | "ok"; title?: string; children?: ReactNode; noticeRef?: React.RefObject<HTMLDivElement | null>; role?: "alert" | "status" }) {
+  const Icon = tone === "ok" ? CircleCheck : CircleAlert;
+  return <div ref={noticeRef} tabIndex={noticeRef ? -1 : undefined} role={role ?? (tone === "error" ? "alert" : undefined)} data-tone={tone} className="cw-notice">
+    <Icon className="size-5" aria-hidden="true" />
+    <div className="min-w-0">{title ? <p className="cw-notice-title">{title}</p> : null}{children ? <div>{children}</div> : null}</div>
+  </div>;
+}
+
+// Sticky bottom bar: running summary + total, and the one primary stamp button. The button uses
+// aria-disabled (not disabled) so it stays focusable and its reason is announced via the hint.
+export function BookingBar({ summary, total, label, blocked, hint, onClick, conversionEvent }: { summary: string; total: string; label: string; blocked: boolean; hint?: string; onClick: () => void; conversionEvent?: string }) {
+  return <div className="cw-bar">
+    <div>
+      <p className="cw-bar-sum">{summary}</p>
+      <p className="cw-bar-total">{total}</p>
+    </div>
+    <button type="button" className="cw-btn cw-btn-stamp" aria-disabled={blocked} aria-describedby={hint ? "booking-bar-hint" : undefined} data-conversion-event={blocked ? undefined : conversionEvent} onClick={onClick}>{label}</button>
+    {hint ? <p id="booking-bar-hint" className="cw-bar-hint">{hint}</p> : null}
+  </div>;
 }
