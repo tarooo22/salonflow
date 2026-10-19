@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useLocation } from "wouter";
+import { usePublicLocale } from "./PublicLocaleContext";
 import "@/components/catalog/catalog.css";
 
 const STORAGE_KEY = "salonflow-public-conversion-consent-v1";
@@ -69,8 +70,15 @@ export function AnalyticsConsentPreferencesButton({ className = "" }: { classNam
   return <button type="button" className={`text-left underline decoration-[var(--sf-line)] underline-offset-4 transition-colors hover:text-[var(--sf-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sf-focus)] ${className}`} onClick={() => setChoice("declined")}>Analytics არჩევანი</button>;
 }
 
+export const consentUi = {
+  ka: { label: "ანალიტიკის თანხმობა", title: "ანონიმური სტატისტიკა?", body: "ვინახავთ მხოლოდ გვერდს და დროს — არა სახელს, ტელეფონს ან ჯავშნის დეტალებს.", more: "დეტალურად", accept: "თანხმობა", decline: "უარი" },
+  en: { label: "Analytics consent", title: "Anonymous statistics?", body: "We store only the page and the time — never your name, phone or booking details.", more: "Details", accept: "Allow", decline: "Decline" },
+  ru: { label: "Согласие на аналитику", title: "Анонимная статистика?", body: "Мы сохраняем только страницу и время — без имени, телефона и деталей записи.", more: "Подробнее", accept: "Разрешить", decline: "Отказаться" },
+};
+
 function AnalyticsConsentSurface() {
   const { choice, setChoice } = usePublicAnalyticsConsent();
+  const text = consentUi[usePublicLocale().locale];
   if (choice !== null) return null;
-  return <section className="cw fixed inset-x-3 bottom-3 z-50 mx-auto max-w-2xl rounded-[4px] border-[1.5px] border-[var(--cw-ink)] p-3 shadow-[0_14px_30px_-16px_rgba(8,7,32,0.6)] sm:flex sm:items-center sm:gap-4 md:bottom-5" aria-label="ანალიტიკის თანხმობა"><p className="text-sm leading-6 text-[var(--cw-ink)]"><strong>ანონიმური სტატისტიკა?</strong> ვინახავთ მხოლოდ გვერდს და დროს — არა სახელს, ტელეფონს ან ჯავშნის დეტალებს. <a href="/privacy#analytics" className="font-bold text-[var(--cw-stamp)] underline">დეტალურად</a></p><div className="mt-2 flex shrink-0 gap-2 sm:mt-0"><button type="button" className="cw-btn cw-btn-stamp min-h-10 px-4 text-sm" onClick={() => setChoice("accepted")}>თანხმობა</button><button type="button" className="cw-btn cw-btn-line min-h-10 px-4 text-sm" onClick={() => setChoice("declined")}>უარი</button></div></section>;
+  return <section className="cw fixed inset-x-3 bottom-3 z-50 mx-auto max-w-2xl rounded-[4px] border-[1.5px] border-[var(--cw-ink)] p-3 shadow-[0_14px_30px_-16px_rgba(8,7,32,0.6)] sm:flex sm:items-center sm:gap-4 md:bottom-5" aria-label={text.label}><p className="text-sm leading-6 text-[var(--cw-ink)]"><strong>{text.title}</strong> {text.body} <a href="/privacy#analytics" className="font-bold text-[var(--cw-stamp)] underline">{text.more}</a></p><div className="mt-2 flex shrink-0 gap-2 sm:mt-0"><button type="button" className="cw-btn cw-btn-stamp min-h-10 px-4 text-sm" onClick={() => setChoice("accepted")}>{text.accept}</button><button type="button" className="cw-btn cw-btn-line min-h-10 px-4 text-sm" onClick={() => setChoice("declined")}>{text.decline}</button></div></section>;
 }

@@ -1,9 +1,10 @@
 import "@/components/catalog/commerce.css";
 import "@/components/catalog/discovery.css";
 import { cssVars } from "@/components/catalog/Tickets";
+import { type PublicLocale, usePublicLocale } from "@/contexts/PublicLocaleContext";
 import { formatGelTetri } from "@/lib/presentation";
 import { trpc } from "@/lib/trpc";
-import { VERTICALS, verticalForCategory, verticalStyle, type Vertical } from "@/lib/verticals";
+import { VERTICALS, verticalForCategory, verticalLabel, verticalStyle, type Vertical } from "@/lib/verticals";
 import { BRAND } from "@shared/brand";
 import type { inferRouterOutputs } from "@trpc/server";
 import { ArrowRight, MapPin, Search, ShoppingBag, X } from "lucide-react";
@@ -24,12 +25,35 @@ export const EMPLOYMENT_LABELS: Record<string, string> = {
   FREELANCE: "ფრილანსი",
 };
 
-export function salaryLabel(from: number | null, to: number | null) {
-  if (from != null && to != null) return from === to ? formatGelTetri(from) : `${formatGelTetri(from)} – ${formatGelTetri(to)}`;
-  if (from != null) return `${formatGelTetri(from)}-დან`;
-  if (to != null) return `${formatGelTetri(to)}-მდე`;
-  return "ანაზღაურება შეთანხმებით";
+const EMPLOYMENT_BY_LOCALE: Record<PublicLocale, Record<string, string>> = {
+  ka: EMPLOYMENT_LABELS,
+  en: { FULL_TIME: "Full-time", PART_TIME: "Part-time", CHAIR_RENTAL: "Chair rental", FREELANCE: "Freelance" },
+  ru: { FULL_TIME: "Полная занятость", PART_TIME: "Частичная занятость", CHAIR_RENTAL: "Аренда кресла", FREELANCE: "Фриланс" },
+};
+
+export function employmentLabel(type: string, locale: PublicLocale = "ka") {
+  return EMPLOYMENT_BY_LOCALE[locale][type] ?? type;
 }
+
+const SALARY_COPY = {
+  ka: { from: "-დან", to: "-მდე", agreed: "ანაზღაურება შეთანხმებით" },
+  en: { from: "from ", to: "up to ", agreed: "Salary by agreement" },
+  ru: { from: "от ", to: "до ", agreed: "Оплата по договорённости" },
+} as const;
+
+export function salaryLabel(from: number | null, to: number | null, locale: PublicLocale = "ka") {
+  if (from != null && to != null) return from === to ? formatGelTetri(from) : `${formatGelTetri(from)} – ${formatGelTetri(to)}`;
+  const copy = SALARY_COPY[locale];
+  if (from != null) return locale === "ka" ? `${formatGelTetri(from)}${copy.from}` : `${copy.from}${formatGelTetri(from)}`;
+  if (to != null) return locale === "ka" ? `${formatGelTetri(to)}${copy.to}` : `${copy.to}${formatGelTetri(to)}`;
+  return copy.agreed;
+}
+
+export const ui = {
+  ka: { chooseField: "სფეროს არჩევა", all: "ყველა", soon: "მალე", date: "თარიღი", where: "სად?", whereSr: " — ქალაქი ან უბანი", areaPlaceholder: "ქალაქი ან უბანი", search: "მოძებნე", category: "კატეგორია", allCategories: "ყველა კატეგორია", areaTag: "ადგილი: ", removeFilter: "ფილტრის მოხსნა", clearFilters: "ფილტრის გასუფთავება", paid: "ფასიანი განთავსება", adSr: " — რეკლამა", details: "დეტალები", until: "ვადა ", inStock: "მარაგშია", outOfStock: "ამოიწურა", loading: "იტვირთება", loadingMore: "იტვირთება…", loadMore: "მეტის ჩატვირთვა" },
+  en: { chooseField: "Choose a field", all: "All", soon: "soon", date: "Date", where: "Where?", whereSr: " — city or area", areaPlaceholder: "City or area", search: "Search", category: "Category", allCategories: "All categories", areaTag: "Area: ", removeFilter: "Remove filter", clearFilters: "Clear filters", paid: "Paid placement", adSr: " — advertisement", details: "Details", until: "Until ", inStock: "In stock", outOfStock: "Out of stock", loading: "Loading", loadingMore: "Loading…", loadMore: "Load more" },
+  ru: { chooseField: "Выбор сферы", all: "Все", soon: "скоро", date: "Дата", where: "Где?", whereSr: " — город или район", areaPlaceholder: "Город или район", search: "Найти", category: "Категория", allCategories: "Все категории", areaTag: "Место: ", removeFilter: "Убрать фильтр", clearFilters: "Сбросить фильтры", paid: "Платное размещение", adSr: " — реклама", details: "Подробнее", until: "До ", inStock: "В наличии", outOfStock: "Нет в наличии", loading: "Загрузка", loadingMore: "Загрузка…", loadMore: "Показать ещё" },
+} as const;
 
 /** DD.MM.YYYY from the UTC date; a posting's deadline is a calendar day, not a clock time. */
 export function formatUtcDate(value: Date | string | null) {
@@ -71,6 +95,8 @@ type CommerceFiltersProps = {
 
 /** Filter card hung under the vertical tabs, same form as the catalog filters. */
 export function CommerceFilters({ idPrefix, vertical, onVertical, area, onArea, category, onCategory, captionWhere }: CommerceFiltersProps) {
+  const { locale } = usePublicLocale();
+  const text = ui[locale];
   const [draft, setDraft] = useState(area);
   const categories = trpc.marketplace.categories.useQuery(undefined, { enabled: Boolean(onCategory) });
   const shownCategories = (categories.data ?? []).filter(item => !vertical || verticalForCategory(item.slug) === vertical);
@@ -82,37 +108,37 @@ export function CommerceFilters({ idPrefix, vertical, onVertical, area, onArea, 
   const hasFilters = Boolean(vertical || area || category);
 
   return <div>
-    <div className="cw-vtabs" role="group" aria-label="სფეროს არჩევა">
-      <button type="button" className="cw-tab cw-tab-all" aria-pressed={vertical === null} onClick={() => onVertical(null)}>ყველა</button>
+    <div className="cw-vtabs" role="group" aria-label={text.chooseField}>
+      <button type="button" className="cw-tab cw-tab-all" aria-pressed={vertical === null} onClick={() => onVertical(null)}>{text.all}</button>
       {VERTICALS.map(item => <button key={item.id} type="button" className="cw-tab" style={cssVars({ "--tab-bg": item.bg, "--tab-ink": item.ink })} aria-pressed={vertical === item.id} onClick={() => onVertical(vertical === item.id ? null : item.id)}>
-        {item.label}{item.id === "dental" ? <span className="cw-tab-soon">მალე</span> : null}
+        {verticalLabel(item.id, locale)}{item.id === "dental" ? <span className="cw-tab-soon">{text.soon}</span> : null}
       </button>)}
     </div>
     <div className="cw-card cw-disc-card">
       <div className="cw-card-band" style={cssVars({ "--band": band })} />
       <div className="cw-card-inner" style={cssVars(vertical ? { "--tint": verticalStyle(vertical).bg, "--tint-amount": "16%" } : {})}>
         <div className="cw-card-head">
-          <span>თარიღი <span className="cw-num ml-1 text-[var(--cw-ink)]">{today}</span></span>
+          <span>{text.date} <span className="cw-num ml-1 text-[var(--cw-ink)]">{today}</span></span>
           <span className="cw-num text-xs">{BRAND.domain}</span>
         </div>
         <form onSubmit={submit} role="search" aria-label={captionWhere} className="mt-5 grid gap-4">
           <div className="cwx-filter-row">
             <label className="cw-field">
-              <span className="cw-caption">სად?<span className="sr-only"> — ქალაქი ან უბანი</span></span>
-              <input id={`${idPrefix}-area`} value={draft} onChange={event => setDraft(event.target.value)} maxLength={120} placeholder="ქალაქი ან უბანი" autoComplete="off" enterKeyHint="search" />
+              <span className="cw-caption">{text.where}<span className="sr-only">{text.whereSr}</span></span>
+              <input id={`${idPrefix}-area`} value={draft} onChange={event => setDraft(event.target.value)} maxLength={120} placeholder={text.areaPlaceholder} autoComplete="off" enterKeyHint="search" />
             </label>
-            <button type="submit" className="cw-btn cw-btn-stamp"><Search className="size-5" aria-hidden="true" />მოძებნე</button>
+            <button type="submit" className="cw-btn cw-btn-stamp"><Search className="size-5" aria-hidden="true" />{text.search}</button>
           </div>
-          {onCategory ? <div role="group" aria-label="კატეგორია" className="cwx-chips flex flex-wrap gap-2">
-            <button type="button" className="cw-chip" aria-pressed={!category} onClick={() => onCategory(undefined)}>ყველა კატეგორია</button>
+          {onCategory ? <div role="group" aria-label={text.category} className="cwx-chips flex flex-wrap gap-2">
+            <button type="button" className="cw-chip" aria-pressed={!category} onClick={() => onCategory(undefined)}>{text.allCategories}</button>
             {shownCategories.map(item => {
               const tone = verticalStyle(verticalForCategory(item.slug));
               return <button key={item.id} type="button" className="cw-chip" style={cssVars({ "--g-bg": tone.bg, "--g-ink": tone.ink })} aria-pressed={category === item.slug} onClick={() => onCategory(category === item.slug ? undefined : item.slug)}>{item.nameKa}</button>;
             })}
           </div> : null}
           {hasFilters ? <div className="cw-active" aria-live="polite">
-            {area ? <span className="cw-tag">ადგილი: {area}<button type="button" onClick={() => { setDraft(""); onArea(""); }} aria-label="ფილტრის მოხსნა"><X className="size-4" aria-hidden="true" /></button></span> : null}
-            <button type="button" className="cw-linkbtn" onClick={clear}><X className="size-4" aria-hidden="true" />ფილტრის გასუფთავება</button>
+            {area ? <span className="cw-tag">{text.areaTag}{area}<button type="button" onClick={() => { setDraft(""); onArea(""); }} aria-label={text.removeFilter}><X className="size-4" aria-hidden="true" /></button></span> : null}
+            <button type="button" className="cw-linkbtn" onClick={clear}><X className="size-4" aria-hidden="true" />{text.clearFilters}</button>
           </div> : null}
         </form>
       </div>
@@ -121,32 +147,36 @@ export function CommerceFilters({ idPrefix, vertical, onVertical, area, onArea, 
 }
 
 export function VacancyTicket({ item, number }: { item: VacancyItem; number: number }) {
-  const lead = verticalStyle(verticalForCategory(item.roleCategory ?? ""));
+  const { locale } = usePublicLocale();
+  const text = ui[locale];
+  const leadVertical = verticalForCategory(item.roleCategory ?? "");
+  const lead = verticalStyle(leadVertical);
   const expires = formatUtcDate(item.expiresAt);
   return <Link href={`/vacancies/${item.id}`} className="cw-ticket group" style={cssVars({ "--stub-bg": lead.bg, "--stub-ink": lead.ink })}>
     <div className="cw-ticket-stub" aria-hidden="true">
       <span className="cw-num">№ {String(number).padStart(3, "0")}</span>
-      <span className="text-[0.72rem] font-extrabold [writing-mode:vertical-rl] rotate-180">{lead.label}</span>
+      <span className="text-[0.72rem] font-extrabold [writing-mode:vertical-rl] rotate-180">{verticalLabel(leadVertical, locale)}</span>
     </div>
     <div className="min-w-0 p-4">
       <div className="flex items-start justify-between gap-2">
         <h3 className="line-clamp-2 text-lg font-extrabold [font-stretch:85%]">{item.title}</h3>
-        {item.isVip ? <span className="cw-stamp-mark shrink-0" title="ფასიანი განთავსება">VIP<span className="sr-only"> — რეკლამა</span></span> : null}
+        {item.isVip ? <span className="cw-stamp-mark shrink-0" title={text.paid}>VIP<span className="sr-only">{text.adSr}</span></span> : null}
       </div>
       <p className="mt-1 truncate text-sm text-[var(--cw-ink-soft)]">{item.businessName}{item.areaLabelKa ? <> · <MapPin className="inline size-3.5 align-[-2px]" aria-hidden="true" /> {item.areaLabelKa}</> : null}</p>
       <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-        <span className="cwx-tag">{EMPLOYMENT_LABELS[item.employmentType] ?? item.employmentType}</span>
-        <span className="cw-num font-semibold">{salaryLabel(item.salaryFromTetri, item.salaryToTetri)}</span>
+        <span className="cwx-tag">{employmentLabel(item.employmentType, locale)}</span>
+        <span className="cw-num font-semibold">{salaryLabel(item.salaryFromTetri, item.salaryToTetri, locale)}</span>
       </p>
       <p className="mt-3 flex items-center justify-between gap-2 text-sm font-extrabold text-[var(--cw-stamp)]">
-        <span className="inline-flex items-center gap-1">დეტალები <ArrowRight className="size-4 transition-transform duration-200 group-hover:translate-x-1" aria-hidden="true" /></span>
-        {expires ? <span className="cw-num text-xs font-semibold text-[var(--cw-ink-soft)]">ვადა {expires}</span> : null}
+        <span className="inline-flex items-center gap-1">{text.details} <ArrowRight className="size-4 transition-transform duration-200 group-hover:translate-x-1" aria-hidden="true" /></span>
+        {expires ? <span className="cw-num text-xs font-semibold text-[var(--cw-ink-soft)]">{text.until}{expires}</span> : null}
       </p>
     </div>
   </Link>;
 }
 
 export function ProductCard({ item }: { item: ProductItem }) {
+  const text = ui[usePublicLocale().locale];
   return <article className="cwx-product">
     {item.imageUrl
       ? <img src={item.imageUrl} alt={item.imageAltKa ?? item.name} loading="lazy" className="cwx-product-img" />
@@ -157,7 +187,7 @@ export function ProductCard({ item }: { item: ProductItem }) {
       {item.description ? <p className="mt-1 line-clamp-2 text-sm leading-6 text-[var(--cw-ink-soft)]">{item.description}</p> : null}
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
         <p className="cw-num text-base font-semibold">{formatGelTetri(item.priceTetri)}</p>
-        <span className="cwx-stock" data-in-stock={item.inStock}>{item.inStock ? "მარაგშია" : "ამოიწურა"}</span>
+        <span className="cwx-stock" data-in-stock={item.inStock}>{item.inStock ? text.inStock : text.outOfStock}</span>
       </div>
       <Link href={`/salon/${item.locationPublicSlug}`} className="cwx-biz">
         <span className="min-w-0 truncate">{item.businessName}{item.areaLabelKa ? ` · ${item.areaLabelKa}` : ""}</span>
@@ -172,7 +202,8 @@ export function ProductGrid({ items }: { items: ProductItem[] }) {
 }
 
 export function LoadingGrid({ ticket = true }: { ticket?: boolean }) {
-  return <div className={ticket ? "grid gap-4 md:grid-cols-2 xl:grid-cols-3" : "cwx-grid"} aria-busy="true" aria-label="იტვირთება">
+  const text = ui[usePublicLocale().locale];
+  return <div className={ticket ? "grid gap-4 md:grid-cols-2 xl:grid-cols-3" : "cwx-grid"} aria-busy="true" aria-label={text.loading}>
     {[0, 1, 2].map(key => <div key={key} className={`${ticket ? "h-[8.5rem]" : "h-72"} animate-pulse rounded-[4px] border-[1.5px] border-[var(--cw-rule)] bg-white`} />)}
   </div>;
 }
@@ -187,8 +218,9 @@ export function CommerceEmpty({ title, text, children }: { title: string; text: 
 }
 
 export function LoadMoreButton({ hasMore, loading, onClick }: { hasMore: boolean; loading: boolean; onClick: () => void }) {
+  const text = ui[usePublicLocale().locale];
   if (!hasMore && !loading) return null;
   return <div className="mt-8 flex justify-center">
-    <button type="button" className="cw-btn cw-btn-line min-h-11 text-[var(--cw-ink)]" disabled={loading} onClick={onClick}>{loading ? "იტვირთება…" : "მეტის ჩატვირთვა"}</button>
+    <button type="button" className="cw-btn cw-btn-line min-h-11 text-[var(--cw-ink)]" disabled={loading} onClick={onClick}>{loading ? text.loadingMore : text.loadMore}</button>
   </div>;
 }

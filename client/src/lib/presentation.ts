@@ -6,6 +6,13 @@ export function formatKaDateTime(value: Date, timeZone?: string) {
   return new Intl.DateTimeFormat("ka-GE", { dateStyle: "medium", timeStyle: "short", ...(timeZone ? { timeZone } : {}) }).format(value);
 }
 
+const INTL_LOCALES = { ka: "ka-GE", en: "en-GB", ru: "ru-RU" } as const;
+
+/** Medium date + short time in the visitor's language (public pages). */
+export function formatDateTimeForLocale(value: Date, locale: keyof typeof INTL_LOCALES, timeZone?: string) {
+  return new Intl.DateTimeFormat(INTL_LOCALES[locale], { dateStyle: "medium", timeStyle: "short", ...(timeZone ? { timeZone } : {}) }).format(value);
+}
+
 export function formatKaDate(value: Date, timeZone?: string) {
   return new Intl.DateTimeFormat("ka-GE", { dateStyle: "medium", ...(timeZone ? { timeZone } : {}) }).format(value);
 }

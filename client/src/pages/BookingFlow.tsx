@@ -1,9 +1,9 @@
 import { CatalogFooter, CatalogHeader } from "@/components/catalog/CatalogChrome";
-import { BookingBar, BookingBusinessStrip, BookingChoiceCard, BookingDateStrip, BookingNotice, BookingRail, BookingSlotGroup, BookingStepHeader, WEEKDAY_FULL, addDaysKey, formatDateKeyLong, schemaWeekdayOf } from "@/components/public/BookingPrimitives";
+import { BookingBar, BookingBusinessStrip, BookingChoiceCard, BookingDateStrip, BookingNotice, BookingRail, BookingSlotGroup, BookingStepHeader, DATE_NAMES, addDaysKey, formatDateKeyLong, schemaWeekdayOf } from "@/components/public/BookingPrimitives";
 import { usePublicMeta } from "@/components/public/PublicMeta";
-import { usePublicLocale } from "@/contexts/PublicLocaleContext";
+import { type PublicLocale, usePublicLocale } from "@/contexts/PublicLocaleContext";
 import { downloadBookingCalendar } from "@/lib/bookingCalendar";
-import { formatGelTetri, formatKaDateTime } from "@/lib/presentation";
+import { formatDateTimeForLocale, formatGelTetri } from "@/lib/presentation";
 import { trpc } from "@/lib/trpc";
 import { BRAND } from "@shared/brand";
 import { MAX_SELECTED_SERVICES } from "@shared/validation";
@@ -13,20 +13,124 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useRoute, useSearch } from "wouter";
 import "@/components/catalog/booking.css";
 
-const bookingUi = {
+export const bookingUi = {
   ka: { loading: "ჩაწერის კატალოგი იტვირთება…", unavailable: "ჩაწერის მონაცემები დროებით მიუწვდომელია. შეამოწმეთ კავშირი და სცადეთ მოგვიანებით.", inactive: "ეს ჩაწერის ბმული აღარ არის აქტიური", inactiveLead: "ფილიალი შესაძლოა გათიშულია ან ბმული არასწორია. დაბრუნდით კატალოგში და აირჩიეთ აქტიური ფილიალი.", trialPaused: "ონლაინ ჩაწერა ამ სალონისთვის დროებით მიუწვდომელია", trialPausedLead: "სალონის საჯარო ინფორმაცია არ წაშლილა, თუმცა ამ ეტაპზე ახალი ონლაინ ჯავშანი ვერ მიიღება. დეტალებისთვის დაუკავშირდით სალონს.", viewSalon: "სალონის გვერდის ნახვა", received: "მოთხოვნა მიღებულია — ელოდება სალონის დადასტურებას", receivedLead: "თქვენი მოთხოვნა სალონმა უნდა დაადასტუროს. საჭიროების შემთხვევაში შეინახეთ დადასტურების კოდი და გამოიყენეთ დაცული მართვის ბმული.", assigned: "თქვენი სპეციალისტი:", code: "ჯავშნის დადასტურების კოდი", calendar: "კალენდარში დამატება", manage: "ჯავშნის მართვა", returnToList: "კატალოგში დაბრუნება" },
   en: { loading: "Loading booking catalog…", unavailable: "Booking data is temporarily unavailable. Check your connection and try again.", inactive: "This booking link is no longer active", inactiveLead: "The location may be inactive or the link may be incorrect. Return to the catalog and choose an active business.", trialPaused: "Online booking is temporarily unavailable", trialPausedLead: "This salon profile remains available, but it is not accepting new online bookings at this time. Please contact the salon for details.", viewSalon: "View salon profile", received: "Booking request received!", receivedLead: "Your booking is awaiting salon confirmation. Save the confirmation code if needed.", assigned: "Your specialist:", code: "Booking confirmation code", calendar: "Add to calendar", manage: "Manage booking", returnToList: "Back to the catalog" },
   ru: { loading: "Загрузка каталога записи…", unavailable: "Данные записи временно недоступны. Проверьте подключение и попробуйте снова.", inactive: "Эта ссылка для записи больше не активна", inactiveLead: "Филиал может быть неактивен или ссылка неверна. Вернитесь в каталог и выберите активный.", trialPaused: "Онлайн-запись временно недоступна", trialPausedLead: "Профиль салона остаётся доступным, но новые онлайн-записи сейчас не принимаются. Свяжитесь с салоном для деталей.", viewSalon: "Страница салона", received: "Заявка на запись принята!", receivedLead: "Запись ожидает подтверждения салоном. При необходимости сохраните код подтверждения.", assigned: "Ваш специалист:", code: "Код подтверждения", calendar: "Добавить в календарь", manage: "Управление записью", returnToList: "Вернуться в каталог" },
 } as const;
 
 const ANY_AVAILABLE = "ANY_AVAILABLE";
-const STEP_NAMES = ["სერვისი", "სპეციალისტი", "დრო", "დადასტურება"];
-const STEP_COPY = [
-  { title: "რა გსურთ დღეს?", lede: "აირჩიეთ ერთი ან რამდენიმე სერვისი. შემდეგ ეტაპზე გამოჩნდება მხოლოდ ყველა არჩეული სერვისისთვის შესაბამისი სპეციალისტი." },
-  { title: "ვინ მოგემსახუროთ?", lede: "აირჩიეთ კონკრეტული სპეციალისტი ან ნებისმიერი თავისუფალი." },
-  { title: "რომელი დრო გერგებათ?", lede: "ნაჩვენებია მხოლოდ რეალურად თავისუფალი საათები. არჩეული დრო დაჯავშნისას კვლავ გადამოწმდება." },
-  { title: "გადაამოწმეთ და დაადასტურეთ", lede: "მიუთითეთ საკონტაქტო მონაცემები. ჯავშანს სალონი დაგიდასტურებთ." },
-];
+
+const ruPlural = (n: number, one: string, few: string, many: string) => (n % 10 === 1 && n % 100 !== 11 ? one : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? few : many);
+
+// Wizard copy (steps, validation, review table). Georgian is the source of truth; business data (service and staff names) is never translated.
+export const flowUi = {
+  ka: {
+    metaWith: (name: string) => `ჩაწერა — ${name}`, metaOnline: "ონლაინ ჩაწერა", metaDescription: "აირჩიეთ სერვისი, სპეციალისტი და თავისუფალი დრო და დაჯავშნეთ ონლაინ.",
+    steps: ["სერვისი", "სპეციალისტი", "დრო", "დადასტურება"],
+    stepCopy: [
+      { title: "რა გსურთ დღეს?", lede: "აირჩიეთ ერთი ან რამდენიმე სერვისი. შემდეგ ეტაპზე გამოჩნდება მხოლოდ ყველა არჩეული სერვისისთვის შესაბამისი სპეციალისტი." },
+      { title: "ვინ მოგემსახუროთ?", lede: "აირჩიეთ კონკრეტული სპეციალისტი ან ნებისმიერი თავისუფალი." },
+      { title: "რომელი დრო გერგებათ?", lede: "ნაჩვენებია მხოლოდ რეალურად თავისუფალი საათები. არჩეული დრო დაჯავშნისას კვლავ გადამოწმდება." },
+      { title: "გადაამოწმეთ და დაადასტურეთ", lede: "მიუთითეთ საკონტაქტო მონაცემები. ჯავშანს სალონი დაგიდასტურებთ." },
+    ],
+    issues: {
+      service: { title: "ჯერ აირჩიეთ სერვისი", description: "მონიშნეთ თქვენთვის სასურველი მომსახურება, შემდეგ კი გადადით სპეციალისტის არჩევაზე." },
+      staff: { title: "ჯერ აირჩიეთ სპეციალისტი", description: "შეგიძლიათ მონიშნოთ კონკრეტული სპეციალისტი ან აირჩიოთ ნებისმიერი თავისუფალი სპეციალისტი." },
+      timeMissing: { title: "დაამატეთ სასურველი თარიღი და დრო", description: `დროის არჩევის შემდეგ ${BRAND.nameKa} ავტომატურად გადაამოწმებს ხელმისაწვდომობას.` },
+      timeUnconfirmed: { title: "ეს დრო ჯერ არ დადასტურებულა", description: "აირჩიეთ სხვა დრო ან დაელოდეთ ხელმისაწვდომობის შემოწმების დასრულებას." },
+      firstName: { title: "მიუთითეთ სახელი", description: "სახელი საჭიროა ჯავშნის მოთხოვნის დასადასტურებლად." },
+      phone: { title: "მიუთითეთ მობილურის ნომერი", description: "მობილურის ნომერი საჭიროა სალონთან თქვენი მოთხოვნის დასაკავშირებლად." },
+      terms: { title: "დაადასტურეთ ჯავშნის პირობები", description: "გაგრძელებამდე საჭიროა მონაცემების დამუშავებაზე თანხმობა." },
+      submit: { title: "ჯავშნის მოთხოვნა ვერ გაიგზავნა", description: "მონაცემები არ დაგვიკარგავს. შეამოწმეთ კავშირი და სცადეთ ხელახლა." },
+    },
+    retry: "კიდევ ერთხელ ცდა", autoPicked: (name: string) => `${name} (ავტომატურად შეირჩა)`, anyStaff: "ნებისმიერი თავისუფალი სპეციალისტი",
+    back: "უკან", profile: "პროფილი", catalog: "კატალოგი", onlineBooking: "ონლაინ ჩაწერა", closeBooking: "ჩაწერის დახურვა", progress: "ჯავშნის პროგრესი", hoursAndContact: "სამუშაო საათები და კონტაქტი",
+    summary: (count: number, minutes: number) => `${count} სერვისი · ${minutes} წთ`, noService: "სერვისი არ არის არჩეული", next: "შემდეგი", sending: "იგზავნება…", book: "დაჯავშნა",
+    staffHours: "ხელმისაწვდომი სპეციალისტების საათები", noHours: "სამუშაო საათები ჯერ არ არის მითითებული. დროის არჩევისას ხელმისაწვდომობა მაინც ავტომატურად შემოწმდება.", dayFallback: "დღე",
+    noServicesTitle: "ონლაინ სერვისი ჯერ არ არის", noServicesText: "ამ ფილიალში ონლაინ ჩასაწერი სერვისები ჯერ არ არის. დაუკავშირდით სალონს.", choose: (name: string) => `${name} არჩევა`, minutes: "წთ",
+    noStaffTitle: "სპეციალისტი ვერ მოიძებნა", noStaffText: "არჩეული სერვისების ერთობლიობისთვის ამ ფილიალში აქტიური ონლაინ სპეციალისტი ჯერ არ არის. აირჩიეთ სხვა სერვისი ან დაუკავშირდით სალონს.", changeServices: "სერვისების შეცვლა", specialist: "სპეციალისტი",
+    anyStaffLabel: "ნებისმიერი თავისუფალი სპეციალისტის არჩევა", anyStaffMeta: "სისტემა დროის არჩევისას მოძებნის მხოლოდ არჩეული სერვისებისთვის რეალურად თავისუფალ სპეციალისტს.",
+    duration: "ხანგრძლივობა: ", closedDay: "ამ დღეს სალონი დახურულია. აირჩიეთ სხვა თარიღი.", slotsLoading: "თავისუფალი დრო იტვირთება…", slotsFailed: "თავისუფალი დროის ჩატვირთვა ვერ მოხერხდა. სცადეთ ხელახლა.",
+    morning: "დილა", afternoon: "შუადღე", evening: "საღამო",
+    noSlotsTitle: "ამ დღისთვის თავისუფალი დრო აღარ არის.", noSlotsText: "შეგიძლიათ აირჩიოთ სხვა დღე ან დატოვოთ waitlist მოთხოვნა. ეს არ არის დადასტურებული ჯავშანი და ავტომატური შეტყობინება ჯერ არ იგზავნება.", waitlist: "Waitlist მოთხოვნა",
+    checking: "ხელმისაწვდომობა მოწმდება…", available: "ეს დრო ხელმისაწვდომია — შეგიძლიათ გააგრძელოთ.", taken: "ეს დრო ახლახან დაიკავეს. აირჩიეთ სხვა თავისუფალი დრო.",
+    change: "შეცვლა", changeAria: (label: string) => `${label} — შეცვლა`, summaryCaption: "ჯავშნის შეჯამება", business: "ბიზნესი", dateTime: "თარიღი და დრო", duration2: "ხანგრძლივობა", services: "სერვისები", total: "ჯამი",
+    firstName: "სახელი *", lastName: "გვარი", optional: "(არასავალდებულო)", phone: "მობილურის ნომერი *", phonePlaceholder: "მაგ. 555 12 34 56", phoneHelp: "ფორმატი: 5XX XX XX XX ან +995 5XX XX XX XX. ნომერი გამოყენებული იქნება მხოლოდ ამ მოთხოვნისთვის.",
+    email: "ელფოსტა", note: "კომენტარი სალონისთვის", consent: "ვეთანხმები, რომ სალონმა ჩემი მონაცემები გამოიყენოს მხოლოდ ამ ჯავშნის მოთხოვნის დამუშავებისა და დადასტურებისთვის. *",
+    stamp: "ჩაწერილია", detailsCaption: "ჯავშნის დეტალები",
+  },
+  en: {
+    metaWith: (name: string) => `Booking — ${name}`, metaOnline: "Online booking", metaDescription: "Choose a service, specialist and free time and book online.",
+    steps: ["Service", "Specialist", "Time", "Confirm"],
+    stepCopy: [
+      { title: "What would you like today?", lede: "Choose one or more services. The next step shows only specialists who can do every selected service." },
+      { title: "Who should serve you?", lede: "Choose a specific specialist or any available one." },
+      { title: "Which time suits you?", lede: "Only truly free times are shown. The chosen time is checked again when you book." },
+      { title: "Review and confirm", lede: "Enter your contact details. The salon will confirm your booking." },
+    ],
+    issues: {
+      service: { title: "Choose a service first", description: "Select the service you want, then move on to choosing a specialist." },
+      staff: { title: "Choose a specialist first", description: "You can pick a specific specialist or any available specialist." },
+      timeMissing: { title: "Add your preferred date and time", description: `After you choose a time, ${BRAND.name} automatically checks availability.` },
+      timeUnconfirmed: { title: "This time has not been confirmed yet", description: "Choose another time or wait for the availability check to finish." },
+      firstName: { title: "Enter your first name", description: "Your name is needed to confirm the booking request." },
+      phone: { title: "Enter your mobile number", description: "A mobile number is needed so the salon can contact you about your request." },
+      terms: { title: "Accept the booking terms", description: "Consent to data processing is required before you continue." },
+      submit: { title: "The booking request could not be sent", description: "We have not lost your data. Check your connection and try again." },
+    },
+    retry: "Try again", autoPicked: (name: string) => `${name} (assigned automatically)`, anyStaff: "Any available specialist",
+    back: "Back", profile: "Profile", catalog: "Catalog", onlineBooking: "Online booking", closeBooking: "Close booking", progress: "Booking progress", hoursAndContact: "Working hours and contact",
+    summary: (count: number, minutes: number) => `${count} ${count === 1 ? "service" : "services"} · ${minutes} min`, noService: "No service selected", next: "Next", sending: "Sending…", book: "Book",
+    staffHours: "Specialists' available hours", noHours: "Working hours have not been set yet. Availability is still checked automatically when you choose a time.", dayFallback: "Day",
+    noServicesTitle: "No online services yet", noServicesText: "This location has no services available for online booking yet. Please contact the salon.", choose: (name: string) => `Select ${name}`, minutes: "min",
+    noStaffTitle: "No specialist found", noStaffText: "No active online specialist at this location can do the selected combination of services. Choose a different service or contact the salon.", changeServices: "Change services", specialist: "Specialist",
+    anyStaffLabel: "Select any available specialist", anyStaffMeta: "When you choose a time, the system finds a specialist who is truly free for all selected services.",
+    duration: "Duration: ", closedDay: "The salon is closed on this day. Choose another date.", slotsLoading: "Loading free times…", slotsFailed: "Free times could not be loaded. Please try again.",
+    morning: "Morning", afternoon: "Afternoon", evening: "Evening",
+    noSlotsTitle: "There is no free time left on this day.", noSlotsText: "You can choose another day or leave a waitlist request. This is not a confirmed booking, and no automatic notification is sent yet.", waitlist: "Waitlist request",
+    checking: "Checking availability…", available: "This time is available — you can continue.", taken: "This time was just taken. Choose another free time.",
+    change: "Change", changeAria: (label: string) => `${label} — change`, summaryCaption: "Booking summary", business: "Business", dateTime: "Date and time", duration2: "Duration", services: "Services", total: "Total",
+    firstName: "First name *", lastName: "Last name", optional: "(optional)", phone: "Mobile number *", phonePlaceholder: "e.g. 555 12 34 56", phoneHelp: "Format: 5XX XX XX XX or +995 5XX XX XX XX. The number is used only for this request.",
+    email: "Email", note: "Note for the salon", consent: "I agree that the salon may use my data only to process and confirm this booking request. *",
+    stamp: "Recorded", detailsCaption: "Booking details",
+  },
+  ru: {
+    metaWith: (name: string) => `Запись — ${name}`, metaOnline: "Онлайн-запись", metaDescription: "Выберите услугу, специалиста и свободное время и запишитесь онлайн.",
+    steps: ["Услуга", "Специалист", "Время", "Подтверждение"],
+    stepCopy: [
+      { title: "Что вам нужно сегодня?", lede: "Выберите одну или несколько услуг. На следующем шаге будут только специалисты, подходящие для всех выбранных услуг." },
+      { title: "Кто вас обслужит?", lede: "Выберите конкретного специалиста или любого свободного." },
+      { title: "Какое время вам подходит?", lede: "Показано только действительно свободное время. Выбранное время ещё раз проверяется при записи." },
+      { title: "Проверьте и подтвердите", lede: "Укажите контактные данные. Запись подтвердит салон." },
+    ],
+    issues: {
+      service: { title: "Сначала выберите услугу", description: "Отметьте нужную услугу, затем переходите к выбору специалиста." },
+      staff: { title: "Сначала выберите специалиста", description: "Можно выбрать конкретного специалиста или любого свободного." },
+      timeMissing: { title: "Укажите желаемую дату и время", description: `После выбора времени ${BRAND.name} автоматически проверит доступность.` },
+      timeUnconfirmed: { title: "Это время ещё не подтверждено", description: "Выберите другое время или дождитесь завершения проверки доступности." },
+      firstName: { title: "Укажите имя", description: "Имя необходимо для подтверждения запроса на запись." },
+      phone: { title: "Укажите номер мобильного телефона", description: "Номер нужен, чтобы салон мог связаться с вами по вашему запросу." },
+      terms: { title: "Подтвердите условия записи", description: "Перед продолжением необходимо согласие на обработку данных." },
+      submit: { title: "Не удалось отправить запрос на запись", description: "Ваши данные не потеряны. Проверьте подключение и попробуйте снова." },
+    },
+    retry: "Попробовать ещё раз", autoPicked: (name: string) => `${name} (выбран автоматически)`, anyStaff: "Любой свободный специалист",
+    back: "Назад", profile: "Профиль", catalog: "Каталог", onlineBooking: "Онлайн-запись", closeBooking: "Закрыть запись", progress: "Ход записи", hoursAndContact: "Часы работы и контакты",
+    summary: (count: number, minutes: number) => `${count} ${ruPlural(count, "услуга", "услуги", "услуг")} · ${minutes} мин`, noService: "Услуга не выбрана", next: "Далее", sending: "Отправка…", book: "Записаться",
+    staffHours: "Доступные часы специалистов", noHours: "Часы работы пока не указаны. Доступность всё равно проверяется автоматически при выборе времени.", dayFallback: "День",
+    noServicesTitle: "Онлайн-услуг пока нет", noServicesText: "В этом филиале пока нет услуг для онлайн-записи. Свяжитесь с салоном.", choose: (name: string) => `Выбрать: ${name}`, minutes: "мин",
+    noStaffTitle: "Специалист не найден", noStaffText: "В этом филиале нет активного онлайн-специалиста для выбранного сочетания услуг. Выберите другую услугу или свяжитесь с салоном.", changeServices: "Изменить услуги", specialist: "Специалист",
+    anyStaffLabel: "Выбрать любого свободного специалиста", anyStaffMeta: "При выборе времени система найдёт специалиста, который действительно свободен для всех выбранных услуг.",
+    duration: "Длительность: ", closedDay: "В этот день салон закрыт. Выберите другую дату.", slotsLoading: "Загрузка свободного времени…", slotsFailed: "Не удалось загрузить свободное время. Попробуйте снова.",
+    morning: "Утро", afternoon: "День", evening: "Вечер",
+    noSlotsTitle: "На этот день свободного времени больше нет.", noSlotsText: "Можно выбрать другой день или оставить запрос в листе ожидания. Это не подтверждённая запись, и автоматическое уведомление пока не отправляется.", waitlist: "Запрос в лист ожидания",
+    checking: "Проверка доступности…", available: "Это время доступно — можно продолжать.", taken: "Это время только что заняли. Выберите другое свободное время.",
+    change: "Изменить", changeAria: (label: string) => `${label} — изменить`, summaryCaption: "Сводка записи", business: "Бизнес", dateTime: "Дата и время", duration2: "Длительность", services: "Услуги", total: "Итого",
+    firstName: "Имя *", lastName: "Фамилия", optional: "(необязательно)", phone: "Номер мобильного телефона *", phonePlaceholder: "напр. 555 12 34 56", phoneHelp: "Формат: 5XX XX XX XX или +995 5XX XX XX XX. Номер используется только для этого запроса.",
+    email: "Эл. почта", note: "Комментарий для салона", consent: "Я согласен(на), что салон использует мои данные только для обработки и подтверждения этого запроса на запись. *",
+    stamp: "Записано", detailsCaption: "Детали записи",
+  },
+} as const;
 
 export type BookingTeamMember = { id: string; name: string; specialty: string | null; bio: string | null; eligibleServiceIds: string[] };
 type BookingService = { id: string; nameKa: string; defaultDurationMinutes: number; priceTetri: number };
@@ -43,14 +147,15 @@ export function formatGel(tetri: number) {
   return formatGelTetri(tetri);
 }
 
-export function getBookingValidationIssue(input: { step: number; serviceId?: string; staffProfileId?: string; startsAt: Date | null; available?: boolean; firstName: string; phone: string; termsAccepted: boolean }): BookingValidationIssue | null {
-  if (input.step === 0 && !input.serviceId) return { kind: "service", title: "ჯერ აირჩიეთ სერვისი", description: "მონიშნეთ თქვენთვის სასურველი მომსახურება, შემდეგ კი გადადით სპეციალისტის არჩევაზე." };
-  if (input.step === 1 && !input.staffProfileId) return { kind: "staff", title: "ჯერ აირჩიეთ სპეციალისტი", description: "შეგიძლიათ მონიშნოთ კონკრეტული სპეციალისტი ან აირჩიოთ ნებისმიერი თავისუფალი სპეციალისტი." };
-  if (input.step === 2 && !input.startsAt) return { kind: "time", title: "დაამატეთ სასურველი თარიღი და დრო", description: `დროის არჩევის შემდეგ ${BRAND.nameKa} ავტომატურად გადაამოწმებს ხელმისაწვდომობას.` };
-  if (input.step === 2 && input.available !== true) return { kind: "time", title: "ეს დრო ჯერ არ დადასტურებულა", description: "აირჩიეთ სხვა დრო ან დაელოდეთ ხელმისაწვდომობის შემოწმების დასრულებას." };
-  if (input.step === 3 && !input.firstName.trim()) return { kind: "contact", title: "მიუთითეთ სახელი", description: "სახელი საჭიროა ჯავშნის მოთხოვნის დასადასტურებლად." };
-  if (input.step === 3 && !input.phone.trim()) return { kind: "contact", title: "მიუთითეთ მობილურის ნომერი", description: "მობილურის ნომერი საჭიროა სალონთან თქვენი მოთხოვნის დასაკავშირებლად." };
-  if (input.step === 3 && !input.termsAccepted) return { kind: "contact", title: "დაადასტურეთ ჯავშნის პირობები", description: "გაგრძელებამდე საჭიროა მონაცემების დამუშავებაზე თანხმობა." };
+export function getBookingValidationIssue(input: { step: number; serviceId?: string; staffProfileId?: string; startsAt: Date | null; available?: boolean; firstName: string; phone: string; termsAccepted: boolean; locale?: PublicLocale }): BookingValidationIssue | null {
+  const issues = flowUi[input.locale ?? "ka"].issues;
+  if (input.step === 0 && !input.serviceId) return { kind: "service", ...issues.service };
+  if (input.step === 1 && !input.staffProfileId) return { kind: "staff", ...issues.staff };
+  if (input.step === 2 && !input.startsAt) return { kind: "time", ...issues.timeMissing };
+  if (input.step === 2 && input.available !== true) return { kind: "time", ...issues.timeUnconfirmed };
+  if (input.step === 3 && !input.firstName.trim()) return { kind: "contact", ...issues.firstName };
+  if (input.step === 3 && !input.phone.trim()) return { kind: "contact", ...issues.phone };
+  if (input.step === 3 && !input.termsAccepted) return { kind: "contact", ...issues.terms };
   return null;
 }
 
@@ -67,11 +172,12 @@ export default function BookingFlow() {
   const search = useSearch();
   const { locale } = usePublicLocale();
   const ui = bookingUi[locale];
+  const text = flowUi[locale];
   const slug = params?.slug ?? "";
   const catalog = trpc.public.bookingCatalog.useQuery(slug, { enabled: Boolean(slug) });
   usePublicMeta({
-    title: catalog.data ? `ჩაწერა — ${catalog.data.location.name} | ${BRAND.name}` : `ონლაინ ჩაწერა | ${BRAND.name}`,
-    description: "აირჩიეთ სერვისი, სპეციალისტი და თავისუფალი დრო და დაჯავშნეთ ონლაინ.",
+    title: catalog.data ? `${text.metaWith(catalog.data.location.name)} | ${BRAND.name}` : `${text.metaOnline} | ${BRAND.name}`,
+    description: text.metaDescription,
     canonicalPath: `/book/${slug}`,
     robots: "noindex,nofollow",
   });
@@ -117,14 +223,14 @@ export default function BookingFlow() {
       setInteractionError(null);
       setConfirmation({ token: result.confirmationToken, assignedStaffName: result.assignedStaffName, endsAt: result.endsAt });
     },
-    onError: () => setInteractionError({ kind: "submit", title: "ჯავშნის მოთხოვნა ვერ გაიგზავნა", description: "მონაცემები არ დაგვიკარგავს. შეამოწმეთ კავშირი და სცადეთ ხელახლა." }),
+    onError: () => setInteractionError({ kind: "submit", ...text.issues.submit }),
   });
   const commitMultiBooking = trpc.public.commitMultiBooking.useMutation({
     onSuccess: result => {
       setInteractionError(null);
       setConfirmation({ token: result.confirmationToken, assignedStaffName: result.assignedStaffName, endsAt: result.endsAt });
     },
-    onError: () => setInteractionError({ kind: "submit", title: "ჯავშნის მოთხოვნა ვერ გაიგზავნა", description: "მონაცემები არ დაგვიკარგავს. შეამოწმეთ კავშირი და სცადეთ ხელახლა." }),
+    onError: () => setInteractionError({ kind: "submit", ...text.issues.submit }),
   });
   const submitting = commitBooking.isPending || commitMultiBooking.isPending;
   const selectedServices = catalog.data?.catalog.filter(item => serviceIds.includes(item.service.id)).map(item => item.service) ?? [];
@@ -132,7 +238,7 @@ export default function BookingFlow() {
   const totalTetri = selectedServices.reduce((sum, service) => sum + service.priceTetri, 0);
   const selectedStaff = catalog.data?.team.find(member => member.id === staffProfileId);
   const eligibleTeam = getEligibleTeam(catalog.data?.team ?? [], serviceIds);
-  const staffLabel = staffProfileId === ANY_AVAILABLE ? (availability.data?.staffName ? `${availability.data.staffName} (ავტომატურად შეირჩა)` : "ნებისმიერი თავისუფალი სპეციალისტი") : selectedStaff?.name;
+  const staffLabel = staffProfileId === ANY_AVAILABLE ? (availability.data?.staffName ? text.autoPicked(availability.data.staffName) : text.anyStaff) : selectedStaff?.name;
 
   useEffect(() => {
     if (!interactionError) return;
@@ -152,7 +258,7 @@ export default function BookingFlow() {
   const selectService = (value: string) => { setServiceIds(current => current.includes(value) ? current.filter(item => item !== value) : [...current, value]); setStaffProfileId(undefined); setDateTime(""); clearIssue("service"); };
   const selectStaff = (value: string) => { setStaffProfileId(value); setDateTime(""); clearIssue("staff"); };
   const selectDateTime = (value: string) => { setDateTime(value); clearIssue("time"); };
-  const currentValidation = () => getBookingValidationIssue({ step, serviceId, staffProfileId, startsAt, available: availability.data?.available, firstName, phone, termsAccepted });
+  const currentValidation = () => getBookingValidationIssue({ step, serviceId, staffProfileId, startsAt, available: availability.data?.available, firstName, phone, termsAccepted, locale });
   const submitBooking = () => {
     if (!serviceId || !staffProfileId || !startsAt) return;
     const sharedPayload = { slug, staffProfileId, startsAt, firstName, lastName: lastName || undefined, phone, email: email || undefined, customerNote: customerNote || undefined, bookingTermsConsent: true as const, idempotencyKey };
@@ -190,10 +296,10 @@ export default function BookingFlow() {
       <div className="cw-form">
         <div className="cw-form-band" aria-hidden="true" />
         <div className="cw-form-head">
-          {step > 0 && catalog.data && available ? <button type="button" className="cw-btn cw-btn-line" onClick={() => goToStep(step - 1)}><ChevronLeft className="size-4" aria-hidden="true" />უკან</button>
-            : <Link href={profileHref} className="cw-btn cw-btn-line"><ChevronLeft className="size-4" aria-hidden="true" />{catalog.data ? "პროფილი" : "კატალოგი"}</Link>}
-          <div className="cw-form-head-title"><span className="cw-caption">ონლაინ ჩაწერა</span>{catalog.data && available ? <span className="cw-num text-xs font-semibold">{step + 1} / 4</span> : null}</div>
-          <Link href={profileHref} className="cw-btn cw-btn-line" aria-label="ჩაწერის დახურვა"><X className="size-4" aria-hidden="true" /></Link>
+          {step > 0 && catalog.data && available ? <button type="button" className="cw-btn cw-btn-line" onClick={() => goToStep(step - 1)}><ChevronLeft className="size-4" aria-hidden="true" />{text.back}</button>
+            : <Link href={profileHref} className="cw-btn cw-btn-line"><ChevronLeft className="size-4" aria-hidden="true" />{catalog.data ? text.profile : text.catalog}</Link>}
+          <div className="cw-form-head-title"><span className="cw-caption">{text.onlineBooking}</span>{catalog.data && available ? <span className="cw-num text-xs font-semibold">{step + 1} / 4</span> : null}</div>
+          <Link href={profileHref} className="cw-btn cw-btn-line" aria-label={text.closeBooking}><X className="size-4" aria-hidden="true" /></Link>
         </div>
 
         {catalog.isLoading ? <div className="cw-step"><p role="status" className="cw-empty">{ui.loading}</p></div> : null}
@@ -205,12 +311,12 @@ export default function BookingFlow() {
         </div> : null}
 
         {catalog.data && available ? <>
-          <BookingRail steps={STEP_NAMES} current={step} onGo={goToStep} label="ჯავშნის პროგრესი" />
+          <BookingRail steps={[...text.steps]} current={step} onGo={goToStep} label={text.progress} />
           <BookingBusinessStrip name={catalog.data.location.name} address={catalog.data.location.address} />
-          <details className="cw-biz-more"><summary>სამუშაო საათები და კონტაქტი</summary><LocationContext location={catalog.data.location} /></details>
+          <details className="cw-biz-more"><summary>{text.hoursAndContact}</summary><LocationContext location={catalog.data.location} /></details>
           {interactionError ? <div className="cw-form-pad"><BookingErrorNotice issue={interactionError} errorRef={errorRef} onRetry={interactionError.kind === "submit" ? submitBooking : undefined} /></div> : null}
           <div className="cw-step" key={step}>
-            <BookingStepHeader step={step + 1} title={STEP_COPY[step]!.title} description={STEP_COPY[step]!.lede} headingRef={titleRef} />
+            <BookingStepHeader step={step + 1} title={text.stepCopy[step]!.title} description={text.stepCopy[step]!.lede} headingRef={titleRef} />
             <div className="mt-4">
               {step === 0 ? <ServiceStep catalog={catalog.data.catalog} selectedIds={serviceIds} onSelect={selectService} /> : null}
               {step === 1 ? <StaffStep team={eligibleTeam} selectedId={staffProfileId} onSelect={selectStaff} onEditServices={() => goToStep(0)} /> : null}
@@ -219,9 +325,9 @@ export default function BookingFlow() {
             </div>
           </div>
           <BookingBar
-            summary={selectedServices.length ? `${selectedServices.length} სერვისი · ${totalMinutes} წთ` : "სერვისი არ არის არჩეული"}
+            summary={selectedServices.length ? text.summary(selectedServices.length, totalMinutes) : text.noService}
             total={formatGel(totalTetri)}
-            label={step < 3 ? "შემდეგი" : submitting ? "იგზავნება…" : "დაჯავშნა"}
+            label={step < 3 ? text.next : submitting ? text.sending : text.book}
             blocked={barBlocked}
             hint={blockedIssue?.title}
             conversionEvent={step === 3 ? "BOOKING_SUBMIT_SELECTED" : undefined}
@@ -235,46 +341,50 @@ export default function BookingFlow() {
 }
 
 export function LocationContext({ location }: { location: BookingLocation }) {
+  const { locale } = usePublicLocale();
+  const text = flowUi[locale];
   return <div className="cw-biz-more-body">
     {location.publicDescription ? <p>{location.publicDescription}</p> : null}
     {location.workingHours.length ? <div>
-      <p className="cw-caption flex items-center gap-2"><CalendarClock className="size-4" aria-hidden="true" />ხელმისაწვდომი სპეციალისტების საათები</p>
-      <ul className="mt-2 grid gap-1">{location.workingHours.map(rule => <li key={rule.weekday}>{weekdayName(rule.weekday)} · <span className="cw-num text-[0.8rem]">{rule.startLocalTime}–{rule.endLocalTime}</span></li>)}</ul>
-    </div> : <p className="cw-empty text-sm">სამუშაო საათები ჯერ არ არის მითითებული. დროის არჩევისას ხელმისაწვდომობა მაინც ავტომატურად შემოწმდება.</p>}
+      <p className="cw-caption flex items-center gap-2"><CalendarClock className="size-4" aria-hidden="true" />{text.staffHours}</p>
+      <ul className="mt-2 grid gap-1">{location.workingHours.map(rule => <li key={rule.weekday}>{weekdayName(rule.weekday, locale)} · <span className="cw-num text-[0.8rem]">{rule.startLocalTime}–{rule.endLocalTime}</span></li>)}</ul>
+    </div> : <p className="cw-empty text-sm">{text.noHours}</p>}
     {location.phone ? <a href={`tel:${location.phone}`} className="inline-flex min-h-11 items-center gap-2 font-bold text-[var(--cw-ink)] underline underline-offset-4"><Phone className="size-4" aria-hidden="true" /><span className="cw-num text-[0.85rem]">{location.phone}</span></a> : null}
     {location.email ? <a href={`mailto:${location.email}`} className="inline-flex min-h-11 items-center gap-2 font-bold text-[var(--cw-ink)] underline underline-offset-4"><Mail className="size-4" aria-hidden="true" />{location.email}</a> : null}
   </div>;
 }
 
-export function weekdayName(day: number) { return WEEKDAY_FULL[day] ?? "დღე"; }
+export function weekdayName(day: number, locale: PublicLocale = "ka") { return DATE_NAMES[locale].weekdayFull[day] ?? flowUi[locale].dayFallback; }
 
 function ServiceStep({ catalog, selectedIds, onSelect }: { catalog: Array<{ service: BookingService; category: { nameKa: string } }>; selectedIds: string[]; onSelect: (id: string) => void }) {
+  const text = flowUi[usePublicLocale().locale];
   const groups = useMemo(() => {
     const map = new Map<string, BookingService[]>();
     for (const { service, category } of catalog) map.set(category.nameKa, [...(map.get(category.nameKa) ?? []), service]);
     return Array.from(map, ([name, items]) => ({ name, items }));
   }, [catalog]);
-  if (!groups.length) return <div className="cw-empty"><strong>ონლაინ სერვისი ჯერ არ არის</strong>ამ ფილიალში ონლაინ ჩასაწერი სერვისები ჯერ არ არის. დაუკავშირდით სალონს.</div>;
+  if (!groups.length) return <div className="cw-empty"><strong>{text.noServicesTitle}</strong>{text.noServicesText}</div>;
   return <div className="grid gap-4">{groups.map((group, index) => {
     const picked = group.items.filter(service => selectedIds.includes(service.id)).length;
     return <div key={group.name} className="cw-ledger" role="group" aria-labelledby={`booking-group-${index}`}>
       <div className="cw-ledger-head"><h2 id={`booking-group-${index}`}>{group.name}</h2><span className="cw-num text-xs font-semibold">{picked ? `${picked} / ${group.items.length}` : group.items.length}</span></div>
-      {group.items.map(service => <BookingChoiceCard key={service.id} conversionEvent="BOOKING_SERVICE_SELECTED" label={`${service.nameKa} არჩევა`} selected={selectedIds.includes(service.id)} onSelect={() => onSelect(service.id)}>
+      {group.items.map(service => <BookingChoiceCard key={service.id} conversionEvent="BOOKING_SERVICE_SELECTED" label={text.choose(service.nameKa)} selected={selectedIds.includes(service.id)} onSelect={() => onSelect(service.id)}>
         <span className="cw-choice-row"><span className="cw-choice-name">{service.nameKa}</span><span className="cw-choice-price">{formatGel(service.priceTetri)}</span></span>
-        <span className="cw-choice-meta block"><span className="cw-num">{service.defaultDurationMinutes} წთ</span></span>
+        <span className="cw-choice-meta block"><span className="cw-num">{service.defaultDurationMinutes} {text.minutes}</span></span>
       </BookingChoiceCard>)}
     </div>;
   })}</div>;
 }
 
 export function StaffStep({ team, selectedId, onSelect, onEditServices }: { team: BookingTeamMember[]; selectedId?: string; onSelect: (id: string) => void; onEditServices?: () => void }) {
-  if (!team.length) return <div className="cw-empty"><strong>სპეციალისტი ვერ მოიძებნა</strong>არჩეული სერვისების ერთობლიობისთვის ამ ფილიალში აქტიური ონლაინ სპეციალისტი ჯერ არ არის. აირჩიეთ სხვა სერვისი ან დაუკავშირდით სალონს.{onEditServices ? <div className="mt-3"><button type="button" className="cw-btn cw-btn-line" onClick={onEditServices}>სერვისების შეცვლა</button></div> : null}</div>;
-  return <div className="cw-choice-list" role="radiogroup" aria-label="სპეციალისტი">
-    <BookingChoiceCard kind="radio" name="booking-specialist" conversionEvent="BOOKING_ANY_AVAILABLE_SELECTED" label="ნებისმიერი თავისუფალი სპეციალისტის არჩევა" selected={selectedId === ANY_AVAILABLE} onSelect={() => onSelect(ANY_AVAILABLE)}>
-      <span className="cw-choice-name block">ნებისმიერი თავისუფალი სპეციალისტი</span>
-      <span className="cw-choice-meta block">სისტემა დროის არჩევისას მოძებნის მხოლოდ არჩეული სერვისებისთვის რეალურად თავისუფალ სპეციალისტს.</span>
+  const text = flowUi[usePublicLocale().locale];
+  if (!team.length) return <div className="cw-empty"><strong>{text.noStaffTitle}</strong>{text.noStaffText}{onEditServices ? <div className="mt-3"><button type="button" className="cw-btn cw-btn-line" onClick={onEditServices}>{text.changeServices}</button></div> : null}</div>;
+  return <div className="cw-choice-list" role="radiogroup" aria-label={text.specialist}>
+    <BookingChoiceCard kind="radio" name="booking-specialist" conversionEvent="BOOKING_ANY_AVAILABLE_SELECTED" label={text.anyStaffLabel} selected={selectedId === ANY_AVAILABLE} onSelect={() => onSelect(ANY_AVAILABLE)}>
+      <span className="cw-choice-name block">{text.anyStaff}</span>
+      <span className="cw-choice-meta block">{text.anyStaffMeta}</span>
     </BookingChoiceCard>
-    {team.map(member => <BookingChoiceCard key={member.id} kind="radio" name="booking-specialist" conversionEvent="BOOKING_SPECIALIST_SELECTED" label={`${member.name} არჩევა`} selected={member.id === selectedId} onSelect={() => onSelect(member.id)}>
+    {team.map(member => <BookingChoiceCard key={member.id} kind="radio" name="booking-specialist" conversionEvent="BOOKING_SPECIALIST_SELECTED" label={text.choose(member.name)} selected={member.id === selectedId} onSelect={() => onSelect(member.id)}>
       <span className="cw-choice-name block">{member.name}</span>
       {member.specialty ? <span className="cw-choice-meta block">{member.specialty}</span> : null}
       {member.bio ? <span className="cw-choice-meta block">{member.bio}</span> : null}
@@ -285,6 +395,8 @@ export function StaffStep({ team, selectedId, onSelect, onEditServices }: { team
 const DAYS_AHEAD = 14;
 
 function TimeStep({ slug, serviceId, serviceIds, multiService, staffProfileId, workingHours, timezone, dateTime, durationMinutes, onChange, availability }: { slug: string; serviceId?: string; serviceIds: string[]; multiService: boolean; staffProfileId?: string; workingHours: Array<{ weekday: number }>; timezone: string; dateTime: string; durationMinutes: number; onChange: (value: string) => void; availability: { isLoading: boolean; isError: boolean; data?: { available: boolean; reason?: string } } }) {
+  const { locale } = usePublicLocale();
+  const text = flowUi[locale];
   const openWeekdays = useMemo(() => new Set(workingHours.map(hour => hour.weekday)), [workingHours]);
   const today = useMemo(() => dateKeyInTimeZone(new Date(), timezone), [timezone]);
   // When no working-hour rule exists at all, nothing is marked closed and availability is decided by the server.
@@ -313,49 +425,51 @@ function TimeStep({ slug, serviceId, serviceIds, multiService, staffProfileId, w
 
   return <div className="grid gap-4">
     <BookingDateStrip days={days} selected={selectedDate} todayKey={today} onSelect={pickDate} />
-    <p className="cw-duration"><span>{formatDateKeyLong(selectedDate)}</span><span>ხანგრძლივობა: <strong>{durationMinutes} წთ</strong></span></p>
+    <p className="cw-duration"><span>{formatDateKeyLong(selectedDate, locale)}</span><span>{text.duration}<strong>{durationMinutes} {text.minutes}</strong></span></p>
     <div aria-live="polite" className="min-h-24">
-      {!dayIsOpen ? <p className="cw-empty text-sm">ამ დღეს სალონი დახურულია. აირჩიეთ სხვა თარიღი.</p>
-        : slotsQuery.isLoading ? <p role="status" className="text-sm text-[var(--cw-ink-soft)]">თავისუფალი დრო იტვირთება…</p>
-        : slotsQuery.isError ? <BookingNotice tone="error" role="alert" title="თავისუფალი დროის ჩატვირთვა ვერ მოხერხდა. სცადეთ ხელახლა." />
+      {!dayIsOpen ? <p className="cw-empty text-sm">{text.closedDay}</p>
+        : slotsQuery.isLoading ? <p role="status" className="text-sm text-[var(--cw-ink-soft)]">{text.slotsLoading}</p>
+        : slotsQuery.isError ? <BookingNotice tone="error" role="alert" title={text.slotsFailed} />
         : slots.length ? <div>
-          <BookingSlotGroup conversionEvent="BOOKING_TIME_SELECTED" title="დილა" slots={slotsByPeriod.დილა} selectedStartsAt={dateTime} onSelect={onChange} />
-          <BookingSlotGroup conversionEvent="BOOKING_TIME_SELECTED" title="შუადღე" slots={slotsByPeriod.შუადღე} selectedStartsAt={dateTime} onSelect={onChange} />
-          <BookingSlotGroup conversionEvent="BOOKING_TIME_SELECTED" title="საღამო" slots={slotsByPeriod.საღამო} selectedStartsAt={dateTime} onSelect={onChange} />
+          <BookingSlotGroup conversionEvent="BOOKING_TIME_SELECTED" title={text.morning} slots={slotsByPeriod.დილა} selectedStartsAt={dateTime} onSelect={onChange} />
+          <BookingSlotGroup conversionEvent="BOOKING_TIME_SELECTED" title={text.afternoon} slots={slotsByPeriod.შუადღე} selectedStartsAt={dateTime} onSelect={onChange} />
+          <BookingSlotGroup conversionEvent="BOOKING_TIME_SELECTED" title={text.evening} slots={slotsByPeriod.საღამო} selectedStartsAt={dateTime} onSelect={onChange} />
         </div>
-        : <div className="cw-empty text-sm"><strong>ამ დღისთვის თავისუფალი დრო აღარ არის.</strong>შეგიძლიათ აირჩიოთ სხვა დღე ან დატოვოთ waitlist მოთხოვნა. ეს არ არის დადასტურებული ჯავშანი და ავტომატური შეტყობინება ჯერ არ იგზავნება.<div className="mt-2"><Link href={`/waitlist/${slug}?serviceId=${encodeURIComponent(serviceId ?? "")}&staffProfileId=${encodeURIComponent(staffProfileId ?? "")}&date=${encodeURIComponent(selectedDate)}`} data-conversion-event="BOOKING_WAITLIST_HANDOFF" className="cw-link">Waitlist მოთხოვნა</Link></div></div>}
+        : <div className="cw-empty text-sm"><strong>{text.noSlotsTitle}</strong>{text.noSlotsText}<div className="mt-2"><Link href={`/waitlist/${slug}?serviceId=${encodeURIComponent(serviceId ?? "")}&staffProfileId=${encodeURIComponent(staffProfileId ?? "")}&date=${encodeURIComponent(selectedDate)}`} data-conversion-event="BOOKING_WAITLIST_HANDOFF" className="cw-link">{text.waitlist}</Link></div></div>}
     </div>
-    {dateTime && availability.isLoading ? <p role="status" className="text-sm text-[var(--cw-ink-soft)]">ხელმისაწვდომობა მოწმდება…</p> : null}
-    {dateTime && availability.data?.available ? <BookingNotice tone="ok" role="status">ეს დრო ხელმისაწვდომია — შეგიძლიათ გააგრძელოთ.</BookingNotice> : null}
-    {dateTime && (availability.isError || availability.data?.available === false) ? <BookingNotice tone="error" role="alert">ეს დრო ახლახან დაიკავეს. აირჩიეთ სხვა თავისუფალი დრო.</BookingNotice> : null}
+    {dateTime && availability.isLoading ? <p role="status" className="text-sm text-[var(--cw-ink-soft)]">{text.checking}</p> : null}
+    {dateTime && availability.data?.available ? <BookingNotice tone="ok" role="status">{text.available}</BookingNotice> : null}
+    {dateTime && (availability.isError || availability.data?.available === false) ? <BookingNotice tone="error" role="alert">{text.taken}</BookingNotice> : null}
   </div>;
 }
 
 function ConfirmStep({ location, services, staffLabel, startsAt, totalMinutes, totalTetri, onEdit, contactError, firstName, lastName, phone, email, customerNote, termsAccepted, onFirstName, onLastName, onPhone, onEmail, onNote, onTerms }: { location: BookingLocation; services: BookingService[]; staffLabel?: string; startsAt: Date | null; totalMinutes: number; totalTetri: number; onEdit: (step: number) => void; contactError: boolean; firstName: string; lastName: string; phone: string; email: string; customerNote: string; termsAccepted: boolean; onFirstName: (value: string) => void; onLastName: (value: string) => void; onPhone: (value: string) => void; onEmail: (value: string) => void; onNote: (value: string) => void; onTerms: (value: boolean) => void }) {
-  const edit = (label: string, target: number) => <button type="button" className="cw-link" aria-label={`${label} — შეცვლა`} onClick={() => onEdit(target)}>შეცვლა</button>;
+  const { locale } = usePublicLocale();
+  const text = flowUi[locale];
+  const edit = (label: string, target: number) => <button type="button" className="cw-link" aria-label={text.changeAria(label)} onClick={() => onEdit(target)}>{text.change}</button>;
   return <div className="grid gap-5">
-    <div className="cw-ledger"><table className="cw-review"><caption className="sr-only">ჯავშნის შეჯამება</caption><tbody>
-      <tr><th scope="row">ბიზნესი</th><td colSpan={2}>{location.name}{location.address ? <span className="block text-sm font-normal text-[var(--cw-ink-soft)]">{location.address}</span> : null}</td></tr>
-      <tr><th scope="row">თარიღი და დრო</th><td className="cw-num text-[0.9rem]">{startsAt ? formatKaDateTime(startsAt, location.timezone) : "—"}</td><td className="cw-review-edit">{edit("თარიღი და დრო", 2)}</td></tr>
-      <tr><th scope="row">სპეციალისტი</th><td>{staffLabel ?? "—"}</td><td className="cw-review-edit">{edit("სპეციალისტი", 1)}</td></tr>
-      <tr><th scope="row">ხანგრძლივობა</th><td colSpan={2} className="cw-num text-[0.9rem]">{totalMinutes} წთ</td></tr>
-      <tr><th scope="row">სერვისები</th><td><ul className="cw-review-services">{services.map(service => <li key={service.id}><span>{service.nameKa}</span><span className="cw-choice-price">{formatGel(service.priceTetri)}</span></li>)}</ul></td><td className="cw-review-edit">{edit("სერვისები", 0)}</td></tr>
-      <tr className="cw-review-total"><th scope="row">ჯამი</th><td colSpan={2} className="cw-num">{formatGel(totalTetri)}</td></tr>
+    <div className="cw-ledger"><table className="cw-review"><caption className="sr-only">{text.summaryCaption}</caption><tbody>
+      <tr><th scope="row">{text.business}</th><td colSpan={2}>{location.name}{location.address ? <span className="block text-sm font-normal text-[var(--cw-ink-soft)]">{location.address}</span> : null}</td></tr>
+      <tr><th scope="row">{text.dateTime}</th><td className="cw-num text-[0.9rem]">{startsAt ? formatDateTimeForLocale(startsAt, locale, location.timezone) : "—"}</td><td className="cw-review-edit">{edit(text.dateTime, 2)}</td></tr>
+      <tr><th scope="row">{text.specialist}</th><td>{staffLabel ?? "—"}</td><td className="cw-review-edit">{edit(text.specialist, 1)}</td></tr>
+      <tr><th scope="row">{text.duration2}</th><td colSpan={2} className="cw-num text-[0.9rem]">{totalMinutes} {text.minutes}</td></tr>
+      <tr><th scope="row">{text.services}</th><td><ul className="cw-review-services">{services.map(service => <li key={service.id}><span>{service.nameKa}</span><span className="cw-choice-price">{formatGel(service.priceTetri)}</span></li>)}</ul></td><td className="cw-review-edit">{edit(text.services, 0)}</td></tr>
+      <tr className="cw-review-total"><th scope="row">{text.total}</th><td colSpan={2} className="cw-num">{formatGel(totalTetri)}</td></tr>
     </tbody></table></div>
     <div className="cw-fields">
       <div className="cw-fields cw-fields-two">
-        <label className="cw-field" data-invalid={contactError && !firstName.trim()}><span className="cw-caption">სახელი *</span><input id="booking-first-name" value={firstName} onChange={event => onFirstName(event.target.value)} autoComplete="given-name" aria-required="true" aria-invalid={contactError && !firstName.trim()} /></label>
-        <label className="cw-field"><span className="cw-caption">გვარი <span className="cw-field-optional">(არასავალდებულო)</span></span><input id="booking-last-name" value={lastName} onChange={event => onLastName(event.target.value)} autoComplete="family-name" /></label>
+        <label className="cw-field" data-invalid={contactError && !firstName.trim()}><span className="cw-caption">{text.firstName}</span><input id="booking-first-name" value={firstName} onChange={event => onFirstName(event.target.value)} autoComplete="given-name" aria-required="true" aria-invalid={contactError && !firstName.trim()} /></label>
+        <label className="cw-field"><span className="cw-caption">{text.lastName} <span className="cw-field-optional">{text.optional}</span></span><input id="booking-last-name" value={lastName} onChange={event => onLastName(event.target.value)} autoComplete="family-name" /></label>
       </div>
       <div>
-        <label className="cw-field" data-invalid={contactError && !phone.trim()}><span className="cw-caption">მობილურის ნომერი *</span><input id="booking-phone" type="tel" value={phone} onChange={event => onPhone(event.target.value)} autoComplete="tel" inputMode="tel" placeholder="მაგ. 555 12 34 56" aria-required="true" aria-invalid={contactError && !phone.trim()} aria-describedby="booking-phone-help" /></label>
-        <p id="booking-phone-help" className="cw-help">ფორმატი: 5XX XX XX XX ან +995 5XX XX XX XX. ნომერი გამოყენებული იქნება მხოლოდ ამ მოთხოვნისთვის.</p>
+        <label className="cw-field" data-invalid={contactError && !phone.trim()}><span className="cw-caption">{text.phone}</span><input id="booking-phone" type="tel" value={phone} onChange={event => onPhone(event.target.value)} autoComplete="tel" inputMode="tel" placeholder={text.phonePlaceholder} aria-required="true" aria-invalid={contactError && !phone.trim()} aria-describedby="booking-phone-help" /></label>
+        <p id="booking-phone-help" className="cw-help">{text.phoneHelp}</p>
       </div>
-      <label className="cw-field"><span className="cw-caption">ელფოსტა <span className="cw-field-optional">(არასავალდებულო)</span></span><input id="booking-email" type="email" value={email} onChange={event => onEmail(event.target.value)} autoComplete="email" /></label>
-      <label className="cw-field"><span className="cw-caption">კომენტარი სალონისთვის <span className="cw-field-optional">(არასავალდებულო)</span></span><textarea id="booking-note" value={customerNote} onChange={event => onNote(event.target.value)} /></label>
+      <label className="cw-field"><span className="cw-caption">{text.email} <span className="cw-field-optional">{text.optional}</span></span><input id="booking-email" type="email" value={email} onChange={event => onEmail(event.target.value)} autoComplete="email" /></label>
+      <label className="cw-field"><span className="cw-caption">{text.note} <span className="cw-field-optional">{text.optional}</span></span><textarea id="booking-note" value={customerNote} onChange={event => onNote(event.target.value)} /></label>
       <label className="cw-consent" data-invalid={contactError && !termsAccepted}>
         <input type="checkbox" className="cw-check" checked={termsAccepted} onChange={event => onTerms(event.target.checked)} aria-required="true" aria-invalid={contactError && !termsAccepted} />
-        <span>ვეთანხმები, რომ სალონმა ჩემი მონაცემები გამოიყენოს მხოლოდ ამ ჯავშნის მოთხოვნის დამუშავებისა და დადასტურებისთვის. *</span>
+        <span>{text.consent}</span>
       </label>
     </div>
   </div>;
@@ -364,11 +478,12 @@ function ConfirmStep({ location, services, staffLabel, startsAt, totalMinutes, t
 export function BookingConfirmation({ confirmationToken, assignedStaffName, serviceName, services, totalTetri, startsAt, endsAt, locationName, locationAddress, timeZone }: { confirmationToken: string; assignedStaffName?: string; serviceName: string; services?: Array<{ name: string; priceTetri: number }>; totalTetri?: number; startsAt: Date; endsAt: Date; locationName: string; locationAddress?: string | null; timeZone?: string }) {
   const { locale } = usePublicLocale();
   const ui = bookingUi[locale];
+  const text = flowUi[locale];
   const titleRef = useRef<HTMLHeadingElement>(null);
   useEffect(() => { titleRef.current?.focus(); }, []);
   const calendarDescription = locale === "en" ? `${BRAND.name} booking. Status: awaiting salon confirmation.${assignedStaffName ? ` Specialist: ${assignedStaffName}.` : ""}` : locale === "ru" ? `Запись ${BRAND.name}. Статус: ожидает подтверждения салоном.${assignedStaffName ? ` Специалист: ${assignedStaffName}.` : ""}` : `${BRAND.name} ჯავშანი. სტატუსი: სალონის დადასტურებას ელოდება.${assignedStaffName ? ` სპეციალისტი: ${assignedStaffName}.` : ""}`;
   const saveToCalendar = () => downloadBookingCalendar({ startsAt, endsAt, title: `${serviceName} — ${locationName}`, location: locationAddress ?? locationName, description: calendarDescription });
-  const stubDate = new Intl.DateTimeFormat("ka-GE", { day: "2-digit", month: "2-digit", ...(timeZone ? { timeZone } : {}) }).format(startsAt);
+  const stubDate = new Intl.DateTimeFormat({ ka: "ka-GE", en: "en-GB", ru: "ru-RU" }[locale], { day: "2-digit", month: "2-digit", ...(timeZone ? { timeZone } : {}) }).format(startsAt);
   return <div className="cw-done cw-confirm">
     <div className="cw-ticket cw-ticket-done">
       <div className="cw-ticket-stub" aria-hidden="true">
@@ -376,17 +491,17 @@ export function BookingConfirmation({ confirmationToken, assignedStaffName, serv
         <span className="text-[0.72rem] font-extrabold [writing-mode:vertical-rl] rotate-180">{BRAND.nameKa}</span>
       </div>
       <div className="cw-ticket-done-body">
-        <span className="cw-stamp-mark cw-stamp-big">ჩაწერილია</span>
+        <span className="cw-stamp-mark cw-stamp-big">{text.stamp}</span>
         <div>
           <h1 ref={titleRef} tabIndex={-1} className="outline-none">{ui.received}</h1>
           <p className="cw-step-lede">{ui.receivedLead}</p>
         </div>
-        <table className="cw-review cw-review-flat"><caption className="sr-only">ჯავშნის დეტალები</caption><tbody>
-          <tr><th scope="row">ბიზნესი</th><td>{locationName}{locationAddress ? <span className="block text-sm font-normal text-[var(--cw-ink-soft)]">{locationAddress}</span> : null}</td></tr>
-          <tr><th scope="row">თარიღი და დრო</th><td className="cw-num text-[0.9rem]">{formatKaDateTime(startsAt, timeZone)}</td></tr>
-          {assignedStaffName ? <tr><th scope="row">სპეციალისტი</th><td><span className="sr-only">{ui.assigned} </span>{assignedStaffName}</td></tr> : null}
-          <tr><th scope="row">სერვისები</th><td>{services?.length ? <ul className="cw-review-services">{services.map(service => <li key={service.name}><span>{service.name}</span><span className="cw-choice-price">{formatGel(service.priceTetri)}</span></li>)}</ul> : serviceName}</td></tr>
-          {totalTetri !== undefined ? <tr className="cw-review-total"><th scope="row">ჯამი</th><td className="cw-num">{formatGel(totalTetri)}</td></tr> : null}
+        <table className="cw-review cw-review-flat"><caption className="sr-only">{text.detailsCaption}</caption><tbody>
+          <tr><th scope="row">{text.business}</th><td>{locationName}{locationAddress ? <span className="block text-sm font-normal text-[var(--cw-ink-soft)]">{locationAddress}</span> : null}</td></tr>
+          <tr><th scope="row">{text.dateTime}</th><td className="cw-num text-[0.9rem]">{formatDateTimeForLocale(startsAt, locale, timeZone)}</td></tr>
+          {assignedStaffName ? <tr><th scope="row">{text.specialist}</th><td><span className="sr-only">{ui.assigned} </span>{assignedStaffName}</td></tr> : null}
+          <tr><th scope="row">{text.services}</th><td>{services?.length ? <ul className="cw-review-services">{services.map(service => <li key={service.name}><span>{service.name}</span><span className="cw-choice-price">{formatGel(service.priceTetri)}</span></li>)}</ul> : serviceName}</td></tr>
+          {totalTetri !== undefined ? <tr className="cw-review-total"><th scope="row">{text.total}</th><td className="cw-num">{formatGel(totalTetri)}</td></tr> : null}
         </tbody></table>
         <div>
           <p className="cw-caption">{ui.code}</p>
@@ -403,8 +518,9 @@ export function BookingConfirmation({ confirmationToken, assignedStaffName, serv
 }
 
 function BookingErrorNotice({ issue, errorRef, onRetry }: { issue: BookingValidationIssue; errorRef: React.RefObject<HTMLDivElement | null>; onRetry?: () => void }) {
+  const text = flowUi[usePublicLocale().locale];
   return <BookingNotice tone="error" role="alert" noticeRef={errorRef} title={issue.title}>
     <p>{issue.description}</p>
-    {onRetry ? <button type="button" className="cw-btn cw-btn-danger mt-3 min-h-11 text-sm" onClick={onRetry}><RefreshCw className="size-4" aria-hidden="true" />კიდევ ერთხელ ცდა</button> : null}
+    {onRetry ? <button type="button" className="cw-btn cw-btn-danger mt-3 min-h-11 text-sm" onClick={onRetry}><RefreshCw className="size-4" aria-hidden="true" />{text.retry}</button> : null}
   </BookingNotice>;
 }

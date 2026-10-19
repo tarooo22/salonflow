@@ -1,4 +1,5 @@
 import { Check, ChevronLeft, ChevronRight, CircleAlert, CircleCheck } from "lucide-react";
+import { type PublicLocale, usePublicLocale } from "@/contexts/PublicLocaleContext";
 import React, { useRef, type ReactNode, type Ref } from "react";
 import "../catalog/booking.css";
 
@@ -8,6 +9,29 @@ export const WEEKDAY_FULL = ["ორშაბათი", "სამშაბა�
 const WEEKDAY_SHORT = ["ორშ", "სამ", "ოთხ", "ხუთ", "პარ", "შაბ", "კვ"];
 const MONTH_SHORT = ["იან", "თებ", "მარ", "აპრ", "მაი", "ივნ", "ივლ", "აგვ", "სექ", "ოქტ", "ნოე", "დეკ"];
 const MONTH_FULL = ["იანვარი", "თებერვალი", "მარტი", "აპრილი", "მაისი", "ივნისი", "ივლისი", "აგვისტო", "სექტემბერი", "ოქტომბერი", "ნოემბერი", "დეკემბერი"];
+
+// Weekday and month names per language; Russian months are in the genitive because they follow a day number.
+export const DATE_NAMES = {
+  ka: { weekdayFull: WEEKDAY_FULL, weekdayShort: WEEKDAY_SHORT, monthShort: MONTH_SHORT, monthFull: MONTH_FULL },
+  en: {
+    weekdayFull: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+    weekdayShort: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    monthShort: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+    monthFull: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+  },
+  ru: {
+    weekdayFull: ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"],
+    weekdayShort: ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"],
+    monthShort: ["янв", "фев", "мар", "апр", "мая", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"],
+    monthFull: ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"],
+  },
+} as const;
+
+export const ui = {
+  ka: { step: "ნაბიჯი", done: " — შესრულებულია", hours: (title: string) => `${title} საათები`, date: "თარიღი", prevDays: "წინა დღეები", nextDays: "შემდეგი დღეები", today: "დღეს", todayLong: ", დღეს", past: ", გასულია", closed: ", დახურულია" },
+  en: { step: "Step", done: " — completed", hours: (title: string) => `${title} times`, date: "Date", prevDays: "Previous days", nextDays: "Next days", today: "Today", todayLong: ", today", past: ", past", closed: ", closed" },
+  ru: { step: "Шаг", done: " — завершено", hours: (title: string) => `Время: ${title}`, date: "Дата", prevDays: "Предыдущие дни", nextDays: "Следующие дни", today: "Сегодня", todayLong: ", сегодня", past: ", прошёл", closed: ", закрыто" },
+} as const;
 
 // Date keys are "YYYY-MM-DD" strings in the location's timezone; arithmetic happens in UTC so it never drifts.
 export function addDaysKey(key: string, days: number) {
@@ -19,25 +43,28 @@ export function schemaWeekdayOf(key: string) {
   const [y, m, d] = key.split("-").map(Number) as [number, number, number];
   return (new Date(Date.UTC(y, m - 1, d)).getUTCDay() + 6) % 7;
 }
-export function formatDateKeyLong(key: string) {
+export function formatDateKeyLong(key: string, locale: PublicLocale = "ka") {
   const [, m, d] = key.split("-").map(Number) as [number, number, number];
-  return `${WEEKDAY_FULL[schemaWeekdayOf(key)]}, ${d} ${MONTH_FULL[m - 1]}`;
+  const names = DATE_NAMES[locale];
+  return `${names.weekdayFull[schemaWeekdayOf(key)]}, ${d} ${names.monthFull[m - 1]}`;
 }
 
 export function BookingStepHeader({ step, total = 4, title, description, headingRef }: { step: number; total?: number; title: string; description?: string; headingRef?: Ref<HTMLHeadingElement> }) {
+  const text = ui[usePublicLocale().locale];
   return <header>
-    <span className="cw-caption cw-step-eyebrow">ნაბიჯი <span className="cw-num">{step} / {total}</span></span>
+    <span className="cw-caption cw-step-eyebrow">{text.step} <span className="cw-num">{step} / {total}</span></span>
     <h1 ref={headingRef} tabIndex={-1} className="cw-step-title">{title}</h1>
     {description ? <p className="cw-step-lede">{description}</p> : null}
   </header>;
 }
 
 export function BookingRail({ steps, current, onGo, label }: { steps: string[]; current: number; onGo?: (index: number) => void; label: string }) {
+  const text = ui[usePublicLocale().locale];
   return <ol className="cw-rail" aria-label={label}>{steps.map((name, index) => {
     const state = index < current ? "done" : index === current ? "current" : "todo";
     const inner = <>
       <span className="cw-rail-box" aria-hidden="true">{state === "done" ? <Check className="size-4" /> : index + 1}</span>
-      <span className="cw-rail-label">{name}<span className="sr-only">{state === "done" ? " — შესრულებულია" : ""}</span></span>
+      <span className="cw-rail-label">{name}<span className="sr-only">{state === "done" ? text.done : ""}</span></span>
     </>;
     return <li key={name} className="cw-rail-item" data-state={state} aria-current={state === "current" ? "step" : undefined}>
       {state === "done" && onGo ? <button type="button" className="cw-rail-step" onClick={() => onGo(index)}>{inner}</button> : <span className="cw-rail-step">{inner}</span>}
@@ -68,8 +95,9 @@ export function BookingChoiceCard({ selected, onSelect, children, label, convers
 }
 
 export function BookingSlotGroup({ title, slots, selectedStartsAt, onSelect, conversionEvent }: { title: string; slots: BookingSlot[]; selectedStartsAt: string; onSelect: (startsAt: string) => void; conversionEvent?: string }) {
+  const text = ui[usePublicLocale().locale];
   if (!slots.length) return null;
-  return <section className="cw-slot-group" aria-label={`${title} საათები`}>
+  return <section className="cw-slot-group" aria-label={text.hours(title)}>
     <h3 className="cw-caption">{title}</h3>
     <div className="cw-slots">{slots.map(slot => {
       const active = selectedStartsAt === slot.startsAt;
@@ -81,7 +109,10 @@ export function BookingSlotGroup({ title, slots, selectedStartsAt, onSelect, con
 export type BookingDay = { key: string; closed?: boolean };
 
 // Horizontal date strip: weekday, day number, month. Today is marked, past and closed days are disabled.
-export function BookingDateStrip({ days, selected, todayKey, onSelect, label = "თარიღი" }: { days: BookingDay[]; selected: string; todayKey: string; onSelect: (key: string) => void; label?: string }) {
+export function BookingDateStrip({ days, selected, todayKey, onSelect, label }: { days: BookingDay[]; selected: string; todayKey: string; onSelect: (key: string) => void; label?: string }) {
+  const { locale } = usePublicLocale();
+  const text = ui[locale];
+  const names = DATE_NAMES[locale];
   const scroller = useRef<HTMLDivElement>(null);
   const scrollBy = (direction: 1 | -1) => {
     const element = scroller.current;
@@ -89,23 +120,23 @@ export function BookingDateStrip({ days, selected, todayKey, onSelect, label = "
     const reduced = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     element.scrollBy({ left: direction * element.clientWidth * 0.8, behavior: reduced ? "auto" : "smooth" });
   };
-  return <div className="cw-dates-wrap" role="group" aria-label={label}>
-    <button type="button" className="cw-date-nav" aria-label="წინა დღეები" onClick={() => scrollBy(-1)}><ChevronLeft className="size-5" aria-hidden="true" /></button>
+  return <div className="cw-dates-wrap" role="group" aria-label={label ?? text.date}>
+    <button type="button" className="cw-date-nav" aria-label={text.prevDays} onClick={() => scrollBy(-1)}><ChevronLeft className="size-5" aria-hidden="true" /></button>
     <div className="cw-dates" ref={scroller}>{days.map(day => {
       const [, month, dayNumber] = day.key.split("-").map(Number) as [number, number, number];
       const past = day.key < todayKey;
       const disabled = past || Boolean(day.closed);
       const isToday = day.key === todayKey;
       const weekday = schemaWeekdayOf(day.key);
-      const full = `${WEEKDAY_FULL[weekday]}, ${dayNumber} ${MONTH_FULL[month - 1]}${isToday ? ", დღეს" : ""}${past ? ", გასულია" : day.closed ? ", დახურულია" : ""}`;
+      const full = `${names.weekdayFull[weekday]}, ${dayNumber} ${names.monthFull[month - 1]}${isToday ? text.todayLong : ""}${past ? text.past : day.closed ? text.closed : ""}`;
       return <button key={day.key} type="button" className="cw-date" disabled={disabled} aria-pressed={day.key === selected} aria-label={full} data-today={isToday} onClick={() => onSelect(day.key)}>
-        <span className="cw-date-weekday" aria-hidden="true">{WEEKDAY_SHORT[weekday]}</span>
+        <span className="cw-date-weekday" aria-hidden="true">{names.weekdayShort[weekday]}</span>
         <span className="cw-date-day" aria-hidden="true">{dayNumber}</span>
-        <span className="cw-date-month" aria-hidden="true">{MONTH_SHORT[month - 1]}</span>
-        {isToday ? <span className="cw-date-today" aria-hidden="true">დღეს</span> : null}
+        <span className="cw-date-month" aria-hidden="true">{names.monthShort[month - 1]}</span>
+        {isToday ? <span className="cw-date-today" aria-hidden="true">{text.today}</span> : null}
       </button>;
     })}</div>
-    <button type="button" className="cw-date-nav" aria-label="შემდეგი დღეები" onClick={() => scrollBy(1)}><ChevronRight className="size-5" aria-hidden="true" /></button>
+    <button type="button" className="cw-date-nav" aria-label={text.nextDays} onClick={() => scrollBy(1)}><ChevronRight className="size-5" aria-hidden="true" /></button>
   </div>;
 }
 

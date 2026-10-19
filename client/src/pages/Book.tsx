@@ -57,9 +57,15 @@ export function DiscoveryResults({ locations, category, onCategoryChange, query 
   </>;
 }
 
+export const ui = {
+  ka: { metaTitle: "ონლაინ ჩაწერა", metaDescription: "აირჩიეთ ფილიალი, სერვისი, სპეციალისტი და თავისუფალი დრო და ჩაეწერეთ ონლაინ ზარის გარეშე." },
+  en: { metaTitle: "Online booking", metaDescription: "Choose a location, service, specialist and free time and book online, no phone call needed." },
+  ru: { metaTitle: "Онлайн-запись", metaDescription: "Выберите филиал, услугу, специалиста и свободное время и запишитесь онлайн, без звонков." },
+} as const;
+
 export default function Book() {
-  usePublicMeta({ title: `ონლაინ ჩაწერა | ${BRAND.name}`, description: "აირჩიეთ ფილიალი, სერვისი, სპეციალისტი და თავისუფალი დრო და ჩაეწერეთ ონლაინ ზარის გარეშე.", canonicalPath: "/book" });
-  const { t } = usePublicLocale();
+  const { locale, t } = usePublicLocale();
+  usePublicMeta({ title: `${ui[locale].metaTitle} | ${BRAND.name}`, description: ui[locale].metaDescription, canonicalPath: "/book" });
   const locations = trpc.public.locations.useQuery();
   const [category, setCategory] = useState("ALL");
   const [query, setQuery] = useState("");

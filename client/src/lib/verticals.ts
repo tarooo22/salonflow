@@ -1,9 +1,12 @@
 export type Vertical = "beauty" | "aesthetics" | "dental";
 
-export const VERTICALS: ReadonlyArray<{ id: Vertical; label: string; bg: string; ink: string }> = [
-  { id: "beauty", label: "სილამაზე", bg: "var(--cw-beauty)", ink: "var(--cw-beauty-ink)" },
-  { id: "aesthetics", label: "ესთეტიკა", bg: "var(--cw-aesthetics)", ink: "var(--cw-aesthetics-ink)" },
-  { id: "dental", label: "სტომატოლოგია", bg: "var(--cw-dental)", ink: "var(--cw-dental-ink)" },
+type VerticalLocale = "ka" | "en" | "ru";
+
+// `label` is the Georgian name kept for existing callers; use verticalLabel() for the visitor's language.
+export const VERTICALS: ReadonlyArray<{ id: Vertical; label: string; labels: Record<VerticalLocale, string>; bg: string; ink: string }> = [
+  { id: "beauty", label: "სილამაზე", labels: { ka: "სილამაზე", en: "Beauty", ru: "Красота" }, bg: "var(--cw-beauty)", ink: "var(--cw-beauty-ink)" },
+  { id: "aesthetics", label: "ესთეტიკა", labels: { ka: "ესთეტიკა", en: "Aesthetics", ru: "Эстетика" }, bg: "var(--cw-aesthetics)", ink: "var(--cw-aesthetics-ink)" },
+  { id: "dental", label: "სტომატოლოგია", labels: { ka: "სტომატოლოგია", en: "Dental", ru: "Стоматология" }, bg: "var(--cw-dental)", ink: "var(--cw-dental-ink)" },
 ];
 
 const AESTHETICS_SLUGS = new Set(["cosmetology"]);
@@ -22,4 +25,8 @@ export function verticalsForListing(categories: ReadonlyArray<{ slug: string }>)
 
 export function verticalStyle(id: Vertical) {
   return VERTICALS.find(vertical => vertical.id === id)!;
+}
+
+export function verticalLabel(id: Vertical, locale: VerticalLocale) {
+  return verticalStyle(id).labels[locale];
 }

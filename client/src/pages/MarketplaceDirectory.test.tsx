@@ -22,8 +22,10 @@ describe("Marketplace Directory discovery handoff", () => {
     expect(source).toContain('marketplaceDiscoveryHref("/salons", nextCategory, searchDraft, area)');
     expect(source).toContain("setArea(filters.area)");
     expect(source).toContain('setArea(""); setAreaDraft(""); setLocation(marketplaceDiscoveryHref("/salons", categorySlug, searchDraft))');
-    expect(filters).toContain("ადგილი: {area.trim()}");
-    expect(filters).toContain('aria-label="ფილტრის მოხსნა"');
+    expect(filters).toContain('areaTag: "ადგილი: "');
+    expect(filters).toContain("{text.areaTag}{area.trim()}");
+    expect(filters).toContain('removeFilter: "ფილტრის მოხსნა"');
+    expect(filters).toContain("aria-label={text.removeFilter}");
   });
 
   it("lives in the catalog world: shared tickets in shelves, vertical tabs, Chawera meta", () => {
@@ -31,7 +33,7 @@ describe("Marketplace Directory discovery handoff", () => {
     expect(source).toContain('<main id="main-content">');
     expect(source).toContain("BRAND.name");
     expect(source).not.toContain("SalonFlow");
-    for (const shelf of ['title="VIP"', 'title="რეკომენდებული"', "newestListings", "TicketShelf"]) expect(source).toContain(shelf);
+    for (const shelf of ["title={text.vip}", "title={text.recommended}", 'vip: "VIP"', 'recommended: "რეკომენდებული"', "newestListings", "TicketShelf"]) expect(source).toContain(shelf);
     expect(filters).toContain("verticalForCategory");
     expect(filters).toContain('role="search"');
   });
