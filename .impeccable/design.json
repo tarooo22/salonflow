@@ -1,0 +1,537 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-18T23:23:01.173Z",
+  "title": "Design System: Chawera",
+  "extensions": {
+    "scope": "Public catalog world only (cw- namespace, tokens on .cw in client/src/components/catalog/catalog.css; shipped on / only). Internal panel and older public pages still use legacy sf- tokens in client/src/index.css: known drift, not yet migrated, not authoritative.",
+    "colorMeta": {
+      "paper": {
+        "role": "neutral",
+        "displayName": "Form Paper",
+        "canonical": "oklch(99.3% 0.003 106.4)",
+        "tonalRamp": [
+          "#0b0b09",
+          "#242422",
+          "#40403d",
+          "#5e5e5b",
+          "#80807e",
+          "#a5a5a2",
+          "#cbcbc8",
+          "#efefec"
+        ]
+      },
+      "sheet-white": {
+        "role": "neutral",
+        "displayName": "Sheet White",
+        "canonical": "oklch(100.0% 0.000 89.9)",
+        "tonalRamp": [
+          "#0c0b09",
+          "#252422",
+          "#40403d",
+          "#5e5d5b",
+          "#81807d",
+          "#a5a4a2",
+          "#cbcac8",
+          "#efeeeb"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Form Ink",
+        "canonical": "oklch(29.5% 0.103 278.1)",
+        "tonalRamp": [
+          "#07012e",
+          "#1b1954",
+          "#353774",
+          "#515696",
+          "#7279bd",
+          "#959ee4",
+          "#bec6ff",
+          "#eaedfe"
+        ]
+      },
+      "ink-soft": {
+        "role": "neutral",
+        "displayName": "Faded Ink",
+        "canonical": "oklch(44.0% 0.094 281.1)",
+        "tonalRamp": [
+          "#09012e",
+          "#1e1a4f",
+          "#383870",
+          "#555691",
+          "#7679b7",
+          "#9a9edf",
+          "#c1c5fe",
+          "#ebedfe"
+        ]
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Pale Rule",
+        "canonical": "oklch(86.7% 0.034 282.0)",
+        "tonalRamp": [
+          "#090919",
+          "#212234",
+          "#3d3e52",
+          "#5a5c71",
+          "#7c7e95",
+          "#a1a2ba",
+          "#c6c8e1",
+          "#ecedfe"
+        ]
+      },
+      "rule-strong": {
+        "role": "neutral",
+        "displayName": "Strong Rule",
+        "canonical": "oklch(72.9% 0.067 280.7)",
+        "tonalRamp": [
+          "#080526",
+          "#1f1f43",
+          "#393b62",
+          "#575983",
+          "#797ca8",
+          "#9ca0ce",
+          "#c2c6f6",
+          "#ebedff"
+        ]
+      },
+      "desk": {
+        "role": "neutral",
+        "displayName": "Indigo Desk",
+        "canonical": "oklch(25.3% 0.082 279.8)",
+        "tonalRamp": [
+          "#08022c",
+          "#1e1d4a",
+          "#383a6a",
+          "#54588b",
+          "#767bb0",
+          "#9a9fd7",
+          "#c0c6fb",
+          "#ebedff"
+        ]
+      },
+      "desk-soft": {
+        "role": "neutral",
+        "displayName": "Desk Shadow",
+        "canonical": "oklch(31.5% 0.095 280.3)",
+        "tonalRamp": [
+          "#09012e",
+          "#1e1a50",
+          "#373870",
+          "#545692",
+          "#7579b8",
+          "#999edf",
+          "#c0c5ff",
+          "#ebedfe"
+        ]
+      },
+      "on-desk": {
+        "role": "neutral",
+        "displayName": "Desk Light",
+        "canonical": "oklch(95.1% 0.018 279.1)",
+        "tonalRamp": [
+          "#090a13",
+          "#22232d",
+          "#3d3f49",
+          "#5b5d68",
+          "#7e7f8b",
+          "#a2a4b0",
+          "#c8cad6",
+          "#eceefb"
+        ]
+      },
+      "on-desk-soft": {
+        "role": "neutral",
+        "displayName": "Desk Dim",
+        "canonical": "oklch(80.7% 0.059 281.8)",
+        "tonalRamp": [
+          "#090623",
+          "#202040",
+          "#3b3c5e",
+          "#585a7f",
+          "#7a7ca3",
+          "#9ea1c9",
+          "#c4c7f1",
+          "#ebedff"
+        ]
+      },
+      "stamp": {
+        "role": "primary",
+        "displayName": "Rubber-Stamp Violet",
+        "canonical": "oklch(45.7% 0.211 288.4)",
+        "tonalRamp": [
+          "#0d002b",
+          "#270661",
+          "#4501a5",
+          "#6038ca",
+          "#8060f4",
+          "#a293fd",
+          "#c8c2ff",
+          "#edecfe"
+        ]
+      },
+      "stamp-hover": {
+        "role": "primary",
+        "displayName": "Pressed Stamp",
+        "canonical": "oklch(40.1% 0.195 287.6)",
+        "tonalRamp": [
+          "#0c002c",
+          "#260662",
+          "#43149e",
+          "#5e3ec2",
+          "#7e65ec",
+          "#a093fe",
+          "#c7c3fb",
+          "#edecfe"
+        ]
+      },
+      "beauty": {
+        "role": "secondary",
+        "displayName": "Carbon Pink",
+        "canonical": "oklch(87.9% 0.058 356.4)",
+        "tonalRamp": [
+          "#1c010c",
+          "#391725",
+          "#583240",
+          "#78505e",
+          "#9d7281",
+          "#c396a5",
+          "#ebbbcb",
+          "#ffe7ef"
+        ]
+      },
+      "beauty-ink": {
+        "role": "secondary",
+        "displayName": "Beauty Ink",
+        "canonical": "oklch(41.7% 0.148 359.2)",
+        "tonalRamp": [
+          "#1d000a",
+          "#460523",
+          "#77033e",
+          "#9b2f5b",
+          "#c4547e",
+          "#ed79a2",
+          "#fcb2c9",
+          "#fee8ee"
+        ]
+      },
+      "aesthetics": {
+        "role": "secondary",
+        "displayName": "Carbon Canary",
+        "canonical": "oklch(90.6% 0.126 98.1)",
+        "tonalRamp": [
+          "#0f0b00",
+          "#2b2403",
+          "#4b4000",
+          "#6c5d03",
+          "#93801a",
+          "#baa53b",
+          "#e0cb64",
+          "#fef0a9"
+        ]
+      },
+      "aesthetics-ink": {
+        "role": "secondary",
+        "displayName": "Aesthetics Ink",
+        "canonical": "oklch(41.5% 0.085 87.6)",
+        "tonalRamp": [
+          "#110a00",
+          "#2e2201",
+          "#503d06",
+          "#725a1b",
+          "#967d41",
+          "#bba265",
+          "#e2c88a",
+          "#feedc4"
+        ]
+      },
+      "dental": {
+        "role": "secondary",
+        "displayName": "Carbon Sky",
+        "canonical": "oklch(89.0% 0.047 238.5)",
+        "tonalRamp": [
+          "#000d18",
+          "#0a2738",
+          "#274356",
+          "#446275",
+          "#66859a",
+          "#8aa9bf",
+          "#afd0e6",
+          "#dff2ff"
+        ]
+      },
+      "dental-ink": {
+        "role": "secondary",
+        "displayName": "Dental Ink",
+        "canonical": "oklch(40.2% 0.106 250.4)",
+        "tonalRamp": [
+          "#000c1c",
+          "#032544",
+          "#0a4171",
+          "#286097",
+          "#4c84bd",
+          "#70a9e5",
+          "#a5cffb",
+          "#e3f0fe"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Hero headline on the appointment card and the wordmark (1.7rem). Width 75%."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Section headings. Width 80%."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Ticket names, ledger heads, shelf and step titles; buttons and tabs share 800 at 85% width."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Ledes (1.05rem / 1.6, max 34rem, Faded Ink) and descriptions."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Printed captions inside field boxes and footer column heads. Floor size for any text."
+      },
+      "numeral": {
+        "displayName": "Numeral",
+        "purpose": "Martian Mono tabular: dates, ticket №, counts, domain, year."
+      }
+    },
+    "shadows": [
+      {
+        "name": "card-on-desk",
+        "value": "drop-shadow(0 18px 30px rgba(8, 7, 32, 0.45))",
+        "purpose": "Filter on the appointment card so the shadow follows the perforated edge."
+      },
+      {
+        "name": "chosen-sheet",
+        "value": "0 10px 24px -14px rgba(0, 0, 0, 0.6)",
+        "purpose": "Carbon copy pulled forward."
+      },
+      {
+        "name": "raised-tab",
+        "value": "0 -6px 14px -10px rgba(0, 0, 0, 0.5)",
+        "purpose": "Pressed vertical tab."
+      },
+      {
+        "name": "stamp-press",
+        "value": "0 6px 14px -8px rgba(58, 28, 134, 0.75)",
+        "purpose": "Stamp button at rest; 0 2px 6px -4px when active."
+      },
+      {
+        "name": "ticket-lift",
+        "value": "0 14px 24px -18px rgba(35, 35, 94, 0.6)",
+        "purpose": "Ticket hover with 3px rise."
+      },
+      {
+        "name": "field-focus",
+        "value": "0 0 0 3px color-mix(in srgb, #5a2fc2 35%, transparent)",
+        "purpose": "Focus-within ring on boxed fields."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-cw",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "The single easing for every transition."
+      },
+      {
+        "name": "duration-state",
+        "value": "160ms",
+        "purpose": "Buttons, nav links, field focus, ledger rows."
+      },
+      {
+        "name": "duration-ticket",
+        "value": "260ms",
+        "purpose": "Ticket lift."
+      },
+      {
+        "name": "duration-tab",
+        "value": "320ms",
+        "purpose": "Tab rise."
+      },
+      {
+        "name": "duration-band",
+        "value": "420ms",
+        "purpose": "Card colour band recolour."
+      },
+      {
+        "name": "duration-shuffle",
+        "value": "560ms",
+        "purpose": "Carbon sheet slide and card tint."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "transition: none",
+        "purpose": "Sheets, tabs, tickets, band and buttons stop animating under prefers-reduced-motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px",
+        "purpose": "Below: tabs become a 4-column grid, stack offset 5px, stub 3.5rem. Above: ticket cover image."
+      },
+      {
+        "name": "md",
+        "value": "768px",
+        "purpose": "Two-column tickets, footer columns; below 767px extra blank tickets hide."
+      },
+      {
+        "name": "lg",
+        "value": "1024px",
+        "purpose": "Card splits headline/form, desktop nav, three ledgers."
+      },
+      {
+        "name": "xl",
+        "value": "1280px",
+        "purpose": "Three-column tickets."
+      }
+    ],
+    "focus": {
+      "value": "outline: 3px solid #5a2fc2; outline-offset: 2px",
+      "onDesk": "outline-color: #fff"
+    }
+  },
+  "components": [
+    {
+      "name": "Stamp Button",
+      "kind": "button",
+      "refersTo": "button-stamp",
+      "description": "The one primary action per region: search, open map.",
+      "html": "<button class=\"ds-btn-stamp\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"11\" cy=\"11\" r=\"8\"/><path d=\"m21 21-4.3-4.3\"/></svg>მოძებნე</button>",
+      "css": ".ds-btn-stamp{--cw-paper:#fdfdfb;--cw-ink:#23235e;--cw-ink-soft:#4a4b85;--cw-rule:#cfd1ea;--cw-rule-strong:#9fa3d1;--cw-desk:#1c1b48;--cw-desk-soft:#2a2960;--cw-on-desk:#eceefb;--cw-on-desk-soft:#b9bce6;--cw-stamp:#5a2fc2;--cw-stamp-hover:#4a22a8;--cw-beauty:#f8c8d8;--cw-beauty-ink:#86194a;--cw-aesthetics:#f6e17a;--cw-aesthetics-ink:#5f4800;--cw-dental:#bfe0f7;--cw-dental-ink:#0d4a7f;--cw-ease:cubic-bezier(0.16,1,0.3,1);font-family:\"Noto Sans Georgian\",Sora,system-ui,sans-serif;display:inline-flex;align-items:center;justify-content:center;gap:.5rem;min-height:3rem;padding:0 1.4rem;border-radius:4px;font-weight:800;font-stretch:85%;font-size:1rem;letter-spacing:.01em;cursor:pointer;transition:background-color 160ms var(--cw-ease),transform 160ms var(--cw-ease),box-shadow 160ms var(--cw-ease);}.ds-btn-stamp:focus-visible{outline:3px solid var(--cw-stamp);outline-offset:2px;}.ds-btn-stamp{background:var(--cw-stamp);color:#fff;border:0;box-shadow:0 6px 14px -8px rgba(58,28,134,.75);}.ds-btn-stamp:hover{background:var(--cw-stamp-hover);}.ds-btn-stamp:active{transform:translateY(1px);box-shadow:0 2px 6px -4px rgba(58,28,134,.75);}"
+    },
+    {
+      "name": "Line Button",
+      "kind": "button",
+      "refersTo": "button-line",
+      "description": "Secondary action and city chip: 1.5px currentColor outline.",
+      "html": "<a href=\"#\" class=\"ds-btn-line\">მთელი კატალოგი <svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12h14\"/><path d=\"m12 5 7 7-7 7\"/></svg></a>",
+      "css": ".ds-btn-line{--cw-paper:#fdfdfb;--cw-ink:#23235e;--cw-ink-soft:#4a4b85;--cw-rule:#cfd1ea;--cw-rule-strong:#9fa3d1;--cw-desk:#1c1b48;--cw-desk-soft:#2a2960;--cw-on-desk:#eceefb;--cw-on-desk-soft:#b9bce6;--cw-stamp:#5a2fc2;--cw-stamp-hover:#4a22a8;--cw-beauty:#f8c8d8;--cw-beauty-ink:#86194a;--cw-aesthetics:#f6e17a;--cw-aesthetics-ink:#5f4800;--cw-dental:#bfe0f7;--cw-dental-ink:#0d4a7f;--cw-ease:cubic-bezier(0.16,1,0.3,1);font-family:\"Noto Sans Georgian\",Sora,system-ui,sans-serif;display:inline-flex;align-items:center;justify-content:center;gap:.5rem;min-height:3rem;padding:0 1.4rem;border-radius:4px;font-weight:800;font-stretch:85%;font-size:1rem;letter-spacing:.01em;cursor:pointer;transition:background-color 160ms var(--cw-ease),transform 160ms var(--cw-ease),box-shadow 160ms var(--cw-ease);}.ds-btn-line:focus-visible{outline:3px solid var(--cw-stamp);outline-offset:2px;}.ds-btn-line{min-height:2.75rem;background:transparent;color:var(--cw-ink);border:1.5px solid currentColor;text-decoration:none;}.ds-btn-line:hover{background:color-mix(in srgb,currentColor 10%,transparent);}"
+    },
+    {
+      "name": "Paper Button on Desk",
+      "kind": "button",
+      "refersTo": "button-paper",
+      "description": "Paper-coloured button placed on an indigo desk band.",
+      "html": "<div class=\"ds-desk\"><a href=\"#\" class=\"ds-btn-paper\">გაიგე მეტი <svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12h14\"/><path d=\"m12 5 7 7-7 7\"/></svg></a></div>",
+      "css": ".ds-btn-paper{--cw-paper:#fdfdfb;--cw-ink:#23235e;--cw-ink-soft:#4a4b85;--cw-rule:#cfd1ea;--cw-rule-strong:#9fa3d1;--cw-desk:#1c1b48;--cw-desk-soft:#2a2960;--cw-on-desk:#eceefb;--cw-on-desk-soft:#b9bce6;--cw-stamp:#5a2fc2;--cw-stamp-hover:#4a22a8;--cw-beauty:#f8c8d8;--cw-beauty-ink:#86194a;--cw-aesthetics:#f6e17a;--cw-aesthetics-ink:#5f4800;--cw-dental:#bfe0f7;--cw-dental-ink:#0d4a7f;--cw-ease:cubic-bezier(0.16,1,0.3,1);font-family:\"Noto Sans Georgian\",Sora,system-ui,sans-serif;display:inline-flex;align-items:center;justify-content:center;gap:.5rem;min-height:3rem;padding:0 1.4rem;border-radius:4px;font-weight:800;font-stretch:85%;font-size:1rem;letter-spacing:.01em;cursor:pointer;transition:background-color 160ms var(--cw-ease),transform 160ms var(--cw-ease),box-shadow 160ms var(--cw-ease);}.ds-btn-paper:focus-visible{outline:3px solid var(--cw-stamp);outline-offset:2px;}.ds-desk{--cw-paper:#fdfdfb;--cw-ink:#23235e;--cw-ink-soft:#4a4b85;--cw-rule:#cfd1ea;--cw-rule-strong:#9fa3d1;--cw-desk:#1c1b48;--cw-desk-soft:#2a2960;--cw-on-desk:#eceefb;--cw-on-desk-soft:#b9bce6;--cw-stamp:#5a2fc2;--cw-stamp-hover:#4a22a8;--cw-beauty:#f8c8d8;--cw-beauty-ink:#86194a;--cw-aesthetics:#f6e17a;--cw-aesthetics-ink:#5f4800;--cw-dental:#bfe0f7;--cw-dental-ink:#0d4a7f;--cw-ease:cubic-bezier(0.16,1,0.3,1);background:var(--cw-desk);padding:1.5rem;}.ds-btn-paper{background:var(--cw-paper);color:var(--cw-ink);border:0;text-decoration:none;}.ds-btn-paper:hover{background:#fff;}.ds-desk .ds-btn-paper:focus-visible{outline-color:#fff;}"
+    },
+    {
+      "name": "Boxed Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Form field: printed caption inside an ink-ruled box.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-caption\">სად?</span><input placeholder=\"ქალაქი ან უბანი\" /></label>",
+      "css": ".ds-field{--cw-paper:#fdfdfb;--cw-ink:#23235e;--cw-ink-soft:#4a4b85;--cw-rule:#cfd1ea;--cw-rule-strong:#9fa3d1;--cw-desk:#1c1b48;--cw-desk-soft:#2a2960;--cw-on-desk:#eceefb;--cw-on-desk-soft:#b9bce6;--cw-stamp:#5a2fc2;--cw-stamp-hover:#4a22a8;--cw-beauty:#f8c8d8;--cw-beauty-ink:#86194a;--cw-aesthetics:#f6e17a;--cw-aesthetics-ink:#5f4800;--cw-dental:#bfe0f7;--cw-dental-ink:#0d4a7f;--cw-ease:cubic-bezier(0.16,1,0.3,1);font-family:\"Noto Sans Georgian\",Sora,system-ui,sans-serif;display:block;max-width:22rem;border:1.5px solid var(--cw-ink);border-radius:3px;background:#fff;padding:.4rem .75rem .55rem;transition:box-shadow 160ms var(--cw-ease);}.ds-field:focus-within{box-shadow:0 0 0 3px color-mix(in srgb,var(--cw-stamp) 35%,transparent);}.ds-caption{font-size:.72rem;font-weight:700;letter-spacing:.06em;color:var(--cw-ink-soft);}.ds-field input{display:block;width:100%;border:0;outline:0;background:transparent;font:inherit;font-size:1.05rem;font-weight:600;color:var(--cw-ink);padding:.15rem 0 0;}.ds-field input::placeholder{color:#6c6e9f;font-weight:500;}"
+    },
+    {
+      "name": "Desk Navigation",
+      "kind": "nav",
+      "refersTo": "navlink",
+      "description": "Header nav on the desk; unavailable items stay visible and inert with a bordered tag.",
+      "html": "<nav class=\"ds-nav\"><span class=\"ds-mark\">ჩაწერა</span><a href=\"#\" class=\"ds-navlink\">კატალოგი</a><a href=\"#\" class=\"ds-navlink\">რუკა</a><span class=\"ds-navlink ds-off\">პროდუქტები<span class=\"ds-soon\">მალე</span></span></nav>",
+      "css": ".ds-nav{--cw-paper:#fdfdfb;--cw-ink:#23235e;--cw-ink-soft:#4a4b85;--cw-rule:#cfd1ea;--cw-rule-strong:#9fa3d1;--cw-desk:#1c1b48;--cw-desk-soft:#2a2960;--cw-on-desk:#eceefb;--cw-on-desk-soft:#b9bce6;--cw-stamp:#5a2fc2;--cw-stamp-hover:#4a22a8;--cw-beauty:#f8c8d8;--cw-beauty-ink:#86194a;--cw-aesthetics:#f6e17a;--cw-aesthetics-ink:#5f4800;--cw-dental:#bfe0f7;--cw-dental-ink:#0d4a7f;--cw-ease:cubic-bezier(0.16,1,0.3,1);font-family:\"Noto Sans Georgian\",Sora,system-ui,sans-serif;display:flex;align-items:center;gap:.25rem;background:var(--cw-desk);padding:.75rem 1rem;}.ds-mark{font-stretch:75%;font-weight:850;font-size:1.7rem;line-height:1;color:var(--cw-on-desk);margin-right:1rem;}.ds-navlink{color:var(--cw-on-desk);font-size:.9rem;font-weight:600;padding:.5rem .65rem;border-radius:4px;text-decoration:none;transition:background-color 160ms var(--cw-ease);}.ds-navlink:hover{background:var(--cw-desk-soft);}.ds-navlink:focus-visible{outline:3px solid #fff;outline-offset:2px;}.ds-off{opacity:.7;cursor:default;}.ds-off:hover{background:none;}.ds-soon{font-size:.72rem;font-weight:800;border:1.5px solid currentColor;border-radius:3px;padding:0 .3rem;margin-left:.35rem;}"
+    },
+    {
+      "name": "Vertical Chips",
+      "kind": "chip",
+      "refersTo": "vertical-tab",
+      "description": "Carbon-copy pairs as static labels: tint plus own ink.",
+      "html": "<ul class=\"ds-chips\"><li style=\"background:#f8c8d8;color:#86194a\">სილამაზე</li><li style=\"background:#f6e17a;color:#5f4800\">ესთეტიკა</li><li style=\"background:#bfe0f7;color:#0d4a7f\">სტომატოლოგია</li></ul>",
+      "css": ".ds-chips{font-family:\"Noto Sans Georgian\",Sora,system-ui,sans-serif;display:flex;flex-wrap:wrap;gap:.5rem;list-style:none;margin:0;padding:0;}.ds-chips li{border-radius:3px;padding:.25rem .75rem;font-size:.875rem;font-weight:800;}"
+    },
+    {
+      "name": "Carbon Copy Tabs",
+      "kind": "custom",
+      "refersTo": "vertical-tab",
+      "description": "Signature: vertical tabs hanging above the card; the pressed tab rises.",
+      "html": "<div class=\"ds-tabs\"><button class=\"ds-tab\" style=\"--tab-bg:#fdfdfb;--tab-ink:#23235e\">ყველა</button><button class=\"ds-tab\" style=\"--tab-bg:#f8c8d8;--tab-ink:#86194a\">სილამაზე</button><button class=\"ds-tab\" aria-pressed=\"true\" style=\"--tab-bg:#f6e17a;--tab-ink:#5f4800\">ესთეტიკა</button><button class=\"ds-tab\" style=\"--tab-bg:#bfe0f7;--tab-ink:#0d4a7f\">სტომატოლოგია</button></div>",
+      "css": ".ds-tabs{--cw-paper:#fdfdfb;--cw-ink:#23235e;--cw-ink-soft:#4a4b85;--cw-rule:#cfd1ea;--cw-rule-strong:#9fa3d1;--cw-desk:#1c1b48;--cw-desk-soft:#2a2960;--cw-on-desk:#eceefb;--cw-on-desk-soft:#b9bce6;--cw-stamp:#5a2fc2;--cw-stamp-hover:#4a22a8;--cw-beauty:#f8c8d8;--cw-beauty-ink:#86194a;--cw-aesthetics:#f6e17a;--cw-aesthetics-ink:#5f4800;--cw-dental:#bfe0f7;--cw-dental-ink:#0d4a7f;--cw-ease:cubic-bezier(0.16,1,0.3,1);font-family:\"Noto Sans Georgian\",Sora,system-ui,sans-serif;display:flex;gap:.35rem;align-items:flex-end;background:var(--cw-desk);padding:1rem 1rem 0;border-bottom:10px solid var(--cw-aesthetics);}.ds-tab{font:inherit;border:0;cursor:pointer;padding:.55rem .9rem .85rem;border-radius:6px 6px 0 0;font-size:.85rem;font-weight:800;font-stretch:85%;color:var(--tab-ink);background:var(--tab-bg);transform:translateY(6px);transition:transform 320ms var(--cw-ease),box-shadow 320ms var(--cw-ease);}.ds-tab:hover{transform:translateY(2px);}.ds-tab[aria-pressed=\"true\"]{transform:translateY(-2px);box-shadow:0 -6px 14px -10px rgba(0,0,0,.5);}.ds-tab:focus-visible{outline:3px solid var(--cw-stamp);outline-offset:2px;}"
+    },
+    {
+      "name": "Ticket",
+      "kind": "card",
+      "refersTo": "ticket",
+      "description": "Signature: a numbered tear-off ticket for one approved business.",
+      "html": "<a href=\"#\" class=\"ds-ticket\"><div class=\"ds-stub\"><span class=\"ds-num\">№ 001</span><span class=\"ds-vl\">სილამაზე</span></div><div class=\"ds-body\"><div class=\"ds-top\"><h3>სალონის სახელი</h3><span class=\"ds-stamp\">VIP</span></div><p class=\"ds-meta\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0\"/><circle cx=\"12\" cy=\"10\" r=\"3\"/></svg>ვაკე</p><p class=\"ds-meta\">მანიკიური · თმის შეჭრა</p><span class=\"ds-go\">ჩაწერა <svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12h14\"/><path d=\"m12 5 7 7-7 7\"/></svg></span></div></a>",
+      "css": ".ds-ticket{--cw-paper:#fdfdfb;--cw-ink:#23235e;--cw-ink-soft:#4a4b85;--cw-rule:#cfd1ea;--cw-rule-strong:#9fa3d1;--cw-desk:#1c1b48;--cw-desk-soft:#2a2960;--cw-on-desk:#eceefb;--cw-on-desk-soft:#b9bce6;--cw-stamp:#5a2fc2;--cw-stamp-hover:#4a22a8;--cw-beauty:#f8c8d8;--cw-beauty-ink:#86194a;--cw-aesthetics:#f6e17a;--cw-aesthetics-ink:#5f4800;--cw-dental:#bfe0f7;--cw-dental-ink:#0d4a7f;--cw-ease:cubic-bezier(0.16,1,0.3,1);font-family:\"Noto Sans Georgian\",Sora,system-ui,sans-serif;--stub:4.75rem;display:grid;grid-template-columns:var(--stub) 1fr;min-height:8.5rem;max-width:24rem;background:#fff;color:var(--cw-ink);text-decoration:none;border:1.5px solid var(--cw-rule);border-radius:4px;transition:transform 260ms var(--cw-ease),box-shadow 260ms var(--cw-ease),border-color 260ms var(--cw-ease);-webkit-mask:radial-gradient(circle 9px at var(--stub) 0,#0000 97%,#000) top/100% 51% no-repeat,radial-gradient(circle 9px at var(--stub) 100%,#0000 97%,#000) bottom/100% 51% no-repeat;mask:radial-gradient(circle 9px at var(--stub) 0,#0000 97%,#000) top/100% 51% no-repeat,radial-gradient(circle 9px at var(--stub) 100%,#0000 97%,#000) bottom/100% 51% no-repeat;}.ds-ticket:hover{transform:translateY(-3px);border-color:var(--cw-rule-strong);box-shadow:0 14px 24px -18px rgba(35,35,94,.6);}.ds-ticket:focus-visible{outline:3px solid var(--cw-stamp);outline-offset:2px;}.ds-stub{display:flex;flex-direction:column;justify-content:space-between;align-items:center;padding:.75rem .4rem;background:var(--cw-beauty);color:var(--cw-beauty-ink);border-right:2px dashed color-mix(in srgb,var(--cw-ink) 30%,transparent);}.ds-num,.ds-vl{writing-mode:vertical-rl;transform:rotate(180deg);}.ds-num{font-family:\"Martian Mono\",ui-monospace,monospace;font-variant-numeric:tabular-nums;font-size:.75rem;font-weight:600;}.ds-vl{font-size:.72rem;font-weight:800;}.ds-body{padding:1rem;}.ds-top{display:flex;justify-content:space-between;gap:.5rem;align-items:flex-start;}.ds-top h3{margin:0;font-size:1.125rem;font-weight:800;font-stretch:85%;}.ds-meta{display:flex;align-items:center;gap:.25rem;margin:.35rem 0 0;font-size:.875rem;color:var(--cw-ink-soft);}.ds-go{display:inline-flex;align-items:center;gap:.25rem;margin-top:.75rem;font-size:.875rem;font-weight:800;color:var(--cw-stamp);}.ds-go svg{transition:transform 200ms;}.ds-ticket:hover .ds-go svg{transform:translateX(4px);}.ds-stamp{color:var(--cw-stamp);border:2px solid currentColor;border-radius:4px;padding:.05rem .45rem;font-weight:900;font-stretch:75%;font-size:.8rem;letter-spacing:.06em;transform:rotate(-5deg);mix-blend-mode:multiply;}"
+    },
+    {
+      "name": "Category Ledger",
+      "kind": "card",
+      "refersTo": "ledger",
+      "description": "Ink-ruled ledger with a carbon-tint head, mono count and linked rows.",
+      "html": "<div class=\"ds-ledger\"><div class=\"ds-lhead\"><span>ესთეტიკა</span><span class=\"ds-cnt\">2</span></div><a href=\"#\" class=\"ds-row\"><span>კოსმეტოლოგია</span><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12h14\"/><path d=\"m12 5 7 7-7 7\"/></svg></a><a href=\"#\" class=\"ds-row\"><span>ლაზერული ეპილაცია</span><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12h14\"/><path d=\"m12 5 7 7-7 7\"/></svg></a></div>",
+      "css": ".ds-ledger{--cw-paper:#fdfdfb;--cw-ink:#23235e;--cw-ink-soft:#4a4b85;--cw-rule:#cfd1ea;--cw-rule-strong:#9fa3d1;--cw-desk:#1c1b48;--cw-desk-soft:#2a2960;--cw-on-desk:#eceefb;--cw-on-desk-soft:#b9bce6;--cw-stamp:#5a2fc2;--cw-stamp-hover:#4a22a8;--cw-beauty:#f8c8d8;--cw-beauty-ink:#86194a;--cw-aesthetics:#f6e17a;--cw-aesthetics-ink:#5f4800;--cw-dental:#bfe0f7;--cw-dental-ink:#0d4a7f;--cw-ease:cubic-bezier(0.16,1,0.3,1);font-family:\"Noto Sans Georgian\",Sora,system-ui,sans-serif;--ledger-bg:var(--cw-aesthetics);--ledger-ink:var(--cw-aesthetics-ink);max-width:22rem;border:1.5px solid var(--cw-ink);border-radius:4px;background:#fff;color:var(--cw-ink);overflow:hidden;}.ds-lhead{display:flex;justify-content:space-between;align-items:baseline;padding:.8rem 1rem;background:var(--ledger-bg);color:var(--ledger-ink);border-bottom:1.5px solid var(--cw-ink);font-size:1.125rem;font-weight:800;font-stretch:85%;}.ds-cnt{font-family:\"Martian Mono\",ui-monospace,monospace;font-size:.75rem;font-variant-numeric:tabular-nums;}.ds-row{display:flex;align-items:center;gap:.75rem;padding:.8rem 1rem;border-top:1px solid var(--cw-rule);font-weight:600;color:inherit;text-decoration:none;transition:background-color 160ms var(--cw-ease);}.ds-row span{flex:1;}.ds-row svg{color:var(--cw-ink-soft);}.ds-lhead+.ds-row{border-top:0;}.ds-row:hover{background:color-mix(in srgb,var(--ledger-bg) 45%,#fff);}.ds-row:focus-visible{outline:3px solid var(--cw-stamp);outline-offset:-3px;}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Appointment Card",
+    "overview": "The public catalog is a printed form lying on an indigo desk. White form paper is ruled in a single indigo form ink; questions are boxed fields with small printed captions; the three verticals are carbon copies of the same form in pink (beauty), canary (aesthetics) and sky blue (dental); the one action ink is a violet rubber stamp. Businesses appear as numbered tear-off tickets with die-cut notches and a dashed perforation between stub and body. Every device is something a real appointment card, carbon triplicate or ticket roll actually has.\n\nDensity is that of a form: hairline rules (1.5px ink, 1px pale rule) carry structure, not cards floating on whitespace. Desk bands (header, hero, business band, footer) frame the paper; paper set on the desk keeps paper colours. Headlines are condensed, very heavy Georgian set at narrow width; every number (dates, ticket №, counts, domain) is typewriter mono with tabular digits. Motion is physical and short: sheets slide, tabs lift, tickets rise a few pixels, all on one out-expo curve, and all of it switches off under reduced motion.\n\nThe world explicitly rejects the category default it replaces: a soft pink gradient banner carousel over rows of rounded photo cards. No glass and no decorative colour gradients.",
+    "keyCharacteristics": [
+      "One indigo ink for all text and rules; one violet stamp for actions, statuses and promotion marks.",
+      "Vertical colour is carbon-copy colour: it owns a whole region (tab, sheet, stub, ledger head), never a stray accent.",
+      "Square-ish corners (2-6px), hairline rules, perforations and die-cut notches as the edge language.",
+      "Condensed heavy Georgian display; mono tabular numerals for anything counted or dated.",
+      "Soft, ink-tinted drop shadows only where paper sits on the desk or lifts on interaction."
+    ],
+    "rules": [
+      {
+        "name": "The One Ink Rule",
+        "body": "Text and structural rules are Form Ink (or Faded Ink for secondary). No second text colour exists on paper; on a carbon tint, use that vertical's own ink.",
+        "section": "colors"
+      },
+      {
+        "name": "The Carbon Copy Rule",
+        "body": "A vertical colour fills a whole region tied to that vertical (tab, sheet, ticket stub, ledger head, tint of the chosen card at 16%). It is never used as a generic accent, button colour, or decoration detached from a vertical.",
+        "section": "colors"
+      },
+      {
+        "name": "The Stamp Rule",
+        "body": "Violet means \"act\" or \"officially marked\". Primary actions, links to book, focus, and promotion/status stamps; nothing else.",
+        "section": "colors"
+      },
+      {
+        "name": "The Stamped Numeral Rule",
+        "body": "Every date, count, ticket number and the domain is set in Martian Mono with tabular digits. Prose never is.",
+        "section": "typography"
+      },
+      {
+        "name": "The Condensed Voice Rule",
+        "body": "Emphasis comes from width and weight (75-85% width, 800-850), not from a second display family or colour.",
+        "section": "typography"
+      },
+      {
+        "name": "The Paper Only Lifts Rule",
+        "body": "Surfaces are flat at rest except the card on the desk. Every other shadow is a response to state: chosen, pressed, hovered.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do set all text and structural rules in Form Ink on paper, and each vertical's own ink on its tint.",
+      "Do give every vertical its full carbon-copy pair and use it for whole regions (tab, sheet, stub, ledger head).",
+      "Do reserve Rubber-Stamp Violet for actions, focus, and stamp marks.",
+      "Do set dates, counts, ticket numbers and the domain in Martian Mono with tabular digits.",
+      "Do use perforations, die-cut notches, dashed tear lines and ruled lines as the edge vocabulary.",
+      "Do keep corners between 2px and 6px and borders at 1.5px ink or 1px pale rule.",
+      "Do show unbuilt features honestly as dashed outlines with a \"მალე\" stamp, not as hidden or fake content.",
+      "Do run all motion on cubic-bezier(0.16, 1, 0.3, 1) and disable it under prefers-reduced-motion."
+    ],
+    "donts": [
+      "Don't use pill-shaped buttons, chips or badges.",
+      "Don't use glass, backdrop blur, or decorative colour gradients (mask and ruling gradients that cut perforations or draw lines are fine).",
+      "Don't use hard offset shadows; shadows are soft and ink-tinted.",
+      "Don't use a vertical colour as a generic accent or a second action colour.",
+      "Don't set body text, captions or labels below 0.72rem.",
+      "Don't add a second display family; emphasis is width and weight of Noto Sans Georgian.",
+      "Don't pull values from the legacy `sf-` tokens in client/src/index.css for public catalog surfaces."
+    ]
+  }
+}

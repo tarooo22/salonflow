@@ -11,17 +11,18 @@ export function marketplacePromotionLabel(tier: string | undefined) {
   return tier === "VIP" ? "VIP / რეკლამა" : tier === "RECOMMENDED" ? "რეკომენდებული" : null;
 }
 
-export function marketplaceDiscoveryHref(path: "/salons" | "/salons/map", categorySlug?: string, search?: string) {
+export function marketplaceDiscoveryHref(path: "/salons" | "/salons/map", categorySlug?: string, search?: string, area?: string) {
   const params = new URLSearchParams();
   if (categorySlug) params.set("category", categorySlug);
   if (search?.trim()) params.set("q", search.trim());
+  if (area?.trim()) params.set("area", area.trim());
   const query = params.toString();
   return query ? `${path}?${query}` : path;
 }
 
 export function marketplaceDiscoveryFilters(queryString: string) {
   const params = new URLSearchParams(queryString.startsWith("?") ? queryString.slice(1) : queryString);
-  return { categorySlug: params.get("category") || undefined, search: params.get("q") || "" };
+  return { categorySlug: params.get("category") || undefined, search: params.get("q") || "", area: params.get("area") || "" };
 }
 
 export function MarketplaceListingCard({ item }: { item: any }) {

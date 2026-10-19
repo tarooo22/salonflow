@@ -1,0 +1,131 @@
+/* Public catalog world: the appointment card. Form paper ruled in indigo ink,
+   carbon-copy colours per vertical, violet rubber-stamp ink for actions. */
+
+.cw {
+  --cw-paper: #fdfdfb;
+  --cw-ink: #23235e;
+  --cw-ink-soft: #4a4b85;
+  --cw-rule: #cfd1ea;
+  --cw-rule-strong: #9fa3d1;
+  --cw-desk: #1c1b48;
+  --cw-desk-soft: #2a2960;
+  --cw-on-desk: #eceefb;
+  --cw-on-desk-soft: #b9bce6;
+  --cw-stamp: #5a2fc2;
+  --cw-stamp-hover: #4a22a8;
+  --cw-beauty: #f8c8d8;
+  --cw-beauty-ink: #86194a;
+  --cw-aesthetics: #f6e17a;
+  --cw-aesthetics-ink: #5f4800;
+  --cw-dental: #bfe0f7;
+  --cw-dental-ink: #0d4a7f;
+  --cw-font: "Noto Sans Georgian", "Sora", system-ui, sans-serif;
+  --cw-mono: "Martian Mono", ui-monospace, monospace;
+  --cw-ease: cubic-bezier(0.16, 1, 0.3, 1);
+
+  background: var(--cw-paper);
+  color: var(--cw-ink);
+  font-family: var(--cw-font);
+  font-variant-numeric: tabular-nums;
+}
+.cw ::selection { background: var(--cw-beauty); color: var(--cw-ink); }
+.cw :focus-visible { outline: 3px solid var(--cw-stamp); outline-offset: 2px; }
+.cw a { text-underline-offset: 0.2em; }
+
+.cw-container { width: min(100% - 2rem, 76rem); margin-inline: auto; }
+
+/* Type */
+.cw-display { font-stretch: 75%; font-weight: 850; line-height: 1.04; letter-spacing: -0.01em; text-wrap: balance; }
+.cw-h2 { font-stretch: 80%; font-weight: 800; font-size: clamp(1.6rem, 3.2vw, 2.4rem); line-height: 1.1; text-wrap: balance; }
+.cw-caption { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--cw-ink-soft); }
+.cw-num { font-family: var(--cw-mono); font-stretch: 100%; font-variant-numeric: tabular-nums; letter-spacing: 0; }
+.cw-lede { color: var(--cw-ink-soft); font-size: 1.05rem; line-height: 1.6; max-width: 34rem; }
+
+/* Desk band (header, hero, business band, footer) */
+.cw-desk { background: var(--cw-desk); color: var(--cw-on-desk); }
+.cw-desk .cw-caption { color: var(--cw-on-desk-soft); }
+.cw-desk :focus-visible { outline-color: #fff; }
+/* Paper placed on the desk keeps paper colours. */
+.cw-desk .cw-card .cw-caption { color: var(--cw-ink-soft); }
+.cw-desk .cw-card :focus-visible, .cw-desk .cw-tab:focus-visible { outline-color: var(--cw-stamp); }
+
+.cw-navlink { color: var(--cw-on-desk); font-size: 0.9rem; font-weight: 600; padding: 0.5rem 0.65rem; border-radius: 4px; transition: background-color 160ms var(--cw-ease); }
+.cw-navlink:hover { background: var(--cw-desk-soft); }
+.cw-soon { font-size: 0.72rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; border: 1.5px solid currentColor; border-radius: 3px; padding: 0 0.3rem; margin-left: 0.35rem; opacity: 0.8; }
+
+/* Buttons */
+.cw-btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; min-height: 3rem; padding: 0 1.4rem; border-radius: 4px; font-weight: 800; font-stretch: 85%; font-size: 1rem; letter-spacing: 0.01em; transition: background-color 160ms var(--cw-ease), transform 160ms var(--cw-ease), box-shadow 160ms var(--cw-ease); }
+.cw-btn-stamp { background: var(--cw-stamp); color: #fff; box-shadow: 0 6px 14px -8px rgba(58, 28, 134, 0.75); }
+.cw-btn-stamp:hover { background: var(--cw-stamp-hover); }
+.cw-btn-stamp:active { transform: translateY(1px); box-shadow: 0 2px 6px -4px rgba(58, 28, 134, 0.75); }
+.cw-btn-line { border: 1.5px solid currentColor; }
+.cw-btn-line:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
+.cw-btn-paper { background: var(--cw-paper); color: var(--cw-ink); }
+.cw-btn-paper:hover { background: #fff; }
+
+/* The appointment card and its carbon copies */
+.cw-stack { --cw-off: 9px; position: relative; padding-top: 2.6rem; margin-right: calc(var(--cw-off) * 3); margin-bottom: calc(var(--cw-off) * 3); }
+.cw-tabs { position: absolute; top: 0; left: 1.25rem; right: 1.25rem; display: flex; gap: 0.35rem; z-index: 5; }
+.cw-tab { position: relative; padding: 0.55rem 0.9rem 0.85rem; border-radius: 6px 6px 0 0; font-size: 0.85rem; font-weight: 800; font-stretch: 85%; color: var(--tab-ink); background: var(--tab-bg); transform: translateY(6px); transition: transform 320ms var(--cw-ease), box-shadow 320ms var(--cw-ease); }
+.cw-tab:hover { transform: translateY(2px); }
+.cw-tab[aria-pressed="true"] { transform: translateY(-2px); box-shadow: 0 -6px 14px -10px rgba(0, 0, 0, 0.5); }
+.cw-tab-all { --tab-bg: var(--cw-paper); --tab-ink: var(--cw-ink); }
+.cw-tab-soon { font-size: 0.72rem; font-weight: 800; margin-left: 0.3rem; opacity: 0.75; text-transform: uppercase; }
+
+.cw-sheet { position: absolute; inset: 2.6rem 0 0 0; border-radius: 4px; background: var(--sheet-bg); transition: transform 560ms var(--cw-ease), box-shadow 560ms var(--cw-ease); }
+.cw-sheet[data-chosen="true"] { box-shadow: 0 10px 24px -14px rgba(0, 0, 0, 0.6); }
+.cw-card { position: relative; z-index: 4; color: var(--cw-ink); border-radius: 4px; filter: drop-shadow(0 18px 30px rgba(8, 7, 32, 0.45)); }
+/* The chosen carbon copy's tint shows through the original, like carbon transfer. */
+.cw-card-inner { padding: clamp(1.25rem, 3.5vw, 2.75rem); padding-bottom: clamp(1.75rem, 4vw, 3rem);
+  -webkit-mask: radial-gradient(circle 7px at 50% 100%, #0000 97%, #000) 0 0 / 18px 100% repeat-x;
+  mask: radial-gradient(circle 7px at 50% 100%, #0000 97%, #000) 0 0 / 18px 100% repeat-x;
+  background: color-mix(in srgb, var(--cw-paper) calc(100% - var(--tint-amount, 0%)), var(--tint, var(--cw-paper)));
+  border-radius: 4px 4px 0 0; transition: background-color 560ms var(--cw-ease); }
+.cw-card-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-bottom: 0.9rem; border-bottom: 1.5px solid var(--cw-ink); font-size: 0.8rem; color: var(--cw-ink-soft); }
+.cw-section-hero { overflow-x: clip; }
+.cw-card-band { height: 10px; margin: -1px 0 0; background: var(--band, var(--cw-ink)); border-radius: 4px 4px 0 0; transition: background-color 420ms var(--cw-ease); }
+
+.cw-field { display: block; border: 1.5px solid var(--cw-ink); border-radius: 3px; background: #fff; padding: 0.4rem 0.75rem 0.55rem; transition: box-shadow 160ms var(--cw-ease); }
+.cw-field:focus-within { box-shadow: 0 0 0 3px color-mix(in srgb, var(--cw-stamp) 35%, transparent); }
+.cw-field input { width: 100%; border: 0; outline: 0; background: transparent; font-size: 1.05rem; font-weight: 600; color: var(--cw-ink); padding: 0.15rem 0 0; }
+.cw-field input::placeholder { color: #6c6e9f; font-weight: 500; }
+.cw .cw-field input:focus-visible { outline: none; }
+
+.cw-perf-line { border-top: 2px dashed var(--cw-rule-strong); }
+
+/* Tickets (approved businesses) */
+.cw-ticket { --stub: 4.75rem; position: relative; display: grid; grid-template-columns: var(--stub) 1fr; min-height: 8.5rem; background: #fff; border: 1.5px solid var(--cw-rule); border-radius: 4px; transition: transform 260ms var(--cw-ease), box-shadow 260ms var(--cw-ease), border-color 260ms var(--cw-ease);
+  -webkit-mask: radial-gradient(circle 9px at var(--stub) 0, #0000 97%, #000) top / 100% 51% no-repeat, radial-gradient(circle 9px at var(--stub) 100%, #0000 97%, #000) bottom / 100% 51% no-repeat;
+  mask: radial-gradient(circle 9px at var(--stub) 0, #0000 97%, #000) top / 100% 51% no-repeat, radial-gradient(circle 9px at var(--stub) 100%, #0000 97%, #000) bottom / 100% 51% no-repeat; }
+.cw-ticket:hover { transform: translateY(-3px); border-color: var(--cw-rule-strong); box-shadow: 0 14px 24px -18px rgba(35, 35, 94, 0.6); }
+.cw-ticket-stub { display: flex; flex-direction: column; justify-content: space-between; align-items: center; padding: 0.75rem 0.4rem; background: var(--stub-bg, var(--cw-beauty)); color: var(--stub-ink, var(--cw-beauty-ink)); border-right: 2px dashed color-mix(in srgb, var(--cw-ink) 30%, transparent); }
+.cw-ticket-stub .cw-num { writing-mode: vertical-rl; transform: rotate(180deg); font-size: 0.75rem; font-weight: 600; }
+.cw-ticket-cover { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 2px; }
+
+.cw-stamp-mark { display: inline-block; color: var(--cw-stamp); border: 2px solid currentColor; border-radius: 4px; padding: 0.05rem 0.45rem; font-weight: 900; font-stretch: 75%; font-size: 0.8rem; letter-spacing: 0.06em; text-transform: uppercase; transform: rotate(-5deg); mix-blend-mode: multiply; }
+
+/* Category ledger */
+.cw-ledger { border: 1.5px solid var(--cw-ink); border-radius: 4px; background: #fff; }
+.cw-ledger-head { padding: 0.8rem 1rem; background: var(--ledger-bg); color: var(--ledger-ink); display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; border-bottom: 1.5px solid var(--cw-ink); }
+.cw-ledger-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.8rem 1rem; border-top: 1px solid var(--cw-rule); font-weight: 600; transition: background-color 160ms var(--cw-ease); }
+.cw-ledger-row:first-of-type { border-top: 0; }
+a.cw-ledger-row:hover { background: color-mix(in srgb, var(--ledger-bg) 45%, #fff); }
+.cw-ticket-blank { background: repeating-linear-gradient(to bottom, transparent 0 1.9rem, var(--cw-rule) 1.9rem calc(1.9rem + 1px)); }
+
+@media (max-width: 767px) { .cw-ticket-extra { display: none; } }
+
+.cw-section { padding-block: clamp(3.5rem, 7vw, 6rem); }
+.cw-rule-top { border-top: 1.5px solid var(--cw-ink); }
+
+@media (max-width: 640px) {
+  .cw-stack { --cw-off: 5px; }
+  .cw-tabs { left: 0.5rem; right: 0.5rem; gap: 0.2rem; overflow-x: auto; }
+  .cw-tabs { display: grid; grid-template-columns: auto 1fr 1fr 1.25fr; align-items: end; overflow: visible; }
+  .cw-tab { padding: 0.45rem 0.4rem 0.75rem; font-size: 0.7rem; line-height: 1.15; text-align: center; }
+  .cw-tab-soon { display: block; margin: 0.1rem 0 0; }
+  .cw-ticket { --stub: 3.5rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cw-sheet, .cw-tab, .cw-ticket, .cw-card-band, .cw-btn { transition: none; }
+}

@@ -120,3 +120,7 @@ node_modules/
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+
+# Impeccable local review artifacts
+/.impeccable/review/
+/.impeccable/questions/

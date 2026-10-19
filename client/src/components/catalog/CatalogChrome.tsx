@@ -1,0 +1,77 @@
+import { PublicLanguageSelector } from "@/components/public/PublicPrimitives";
+import { usePublicLocale } from "@/contexts/PublicLocaleContext";
+import { BRAND } from "@shared/brand";
+import { LogIn, Menu, X } from "lucide-react";
+import { useState } from "react";
+import { Link } from "wouter";
+import "./catalog.css";
+
+const navigation: Array<{ href: string; label: string; soon?: boolean }> = [
+  { href: "/salons", label: "კატალოგი" },
+  { href: "/salons/map", label: "რუკა" },
+  { href: "/products", label: "პროდუქტები", soon: true },
+  { href: "/vacancies", label: "ვაკანსიები", soon: true },
+  { href: "/partner", label: "ბიზნესისთვის" },
+];
+
+export function CatalogWordmark() {
+  return <span className="inline-flex items-baseline gap-2">
+    <span className="cw-display text-[1.7rem] leading-none">{BRAND.nameKa}</span>
+    <span className="cw-num hidden text-[0.7rem] text-[var(--cw-on-desk-soft)] sm:inline">{BRAND.domain}</span>
+  </span>;
+}
+
+function NavItem({ item, onNavigate }: { item: (typeof navigation)[number]; onNavigate?: () => void }) {
+  if (item.soon) return <span className="cw-navlink cursor-default opacity-70" aria-disabled="true">{item.label}<span className="cw-soon">მალე</span></span>;
+  return <Link href={item.href} className="cw-navlink" onClick={onNavigate}>{item.label}</Link>;
+}
+
+export function CatalogHeader() {
+  const [open, setOpen] = useState(false);
+  const { t } = usePublicLocale();
+  return <header className="cw-desk relative z-20">
+    <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-3 focus:z-50 focus:rounded focus:bg-white focus:px-4 focus:py-2 focus:text-[var(--cw-ink)]">{t("skip")}</a>
+    <div className="cw-container flex min-h-16 items-center justify-between gap-4 py-3">
+      <Link href="/" aria-label={`${BRAND.nameKa} — მთავარი`}><CatalogWordmark /></Link>
+      <nav aria-label="მთავარი ნავიგაცია" className="hidden items-center gap-1 lg:flex">{navigation.map(item => <NavItem key={item.href} item={item} />)}</nav>
+      <div className="flex items-center gap-2">
+        <span className="hidden sm:block"><PublicLanguageSelector /></span>
+        <Link href="/login" className="cw-btn cw-btn-paper min-h-10 px-3 text-sm sm:px-4"><LogIn className="size-4" aria-hidden="true" /><span className="max-sm:sr-only">შესვლა</span></Link>
+        <button type="button" className="cw-navlink lg:hidden" aria-expanded={open} aria-controls="cw-mobile-nav" aria-label={open ? "მენიუს დახურვა" : "მენიუს გახსნა"} onClick={() => setOpen(value => !value)}>
+          {open ? <X className="size-5" aria-hidden="true" /> : <Menu className="size-5" aria-hidden="true" />}
+        </button>
+      </div>
+    </div>
+    {open ? <nav id="cw-mobile-nav" aria-label="მობილური ნავიგაცია" className="cw-container grid gap-1 border-t border-[var(--cw-desk-soft)] pb-4 pt-2 lg:hidden">{navigation.map(item => <NavItem key={item.href} item={item} onNavigate={() => setOpen(false)} />)}</nav> : null}
+  </header>;
+}
+
+export function CatalogFooter() {
+  const year = new Date().getFullYear();
+  return <footer className="cw-desk">
+    <div className="cw-container grid gap-10 py-14 md:grid-cols-[1.4fr_1fr_1fr]">
+      <div>
+        <CatalogWordmark />
+        <p className="mt-4 max-w-sm text-sm leading-6 text-[var(--cw-on-desk-soft)]">ონლაინ ჩაწერა სალონებში, ესთეტიკის ცენტრებსა და სტომატოლოგიურ კლინიკებში — მთელ საქართველოში.</p>
+      </div>
+      <div>
+        <p className="cw-caption">კლიენტისთვის</p>
+        <ul className="mt-3 grid gap-2 text-sm">
+          <li><Link href="/salons" className="hover:underline">კატალოგი</Link></li>
+          <li><Link href="/salons/map" className="hover:underline">რუკა</Link></li>
+          <li><Link href="/faq" className="hover:underline">ხშირი კითხვები</Link></li>
+        </ul>
+      </div>
+      <div>
+        <p className="cw-caption">ბიზნესისთვის</p>
+        <ul className="mt-3 grid gap-2 text-sm">
+          <li><Link href="/partner" className="hover:underline">გახდი პარტნიორი</Link></li>
+          <li><Link href="/pricing" className="hover:underline">ტარიფები</Link></li>
+          <li><Link href="/contact" className="hover:underline">კონტაქტი</Link></li>
+          <li><Link href="/privacy" className="hover:underline">კონფიდენციალურობა</Link></li>
+        </ul>
+      </div>
+    </div>
+    <div className="cw-container border-t border-[var(--cw-desk-soft)] py-5 text-xs text-[var(--cw-on-desk-soft)]"><span className="cw-num">© {year}</span> {BRAND.name}</div>
+  </footer>;
+}
