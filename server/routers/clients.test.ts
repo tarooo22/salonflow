@@ -186,7 +186,7 @@ describe("clients.merge", () => {
       targetClientId: target.id,
       reason: "დუბლიკატი ჩანაწერი",
     })).resolves.toEqual({ id: "client_merge_000001" });
-    expect(tx.update).toHaveBeenCalledTimes(3);
+    expect(tx.update).toHaveBeenCalledTimes(5); // appointments, gallery, dental chart, aesthetic records, source status;
     expect(values).toHaveBeenCalledWith(expect.objectContaining({ sourceClientId: source.id, targetClientId: target.id, mergedByUserId: user.id }));
   });
 });

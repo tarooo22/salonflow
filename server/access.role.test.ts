@@ -23,4 +23,13 @@ describe("SalonFlow role-action policy", () => {
     expect(roleCan("STAFF", "clients:manage")).toBe(false);
     expect(roleCan("STAFF", "reports:view")).toBe(false);
   });
+
+  it("grants clinical (health) data to OWNER, MANAGER and STAFF but never RECEPTIONIST", () => {
+    for (const action of ["clinical:view", "clinical:write"]) {
+      expect(roleCan("OWNER", action)).toBe(true);
+      expect(roleCan("MANAGER", action)).toBe(true);
+      expect(roleCan("STAFF", action)).toBe(true);
+      expect(roleCan("RECEPTIONIST", action)).toBe(false);
+    }
+  });
 });

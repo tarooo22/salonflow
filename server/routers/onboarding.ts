@@ -48,6 +48,7 @@ export const onboardingRouter = router({
         id: organizationId,
         name: input.organization.name,
         slug: input.organization.slug,
+        vertical: input.organization.vertical,
         billingCode: `SF-${organizationId.slice(-8).toUpperCase()}`,
         defaultTimezone: input.organization.timezone,
         contactPhone: normalizeGeorgianPhone(input.organization.contactPhone),

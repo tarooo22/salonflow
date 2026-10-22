@@ -101,6 +101,8 @@ export const users = mysqlTable("users", {
   uniqueIndex("users_normalized_phone_uq").on(table.normalizedPhone),
 ]);
 
+export const organizationVerticalValues = ["SALON", "AESTHETICS", "DENTAL"] as const;
+
 export const organizations = mysqlTable("organizations", {
   id: varchar("id", { length: 36 }).primaryKey(),
   name: varchar("name", { length: 160 }).notNull(),
@@ -111,6 +113,8 @@ export const organizations = mysqlTable("organizations", {
   contactPhone: varchar("contactPhone", { length: 32 }),
   contactEmail: varchar("contactEmail", { length: 320 }),
   billingCode: varchar("billingCode", { length: 24 }),
+  /** Kind of business panel: decides which clinical records (dental chart / aesthetic procedures) are available. */
+  vertical: mysqlEnum("vertical", organizationVerticalValues).default("SALON").notNull(),
   status: recordStatus.default("ACTIVE").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -1092,3 +1096,46 @@ export const products = mysqlTable("products", {
 
 export type Vacancy = typeof vacancies.$inferSelect;
 export type Product = typeof products.$inferSelect;
+
+export const dentalConditionValues = ["HEALTHY", "CARIES", "FILLED", "CROWN", "ROOT_CANAL", "IMPLANT", "BRIDGE", "MISSING", "EXTRACTION_NEEDED", "OTHER"] as const;
+export const aestheticDoseUnitValues = ["UNITS", "ML", "MG", "OTHER"] as const;
+
+/** Append-only tooth chart (FDI codes). A correction is a new row; the latest row per tooth is the current state. */
+export const dentalToothRecords = mysqlTable("dental_tooth_records", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  organizationId: varchar("organizationId", { length: 36 }).notNull().references(() => organizations.id),
+  clientId: varchar("clientId", { length: 36 }).notNull().references(() => clients.id),
+  toothCode: varchar("toothCode", { length: 2 }).notNull(),
+  /** Subset of M,O,D,B,L in canonical order, e.g. "MOD". */
+  surfaces: varchar("surfaces", { length: 5 }),
+  condition: mysqlEnum("tooth_condition", dentalConditionValues).notNull(),
+  note: varchar("note", { length: 1000 }),
+  appointmentId: varchar("appointmentId", { length: 36 }).references(() => appointments.id),
+  recordedByUserId: int("recordedByUserId").notNull().references(() => users.id),
+  recordedAt: timestamp("recordedAt").defaultNow().notNull(),
+}, table => [index("dental_tooth_client_tooth_idx").on(table.organizationId, table.clientId, table.toothCode, table.recordedAt)]);
+
+/** Aesthetic procedure log. Content is never edited or deleted; mistakes are voided with a reason. */
+export const aestheticProcedureRecords = mysqlTable("aesthetic_procedure_records", {
+  id: varchar("id", { length: 36 }).primaryKey(),
+  organizationId: varchar("organizationId", { length: 36 }).notNull().references(() => organizations.id),
+  clientId: varchar("clientId", { length: 36 }).notNull().references(() => clients.id),
+  appointmentId: varchar("appointmentId", { length: 36 }).references(() => appointments.id),
+  staffProfileId: varchar("staffProfileId", { length: 36 }).references(() => staffProfiles.id),
+  performedAt: timestamp("performedAt").notNull(),
+  procedureName: varchar("procedureName", { length: 160 }).notNull(),
+  productName: varchar("productName", { length: 160 }),
+  batchNumber: varchar("batchNumber", { length: 80 }),
+  /** YYYY-MM-DD */
+  productExpiry: date("productExpiry", { mode: "string" }),
+  /** Dose in hundredths of the unit (12.50 units = 1250); never a float. */
+  doseHundredths: int("doseHundredths"),
+  doseUnit: mysqlEnum("dose_unit", aestheticDoseUnitValues),
+  treatmentAreas: varchar("treatmentAreas", { length: 500 }),
+  notes: varchar("notes", { length: 2000 }),
+  recordedByUserId: int("recordedByUserId").notNull().references(() => users.id),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  voidedAt: timestamp("voidedAt"),
+  voidedByUserId: int("voidedByUserId").references(() => users.id),
+  voidReason: varchar("voidReason", { length: 300 }),
+}, table => [index("aesthetic_client_performed_idx").on(table.organizationId, table.clientId, table.performedAt)]);

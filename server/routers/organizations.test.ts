@@ -127,3 +127,25 @@ describe("organizations.updateLocationSettings", () => {
     expect(where).toHaveBeenCalledOnce();
   });
 });
+
+describe("organizations.setVertical", () => {
+  it("is OWNER-only, changes the vertical and writes an audit entry", async () => {
+    const where = vi.fn(async () => undefined);
+    const set = vi.fn(() => ({ where }));
+    const values = vi.fn(async () => undefined);
+    const limit = vi.fn(async () => [{ vertical: "SALON" }]);
+    mocked.nanoid.mockReturnValue("audit_vertical_0000001");
+    mocked.db = {
+      select: () => ({ from: () => ({ where: () => ({ limit }) }) }),
+      transaction: async (callback: (tx: unknown) => Promise<void>) => callback({ update: () => ({ set }), insert: () => ({ values }) }),
+    };
+    await expect(organizationRouter.createCaller({ user } as never).setVertical({ organizationId: "organization_0001", vertical: "DENTAL" })).resolves.toEqual({ vertical: "DENTAL" });
+    expect(mocked.requireOrganizationRole).toHaveBeenCalledWith(user, "organization_0001", ["OWNER"]);
+    expect(set).toHaveBeenCalledWith({ vertical: "DENTAL" });
+    expect(values).toHaveBeenCalledWith(expect.objectContaining({ action: "ORGANIZATION_VERTICAL_CHANGED", beforeState: { vertical: "SALON" }, afterState: { vertical: "DENTAL" } }));
+  });
+
+  it("rejects an unknown vertical", async () => {
+    await expect(organizationRouter.createCaller({ user } as never).setVertical({ organizationId: "organization_0001", vertical: "SPA" as never })).rejects.toThrow();
+  });
+});

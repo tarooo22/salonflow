@@ -174,9 +174,12 @@ export const legacyLocalAccountClaimSchema = z.union([
   }),
 ]);
 
+export const organizationVerticalSchema = z.enum(["SALON", "AESTHETICS", "DENTAL"]);
+
 export const organizationCreateSchema = z.object({
   name: z.string().trim().min(2).max(160),
   slug: slugSchema,
+  vertical: organizationVerticalSchema.default("SALON"),
   timezone: timezoneSchema.default("Asia/Tbilisi"),
   contactPhone: z.string().trim().max(32).optional(),
   contactEmail: z.string().trim().email().max(320).optional(),
@@ -883,3 +886,60 @@ export const productPublicListSchema = z.object({
   offset: z.number().int().min(0).default(0),
 });
 export const productByLocationSchema = z.object({ publicSlug: slugSchema });
+
+// ---- Clinical records (dental chart / aesthetic procedures) ----
+export const organizationSetVerticalSchema = organizationScopeSchema.extend({ vertical: organizationVerticalSchema });
+
+/** FDI two-digit notation: permanent 11-18, 21-28, 31-38, 41-48; primary 51-55, 61-65, 71-75, 81-85. */
+export function isValidToothCode(code: string): boolean {
+  if (!/^[1-8][1-8]$/.test(code)) return false;
+  const quadrant = Number(code[0]);
+  const position = Number(code[1]);
+  return quadrant <= 4 ? true : position <= 5;
+}
+export const toothCodeSchema = z.string().trim().refine(isValidToothCode, "კბილის კოდი არასწორია (FDI: 11-48 ან 51-85).");
+
+export const TOOTH_SURFACES = ["M", "O", "D", "B", "L"] as const;
+/** Any subset of M,O,D,B,L (no duplicates); normalised to canonical MODBL order, empty means none. */
+export const toothSurfacesSchema = z.string().trim().toUpperCase().refine(
+  value => /^[MODBL]*$/.test(value) && new Set(value).size === value.length,
+  "ზედაპირები უნდა იყოს M, O, D, B, L-ის ქვესიმრავლე განმეორების გარეშე.",
+).transform(value => TOOTH_SURFACES.filter(surface => value.includes(surface)).join("") || undefined);
+
+export const dentalConditionSchema = z.enum(["HEALTHY", "CARIES", "FILLED", "CROWN", "ROOT_CANAL", "IMPLANT", "BRIDGE", "MISSING", "EXTRACTION_NEEDED", "OTHER"]);
+
+export const dentalChartSchema = organizationScopeSchema.extend({ clientId: opaqueIdSchema });
+export const dentalToothHistorySchema = dentalChartSchema.extend({ toothCode: toothCodeSchema });
+export const dentalRecordSchema = dentalToothHistorySchema.extend({
+  surfaces: toothSurfacesSchema.optional(),
+  condition: dentalConditionSchema,
+  note: z.string().trim().max(1000).optional(),
+  appointmentId: opaqueIdSchema.optional(),
+});
+
+export const aestheticDoseUnitSchema = z.enum(["UNITS", "ML", "MG", "OTHER"]);
+const calendarDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value => {
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}, "თარიღი არასწორია.");
+
+export const aestheticListSchema = dentalChartSchema;
+export const aestheticCreateSchema = dentalChartSchema.extend({
+  appointmentId: opaqueIdSchema.optional(),
+  staffProfileId: opaqueIdSchema.optional(),
+  // TIMESTAMP range, and no procedures dated more than a day ahead.
+  performedAt: z.coerce.date().refine(date => date.getTime() >= Date.UTC(2000, 0, 1) && date.getTime() <= Date.now() + 86_400_000, "პროცედურის თარიღი არასწორია.").optional(),
+  procedureName: z.string().trim().min(2).max(160),
+  productName: z.string().trim().min(1).max(160).optional(),
+  batchNumber: z.string().trim().min(1).max(80).optional(),
+  productExpiry: calendarDateSchema.optional(),
+  /** Integer hundredths of the unit: 12.50 units = 1250. */
+  doseHundredths: z.number().int().min(1).max(10_000_000).optional(),
+  doseUnit: aestheticDoseUnitSchema.optional(),
+  treatmentAreas: z.string().trim().max(500).optional(),
+  notes: z.string().trim().max(2000).optional(),
+}).refine(input => (input.doseHundredths === undefined) === (input.doseUnit === undefined), { path: ["doseUnit"], message: "დოზა და საზომი ერთეული ერთად უნდა იყოს მითითებული." });
+export const aestheticVoidSchema = organizationScopeSchema.extend({
+  id: opaqueIdSchema,
+  reason: z.string().trim().min(3, "ბათილობის მიზეზი აუცილებელია.").max(300),
+});

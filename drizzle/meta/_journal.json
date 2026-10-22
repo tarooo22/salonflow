@@ -134,6 +134,13 @@
       "when": 1792410381112,
       "tag": "0018_vacancies_products_dental",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "5",
+      "when": 1792688375156,
+      "tag": "0019_wealthy_mandroid",
+      "breakpoints": true
     }
   ]
 }

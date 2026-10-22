@@ -26,6 +26,7 @@ import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 import { trpc } from "@/lib/trpc";
+import { clientTerms } from "@/lib/verticalTerms";
 import { GuidedHelpTour } from "@/components/workspace/GuidedHelpTour";
 import { CommandPalette } from "@/components/workspace/CommandPalette";
 
@@ -141,7 +142,8 @@ function DashboardLayoutContent({
   const workspaceLocked = workspaceStatus.data?.locked === true;
   const workspaceRestricted = Boolean(organizationId && (workspaceStatus.isLoading || workspaceStatus.isError || workspaceLocked));
   const lockedOwnerItems = workspaceRestricted && role === "OWNER" ? [{ icon: ReceiptText, label: "პაკეტის გააქტიურება", path: "/app/billing", group: "წვდომის აღდგენა", roles: ["OWNER"] }] : [];
-  const visibleMenuItems = role ? [...menuItems.filter(item => (item.roles as readonly string[]).includes(role) && (!workspaceRestricted || item.path === "/app/today")), ...lockedOwnerItems] : [];
+  const clientsLabel = clientTerms(organizations.data?.[0]?.organization.vertical).plural;
+  const visibleMenuItems = role ? [...menuItems.filter(item => (item.roles as readonly string[]).includes(role) && (!workspaceRestricted || item.path === "/app/today")).map(item => item.path === "/app/clients" ? { ...item, label: clientsLabel } : item), ...lockedOwnerItems] : [];
   const dailyItems = visibleMenuItems.filter(item => item.group === "დღის მართვა");
   const salesItems = visibleMenuItems.filter(item => item.group === "კლიენტები და გაყიდვა");
   const managementItems = visibleMenuItems.filter(item => item.group === "სალონის მართვა");

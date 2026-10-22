@@ -26,6 +26,8 @@ import { publicAnalyticsRouter } from "./routers/publicAnalytics";
 import { governanceRouter } from "./routers/governance";
 import { vacanciesRouter } from "./routers/vacancies";
 import { productsRouter } from "./routers/products";
+import { dentalRouter } from "./routers/dental";
+import { aestheticRouter } from "./routers/aesthetic";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -55,6 +57,8 @@ export const appRouter = router({
   governance: governanceRouter,
   vacancies: vacanciesRouter,
   products: productsRouter,
+  dental: dentalRouter,
+  aesthetic: aestheticRouter,
   public: publicRouter,
 });
 

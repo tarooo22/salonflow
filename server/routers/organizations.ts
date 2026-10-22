@@ -1,11 +1,12 @@
 import { and, asc, eq } from "drizzle-orm";
+import { TRPCError } from "@trpc/server";
 import { nanoid } from "nanoid";
-import { locations, organizationMemberships, organizations, staffLocations, staffProfiles, trialAccessEvents, trialAccessRequests } from "../../drizzle/schema";
+import { auditLogs, locations, organizationMemberships, organizations, staffLocations, staffProfiles, trialAccessEvents, trialAccessRequests } from "../../drizzle/schema";
 import { requireOrganizationRole } from "../access";
 import { requireDb } from "../db";
 import { normalizeEmail, normalizeGeorgianPhone } from "../lib/normalization";
 import { requireApprovedTrialForWorkspaceCreation } from "../lib/trialAccess";
-import { locationCreateSchema, locationSettingsUpdateSchema, organizationCreateSchema, organizationScopeSchema, workspaceSetupSchema } from "../../shared/validation";
+import { locationCreateSchema, locationSettingsUpdateSchema, organizationCreateSchema, organizationScopeSchema, organizationSetVerticalSchema, workspaceSetupSchema } from "../../shared/validation";
 import { protectedProcedure, router } from "../_core/trpc";
 
 export const organizationRouter = router({
@@ -30,6 +31,7 @@ export const organizationRouter = router({
         id: organizationId,
         name: input.name,
         slug: input.slug,
+        vertical: input.vertical,
         billingCode: `SF-${organizationId.slice(-8).toUpperCase()}`,
         defaultTimezone: input.timezone,
         contactPhone: normalizeGeorgianPhone(input.contactPhone),
@@ -62,6 +64,7 @@ export const organizationRouter = router({
         id: organizationId,
         name: input.organization.name,
         slug: input.organization.slug,
+        vertical: input.organization.vertical,
         billingCode: `SF-${organizationId.slice(-8).toUpperCase()}`,
         defaultTimezone: input.organization.timezone,
         contactPhone: normalizeGeorgianPhone(input.organization.contactPhone),
@@ -96,6 +99,20 @@ export const organizationRouter = router({
       await tx.insert(trialAccessEvents).values({ id: nanoid(21), trialRequestId: trial.id, eventType: "WORKSPACE_CREATED_LEGACY", actorUserId: ctx.user.id, metadata: { organizationId, locationId } });
     });
     return { organizationId, membershipId, locationId };
+  }),
+
+  /** Business type (salon / aesthetic clinic / dental clinic). OWNER only; existing clinical records are kept but hidden while the type does not match. */
+  setVertical: protectedProcedure.input(organizationSetVerticalSchema).mutation(async ({ ctx, input }) => {
+    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER"]);
+    const db = await requireDb();
+    const [current] = await db.select({ vertical: organizations.vertical }).from(organizations).where(eq(organizations.id, input.organizationId)).limit(1);
+    if (!current) throw new TRPCError({ code: "NOT_FOUND", message: "სამუშაო სივრცე ვერ მოიძებნა." });
+    if (current.vertical === input.vertical) return { vertical: input.vertical };
+    await db.transaction(async tx => {
+      await tx.update(organizations).set({ vertical: input.vertical }).where(eq(organizations.id, input.organizationId));
+      await tx.insert(auditLogs).values({ id: nanoid(21), organizationId: input.organizationId, actorUserId: ctx.user.id, action: "ORGANIZATION_VERTICAL_CHANGED", entityType: "organization", entityId: input.organizationId, beforeState: { vertical: current.vertical }, afterState: { vertical: input.vertical } });
+    });
+    return { vertical: input.vertical };
   }),
 
   createLocation: protectedProcedure.input(locationCreateSchema).mutation(async ({ ctx, input }) => {

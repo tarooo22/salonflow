@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { gelTextToTetri } from "@/lib/moneyInput";
 import { trpc } from "@/lib/trpc";
+import { VerticalPicker } from "@/components/clinical/VerticalPicker";
+import type { OrganizationVertical } from "@/lib/verticalTerms";
 import { Building2, CalendarClock, CheckCircle2, ChevronLeft, ChevronRight, MapPin, Scissors, UserRound } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
@@ -26,6 +28,7 @@ export default function WorkspaceSetup() {
   const trial = trpc.trialAccess.mine.useQuery();
   const currentUser = trpc.auth.me.useQuery();
   const [step, setStep] = useState(1);
+  const [vertical, setVertical] = useState<OrganizationVertical>("SALON");
   const [organizationName, setOrganizationName] = useState("");
   const [organizationSlug, setOrganizationSlug] = useState("");
   const [locationName, setLocationName] = useState("");
@@ -100,6 +103,7 @@ export default function WorkspaceSetup() {
       organization: {
         name: organizationName,
         slug: organizationSlug,
+        vertical,
         timezone,
         contactPhone: phone || undefined,
         contactEmail: email || undefined,
@@ -144,6 +148,7 @@ export default function WorkspaceSetup() {
               <div className="flex items-center gap-3"><div className="rounded-xl bg-primary/10 p-2 text-primary"><Building2 className="h-5 w-5" /></div><div><CardTitle>სალონი და პირველი ფილიალი</CardTitle><CardDescription>ეს მონაცემები ქმნის თქვენს დაცულ სივრცეს და საჯარო ონლაინ ჩაწერის მისამართს.</CardDescription></div></div>
             </CardHeader>
             <CardContent className="grid gap-5 sm:grid-cols-2">
+              <div className="sm:col-span-2"><VerticalPicker value={vertical} onChange={setVertical} legend="რა ტიპის ბიზნესი გაქვთ?" /></div>
               <div className="space-y-2 sm:col-span-2"><Label htmlFor="organization-name">სალონის ან ბიზნესის სახელი</Label><Input id="organization-name" value={organizationName} onChange={event => setOrganizationName(event.target.value)} placeholder="მაგ. Lela Beauty Studio" minLength={2} maxLength={160} required /></div>
               <div className="space-y-2"><Label htmlFor="organization-slug">სამუშაო სივრცის კოდი</Label><Input id="organization-slug" value={organizationSlug} onChange={event => setOrganizationSlug(event.target.value.toLowerCase())} placeholder="lela-beauty" pattern="[a-z0-9]+(-[a-z0-9]+)*" minLength={3} maxLength={96} required /><p className="text-xs text-muted-foreground">გამოიყენეთ ლათინური ასოები, ციფრები და დეფისი.</p></div>
               <div className="space-y-2"><Label htmlFor="timezone">დროის სარტყელი</Label><select id="timezone" value={timezone} onChange={event => setTimezone(event.target.value)} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"><option value="" disabled>აირჩიეთ დროის სარტყელი</option>{TIMEZONES.map(item => <option key={item} value={item}>{item}</option>)}</select><p className="text-xs text-muted-foreground">კალენდარი და თავისუფალი დროები ამ დროის სარტყელს დაეფუძნება.</p></div>
