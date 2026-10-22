@@ -16,7 +16,7 @@ async function ownerMembership(userId: number, organizationId: string) {
   if (!membership) throw new TRPCError({ code: "FORBIDDEN", message: "გადახდის ქვითრის მართვა ხელმისაწვდომია მხოლოდ სალონის მფლობელისთვის." });
   return db;
 }
-function requireAdmin(role: string) { if (role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "ეს მოქმედება ხელმისაწვდომია მხოლოდ SalonFlow platform admin-ისთვის." }); }
+function requireAdmin(role: string) { if (role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "ეს მოქმედება ხელმისაწვდომია მხოლოდ Chawera platform admin-ისთვის." }); }
 function monthFrom(date: Date) { const value = new Date(date); value.setMonth(value.getMonth() + 1); return value; }
 function hasReceiptSignature(bytes: Buffer, mimeType: string) {
   if (mimeType === "image/jpeg") return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;

@@ -54,7 +54,7 @@ const ContactPage = lazy(() => import("./pages/MarketingPages").then(module => (
 const Privacy = lazy(() => import("./pages/Privacy"));
 
 function RouteLoading() {
-  return <main className="sf-public-page grid min-h-screen place-items-center px-4" role="status" aria-live="polite"><div className="sf-luxury-panel flex w-full max-w-sm items-center gap-3 rounded-[var(--sf-radius-surface)] p-5"><span className="sf-skeleton size-9 rounded-xl" aria-hidden="true" /><p className="text-sm font-semibold">SalonFlow იტვირთება…</p></div></main>;
+  return <main className="sf-public-page grid min-h-screen place-items-center px-4" role="status" aria-live="polite"><div className="sf-luxury-panel flex w-full max-w-sm items-center gap-3 rounded-[var(--sf-radius-surface)] p-5"><span className="sf-skeleton size-9 rounded-xl" aria-hidden="true" /><p className="text-sm font-semibold">Chawera იტვირთება…</p></div></main>;
 }
 
 function Router() {

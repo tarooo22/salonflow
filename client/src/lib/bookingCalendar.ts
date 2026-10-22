@@ -19,7 +19,7 @@ export function createBookingCalendarIcs(event: BookingCalendarEvent) {
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//SalonFlow//Booking//KA",
+    "PRODID:-//Chawera//Booking//KA",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     "BEGIN:VEVENT",

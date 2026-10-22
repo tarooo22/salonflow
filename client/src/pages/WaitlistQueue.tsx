@@ -43,7 +43,7 @@ export default function WaitlistQueue() {
 
   let content: React.ReactNode;
   if (!organization) {
-    content = <WorkspaceState kind="empty" title="სამუშაო სივრცე ჯერ არ არის მზად" description="Waitlist მოთხოვნების სანახავად ჯერ შექმენით SalonFlow სამუშაო სივრცე." />;
+    content = <WorkspaceState kind="empty" title="სამუშაო სივრცე ჯერ არ არის მზად" description="Waitlist მოთხოვნების სანახავად ჯერ შექმენით Chawera სამუშაო სივრცე." />;
   } else if (queue.isLoading) {
     content = <WorkspaceState kind="loading" title="მოლოდინის სია იტვირთება" description="მოთხოვნები მალე გამოჩნდება." />;
   } else if (queue.isError) {

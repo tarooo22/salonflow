@@ -13,7 +13,7 @@ function sessionKey() {
 
 export async function createLocalSessionToken(openId: string, name: string | null) {
   const expirationSeconds = Math.floor((Date.now() + ONE_YEAR_MS) / 1000);
-  return new SignJWT({ kind: SESSION_KIND, name: name ?? "SalonFlow User" })
+  return new SignJWT({ kind: SESSION_KIND, name: name ?? "Chawera User" })
     .setProtectedHeader({ alg: "HS256", typ: "JWT" })
     .setSubject(openId)
     .setExpirationTime(expirationSeconds)

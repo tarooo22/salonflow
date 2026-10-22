@@ -23,7 +23,7 @@ export default function BillingAdmin() {
   const [, go] = useLocation();
   const utils = trpc.useUtils();
   const config = trpc.billing.adminConfig.useQuery(undefined, { enabled: user?.role === "admin" });
-  const [form, setForm] = useState({ beneficiaryName: "", personalNumber: "", accountNumber: "", monthlyPriceGel: "", transferCommentPrefix: "SF", privacyNoticeKa: "ქვითარი ხელით მოწმდება SalonFlow platform admin-ის მიერ." });
+  const [form, setForm] = useState({ beneficiaryName: "", personalNumber: "", accountNumber: "", monthlyPriceGel: "", transferCommentPrefix: "SF", privacyNoticeKa: "ქვითარი ხელით მოწმდება Chawera platform admin-ის მიერ." });
   const [formError, setFormError] = useState("");
   const [search, setSearch] = useState("");
   const [approvalId, setApprovalId] = useState<string | null>(null);
@@ -107,7 +107,7 @@ export default function BillingAdmin() {
           <AlertDialogDescription>დარწმუნდით, რომ უკვე ხელით შეამოწმეთ ქვითარი და გადარიცხვის კომენტარი. ეს მოქმედება შექმნის {approvalItem?.organizationName ?? "ამ სალონის"} 1-თვიან წვდომას.</AlertDialogDescription>
         </AlertDialogHeader>
         <div className="rounded-xl border bg-muted/30 p-3 text-sm">
-          <p><strong>SalonFlow ID:</strong> {approvalItem?.billingCodeSnapshot}</p>
+          <p><strong>Chawera ID:</strong> {approvalItem?.billingCodeSnapshot}</p>
           {approvalItem?.amountTetri ? <p className="mt-1"><strong>ქვითრის თანხა:</strong> {(approvalItem.amountTetri / 100).toLocaleString("ka-GE", { style: "currency", currency: "GEL" })}</p> : null}
         </div>
         <AlertDialogFooter>

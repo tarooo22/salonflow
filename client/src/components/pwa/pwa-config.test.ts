@@ -7,7 +7,7 @@ describe("PWA configuration", () => {
     const manifest = JSON.parse(readFileSync(resolve(process.cwd(), "client/public/manifest.webmanifest"), "utf8"));
     const serviceWorker = readFileSync(resolve(process.cwd(), "client/public/service-worker.js"), "utf8");
 
-    expect(manifest.name).toContain("SalonFlow");
+    expect(manifest.name).toContain("Chawera");
     expect(manifest.display).toBe("standalone");
     expect(manifest.icons[0].src).toContain("/manus-storage/");
     expect(serviceWorker).toContain('url.pathname.startsWith("/api/")');

@@ -9,11 +9,11 @@ function xmlEscape(value: string) {
   return value.replace(/[<>&'\"]/g, character => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "'": "&apos;", "\"": "&quot;" })[character] ?? character);
 }
 
-function requestOrigin(req: Request) {
+export function requestOrigin(req: Request) {
   const configured = process.env.PUBLIC_SITE_URL;
   if (configured && /^https:\/\/[a-z0-9.-]+(?:\:\d+)?$/i.test(configured)) return configured.replace(/\/$/, "");
-  const host = req.get("host") ?? "salonflow-dpxqgxgv.manus.space";
-  const safeHost = /^[a-z0-9.-]+(?::\d+)?$/i.test(host) ? host : "salonflow-dpxqgxgv.manus.space";
+  const host = req.get("host") ?? "salonflow-production-c542.up.railway.app";
+  const safeHost = /^[a-z0-9.-]+(?::\d+)?$/i.test(host) ? host : "salonflow-production-c542.up.railway.app";
   const protocol = safeHost.includes("localhost") || safeHost.startsWith("127.") ? "http" : "https";
   return `${protocol}://${safeHost}`;
 }

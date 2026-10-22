@@ -11,7 +11,7 @@ const bookingHref = "/book";
 const localeOptions: Array<{ value: PublicLocale; label: string }> = [{ value: "ka", label: "ქართული" }, { value: "en", label: "English" }, { value: "ru", label: "Русский" }];
 
 export function SalonFlowMark({ inverted = false, compact = false }: { inverted?: boolean; compact?: boolean }) {
-  return <Link href="/" className={`sf-public-brand inline-flex shrink-0 items-center gap-2 rounded-xl font-semibold tracking-tight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sf-focus)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--sf-bg)] ${compact ? "sf-public-brand--compact" : ""}`}><span className={`sf-brand-mark ${inverted ? "sf-brand-mark--inverted" : ""}`} aria-hidden="true"><i /><i /><i /></span><span className="text-lg">SalonFlow</span></Link>;
+  return <Link href="/" className={`sf-public-brand inline-flex shrink-0 items-center gap-2 rounded-xl font-semibold tracking-tight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--sf-focus)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--sf-bg)] ${compact ? "sf-public-brand--compact" : ""}`}><span className={`sf-brand-mark ${inverted ? "sf-brand-mark--inverted" : ""}`} aria-hidden="true"><i /><i /><i /></span><span className="text-lg">Chawera</span></Link>;
 }
 
 export function PublicLanguageSelector({ className = "" }: { className?: string }) {

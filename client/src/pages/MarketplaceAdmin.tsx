@@ -80,7 +80,7 @@ export default function MarketplaceAdmin() {
   return (
     <DashboardLayout>
       <main className="sf-workspace-page mx-auto w-full max-w-7xl space-y-5">
-        <WorkspacePageHeader eyebrow="PLATFORM ADMIN" title="Marketplace moderation" description="ეს კონსოლი ეკუთვნის მხოლოდ SalonFlow-ის platform admin-ს. salon OWNER ვერ ამტკიცებს საკუთარ listing-ს, ვერ ირჩევს VIP-ს და ვერ მართავს promotion-ს." />
+        <WorkspacePageHeader eyebrow="PLATFORM ADMIN" title="Marketplace moderation" description="ეს კონსოლი ეკუთვნის მხოლოდ Chawera-ის platform admin-ს. salon OWNER ვერ ამტკიცებს საკუთარ listing-ს, ვერ ირჩევს VIP-ს და ვერ მართავს promotion-ს." />
         {loading ? <WorkspaceState kind="loading" title="წვდომა მოწმდება…" /> : null}
         {!loading && user?.role !== "admin" ? <WorkspaceState kind="empty" title="Platform admin წვდომა აუცილებელია" description="ეს კონტროლები არ არის salon workspace-ის მფლობელის ფუნქცია. დაუბრუნდით Marketplace listing-ს და გაგზავნეთ ინფორმაცია review-ზე." /> : null}
 

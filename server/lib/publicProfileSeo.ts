@@ -28,7 +28,7 @@ function absoluteUrl(origin: string, value: string | null) {
 }
 
 export function renderPublicSalonProfileHead(profile: SalonProfile, origin: string) {
-  const title = `${profile.salon.name} | SalonFlow`;
+  const title = `${profile.salon.name} | Chawera`;
   const description = metaText(profile.salon.publicDescription || `${profile.salon.name} — სალონის მომსახურებები, გუნდი და ონლაინ ჩაწერა.`);
   const canonical = `${origin}/salon/${encodeURIComponent(profile.salon.publicSlug)}`;
   const image = absoluteUrl(origin, profile.salon.coverImageUrl);
@@ -41,7 +41,7 @@ export function renderPublicSalonProfileHead(profile: SalonProfile, origin: stri
     `<meta property="og:title" content="${escapeHtml(title)}" />`,
     `<meta property="og:description" content="${escapeHtml(description)}" />`,
     `<meta property="og:url" content="${escapeHtml(canonical)}" />`,
-    `<meta property="og:site_name" content="SalonFlow" />`,
+    `<meta property="og:site_name" content="Chawera" />`,
     `<meta name="twitter:card" content="${image ? "summary_large_image" : "summary"}" />`,
     `<meta name="twitter:title" content="${escapeHtml(title)}" />`,
     `<meta name="twitter:description" content="${escapeHtml(description)}" />`,

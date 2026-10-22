@@ -17,5 +17,5 @@ export function PwaInstallButton({ compact = false }: { compact?: boolean }) {
   }, []);
 
   if (!installPrompt || installed) return null;
-  return <Button type="button" variant="publicQuiet" size={compact ? "icon" : "sm"} aria-label="SalonFlow აპის დაყენება" title="SalonFlow აპის დაყენება" onClick={async () => { await installPrompt.prompt(); const choice = await installPrompt.userChoice; if (choice.outcome === "accepted") setInstallPrompt(null); }}><Download className={compact ? "size-4" : "mr-1.5 size-3.5"} aria-hidden="true" />{compact ? null : "აპის დაყენება"}</Button>;
+  return <Button type="button" variant="publicQuiet" size={compact ? "icon" : "sm"} aria-label="Chawera აპის დაყენება" title="Chawera აპის დაყენება" onClick={async () => { await installPrompt.prompt(); const choice = await installPrompt.userChoice; if (choice.outcome === "accepted") setInstallPrompt(null); }}><Download className={compact ? "size-4" : "mr-1.5 size-3.5"} aria-hidden="true" />{compact ? null : "აპის დაყენება"}</Button>;
 }

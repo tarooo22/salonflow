@@ -9,7 +9,7 @@ import { getTrialRequestForUser } from "../lib/trialAccess";
 import { protectedProcedure, router } from "../_core/trpc";
 
 function requirePlatformAdmin(role: string) {
-  if (role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "ეს მოქმედება ხელმისაწვდომია მხოლოდ SalonFlow platform admin-ისთვის." });
+  if (role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "ეს მოქმედება ხელმისაწვდომია მხოლოდ Chawera platform admin-ისთვის." });
 }
 
 function trialEndsAt(start: Date) {

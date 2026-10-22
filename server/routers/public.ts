@@ -306,7 +306,7 @@ export const publicRouter = router({
     const [existing] = await db.select({ id: customerFeedback.id, status: customerFeedback.status }).from(customerFeedback).where(eq(customerFeedback.appointmentId, appointment.id)).limit(1);
     if (existing) return { eligible: false, submitted: true, status: existing.status, reason: "ამ ვიზიტისთვის უკუკავშირი უკვე დატოვებულია." };
     const [location] = await db.select({ name: locations.name, publicSlug: locations.publicSlug }).from(locations).where(eq(locations.id, appointment.locationId)).limit(1);
-    return { eligible: true, submitted: false, locationName: location?.name ?? "SalonFlow", publicSlug: location?.publicSlug ?? null };
+    return { eligible: true, submitted: false, locationName: location?.name ?? "Chawera", publicSlug: location?.publicSlug ?? null };
   }),
 
   submitFeedback: publicProcedure.input(publicFeedbackSubmitSchema).mutation(async ({ input }) => {

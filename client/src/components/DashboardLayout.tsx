@@ -90,7 +90,7 @@ export default function DashboardLayout({
               შედით სამუშაო სივრცეში
             </h1>
             <p className="text-sm text-muted-foreground text-center max-w-sm">
-              SalonFlow-ის სამუშაო სივრცე დაცულია. გასაგრძელებლად გაიარეთ ავტორიზაცია.
+              Chawera-ის სამუშაო სივრცე დაცულია. გასაგრძელებლად გაიარეთ ავტორიზაცია.
             </p>
           </div>
           <Button
@@ -216,7 +216,7 @@ function DashboardLayoutContent({
               {!isCollapsed ? (
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="sf-brand-mark sf-brand-mark--inverted" aria-hidden="true"><i /><i /><i /></span>
-                  <div className="min-w-0"><span className="block truncate text-sm font-semibold tracking-tight text-sidebar-foreground">SalonFlow</span><span className="block truncate text-[11px] text-sidebar-foreground/65">სამუშაო სივრცე</span></div>
+                  <div className="min-w-0"><span className="block truncate text-sm font-semibold tracking-tight text-sidebar-foreground">Chawera</span><span className="block truncate text-[11px] text-sidebar-foreground/65">სამუშაო სივრცე</span></div>
                 </div>
               ) : null}
               <button type="button" onClick={() => setCommandOpen(true)} className="ml-auto grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-sidebar-border/90 bg-sidebar-accent/45 text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="სწრაფი ძიება"><Search className="size-4" aria-hidden="true" /></button>
@@ -325,7 +325,7 @@ function DashboardLayoutContent({
                 <span className="sf-brand-mark" aria-hidden="true"><i /><i /><i /></span>
                 <div className="flex flex-col gap-0.5">
                   <span className="text-sm font-semibold tracking-tight text-foreground">{activeMenuItem?.path === "/app/staff" && role === "STAFF" ? "ჩემი პროფილი" : activeMenuItem?.label ?? "მენიუ"}</span>
-                  <span className="text-[11px] text-muted-foreground">SalonFlow</span>
+                  <span className="text-[11px] text-muted-foreground">Chawera</span>
                 </div>
               </div>
             </div>
