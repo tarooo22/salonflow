@@ -15,7 +15,7 @@ const NO_PRACTITIONER = "none";
 const formatDateTime = (value: Date | string) => new Intl.DateTimeFormat("ka-GE", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
 const emptyForm = { procedureName: "", productName: "", batchNumber: "", productExpiry: "", dose: "", doseUnit: "UNITS" as DoseUnit, staffProfileId: NO_PRACTITIONER, treatmentAreas: "", notes: "", performedAt: "" };
 
-export function AestheticProcedures({ organizationId, clientId }: { organizationId: string; clientId: string }) {
+export function AestheticProcedures({ organizationId, clientId, appointmentId, ownProfileOnly = false }: { organizationId: string; clientId: string; appointmentId?: string; ownProfileOnly?: boolean }) {
   const utils = trpc.useUtils();
   const list = trpc.aesthetic.list.useQuery({ organizationId, clientId });
   const staff = trpc.staff.list.useQuery({ organizationId });
@@ -42,14 +42,14 @@ export function AestheticProcedures({ organizationId, clientId }: { organization
     if (hasDose && hundredths === null) { setFormError("დოზა უნდა იყოს დადებითი რიცხვი არაუმეტეს ორი ათწილადისა, მაგ. 12.5."); return; }
     setFormError("");
     create.mutate({
-      organizationId, clientId,
+      organizationId, clientId, appointmentId,
       procedureName: form.procedureName,
       productName: form.productName || undefined,
       batchNumber: form.batchNumber || undefined,
       productExpiry: form.productExpiry || undefined,
       doseHundredths: hundredths ?? undefined,
       doseUnit: hundredths === null ? undefined : form.doseUnit,
-      staffProfileId: form.staffProfileId === NO_PRACTITIONER ? undefined : form.staffProfileId,
+      staffProfileId: ownProfileOnly || form.staffProfileId === NO_PRACTITIONER ? undefined : form.staffProfileId,
       treatmentAreas: form.treatmentAreas || undefined,
       notes: form.notes || undefined,
       performedAt: form.performedAt ? new Date(form.performedAt) : undefined,
@@ -95,7 +95,7 @@ export function AestheticProcedures({ organizationId, clientId }: { organization
           <Field id="proc-dose" label="დოზა"><Input id="proc-dose" inputMode="decimal" value={form.dose} onChange={event => set("dose", event.target.value)} placeholder="მაგ. 12.5" /></Field>
           <Field id="proc-unit" label="საზომი ერთეული"><Select value={form.doseUnit} onValueChange={value => set("doseUnit", value as DoseUnit)}><SelectTrigger id="proc-unit" className="min-h-11 w-full"><SelectValue /></SelectTrigger><SelectContent>{DOSE_UNITS.map(unit => <SelectItem key={unit.value} value={unit.value}>{unit.label}</SelectItem>)}</SelectContent></Select></Field>
         </div>
-        <Field id="proc-staff" label="შემსრულებელი"><Select value={form.staffProfileId} onValueChange={value => set("staffProfileId", value)}><SelectTrigger id="proc-staff" className="min-h-11 w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value={NO_PRACTITIONER}>არ არის მითითებული</SelectItem>{staff.data?.map(item => <SelectItem key={item.profile.id} value={item.profile.id}>{item.profile.publicDisplayName}</SelectItem>)}</SelectContent></Select></Field>
+        {ownProfileOnly ? null : <Field id="proc-staff" label="შემსრულებელი"><Select value={form.staffProfileId} onValueChange={value => set("staffProfileId", value)}><SelectTrigger id="proc-staff" className="min-h-11 w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value={NO_PRACTITIONER}>არ არის მითითებული</SelectItem>{staff.data?.map(item => <SelectItem key={item.profile.id} value={item.profile.id}>{item.profile.publicDisplayName}</SelectItem>)}</SelectContent></Select></Field>}
         <Field id="proc-areas" label="დამუშავებული უბნები"><Input id="proc-areas" value={form.treatmentAreas} onChange={event => set("treatmentAreas", event.target.value)} maxLength={500} /></Field>
         <Field id="proc-performed" label="შესრულების დრო (ცარიელი ნიშნავს ახლა)"><Input id="proc-performed" type="datetime-local" value={form.performedAt} onChange={event => set("performedAt", event.target.value)} /></Field>
         <Field id="proc-notes" label="შენიშვნა"><Textarea id="proc-notes" value={form.notes} onChange={event => set("notes", event.target.value)} maxLength={2000} rows={3} /></Field>

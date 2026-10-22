@@ -943,3 +943,7 @@ export const aestheticVoidSchema = organizationScopeSchema.extend({
   id: opaqueIdSchema,
   reason: z.string().trim().min(3, "ბათილობის მიზეზი აუცილებელია.").max(300),
 });
+
+// Visits that give a specialist (STAFF) access to a patient's clinical records. PENDING is excluded: anyone can create
+// one on the public site with a patient's phone number, so counting it would let a specialist book a stranger to read their records.
+export const CLINICAL_ACCESS_STATUSES = ["CONFIRMED", "CHECKED_IN", "IN_SERVICE", "COMPLETED"] as const;

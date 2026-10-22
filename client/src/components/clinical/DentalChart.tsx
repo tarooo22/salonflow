@@ -11,7 +11,7 @@ import { toast } from "sonner";
 const conditionStyle = (value: string | undefined) => DENTAL_CONDITIONS.find(item => item.value === value);
 const formatDate = (value: Date | string) => new Intl.DateTimeFormat("ka-GE", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
 
-export function DentalChart({ organizationId, clientId }: { organizationId: string; clientId: string }) {
+export function DentalChart({ organizationId, clientId, appointmentId }: { organizationId: string; clientId: string; appointmentId?: string }) {
   const [primary, setPrimary] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const chart = trpc.dental.chart.useQuery({ organizationId, clientId });
@@ -67,11 +67,11 @@ export function DentalChart({ organizationId, clientId }: { organizationId: stri
         <li className="flex items-center gap-1.5 rounded-full border px-2 py-1"><span aria-hidden className="size-3 rounded-sm border bg-background" />ჩანაწერი არ არის</li>
       </ul>
     </> : null}
-    {selected ? <ToothPanel key={`${selected}`} organizationId={organizationId} clientId={clientId} toothCode={selected} onClose={() => setSelected(null)} /> : null}
+    {selected ? <ToothPanel key={`${selected}`} organizationId={organizationId} clientId={clientId} appointmentId={appointmentId} toothCode={selected} onClose={() => setSelected(null)} /> : null}
   </div>;
 }
 
-function ToothPanel({ organizationId, clientId, toothCode, onClose }: { organizationId: string; clientId: string; toothCode: string; onClose: () => void }) {
+function ToothPanel({ organizationId, clientId, appointmentId, toothCode, onClose }: { organizationId: string; clientId: string; appointmentId?: string; toothCode: string; onClose: () => void }) {
   const utils = trpc.useUtils();
   const history = trpc.dental.toothHistory.useQuery({ organizationId, clientId, toothCode });
   const [condition, setCondition] = useState<DentalCondition>("HEALTHY");
@@ -87,7 +87,7 @@ function ToothPanel({ organizationId, clientId, toothCode, onClose }: { organiza
   });
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    record.mutate({ organizationId, clientId, toothCode, condition, surfaces: surfaces.length ? TOOTH_SURFACE_OPTIONS.filter(item => surfaces.includes(item.value)).map(item => item.value).join("") : undefined, note: note.trim() || undefined });
+    record.mutate({ organizationId, clientId, appointmentId, toothCode, condition, surfaces: surfaces.length ? TOOTH_SURFACE_OPTIONS.filter(item => surfaces.includes(item.value)).map(item => item.value).join("") : undefined, note: note.trim() || undefined });
   };
 
   return <section className="space-y-4 rounded-xl border bg-muted/15 p-4" aria-label={`კბილი ${toothCode}`}>

@@ -6,6 +6,7 @@ import { aestheticCreateSchema, aestheticListSchema, aestheticVoidSchema } from 
 import { protectedProcedure, router } from "../_core/trpc";
 import { requireOrganizationAction } from "../access";
 import { requireDb } from "../db";
+import { requireClinicalPatientAccess, requireRecordAppointment } from "../lib/clinicalAccess";
 
 type Db = Awaited<ReturnType<typeof requireDb>>;
 
@@ -15,18 +16,22 @@ async function requireAestheticsOrganization(db: Db, organizationId: string) {
   if (organization?.vertical !== "AESTHETICS") throw new TRPCError({ code: "FORBIDDEN", message: "პროცედურების ჟურნალი ხელმისაწვდომია მხოლოდ ესთეტიკური კლინიკის სივრცეში." });
 }
 
-async function requireClient(db: Db, organizationId: string, clientId: string) {
+const CLIENT_NOT_FOUND = "კლიენტი ვერ მოიძებნა.";
+
+/** The client must belong to the organization, and STAFF need an appointment with them. Returns the STAFF member's profile (null for other roles). */
+async function requireClient(db: Db, membership: { id: string; role: string }, organizationId: string, clientId: string) {
   const [client] = await db.select({ id: clients.id }).from(clients).where(and(eq(clients.id, clientId), eq(clients.organizationId, organizationId))).limit(1);
-  if (!client) throw new TRPCError({ code: "NOT_FOUND", message: "კლიენტი ვერ მოიძებნა." });
+  if (!client) throw new TRPCError({ code: "NOT_FOUND", message: CLIENT_NOT_FOUND });
+  return requireClinicalPatientAccess(db, membership, organizationId, clientId, CLIENT_NOT_FOUND);
 }
 
 export const aestheticRouter = router({
   /** Newest first; voided records are included and flagged (`isVoided`). */
   list: protectedProcedure.input(aestheticListSchema).query(async ({ ctx, input }) => {
-    await requireOrganizationAction(ctx.user, input.organizationId, "clinical:view");
+    const membership = await requireOrganizationAction(ctx.user, input.organizationId, "clinical:view");
     const db = await requireDb();
     await requireAestheticsOrganization(db, input.organizationId);
-    await requireClient(db, input.organizationId, input.clientId);
+    await requireClient(db, membership, input.organizationId, input.clientId);
     const rows = await db.select({
       id: aestheticProcedureRecords.id,
       appointmentId: aestheticProcedureRecords.appointmentId,
@@ -53,21 +58,20 @@ export const aestheticRouter = router({
   }),
 
   create: protectedProcedure.input(aestheticCreateSchema).mutation(async ({ ctx, input }) => {
-    await requireOrganizationAction(ctx.user, input.organizationId, "clinical:write");
+    const membership = await requireOrganizationAction(ctx.user, input.organizationId, "clinical:write");
     const db = await requireDb();
     await requireAestheticsOrganization(db, input.organizationId);
-    await requireClient(db, input.organizationId, input.clientId);
-    if (input.appointmentId) {
-      const [appointment] = await db.select({ id: appointments.id }).from(appointments).where(and(
-        eq(appointments.id, input.appointmentId), eq(appointments.organizationId, input.organizationId), eq(appointments.clientId, input.clientId),
-      )).limit(1);
-      if (!appointment) throw new TRPCError({ code: "NOT_FOUND", message: "ვიზიტი ვერ მოიძებნა ამ კლიენტისთვის." });
-    }
-    if (input.staffProfileId) {
+    const access = await requireClient(db, membership, input.organizationId, input.clientId);
+    // STAFF record under their own profile only (it defaults to the profile that has the appointment).
+    const isStaff = membership.role === "STAFF";
+    if (isStaff && input.staffProfileId && input.staffProfileId !== access.staffProfileId) throw new TRPCError({ code: "FORBIDDEN", message: "სხვა სპეციალისტის სახელით ჩანაწერის დამატება შეუძლებელია." });
+    const staffProfileId = isStaff ? access.staffProfileId : input.staffProfileId;
+    if (input.appointmentId) await requireRecordAppointment(db, access, input.organizationId, input.clientId, input.appointmentId, "ვიზიტი ვერ მოიძებნა ამ კლიენტისთვის.");
+    if (!isStaff && staffProfileId) {
       // staff_profiles has no organizationId; scope through the membership.
       const [practitioner] = await db.select({ id: staffProfiles.id }).from(staffProfiles)
         .innerJoin(organizationMemberships, eq(organizationMemberships.id, staffProfiles.membershipId))
-        .where(and(eq(staffProfiles.id, input.staffProfileId), eq(organizationMemberships.organizationId, input.organizationId))).limit(1);
+        .where(and(eq(staffProfiles.id, staffProfileId), eq(organizationMemberships.organizationId, input.organizationId))).limit(1);
       if (!practitioner) throw new TRPCError({ code: "NOT_FOUND", message: "სპეციალისტი ვერ მოიძებნა." });
     }
     const id = nanoid(21);
@@ -77,7 +81,7 @@ export const aestheticRouter = router({
         organizationId: input.organizationId,
         clientId: input.clientId,
         appointmentId: input.appointmentId ?? null,
-        staffProfileId: input.staffProfileId ?? null,
+        staffProfileId: staffProfileId ?? null,
         performedAt: input.performedAt ?? new Date(),
         procedureName: input.procedureName,
         productName: input.productName ?? null,
@@ -96,12 +100,13 @@ export const aestheticRouter = router({
 
   /** Mistakes are voided with a reason, never edited or deleted; add a new record for the corrected data. */
   void: protectedProcedure.input(aestheticVoidSchema).mutation(async ({ ctx, input }) => {
-    await requireOrganizationAction(ctx.user, input.organizationId, "clinical:write");
+    const membership = await requireOrganizationAction(ctx.user, input.organizationId, "clinical:write");
     const db = await requireDb();
     await requireAestheticsOrganization(db, input.organizationId);
     const [record] = await db.select({ id: aestheticProcedureRecords.id, clientId: aestheticProcedureRecords.clientId, voidedAt: aestheticProcedureRecords.voidedAt }).from(aestheticProcedureRecords)
       .where(and(eq(aestheticProcedureRecords.id, input.id), eq(aestheticProcedureRecords.organizationId, input.organizationId))).limit(1);
     if (!record) throw new TRPCError({ code: "NOT_FOUND", message: "ჩანაწერი ვერ მოიძებნა." });
+    await requireClinicalPatientAccess(db, membership, input.organizationId, record.clientId, "ჩანაწერი ვერ მოიძებნა.");
     if (record.voidedAt) throw new TRPCError({ code: "CONFLICT", message: "ჩანაწერი უკვე გაუქმებულია." });
     await db.transaction(async tx => {
       const result = await tx.update(aestheticProcedureRecords)

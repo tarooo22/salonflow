@@ -51,7 +51,7 @@ const base = { organizationId: orgId, clientId, procedureName: "Botox" };
 
 beforeEach(() => {
   mocked.requireOrganizationAction.mockReset();
-  mocked.requireOrganizationAction.mockResolvedValue({ id: "m1", role: "STAFF" });
+  mocked.requireOrganizationAction.mockResolvedValue({ id: "m1", role: "OWNER" });
 });
 
 describe("aesthetic access, vertical gate and org scoping", () => {
@@ -91,6 +91,72 @@ describe("aesthetic access, vertical gate and org scoping", () => {
     await expect(caller.create({ ...base, staffProfileId: "staff_0000000001" })).rejects.toMatchObject({ code: "NOT_FOUND" });
     mocked.db = capture([aestheticsOrg, []]).db;
     await expect(caller.void({ organizationId: otherOrgId, id: recordId, reason: "შეცდომა" })).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+});
+
+describe("STAFF reach clients only through their own appointments", () => {
+  const staffMember = { id: "m-staff", role: "STAFF" };
+  const ownAppointment = [{ staffProfileId: "staff_profile_01" }];
+
+  it("list is allowed with an own appointment and NOT_FOUND without", async () => {
+    mocked.requireOrganizationAction.mockResolvedValue(staffMember);
+    const caller = aestheticRouter.createCaller({ user } as never);
+    mocked.db = capture([aestheticsOrg, clientRow, ownAppointment, []]).db;
+    await expect(caller.list({ organizationId: orgId, clientId })).resolves.toEqual([]);
+    mocked.db = capture([aestheticsOrg, clientRow, []]).db;
+    await expect(caller.list({ organizationId: orgId, clientId })).rejects.toMatchObject({ code: "NOT_FOUND", message: "კლიენტი ვერ მოიძებნა." });
+  });
+
+  it("create defaults staffProfileId to their own profile and writes nothing without an appointment", async () => {
+    mocked.requireOrganizationAction.mockResolvedValue(staffMember);
+    const caller = aestheticRouter.createCaller({ user } as never);
+    const allowed = capture([aestheticsOrg, clientRow, ownAppointment]);
+    mocked.db = allowed.db;
+    await caller.create(base);
+    expect(allowed.inserts[0].calls.values[0]).toMatchObject({ staffProfileId: "staff_profile_01", recordedByUserId: 5 });
+    const ownExplicit = capture([aestheticsOrg, clientRow, ownAppointment]);
+    mocked.db = ownExplicit.db;
+    await caller.create({ ...base, staffProfileId: "staff_profile_01" });
+    expect(ownExplicit.inserts[0].calls.values[0]).toMatchObject({ staffProfileId: "staff_profile_01" });
+
+    const denied = capture([aestheticsOrg, clientRow, []]);
+    mocked.db = denied.db;
+    await expect(caller.create(base)).rejects.toMatchObject({ code: "NOT_FOUND" });
+    expect(denied.db.transaction).not.toHaveBeenCalled();
+  });
+
+  it("create cannot name another specialist", async () => {
+    mocked.requireOrganizationAction.mockResolvedValue(staffMember);
+    const { db } = capture([aestheticsOrg, clientRow, ownAppointment]);
+    mocked.db = db;
+    await expect(aestheticRouter.createCaller({ user } as never).create({ ...base, staffProfileId: "staff_other_0001" })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect(db.transaction).not.toHaveBeenCalled();
+  });
+
+  it("void only works on records of patients they can access", async () => {
+    mocked.requireOrganizationAction.mockResolvedValue(staffMember);
+    const caller = aestheticRouter.createCaller({ user } as never);
+    const ok = capture([aestheticsOrg, [{ id: recordId, clientId, voidedAt: null }], ownAppointment]);
+    mocked.db = ok.db;
+    await expect(caller.void({ organizationId: orgId, id: recordId, reason: "შეცდომა" })).resolves.toEqual({ success: true });
+    const denied = capture([aestheticsOrg, [{ id: recordId, clientId, voidedAt: null }], []]);
+    mocked.db = denied.db;
+    await expect(caller.void({ organizationId: orgId, id: recordId, reason: "შეცდომა" })).rejects.toMatchObject({ code: "NOT_FOUND", message: "ჩანაწერი ვერ მოიძებნა." });
+    expect(denied.db.transaction).not.toHaveBeenCalled();
+  });
+
+  it("OWNER and MANAGER keep any practitioner and skip the appointment check; RECEPTIONIST has no clinical action", async () => {
+    for (const role of ["OWNER", "MANAGER"]) {
+      mocked.requireOrganizationAction.mockResolvedValue({ id: "m1", role });
+      const { db, inserts } = capture([aestheticsOrg, clientRow, [{ id: "staff_other_0001" }]]);
+      mocked.db = db;
+      await aestheticRouter.createCaller({ user } as never).create({ ...base, staffProfileId: "staff_other_0001" });
+      expect(inserts[0].calls.values[0]).toMatchObject({ staffProfileId: "staff_other_0001" });
+      expect(db.select).toHaveBeenCalledTimes(3);
+    }
+    const { roleCan } = await vi.importActual<typeof import("../access")>("../access");
+    expect(roleCan("RECEPTIONIST", "clinical:view")).toBe(false);
+    expect(roleCan("RECEPTIONIST", "clinical:write")).toBe(false);
   });
 });
 

@@ -7,7 +7,7 @@ vi.mock("../access", () => ({ requireOrganizationAction: mocked.requireOrganizat
 vi.mock("drizzle-orm", async importOriginal => {
   const actual = await importOriginal<typeof import("drizzle-orm")>();
   const tag = (kind: string) => (...args: unknown[]) => ({ kind, args });
-  return { ...actual, and: tag("and"), eq: tag("eq"), desc: tag("desc") };
+  return { ...actual, and: tag("and"), eq: tag("eq"), desc: tag("desc"), inArray: tag("inArray") };
 });
 
 import { dentalToothRecords } from "../../drizzle/schema";
@@ -25,6 +25,7 @@ function has(condition: unknown, kind: string, ...lead: unknown[]): boolean {
 /** Does the (tagged) condition tree contain this literal value? */
 function mentions(condition: unknown, value: unknown): boolean {
   if (condition === value) return true;
+  if (Array.isArray(condition)) return condition.some(item => mentions(item, value));
   if (!condition || typeof condition !== "object") return false;
   const args = (condition as { args?: unknown[] }).args;
   return Array.isArray(args) && args.some(arg => mentions(arg, value));
@@ -55,7 +56,7 @@ const clientRow = [{ id: clientId }];
 
 beforeEach(() => {
   mocked.requireOrganizationAction.mockReset();
-  mocked.requireOrganizationAction.mockResolvedValue({ id: "m1", role: "STAFF" });
+  mocked.requireOrganizationAction.mockResolvedValue({ id: "m1", role: "OWNER" });
 });
 
 describe("FDI tooth code and surface validation", () => {
@@ -130,6 +131,65 @@ describe("dental access, vertical gate and org scoping", () => {
     await expect(caller.record({ organizationId: orgId, clientId, toothCode: "11", surfaces: "MX", condition: "CARIES" })).rejects.toMatchObject({ code: "BAD_REQUEST" });
     await expect(caller.record({ organizationId: orgId, clientId, toothCode: "11", condition: "CARIES", note: "x".repeat(1001) })).rejects.toMatchObject({ code: "BAD_REQUEST" });
     expect(db.select).not.toHaveBeenCalled();
+  });
+});
+
+describe("STAFF reach patients only through their own appointments", () => {
+  const staffMember = { id: "m-staff", role: "STAFF" };
+  const ownAppointment = [{ staffProfileId: "staff_profile_01" }];
+
+  it("allows chart, toothHistory and record when the specialist has a accepted appointment with the patient", async () => {
+    mocked.requireOrganizationAction.mockResolvedValue(staffMember);
+    const { db, all } = capture([dentalOrg, clientRow, ownAppointment, []]);
+    mocked.db = db;
+    await expect(dentalRouter.createCaller({ user } as never).chart({ organizationId: orgId, clientId })).resolves.toEqual([]);
+    const where = all[2].calls.where[0];
+    expect(mentions(where, "m-staff")).toBe(true);
+    expect(mentions(where, orgId)).toBe(true);
+    expect(mentions(where, clientId)).toBe(true);
+    // Only accepted visits count (a PENDING public booking must not unlock records), and only an active profile.
+    expect(mentions(where, "CONFIRMED")).toBe(true);
+    expect(mentions(where, "PENDING")).toBe(false);
+    expect(mentions(where, "ACTIVE")).toBe(true);
+
+    mocked.db = capture([dentalOrg, clientRow, ownAppointment, []]).db;
+    await expect(dentalRouter.createCaller({ user } as never).toothHistory({ organizationId: orgId, clientId, toothCode: "11" })).resolves.toEqual([]);
+    const writer = capture([dentalOrg, clientRow, ownAppointment, []]);
+    mocked.db = writer.db;
+    await expect(dentalRouter.createCaller({ user } as never).record({ organizationId: orgId, clientId, toothCode: "11", condition: "CARIES" })).resolves.toHaveProperty("id");
+  });
+
+  it("is NOT_FOUND (same as a foreign client) without such an appointment, and nothing is read or written", async () => {
+    mocked.requireOrganizationAction.mockResolvedValue(staffMember);
+    const caller = dentalRouter.createCaller({ user } as never);
+    for (const call of [
+      () => caller.chart({ organizationId: orgId, clientId }),
+      () => caller.toothHistory({ organizationId: orgId, clientId, toothCode: "11" }),
+      () => caller.record({ organizationId: orgId, clientId, toothCode: "11", condition: "CARIES" }),
+    ]) {
+      const { db } = capture([dentalOrg, clientRow, []]);
+      mocked.db = db;
+      await expect(call()).rejects.toMatchObject({ code: "NOT_FOUND", message: "პაციენტი ვერ მოიძებნა." });
+      expect(db.select).toHaveBeenCalledTimes(3);
+      expect(db.transaction).not.toHaveBeenCalled();
+    }
+  });
+
+  it("OWNER and MANAGER skip the appointment check", async () => {
+    for (const role of ["OWNER", "MANAGER"]) {
+      mocked.requireOrganizationAction.mockResolvedValue({ id: "m1", role });
+      const { db } = capture([dentalOrg, clientRow, []]);
+      mocked.db = db;
+      await expect(dentalRouter.createCaller({ user } as never).chart({ organizationId: orgId, clientId })).resolves.toEqual([]);
+      expect(db.select).toHaveBeenCalledTimes(3);
+    }
+  });
+
+  it("RECEPTIONIST has no clinical action", async () => {
+    const { roleCan } = await vi.importActual<typeof import("../access")>("../access");
+    expect(roleCan("RECEPTIONIST", "clinical:view")).toBe(false);
+    expect(roleCan("RECEPTIONIST", "clinical:write")).toBe(false);
+    expect(roleCan("STAFF", "clinical:view")).toBe(true);
   });
 });
 

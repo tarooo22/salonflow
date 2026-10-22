@@ -6,15 +6,18 @@ import { dentalChartSchema, dentalRecordSchema, dentalToothHistorySchema } from 
 import { protectedProcedure, router } from "../_core/trpc";
 import { requireOrganizationAction } from "../access";
 import { requireDb } from "../db";
+import { requireClinicalPatientAccess, requireRecordAppointment } from "../lib/clinicalAccess";
 
 type Db = Awaited<ReturnType<typeof requireDb>>;
+const PATIENT_NOT_FOUND = "პაციენტი ვერ მოიძებნა.";
 
-/** Only DENTAL workspaces have a tooth chart, and the patient must belong to the organization. */
-async function requireDentalClient(db: Db, organizationId: string, clientId: string) {
+/** Only DENTAL workspaces have a tooth chart, the patient must belong to the organization, and STAFF need an appointment with them. */
+async function requireDentalClient(db: Db, membership: { id: string; role: string }, organizationId: string, clientId: string) {
   const [organization] = await db.select({ vertical: organizations.vertical }).from(organizations).where(eq(organizations.id, organizationId)).limit(1);
   if (organization?.vertical !== "DENTAL") throw new TRPCError({ code: "FORBIDDEN", message: "კბილების რუკა ხელმისაწვდომია მხოლოდ სტომატოლოგიური კლინიკის სივრცეში." });
   const [client] = await db.select({ id: clients.id }).from(clients).where(and(eq(clients.id, clientId), eq(clients.organizationId, organizationId))).limit(1);
-  if (!client) throw new TRPCError({ code: "NOT_FOUND", message: "პაციენტი ვერ მოიძებნა." });
+  if (!client) throw new TRPCError({ code: "NOT_FOUND", message: PATIENT_NOT_FOUND });
+  return requireClinicalPatientAccess(db, membership, organizationId, clientId, PATIENT_NOT_FOUND);
 }
 
 /** Rows must be newest first; keeps the first (latest) entry of every tooth. */
@@ -27,9 +30,9 @@ export function latestPerTooth<T extends { toothCode: string }>(rowsNewestFirst:
 export const dentalRouter = router({
   /** Current state per tooth (latest entry of each tooth that has any record). */
   chart: protectedProcedure.input(dentalChartSchema).query(async ({ ctx, input }) => {
-    await requireOrganizationAction(ctx.user, input.organizationId, "clinical:view");
+    const membership = await requireOrganizationAction(ctx.user, input.organizationId, "clinical:view");
     const db = await requireDb();
-    await requireDentalClient(db, input.organizationId, input.clientId);
+    await requireDentalClient(db, membership, input.organizationId, input.clientId);
     const rows = await db.select({
       id: dentalToothRecords.id,
       toothCode: dentalToothRecords.toothCode,
@@ -46,9 +49,9 @@ export const dentalRouter = router({
 
   /** All entries of one tooth, newest first, with the recorder's display name. */
   toothHistory: protectedProcedure.input(dentalToothHistorySchema).query(async ({ ctx, input }) => {
-    await requireOrganizationAction(ctx.user, input.organizationId, "clinical:view");
+    const membership = await requireOrganizationAction(ctx.user, input.organizationId, "clinical:view");
     const db = await requireDb();
-    await requireDentalClient(db, input.organizationId, input.clientId);
+    await requireDentalClient(db, membership, input.organizationId, input.clientId);
     return db.select({
       id: dentalToothRecords.id,
       toothCode: dentalToothRecords.toothCode,
@@ -67,15 +70,10 @@ export const dentalRouter = router({
 
   /** Append-only: a correction is a new entry. */
   record: protectedProcedure.input(dentalRecordSchema).mutation(async ({ ctx, input }) => {
-    await requireOrganizationAction(ctx.user, input.organizationId, "clinical:write");
+    const membership = await requireOrganizationAction(ctx.user, input.organizationId, "clinical:write");
     const db = await requireDb();
-    await requireDentalClient(db, input.organizationId, input.clientId);
-    if (input.appointmentId) {
-      const [appointment] = await db.select({ id: appointments.id }).from(appointments).where(and(
-        eq(appointments.id, input.appointmentId), eq(appointments.organizationId, input.organizationId), eq(appointments.clientId, input.clientId),
-      )).limit(1);
-      if (!appointment) throw new TRPCError({ code: "NOT_FOUND", message: "ვიზიტი ვერ მოიძებნა ამ პაციენტისთვის." });
-    }
+    const access = await requireDentalClient(db, membership, input.organizationId, input.clientId);
+    if (input.appointmentId) await requireRecordAppointment(db, access, input.organizationId, input.clientId, input.appointmentId, "ვიზიტი ვერ მოიძებნა ამ პაციენტისთვის.");
     // recordedAt has 1-second resolution: keep it strictly after the tooth's previous entry so "latest" is unambiguous.
     const [previous] = await db.select({ recordedAt: dentalToothRecords.recordedAt }).from(dentalToothRecords).where(and(
       eq(dentalToothRecords.organizationId, input.organizationId), eq(dentalToothRecords.clientId, input.clientId), eq(dentalToothRecords.toothCode, input.toothCode),
