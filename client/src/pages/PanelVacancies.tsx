@@ -10,7 +10,7 @@ import { buildVacancyInput, emptyVacancyForm, employmentTypeLabel, vacancyStatus
 import { formatGelTetri, formatKaDateTime } from "@/lib/presentation";
 import { trpc } from "@/lib/trpc";
 import { DEFAULT_VACANCY_DAYS } from "@shared/validation";
-import { Megaphone, Pencil, Plus, Send, Star, XCircle } from "lucide-react";
+import { Pencil, Plus, Send, Star, XCircle } from "lucide-react";
 import { FormEvent, useState } from "react";
 import { toast } from "sonner";
 
@@ -41,7 +41,7 @@ export default function PanelVacancies() {
 
   const done = async (message: string) => { await utils.vacancies.list.invalidate(); toast.success(message); };
   const fail = (e: { message: string }) => toast.error(e.message || "ოპერაცია ვერ შესრულდა. სცადეთ ხელახლა.");
-  const create = trpc.vacancies.create.useMutation({ onSuccess: async () => { await done("ვაკანსია დრაფტად შეინახა. გამოსაქვეყნებლად დააჭირეთ „გამოქვეყნებას“."); setOpen(false); }, onError: e => setError(e.message) });
+  const create = trpc.vacancies.create.useMutation({ onSuccess: async () => { await done("ვაკანსია მონახაზად შეინახა. გამოსაქვეყნებლად დააჭირეთ „გამოქვეყნებას“."); setOpen(false); }, onError: e => setError(e.message) });
   const update = trpc.vacancies.update.useMutation({ onSuccess: async () => { await done("ვაკანსია განახლდა."); setOpen(false); }, onError: e => setError(e.message) });
   const publish = trpc.vacancies.publish.useMutation({ onSuccess: () => done(`ვაკანსია გამოქვეყნდა ${DEFAULT_VACANCY_DAYS} დღით.`), onError: fail });
   const close = trpc.vacancies.close.useMutation({ onSuccess: () => done("ვაკანსია დაიხურა."), onError: fail });
@@ -67,15 +67,15 @@ export default function PanelVacancies() {
   return (
     <DashboardLayout>
       <div className="sf-workspace-page mx-auto w-full max-w-7xl space-y-5">
-        <WorkspacePageHeader eyebrow="მარკეტფლეისი" title="ვაკანსიები" description="გამოაქვეყნეთ ვაკანსია საჯარო კატალოგში. ვაკანსია აქტიურია არჩეული ვადით, შემდეგ ავტომატურად იმალება." actions={<>{organization ? <WorkspaceStatusPill tone="info">{organization.name}</WorkspaceStatusPill> : null}{enabled ? <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" />ვაკანსიის დამატება</Button> : null}</>} />
-        {organizations.isLoading ? <WorkspaceState kind="loading" title="ვაკანსიები იტვირთება…" /> : null}
-        {organizations.isError ? <WorkspaceState kind="error" title="სამუშაო სივრცის მონაცემები მიუწვდომელია" /> : null}
+        <WorkspacePageHeader title="ვაკანსიები" actions={<>{enabled ? <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" />ვაკანსიის დამატება</Button> : null}</>} />
+        {organizations.isLoading ? <WorkspaceState kind="loading" title="იტვირთება…" /> : null}
+        {organizations.isError ? <WorkspaceState kind="error" title="მონაცემები მიუწვდომელია" /> : null}
         {organization && !canManage ? <WorkspaceState kind="empty" title="წვდომა მხოლოდ მფლობელს და მენეჯერს აქვს" /> : null}
-        {enabled ? <WorkspaceSection title="ჩემი ვაკანსიები" description="ტელეფონი და ელფოსტა საჯაროდ ჩანს გამოქვეყნებულ ვაკანსიაზე.">
-          <div className="divide-y divide-border/70">
-            {vacancies.isLoading ? <WorkspaceState kind="loading" title="ვაკანსიები იტვირთება…" /> : null}
-            {vacancies.isError ? <WorkspaceState kind="error" title="ვაკანსიების ჩატვირთვა ვერ მოხერხდა" /> : null}
-            {vacancies.data?.length === 0 ? <WorkspaceState kind="empty" title="ვაკანსია ჯერ არ გაქვთ" description="დაამატეთ პირველი ვაკანსია და გამოაქვეყნეთ იგი კატალოგში." action={<Button variant="outline" size="sm" onClick={openCreate}><Plus className="mr-1.5 h-4 w-4" />ვაკანსიის დამატება</Button>} /> : null}
+        {enabled ? <WorkspaceSection title="ჩემი ვაკანსიები">
+          <div className="divide-y divide-border">
+            {vacancies.isLoading ? <WorkspaceState kind="loading" title="იტვირთება…" /> : null}
+            {vacancies.isError ? <WorkspaceState kind="error" title="ჩატვირთვა ვერ მოხერხდა" /> : null}
+            {vacancies.data?.length === 0 ? <WorkspaceState kind="empty" title="ვაკანსია ჯერ არ გაქვთ" action={<Button variant="outline" size="sm" onClick={openCreate}><Plus className="mr-1.5 h-4 w-4" />ვაკანსიის დამატება</Button>} /> : null}
             {vacancies.data?.map(v => {
               const status = vacancyStatusInfo(v);
               return <article key={v.id} className="grid gap-3 py-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
@@ -101,7 +101,7 @@ export default function PanelVacancies() {
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>{editingId ? "ვაკანსიის რედაქტირება" : "ვაკანსიის დამატება"}</DialogTitle><DialogDescription>ტელეფონი და ელფოსტა საჯაროდ გამოჩნდება გამოქვეყნებულ ვაკანსიაზე. მიუთითეთ მხოლოდ ის საკონტაქტო მონაცემი, რომლის გამოჩენაც გსურთ.</DialogDescription></DialogHeader>
+          <DialogHeader><DialogTitle>{editingId ? "ვაკანსიის რედაქტირება" : "ვაკანსიის დამატება"}</DialogTitle><DialogDescription>ტელეფონი და ელფოსტა საჯაროდ გამოჩნდება გამოქვეყნების შემდეგ.</DialogDescription></DialogHeader>
           <form onSubmit={submit} className="space-y-4">
             <div className="space-y-2"><Label htmlFor="vac-title">პოზიცია</Label><Input id="vac-title" value={form.title} onChange={e => set("title", e.target.value)} placeholder="მაგ. თმის სტილისტი" minLength={3} maxLength={160} required /></div>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -118,7 +118,6 @@ export default function PanelVacancies() {
               <div className="space-y-2"><Label htmlFor="vac-phone">საკონტაქტო ტელეფონი</Label><Input id="vac-phone" type="tel" value={form.contactPhone} onChange={e => set("contactPhone", e.target.value)} placeholder="+995 5XX XX XX XX" maxLength={32} /></div>
               <div className="space-y-2"><Label htmlFor="vac-email">საკონტაქტო ელფოსტა</Label><Input id="vac-email" type="email" value={form.contactEmail} onChange={e => set("contactEmail", e.target.value)} maxLength={320} /></div>
             </div>
-            <p className="flex items-start gap-2 rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground"><Megaphone className="mt-0.5 h-3.5 w-3.5 shrink-0" />ახალი ვაკანსია ინახება დრაფტად; საჯაროდ ჩანს მხოლოდ გამოქვეყნების შემდეგ.</p>
             {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
             <DialogFooter><Button type="submit" disabled={pending}>{pending ? "ინახება…" : "შენახვა"}</Button></DialogFooter>
           </form>

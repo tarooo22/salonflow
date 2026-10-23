@@ -48,8 +48,8 @@ describe("Settings profile and privacy surface", () => {
 
     expect(markup).toContain("პირადი გარემო");
     expect(markup).toContain("ინფორმაციის სიმკვრივე");
-    expect(markup).toContain("In-app შეტყობინებები");
-    expect(markup).toContain("local account");
+    expect(markup).toContain("შეტყობინებები აპში");
+    expect(markup).toContain("ანგარიში");
     expect(markup).not.toContain("ავტომატური booking confirmation");
   });
 });

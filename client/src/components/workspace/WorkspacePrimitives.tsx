@@ -2,8 +2,10 @@ import { cn } from "@/lib/utils";
 import React from "react";
 import { AlertCircle, Inbox, LoaderCircle } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
+import "./panel.css";
 
 type WorkspacePageHeaderProps = {
+  /** Kept for compatibility; the panel no longer prints eyebrows. */
   eyebrow?: string;
   title: string;
   description?: string;
@@ -11,55 +13,41 @@ type WorkspacePageHeaderProps = {
   className?: string;
 };
 
-export function WorkspacePageHeader({ eyebrow, title, description, actions, className }: WorkspacePageHeaderProps) {
+/** One compact head row on the page ground: condensed title left, actions right, 1.5px ink rule under it. */
+export function WorkspacePageHeader({ title, description, actions, className }: WorkspacePageHeaderProps) {
   return (
-    <header className={cn("sf-workspace-page-header flex flex-col gap-4 rounded-2xl border border-border/70 bg-card p-4 shadow-sm lg:flex-row lg:items-end lg:justify-between", className)}>
-      <div className="min-w-0">
-        {eyebrow ? <p className="sf-workspace-eyebrow">{eyebrow}</p> : null}
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">{title}</h1>
-        {description ? <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">{description}</p> : null}
+    <header className={cn("cwk-head", className)}>
+      <div className="cwk-head-text">
+        <h1 className="cwk-title cwk-display">{title}</h1>
+        {description ? <p className="cwk-desc" title={description}>{description}</p> : null}
       </div>
-      {actions ? <div className="flex flex-wrap items-center gap-2 lg:justify-end">{actions}</div> : null}
+      {actions ? <div className="cwk-actions">{actions}</div> : null}
     </header>
   );
 }
 
-export function WorkspaceMetric({ label, value, helper, icon: Icon, tone = "neutral" }: {
+/** Sheet-white count tile: caption, mono value. `tone` is kept for compatibility and no longer colours the tile. */
+export function WorkspaceMetric({ label, value, helper, icon: Icon }: {
   label: string;
   value: ReactNode;
   helper?: string;
   icon?: (props: ComponentProps<"svg">) => ReactNode;
   tone?: "neutral" | "jade" | "terracotta" | "violet" | "fuchsia" | "amber";
 }) {
-  const tones = {
-    neutral: "bg-gradient-to-br from-[var(--sf-muted)] to-[var(--sf-ink)] text-white",
-    jade: "bg-gradient-to-br from-[var(--sf-teal)] to-[var(--sf-jade)] text-white",
-    terracotta: "bg-gradient-to-br from-[var(--sf-fuchsia)] to-[var(--sf-magenta)] text-white",
-    violet: "bg-gradient-to-br from-[var(--sf-violet)] to-[var(--sf-indigo)] text-white",
-    fuchsia: "bg-gradient-to-br from-[var(--sf-fuchsia)] to-[var(--sf-magenta)] text-white",
-    amber: "bg-gradient-to-br from-[var(--sf-amber)] to-[var(--sf-fuchsia)] text-white",
-  } as const;
-  const bars = {
-    neutral: "var(--sf-muted)", jade: "var(--sf-jade)", terracotta: "var(--sf-fuchsia)",
-    violet: "var(--sf-violet)", fuchsia: "var(--sf-fuchsia)", amber: "var(--sf-amber)",
-  } as const;
   return (
-    <div className="sf-workspace-metric sf-lift group relative min-w-0 overflow-hidden px-4 py-4">
-      <span className="absolute inset-x-0 top-0 h-1" style={{ background: bars[tone], opacity: 0.85 }} aria-hidden="true" />
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0"><p className="text-xs font-medium text-muted-foreground">{label}</p><p className="sf-display mt-1.5 truncate text-[1.35rem] font-bold leading-tight tracking-tight text-foreground">{value}</p></div>
-        {Icon ? <span className={cn("grid h-10 w-10 shrink-0 place-items-center rounded-xl shadow-sm transition-transform group-hover:scale-105", tones[tone])}><Icon className="h-4.5 w-4.5" /></span> : null}
-      </div>
-      {helper ? <p className="mt-2 text-xs leading-5 text-muted-foreground">{helper}</p> : null}
+    <div className="cwk-metric">
+      <p className="cwk-metric-label"><span>{label}</span>{Icon ? <Icon className="size-4 shrink-0" aria-hidden="true" /> : null}</p>
+      <p className="cwk-metric-value cwk-num">{value}</p>
+      {helper ? <p className="cwk-metric-helper">{helper}</p> : null}
     </div>
   );
 }
 
 export function WorkspaceSection({ title, description, action, children, className }: { title: string; description?: string; action?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <section className={cn("sf-workspace-section", className)}>
-      <div className="flex flex-col gap-2 border-b border-border/70 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-        <div><h2 className="text-sm font-semibold text-foreground">{title}</h2>{description ? <p className="mt-1 text-xs leading-5 text-muted-foreground">{description}</p> : null}</div>
+    <section className={cn("cwk-sheet", className)}>
+      <div className="cwk-sheet-head">
+        <div className="min-w-0"><h2 className="cwk-sheet-title">{title}</h2>{description ? <p className="cwk-sheet-desc">{description}</p> : null}</div>
         {action ? <div className="shrink-0">{action}</div> : null}
       </div>
       <div className="p-4">{children}</div>
@@ -69,29 +57,20 @@ export function WorkspaceSection({ title, description, action, children, classNa
 
 export function WorkspaceState({ kind, title, description, action }: { kind: "loading" | "error" | "empty"; title: string; description?: string; action?: ReactNode }) {
   const Icon = kind === "loading" ? LoaderCircle : kind === "error" ? AlertCircle : Inbox;
-  const tone = kind === "error" ? "text-destructive bg-destructive/10" : "text-primary bg-primary/10";
   return (
-    <div className="sf-workspace-state flex min-h-32 flex-col items-start justify-center p-5">
-      <span className={cn("mb-3 grid h-9 w-9 place-items-center rounded-lg", tone)}><Icon className={cn("h-4 w-4", kind === "loading" && "animate-spin")} /></span>
-      <p className="text-sm font-semibold text-foreground">{title}</p>
-      {description ? <p className="mt-1 max-w-xl text-sm leading-6 text-muted-foreground">{description}</p> : null}
-      {action ? <div className="mt-4">{action}</div> : null}
+    <div className="cwk-state" data-kind={kind} role={kind === "error" ? "alert" : undefined}>
+      <Icon className={cn("mb-1 size-5", kind === "loading" && "animate-spin motion-reduce:animate-none")} aria-hidden="true" />
+      <p className="text-sm font-bold">{title}</p>
+      {description ? <p className="max-w-xl text-sm leading-6 text-[var(--cwk-ink-soft)]">{description}</p> : null}
+      {action ? <div className="mt-3">{action}</div> : null}
     </div>
   );
 }
 
-export function WorkspaceStatusPill({ children, tone = "neutral" }: { children: ReactNode; tone?: "neutral" | "success" | "warning" | "danger" | "info" | "violet" }) {
-  const tones = {
-    neutral: "bg-muted text-muted-foreground",
-    success: "bg-[color-mix(in_srgb,var(--sf-jade)_16%,transparent)] text-[var(--sf-jade)]",
-    warning: "bg-[color-mix(in_srgb,var(--sf-amber)_16%,transparent)] text-[var(--sf-amber)]",
-    danger: "bg-destructive/10 text-destructive",
-    info: "bg-[color-mix(in_srgb,var(--sf-violet)_16%,transparent)] text-[var(--sf-violet)]",
-    violet: "bg-[color-mix(in_srgb,var(--sf-violet)_16%,transparent)] text-[var(--sf-violet)]",
-  } as const;
-  return <span className={cn("inline-flex min-h-6 items-center rounded-md px-2 py-0.5 text-xs font-semibold", tones[tone])}>{children}</span>;
+export function WorkspaceStatusPill({ children, tone = "neutral" }: { children: ReactNode; tone?: "neutral" | "success" | "warning" | "danger" | "info" | "violet" | "count" }) {
+  return <span className="cwk-mark" data-tone={tone}>{children}</span>;
 }
 
 export function WorkspaceFilterBar({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn("sf-workspace-filter-bar flex flex-col gap-3 rounded-2xl border border-border/70 bg-card p-3 shadow-sm sm:flex-row sm:flex-wrap sm:items-end", className)}>{children}</div>;
+  return <div className={cn("cwk-toolbar", className)}>{children}</div>;
 }

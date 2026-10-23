@@ -55,7 +55,7 @@ export default function PanelProducts() {
     event.preventDefault();
     if (!organization) return;
     const priceTetri = gelInputToTetri(form.priceGel);
-    if (priceTetri === null) { setError("მიუთითეთ ფასი ლარში ორი ათწილადის სიზუსტით, მაგ. 25.50."); return; }
+    if (priceTetri === null) { setError("მიუთითეთ ფასი ლარში, მაგ. 25.50."); return; }
     if (!form.locationId) { setError("აირჩიეთ ფილიალი."); return; }
     if (form.imageDataUrl && !form.imageAltKa.trim()) { setError("ფოტოს მოკლე აღწერა აუცილებელია."); return; }
     setError("");
@@ -70,22 +70,22 @@ export default function PanelProducts() {
   return (
     <DashboardLayout>
       <div className="sf-workspace-page mx-auto w-full max-w-7xl space-y-5">
-        <WorkspacePageHeader eyebrow="მარკეტფლეისი" title="პროდუქტები" description="პროდუქტები, რომლებიც საჯარო კატალოგში გამოჩნდება. არქივირებული პროდუქტი იმალება, მაგრამ არ იშლება." actions={<>{organization ? <WorkspaceStatusPill tone="info">{organization.name}</WorkspaceStatusPill> : null}{enabled ? <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" />პროდუქტის დამატება</Button> : null}</>} />
-        {organizations.isLoading ? <WorkspaceState kind="loading" title="პროდუქტები იტვირთება…" /> : null}
-        {organizations.isError ? <WorkspaceState kind="error" title="სამუშაო სივრცის მონაცემები მიუწვდომელია" /> : null}
+        <WorkspacePageHeader title="პროდუქტები" actions={<>{enabled ? <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" />პროდუქტის დამატება</Button> : null}</>} />
+        {organizations.isLoading ? <WorkspaceState kind="loading" title="იტვირთება…" /> : null}
+        {organizations.isError ? <WorkspaceState kind="error" title="მონაცემები მიუწვდომელია" /> : null}
         {organization && !canManage ? <WorkspaceState kind="empty" title="წვდომა მხოლოდ მფლობელს და მენეჯერს აქვს" /> : null}
         {enabled ? <WorkspaceSection title="ჩემი პროდუქტები">
-          <div className="divide-y divide-border/70">
-            {products.isLoading ? <WorkspaceState kind="loading" title="პროდუქტები იტვირთება…" /> : null}
-            {products.isError ? <WorkspaceState kind="error" title="პროდუქტების ჩატვირთვა ვერ მოხერხდა" /> : null}
-            {products.data?.length === 0 ? <WorkspaceState kind="empty" title="პროდუქტი ჯერ არ გაქვთ" action={<Button variant="outline" size="sm" onClick={openCreate}><Plus className="mr-1.5 h-4 w-4" />პირველი პროდუქტის დამატება</Button>} /> : null}
+          <div className="divide-y divide-border">
+            {products.isLoading ? <WorkspaceState kind="loading" title="იტვირთება…" /> : null}
+            {products.isError ? <WorkspaceState kind="error" title="ჩატვირთვა ვერ მოხერხდა" /> : null}
+            {products.data?.length === 0 ? <WorkspaceState kind="empty" title="პროდუქტი ჯერ არ გაქვთ" action={<Button variant="outline" size="sm" onClick={openCreate}><Plus className="mr-1.5 h-4 w-4" />პროდუქტის დამატება</Button>} /> : null}
             {products.data?.map(p => {
               const archived = p.status === "ARCHIVED";
               return <article key={p.id} className="grid gap-3 py-3 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center">
-                {p.imageUrl ? <img src={p.imageUrl} alt={p.imageAltKa ?? p.name} className="h-14 w-14 rounded-lg border object-cover" /> : <span className="grid h-14 w-14 place-items-center rounded-lg border bg-muted text-muted-foreground" aria-hidden="true"><ImagePlus className="h-5 w-5" /></span>}
+                {p.imageUrl ? <img src={p.imageUrl} alt={p.imageAltKa ?? p.name} className="h-14 w-14 rounded-md border object-cover" /> : <span className="grid h-14 w-14 place-items-center rounded-md border bg-muted text-muted-foreground" aria-hidden="true"><ImagePlus className="h-5 w-5" /></span>}
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2"><p className="font-semibold">{p.name}</p>{archived ? <WorkspaceStatusPill>არქივში</WorkspaceStatusPill> : null}</div>
-                  <p className="mt-1 text-sm text-muted-foreground">{[p.brand, p.locationName].filter(Boolean).join(" · ")} · <strong className="text-foreground">{formatGelTetri(p.priceTetri)}</strong></p>
+                  <p className="mt-1 text-sm text-muted-foreground">{[p.brand, p.locationName].filter(Boolean).join(" · ")} · <strong className="font-mono text-foreground">{formatGelTetri(p.priceTetri)}</strong></p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                   <label className="flex items-center gap-2 text-sm"><Switch checked={p.inStock} disabled={archived || toggle.isPending} aria-label={`${p.name}: მარაგშია`} onCheckedChange={checked => toggle.mutate({ organizationId, id: p.id, inStock: checked })} />{p.inStock ? "მარაგშია" : "არ არის მარაგში"}</label>
@@ -102,7 +102,7 @@ export default function PanelProducts() {
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>{editing ? "პროდუქტის რედაქტირება" : "პროდუქტის დამატება"}</DialogTitle><DialogDescription>ფასი ლარში შეიყვანეთ; სისტემა მას მთელ თეთრებად შეინახავს.</DialogDescription></DialogHeader>
+          <DialogHeader><DialogTitle>{editing ? "პროდუქტის რედაქტირება" : "პროდუქტის დამატება"}</DialogTitle></DialogHeader>
           <form onSubmit={submit} className="space-y-4">
             <div className="space-y-2"><Label htmlFor="prod-name">დასახელება</Label><Input id="prod-name" value={form.name} onChange={e => set("name", e.target.value)} minLength={2} maxLength={160} required /></div>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -111,10 +111,10 @@ export default function PanelProducts() {
             </div>
             <div className="space-y-2"><Label htmlFor="prod-location">ფილიალი</Label><Select value={form.locationId} onValueChange={v => set("locationId", v)}><SelectTrigger id="prod-location"><SelectValue placeholder="აირჩიეთ ფილიალი" /></SelectTrigger><SelectContent>{locations.data?.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}</SelectContent></Select></div>
             <div className="space-y-2"><Label htmlFor="prod-desc">აღწერა (არასავალდებულო)</Label><Textarea id="prod-desc" value={form.description} onChange={e => set("description", e.target.value)} rows={3} maxLength={600} /></div>
-            <label className="flex items-center justify-between gap-3 rounded-xl border p-3 text-sm"><span className="font-medium">მარაგშია</span><Switch checked={form.inStock} onCheckedChange={v => set("inStock", v)} /></label>
-            <div className="space-y-2 rounded-xl border p-3">
+            <label className="flex items-center justify-between gap-3 rounded-md border p-3 text-sm"><span className="font-medium">მარაგშია</span><Switch checked={form.inStock} onCheckedChange={v => set("inStock", v)} /></label>
+            <div className="space-y-2 rounded-md border p-3">
               <Label htmlFor="prod-image">ფოტო (არასავალდებულო, JPEG/PNG/WebP, 5MB-მდე)</Label>
-              {preview ? <img src={preview} alt="არჩეული ფოტოს გადახედვა" className="h-24 w-24 rounded-lg border object-cover" /> : null}
+              {preview ? <img src={preview} alt="არჩეული ფოტოს გადახედვა" className="h-24 w-24 rounded-md border object-cover" /> : null}
               <Input id="prod-image" type="file" accept="image/jpeg,image/png,image/webp" onChange={e => { void chooseFile(e.target.files?.[0]); e.target.value = ""; }} />
               {form.imageDataUrl || (editing?.imageUrl && !form.removeImage) ? <div className="space-y-2"><Label htmlFor="prod-alt">ფოტოს მოკლე აღწერა</Label><Input id="prod-alt" value={form.imageAltKa} onChange={e => set("imageAltKa", e.target.value)} placeholder="მაგ. შამპუნის ცისფერი ბოთლი" maxLength={160} /></div> : null}
               {editing?.imageUrl && !form.imageDataUrl ? <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.removeImage} onChange={e => set("removeImage", e.target.checked)} className="h-4 w-4 accent-primary" />ამჟამინდელი ფოტოს წაშლა</label> : null}

@@ -21,7 +21,9 @@ import {
 } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
 import { BarChart3, BriefcaseBusiness, Package,CalendarDays, CalendarHeart, ChevronDown, CircleHelp, Clock3, Images, LayoutDashboard, ListChecks, LogOut, MessageSquareText, MoreHorizontal, PanelLeft, ReceiptText, Scissors, Search, Settings2, Store, Users } from "lucide-react";
-import { CSSProperties, useEffect, useRef, useState } from "react";
+import { BRAND } from "@shared/brand";
+import "@/components/workspace/panel.css";
+import { ComponentType, CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
@@ -30,19 +32,22 @@ import { clientTerms } from "@/lib/verticalTerms";
 import { GuidedHelpTour } from "@/components/workspace/GuidedHelpTour";
 import { CommandPalette } from "@/components/workspace/CommandPalette";
 
+type RailIcon = ComponentType<{ className?: string }>;
+const VERTICAL_CHIP: Record<string, string> = { SALON: "სალონი", AESTHETICS: "ესთეტიკა", DENTAL: "სტომატოლოგია" };
+
 const menuItems = [
   { icon: LayoutDashboard, label: "დღეს", path: "/app/today", group: "დღის მართვა", roles: ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"] },
   { icon: CalendarDays, label: "კალენდარი", path: "/app/calendar", group: "დღის მართვა", roles: ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"] },
   { icon: CalendarHeart, label: "მოლოდინის სია", path: "/app/waitlist", group: "დღის მართვა", roles: ["OWNER", "MANAGER", "RECEPTIONIST"] },
   { icon: Clock3, label: "ოპერაციები", path: "/app/operations", group: "დღის მართვა", roles: ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"] },
-  { icon: ReceiptText, label: "POS და მარაგი", path: "/app/pos", group: "კლიენტები და გაყიდვა", roles: ["OWNER", "MANAGER", "RECEPTIONIST"] },
+  { icon: ReceiptText, label: "სალარო", path: "/app/pos", group: "კლიენტები და გაყიდვა", roles: ["OWNER", "MANAGER", "RECEPTIONIST"] },
   { icon: Users, label: "კლიენტები", path: "/app/clients", group: "კლიენტები და გაყიდვა", roles: ["OWNER", "MANAGER", "RECEPTIONIST"] },
   { icon: Images, label: "კლიენტის გალერეა", path: "/app/client-gallery", group: "კლიენტები და გაყიდვა", roles: ["OWNER"] },
   { icon: Scissors, label: "სერვისები", path: "/app/services", group: "სალონის მართვა", roles: ["OWNER"] },
   { icon: Users, label: "გუნდი", path: "/app/staff", group: "სალონის მართვა", roles: ["OWNER", "STAFF"] },
   { icon: BarChart3, label: "ანგარიშები", path: "/app/reports", group: "სალონის მართვა", roles: ["OWNER"] },
   { icon: Images, label: "მედია და პროფილი", path: "/app/media", group: "სალონის მართვა", roles: ["OWNER"] },
-  { icon: Store, label: "Marketplace", path: "/app/marketplace", group: "სალონის მართვა", roles: ["OWNER"] },
+  { icon: Store, label: "კატალოგის პროფილი", path: "/app/marketplace", group: "სალონის მართვა", roles: ["OWNER"] },
   { icon: BriefcaseBusiness, label: "ვაკანსიები", path: "/app/vacancies", group: "სალონის მართვა", roles: ["OWNER", "MANAGER"] },
   { icon: Package, label: "პროდუქტები", path: "/app/products", group: "სალონის მართვა", roles: ["OWNER", "MANAGER"] },
   { icon: MessageSquareText, label: "შეფასებები", path: "/app/feedback", group: "სალონის მართვა", roles: ["OWNER", "MANAGER"] },
@@ -51,10 +56,10 @@ const menuItems = [
 
 const menuGroups = ["დღის მართვა", "კლიენტები და გაყიდვა", "სალონის მართვა"] as const;
 const platformAdminItems = [
-  { icon: ListChecks, label: "Trial requests", path: "/app/trial-admin" },
+  { icon: ListChecks, label: "საცდელი მოთხოვნები", path: "/app/trial-admin" },
   { icon: Store, label: "სალონების კონტროლი", path: "/app/organization-governance" },
-  { icon: ReceiptText, label: "Billing payments", path: "/app/billing-admin" },
-  { icon: MessageSquareText, label: "Review moderation", path: "/app/feedback-admin" },
+  { icon: ReceiptText, label: "გადახდები", path: "/app/billing-admin" },
+  { icon: MessageSquareText, label: "შეფასებების მოდერაცია", path: "/app/feedback-admin" },
 ] as const;
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -148,7 +153,6 @@ function DashboardLayoutContent({
   const salesItems = visibleMenuItems.filter(item => item.group === "კლიენტები და გაყიდვა");
   const managementItems = visibleMenuItems.filter(item => item.group === "სალონის მართვა");
   const visiblePlatformAdminItems = user?.role === "admin" ? platformAdminItems : [];
-  const activeMenuItem = [...visibleMenuItems, ...visiblePlatformAdminItems].find(item => item.path === location);
   const isMobile = useIsMobile();
   const [helpOpen, setHelpOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
@@ -196,101 +200,78 @@ function DashboardLayoutContent({
     };
   }, [isResizing, setSidebarWidth]);
 
+  const organization = organizations.data?.[0]?.organization;
+  const railItem = (item: { icon: RailIcon; label: string; path: string }, label = item.label) => {
+    const isActive = location === item.path;
+    return (
+      <SidebarMenuItem key={item.path}>
+        <SidebarMenuButton isActive={isActive} onClick={() => setLocation(item.path)} tooltip={label} className="cwk-nav min-h-11 md:min-h-9">
+          <item.icon className="h-4 w-4" />
+          <span>{label}</span>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    );
+  };
+  const groupCaption = (label: string) => (!isCollapsed ? <p className="cwk-group-caption">{label}</p> : null);
+
   return (
     <>
       <div className="relative" ref={sidebarRef}>
-        <Sidebar
-          collapsible="icon"
-          className="sf-workspace-sidebar border-r border-sidebar-border/90 bg-sidebar shadow-[18px_0_44px_rgb(0_0_0_/_0.16)]"
-          disableTransition={isResizing}
-        >
-          <SidebarHeader className="h-[4.75rem] justify-center border-b border-sidebar-border/90">
-            <div className="flex items-center gap-3 px-3 transition-all w-full">
-              <button
-                onClick={toggleSidebar}
-                className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-sidebar-border/90 bg-sidebar-accent/45 transition-colors hover:bg-sidebar-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                aria-label="ნავიგაციის გადართვა"
-              >
-                <PanelLeft className="h-4 w-4 text-sidebar-foreground" />
+        <Sidebar collapsible="icon" className="cwk-rail border-r-0" disableTransition={isResizing}>
+          <SidebarHeader className="cwk-rail-head justify-center p-0">
+            <div className="flex min-h-[4rem] w-full items-center gap-2 px-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
+              <button onClick={toggleSidebar} className="cwk-rail-btn" aria-label="ნავიგაციის გადართვა">
+                <PanelLeft className="h-4 w-4" />
               </button>
               {!isCollapsed ? (
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="sf-brand-mark sf-brand-mark--inverted" aria-hidden="true"><i /><i /><i /></span>
-                  <div className="min-w-0"><span className="block truncate text-sm font-semibold tracking-tight text-sidebar-foreground">Chawera</span><span className="block truncate text-[11px] text-sidebar-foreground/65">სამუშაო სივრცე</span></div>
-                </div>
+                <>
+                  <span className="cwk-wordmark min-w-0 flex-1"><span className="cwk-wordmark-ka">{BRAND.nameKa}</span><span className="cwk-wordmark-domain cwk-num">{BRAND.domain}</span></span>
+                  <button type="button" onClick={() => setCommandOpen(true)} className="cwk-rail-btn" aria-label="სწრაფი ძიება"><Search className="size-4" aria-hidden="true" /></button>
+                </>
               ) : null}
-              <button type="button" onClick={() => setCommandOpen(true)} className="ml-auto grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-sidebar-border/90 bg-sidebar-accent/45 text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="სწრაფი ძიება"><Search className="size-4" aria-hidden="true" /></button>
             </div>
+            {!isCollapsed && organization ? (
+              <div className="cwk-org pb-3">
+                <span className="cwk-org-name" title={organization.name}>{organization.name}</span>
+                <span className="cwk-vchip" data-v={organization.vertical}>{VERTICAL_CHIP[organization.vertical] ?? VERTICAL_CHIP.SALON}</span>
+              </div>
+            ) : null}
           </SidebarHeader>
 
           <SidebarContent className="gap-0 px-2 py-4">
             {[{ label: "დღის მართვა", items: dailyItems }, { label: "კლიენტები და გაყიდვა", items: salesItems }].filter(group => group.items.length).map((group, groupIndex) => <div key={group.label} className={groupIndex ? "mt-5" : ""}>
-              {!isCollapsed ? <p className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-sidebar-foreground/55">{group.label}</p> : null}
-              <SidebarMenu className="gap-1">
-              {group.items.map(item => {
-                const isActive = location === item.path;
-                const label = item.path === "/app/staff" && role === "STAFF" ? "ჩემი პროფილი" : item.label;
-                return (
-                  <SidebarMenuItem key={item.path}>
-                    <SidebarMenuButton
-                      isActive={isActive}
-                      onClick={() => setLocation(item.path)}
-                      tooltip={label}
-                      className="min-h-11 rounded-xl px-3 text-sidebar-foreground/72 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground data-[active=true]:bg-sidebar-primary data-[active=true]:font-semibold data-[active=true]:text-sidebar-primary-foreground data-[active=true]:shadow-[0_8px_18px_rgb(0_0_0_/_0.18)]"
-                    >
-                      <item.icon
-                        className={`h-4 w-4 ${isActive ? "text-sidebar-primary-foreground" : ""}`}
-                      />
-                      <span>{label}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
+              {groupCaption(group.label)}
+              <SidebarMenu className="gap-0.5">
+                {group.items.map(item => railItem(item, item.path === "/app/staff" && role === "STAFF" ? "ჩემი პროფილი" : item.label))}
               </SidebarMenu>
             </div>)}
             {managementItems.length ? <div className="mt-5">
-              {!isCollapsed ? <button type="button" onClick={() => setManagementOpen(open => !open)} aria-expanded={managementOpen} className="flex min-h-11 w-full items-center justify-between rounded-xl px-2 text-left text-[11px] font-semibold uppercase tracking-[0.14em] text-sidebar-foreground/55 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><span>სალონის მართვა</span><ChevronDown className={`size-4 transition-transform motion-reduce:transition-none motion-reduce:transform-none ${managementOpen ? "rotate-180" : ""}`} aria-hidden="true" /></button> : null}
-              {(managementOpen || isCollapsed) ? <SidebarMenu className="mt-1 gap-1">{managementItems.map(item => { const isActive = location === item.path; return <SidebarMenuItem key={item.path}><SidebarMenuButton isActive={isActive} onClick={() => setLocation(item.path)} tooltip={item.label} className="min-h-11 rounded-xl px-3 text-sidebar-foreground/72 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground data-[active=true]:bg-sidebar-primary data-[active=true]:font-semibold data-[active=true]:text-sidebar-primary-foreground"><item.icon className={`h-4 w-4 ${isActive ? "text-sidebar-primary-foreground" : ""}`} /><span>{item.label}</span></SidebarMenuButton></SidebarMenuItem>; })}</SidebarMenu> : null}
+              {!isCollapsed ? <button type="button" onClick={() => setManagementOpen(open => !open)} aria-expanded={managementOpen} className="cwk-group-caption"><span>სალონის მართვა</span><ChevronDown className={`size-4 transition-transform motion-reduce:transition-none motion-reduce:transform-none ${managementOpen ? "rotate-180" : ""}`} aria-hidden="true" /></button> : null}
+              {(managementOpen || isCollapsed) ? <SidebarMenu className="mt-1 gap-0.5">{managementItems.map(item => railItem(item))}</SidebarMenu> : null}
             </div> : null}
             {lockedOwnerItems.length ? <div className="mt-5">
-              {!isCollapsed ? <p className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-sidebar-foreground/55">წვდომის აღდგენა</p> : null}
-              <SidebarMenu className="gap-1">{lockedOwnerItems.map(item => <SidebarMenuItem key={item.path}><SidebarMenuButton isActive={location === item.path} onClick={() => setLocation(item.path)} tooltip={item.label} className="min-h-11 rounded-xl px-3 text-sidebar-foreground/72 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground data-[active=true]:bg-sidebar-primary data-[active=true]:font-semibold data-[active=true]:text-sidebar-primary-foreground"><item.icon className={`h-4 w-4 ${location === item.path ? "text-sidebar-primary-foreground" : ""}`} /><span>{item.label}</span></SidebarMenuButton></SidebarMenuItem>)}</SidebarMenu>
+              {groupCaption("წვდომის აღდგენა")}
+              <SidebarMenu className="gap-0.5">{lockedOwnerItems.map(item => railItem(item))}</SidebarMenu>
             </div> : null}
             {visiblePlatformAdminItems.length ? <div className={(dailyItems.length || salesItems.length || managementItems.length) ? "mt-5" : ""}>
-              {!isCollapsed ? <p className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-sidebar-foreground/55">პლატფორმის მართვა</p> : null}
-              <SidebarMenu className="gap-1">
-                {visiblePlatformAdminItems.map(item => <SidebarMenuItem key={item.path}>
-                  <SidebarMenuButton
-                    isActive={location === item.path}
-                    onClick={() => setLocation(item.path)}
-                    tooltip={item.label}
-                    className="min-h-11 rounded-xl px-3 text-sidebar-foreground/72 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground data-[active=true]:bg-sidebar-primary data-[active=true]:font-semibold data-[active=true]:text-sidebar-primary-foreground data-[active=true]:shadow-[0_8px_18px_rgb(0_0_0_/_0.18)]"
-                  >
-                    <item.icon className={`h-4 w-4 ${location === item.path ? "text-sidebar-primary-foreground" : ""}`} />
-                    <span>{item.label}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>)}
-              </SidebarMenu>
+              {groupCaption("პლატფორმის მართვა")}
+              <SidebarMenu className="gap-0.5">{visiblePlatformAdminItems.map(item => railItem(item))}</SidebarMenu>
             </div> : null}
           </SidebarContent>
 
-          <SidebarFooter className="border-t border-sidebar-border/90 p-3">
-            <button type="button" onClick={() => setHelpOpen(true)} className="mb-2 flex min-h-10 w-full items-center gap-2 rounded-xl px-2 text-left text-sm font-medium text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-data-[collapsible=icon]:justify-center" aria-label="სამუშაო სივრცის დახმარება"><CircleHelp className="size-4" /><span className="group-data-[collapsible=icon]:hidden">დახმარება</span></button>
+          <SidebarFooter className="cwk-rail-foot p-2">
+            <button type="button" onClick={() => setHelpOpen(true)} className="cwk-rail-link group-data-[collapsible=icon]:justify-center" aria-label="სამუშაო სივრცის დახმარება"><CircleHelp className="size-4" /><span className="group-data-[collapsible=icon]:hidden">დახმარება</span></button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex min-h-11 w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left transition-colors hover:bg-sidebar-accent group-data-[collapsible=icon]:justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                  <Avatar className="h-9 w-9 border border-sidebar-border shrink-0">
-                    <AvatarFallback className="text-xs font-medium">
+                <button className="cwk-rail-link min-h-12 gap-3 group-data-[collapsible=icon]:justify-center">
+                  <Avatar className="cwk-avatar h-8 w-8 shrink-0">
+                    <AvatarFallback className="text-xs">
                       {user?.name?.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
-                    <p className="text-sm font-medium truncate leading-none text-sidebar-foreground">
-                      {user?.name || "-"}
-                    </p>
-                    <p className="text-xs text-sidebar-foreground/60 truncate mt-1.5">
-                      {user?.email || "-"}
-                    </p>
+                  <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
+                    <p className="cwk-user-name truncate leading-none">{user?.name || "-"}</p>
+                    <p className="cwk-user-mail mt-1 truncate">{user?.email || "-"}</p>
                   </div>
                 </button>
               </DropdownMenuTrigger>
@@ -318,27 +299,24 @@ function DashboardLayoutContent({
 
       <SidebarInset className="sf-workspace-inset">
         {isMobile && (
-          <div className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-border/90 bg-background px-3 shadow-[0_8px_24px_rgb(0_0_0_/_0.08)]">
-              <div className="flex items-center gap-2">
-                <SidebarTrigger className="h-11 w-11 rounded-xl border border-border/75 bg-card" />
-              <div className="flex items-center gap-3">
-                <span className="sf-brand-mark" aria-hidden="true"><i /><i /><i /></span>
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-sm font-semibold tracking-tight text-foreground">{activeMenuItem?.path === "/app/staff" && role === "STAFF" ? "ჩემი პროფილი" : activeMenuItem?.label ?? "მენიუ"}</span>
-                  <span className="text-[11px] text-muted-foreground">Chawera</span>
-                </div>
+          <div className="cwk-topbar sticky top-0 z-40 flex h-14 items-center justify-between px-3">
+            <div className="flex min-w-0 items-center gap-2">
+              <SidebarTrigger className="cwk-topbtn" />
+              <div className="flex min-w-0 flex-col">
+                <span className="cwk-wordmark" style={{ color: "var(--cwk-ink)" }}><span className="cwk-wordmark-ka">{BRAND.nameKa}</span></span>
               </div>
             </div>
-            <div className="flex items-center gap-2"><button type="button" onClick={() => setCommandOpen(true)} className="grid size-11 place-items-center rounded-xl border border-border/75 bg-card text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label="სწრაფი ძიება"><Search className="size-4" /></button><button type="button" onClick={() => setHelpOpen(true)} className="grid size-11 place-items-center rounded-xl border border-border/75 bg-card text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label="სამუშაო სივრცის დახმარება"><CircleHelp className="size-4" /></button></div>
+            <div className="flex items-center gap-2"><button type="button" onClick={() => setCommandOpen(true)} className="cwk-topbtn" aria-label="სწრაფი ძიება"><Search className="size-4" /></button><button type="button" onClick={() => setHelpOpen(true)} className="cwk-topbtn" aria-label="სამუშაო სივრცის დახმარება"><CircleHelp className="size-4" /></button></div>
           </div>
         )}
-        <main className="sf-motion-enter sf-workspace-main flex-1 p-4 pb-24 sm:p-5 sm:pb-5 xl:p-6">{children}</main>
-        {isMobile ? <nav aria-label="სწრაფი ნავიგაცია" className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-border/90 bg-background/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_24px_rgb(0_0_0_/_0.08)] backdrop-blur">
-          {mobileQuickItems.map(item => { const isActive = location === item.path; return <button key={item.path} type="button" onClick={() => setLocation(item.path)} aria-current={isActive ? "page" : undefined} className={`grid min-h-12 place-items-center rounded-xl text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"}`}><item.icon className="size-4" aria-hidden="true" /><span className="mt-0.5 max-w-20 truncate">{item.path === "/app/staff" && role === "STAFF" ? "პროფილი" : item.label}</span></button>; })}
-          <button type="button" onClick={toggleSidebar} className="grid min-h-12 place-items-center rounded-xl text-xs font-medium text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><MoreHorizontal className="size-4" aria-hidden="true" /><span className="mt-0.5">მეტი</span></button>
+        <main className="cwk-main sf-motion-enter flex-1 p-3 pb-24 sm:p-5 sm:pb-5 xl:p-6">{children}</main>
+        {isMobile ? <nav aria-label="სწრაფი ნავიგაცია" className="cwk-tabbar fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 gap-1 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2">
+          {mobileQuickItems.map(item => { const isActive = location === item.path; return <button key={item.path} type="button" onClick={() => setLocation(item.path)} aria-current={isActive ? "page" : undefined} className="cwk-tab"><item.icon className="size-4" aria-hidden="true" /><span className="mt-0.5 max-w-20 truncate">{item.path === "/app/staff" && role === "STAFF" ? "პროფილი" : item.label}</span></button>; })}
+          <button type="button" onClick={toggleSidebar} className="cwk-tab"><MoreHorizontal className="size-4" aria-hidden="true" /><span className="mt-0.5">მეტი</span></button>
         </nav> : null}
       </SidebarInset>
-      {organizations.data?.[0]?.organization.id ? <GuidedHelpTour organizationId={organizations.data[0].organization.id} role={role} open={helpOpen} onOpenChange={setHelpOpen} /> : null}
+      {/* Mounted only while open: the tour must never pop up on its own. */}
+      {helpOpen && organizations.data?.[0]?.organization.id ? <GuidedHelpTour organizationId={organizations.data[0].organization.id} role={role} open={helpOpen} onOpenChange={setHelpOpen} /> : null}
       <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} organizationId={organizationId} role={role} restricted={workspaceRestricted} />
     </>
   );

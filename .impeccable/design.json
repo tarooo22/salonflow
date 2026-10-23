@@ -1,9 +1,9 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-18T23:23:01.173Z",
+  "generatedAt": "2026-10-23T19:11:17.254Z",
   "title": "Design System: Chawera",
   "extensions": {
-    "scope": "Public catalog world only (cw- namespace, tokens on .cw in client/src/components/catalog/catalog.css; shipped on / only). Internal panel and older public pages still use legacy sf- tokens in client/src/index.css: known drift, not yet migrated, not authoritative.",
+    "scope": "One world, two modes. Catalog mode: public catalog (cw-, catalog.css). Operate mode: business panel /app/* (cwk-, client/src/components/workspace/panel.css via WorkspacePrimitives.tsx and DashboardLayout.tsx). :root in client/src/index.css is retoned: core sf- names and shadcn variables are aliases of this palette, not a second system. Not part of the system: --sf-salon-* remnants and the unreviewed .dark theme.",
     "colorMeta": {
       "paper": {
         "role": "neutral",
@@ -274,6 +274,51 @@
           "#a5cffb",
           "#e3f0fe"
         ]
+      },
+      "rule-wash": {
+        "role": "neutral",
+        "displayName": "Ruled Wash",
+        "canonical": "oklch(93.6% 0.017 281)",
+        "tonalRamp": [
+          "#0a0a17",
+          "#232333",
+          "#3e3f50",
+          "#5b5d6f",
+          "#7d7f93",
+          "#a1a3b8",
+          "#c7c9df",
+          "#eceefb"
+        ]
+      },
+      "surface-hover": {
+        "role": "neutral",
+        "displayName": "Hover Wash",
+        "canonical": "oklch(95.6% 0.011 281)",
+        "tonalRamp": [
+          "#0b0b14",
+          "#24242f",
+          "#3f404b",
+          "#5c5e6a",
+          "#7f808d",
+          "#a3a5b2",
+          "#c9cad8",
+          "#eff0f8"
+        ]
+      },
+      "danger": {
+        "role": "neutral",
+        "displayName": "Error Red",
+        "canonical": "oklch(50.4% 0.185 25.6)",
+        "tonalRamp": [
+          "#2a0003",
+          "#560a0e",
+          "#86151b",
+          "#b4232a",
+          "#d9534f",
+          "#f08680",
+          "#fbb8b2",
+          "#feeae7"
+        ]
       }
     },
     "typographyMeta": {
@@ -300,6 +345,34 @@
       "numeral": {
         "displayName": "Numeral",
         "purpose": "Martian Mono tabular: dates, ticket №, counts, domain, year."
+      },
+      "panel-title": {
+        "displayName": "Panel Title",
+        "purpose": "The one page title in the panel head row; 1.5rem on phones. Width 80%."
+      },
+      "panel-sheet-title": {
+        "displayName": "Sheet Title",
+        "purpose": "Panel section sheet heads. Width 85%."
+      },
+      "panel-control": {
+        "displayName": "Panel Control",
+        "purpose": "Segmented switch, date buttons, specialist strip, panel stamp button (0.85-0.9rem, 800, 85%)."
+      },
+      "panel-body": {
+        "displayName": "Panel Body",
+        "purpose": "Head-row description (one line, hidden under 640px), rail links, empty states."
+      },
+      "panel-meta": {
+        "displayName": "Panel Meta",
+        "purpose": "Metric helper, status/count marks, ticket action and service line, rail captions, phone tabs (0.72-0.75rem). Floor for Georgian text."
+      },
+      "ticket-name": {
+        "displayName": "Ticket Name",
+        "purpose": "Client name on a board ticket."
+      },
+      "metric-numeral": {
+        "displayName": "Metric Numeral",
+        "purpose": "Mono value in a metric tile."
       }
     },
     "shadows": [
@@ -332,6 +405,16 @@
         "name": "field-focus",
         "value": "0 0 0 3px color-mix(in srgb, #5a2fc2 35%, transparent)",
         "purpose": "Focus-within ring on boxed fields."
+      },
+      {
+        "name": "pinned-ticket",
+        "value": "0 1px 2px rgba(35, 35, 94, 0.08)",
+        "purpose": "Board tickets at rest: pinned to the board. The only resting shadow besides the card on the desk."
+      },
+      {
+        "name": "rail-active-ring",
+        "value": "inset 0 0 0 1px #3d3b86",
+        "purpose": "Active rail nav link edge."
       }
     ],
     "motion": [
@@ -369,23 +452,38 @@
         "name": "reduced-motion",
         "value": "transition: none",
         "purpose": "Sheets, tabs, tickets, band and buttons stop animating under prefers-reduced-motion."
+      },
+      {
+        "name": "duration-stub",
+        "value": "200ms",
+        "purpose": "Ticket stub recolour on status change."
+      },
+      {
+        "name": "stamp-press",
+        "value": "@keyframes cwk-stamp 220ms: 0% translateY(-3px) scale(1.3) with 0 4px 6px -2px rgba(35,35,94,.45); 55% translateY(1px) scale(.94); 100% none",
+        "purpose": "Plays on the ticket stub when a booking changes status."
+      },
+      {
+        "name": "panel-reduced-motion",
+        "value": "transition: none; animation: none",
+        "purpose": "Ticket, stub, panel stamp button, rail buttons/links and nav lose transitions and the stamp press does not play; the global rule collapses all other transitions and the page enter animation to 0.01ms."
       }
     ],
     "breakpoints": [
       {
         "name": "sm",
         "value": "640px",
-        "purpose": "Below: tabs become a 4-column grid, stack offset 5px, stub 3.5rem. Above: ticket cover image."
+        "purpose": "Below: tabs become a 4-column grid, stack offset 5px, stub 3.5rem. Above: ticket cover image. Panel: head-row description hidden below; main padding 1.25rem above."
       },
       {
         "name": "md",
         "value": "768px",
-        "purpose": "Two-column tickets, footer columns; below 767px extra blank tickets hide."
+        "purpose": "Two-column tickets, footer columns; below 767px extra blank tickets hide. Panel: below, the board shows one column with a specialist strip, controls grow to 2.75rem, bottom tab bar replaces the rail."
       },
       {
         "name": "lg",
         "value": "1024px",
-        "purpose": "Card splits headline/form, desktop nav, three ledgers."
+        "purpose": "Card splits headline/form, desktop nav, three ledgers. Panel: board max-height viewport minus 13rem above, 14rem below."
       },
       {
         "name": "xl",
@@ -396,7 +494,58 @@
     "focus": {
       "value": "outline: 3px solid #5a2fc2; outline-offset: 2px",
       "onDesk": "outline-color: #fff"
-    }
+    },
+    "statusStub": {
+      "PENDING": {
+        "stub": "#f6e17a",
+        "ink": "#23235e",
+        "icon": "clock",
+        "mark": "warning: #f6e17a / #5f4800, violet outline"
+      },
+      "CONFIRMED": {
+        "stub": "#bfe0f7",
+        "ink": "#0d4a7f",
+        "icon": "check",
+        "mark": "info: #bfe0f7 / #0d4a7f, #94c8ec outline"
+      },
+      "CHECKED_IN": {
+        "stub": "#5a2fc2",
+        "ink": "#ffffff",
+        "icon": "user-check",
+        "mark": "violet: stamp fill"
+      },
+      "IN_SERVICE": {
+        "stub": "#5a2fc2",
+        "ink": "#ffffff",
+        "icon": "play",
+        "mark": "violet: stamp fill"
+      },
+      "COMPLETED": {
+        "stub": "#cfd1ea",
+        "ink": "#23235e",
+        "icon": "check-check",
+        "mark": "success: #cfd1ea / #23235e, #9fa3d1 outline"
+      },
+      "CANCELLED": {
+        "stub": "repeating-linear-gradient(45deg, #cfd1ea 0 3px, transparent 3px 6px)",
+        "ink": "#4a4b85",
+        "icon": "x",
+        "extra": "dashed ticket border, name struck in Faded Ink",
+        "mark": "danger: #e7e8f5 / #4a4b85, struck"
+      },
+      "NO_SHOW": {
+        "stub": "repeating-linear-gradient(45deg, #cfd1ea 0 3px, transparent 3px 6px)",
+        "ink": "#4a4b85",
+        "icon": "user-x",
+        "extra": "dashed ticket border, name struck in Faded Ink",
+        "mark": "danger: #e7e8f5 / #4a4b85, struck"
+      }
+    },
+    "knownLimits": [
+      "Week view with all specialists is dense.",
+      "Drag-to-reschedule is pointer-only.",
+      "The .dark theme exists but was not visually reviewed and does not follow this system."
+    ]
   },
   "components": [
     {
@@ -470,17 +619,58 @@
       "description": "Ink-ruled ledger with a carbon-tint head, mono count and linked rows.",
       "html": "<div class=\"ds-ledger\"><div class=\"ds-lhead\"><span>ესთეტიკა</span><span class=\"ds-cnt\">2</span></div><a href=\"#\" class=\"ds-row\"><span>კოსმეტოლოგია</span><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12h14\"/><path d=\"m12 5 7 7-7 7\"/></svg></a><a href=\"#\" class=\"ds-row\"><span>ლაზერული ეპილაცია</span><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12h14\"/><path d=\"m12 5 7 7-7 7\"/></svg></a></div>",
       "css": ".ds-ledger{--cw-paper:#fdfdfb;--cw-ink:#23235e;--cw-ink-soft:#4a4b85;--cw-rule:#cfd1ea;--cw-rule-strong:#9fa3d1;--cw-desk:#1c1b48;--cw-desk-soft:#2a2960;--cw-on-desk:#eceefb;--cw-on-desk-soft:#b9bce6;--cw-stamp:#5a2fc2;--cw-stamp-hover:#4a22a8;--cw-beauty:#f8c8d8;--cw-beauty-ink:#86194a;--cw-aesthetics:#f6e17a;--cw-aesthetics-ink:#5f4800;--cw-dental:#bfe0f7;--cw-dental-ink:#0d4a7f;--cw-ease:cubic-bezier(0.16,1,0.3,1);font-family:\"Noto Sans Georgian\",Sora,system-ui,sans-serif;--ledger-bg:var(--cw-aesthetics);--ledger-ink:var(--cw-aesthetics-ink);max-width:22rem;border:1.5px solid var(--cw-ink);border-radius:4px;background:#fff;color:var(--cw-ink);overflow:hidden;}.ds-lhead{display:flex;justify-content:space-between;align-items:baseline;padding:.8rem 1rem;background:var(--ledger-bg);color:var(--ledger-ink);border-bottom:1.5px solid var(--cw-ink);font-size:1.125rem;font-weight:800;font-stretch:85%;}.ds-cnt{font-family:\"Martian Mono\",ui-monospace,monospace;font-size:.75rem;font-variant-numeric:tabular-nums;}.ds-row{display:flex;align-items:center;gap:.75rem;padding:.8rem 1rem;border-top:1px solid var(--cw-rule);font-weight:600;color:inherit;text-decoration:none;transition:background-color 160ms var(--cw-ease);}.ds-row span{flex:1;}.ds-row svg{color:var(--cw-ink-soft);}.ds-lhead+.ds-row{border-top:0;}.ds-row:hover{background:color-mix(in srgb,var(--ledger-bg) 45%,#fff);}.ds-row:focus-visible{outline:3px solid var(--cw-stamp);outline-offset:-3px;}"
+    },
+    {
+      "name": "Desk Rail",
+      "kind": "nav",
+      "refersTo": "rail",
+      "description": "Panel navigation on the indigo desk: wordmark, org with vertical chip, grouped links.",
+      "html": "<nav class=\"ds-rail\"><div class=\"ds-rail-mark\"><span class=\"ds-rail-ka\">ჩაწერა</span><span class=\"ds-rail-dom\">chawera.ge</span></div><div class=\"ds-rail-org\"><span>სალონი ია</span><span class=\"ds-rail-chip\">სილამაზე</span></div><p class=\"ds-rail-cap\">სამუშაო</p><a href=\"#\" class=\"ds-rail-link\" data-active=\"true\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"3\" y=\"4\" width=\"18\" height=\"18\" rx=\"2\"/><path d=\"M16 2v4M8 2v4M3 10h18\"/></svg>კალენდარი</a><a href=\"#\" class=\"ds-rail-link\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"9\" cy=\"7\" r=\"4\"/><path d=\"M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2\"/></svg>კლიენტები</a></nav>",
+      "css": ".ds-rail{--ink:#23235e;--ink-soft:#4a4b85;--rule:#cfd1ea;--rule-strong:#9fa3d1;--stamp:#5a2fc2;--desk:#1c1b48;--desk-soft:#2a2960;--on-desk:#eceefb;--on-desk-soft:#b9bce6;--ease:cubic-bezier(0.16,1,0.3,1);font-family:\"Noto Sans Georgian\",Sora,system-ui,sans-serif;width:15rem;background:var(--desk);padding:.75rem .5rem;display:flex;flex-direction:column;gap:.15rem;}.ds-rail-mark{display:flex;align-items:baseline;gap:.5rem;color:var(--on-desk);padding:0 .6rem .7rem;border-bottom:1px solid var(--desk-soft);}.ds-rail-ka{font-size:1.5rem;font-stretch:75%;font-weight:850;line-height:1;}.ds-rail-dom{font-family:\"Martian Mono\",ui-monospace,monospace;font-variant-numeric:tabular-nums;font-weight:600;font-weight:400;font-size:.72rem;color:var(--on-desk-soft);}.ds-rail-org{display:flex;justify-content:space-between;align-items:center;gap:.5rem;padding:.7rem .6rem .75rem;font-size:.8rem;font-weight:700;color:var(--on-desk);}.ds-rail-chip{border-radius:3px;padding:.1rem .4rem;font-size:.72rem;font-weight:800;font-stretch:85%;background:#f8c8d8;color:#86194a;}.ds-rail-cap{margin:0;padding:.25rem .6rem .4rem;font-size:.72rem;font-weight:700;letter-spacing:.06em;color:var(--on-desk-soft);}.ds-rail-link{display:flex;align-items:center;gap:.6rem;min-height:2.25rem;padding:0 .65rem;border-radius:4px;font-size:.9rem;font-weight:600;color:var(--on-desk);text-decoration:none;transition:background-color 160ms var(--ease);}.ds-rail-link svg{color:var(--on-desk-soft);}.ds-rail-link:hover{background:var(--desk-soft);color:#fff;}.ds-rail-link[data-active=\"true\"]{background:var(--desk-soft);color:#fff;font-weight:800;font-stretch:90%;box-shadow:inset 0 0 0 1px #3d3b86;}.ds-rail-link[data-active=\"true\"] svg,.ds-rail-link:hover svg{color:#fff;}.ds-rail-link:focus-visible{outline:3px solid var(--on-desk-soft);outline-offset:1px;}@media (prefers-reduced-motion:reduce){.ds-rail-link{transition:none;}}"
+    },
+    {
+      "name": "Panel Head Row",
+      "kind": "custom",
+      "refersTo": "panel-stamp-button",
+      "description": "The one head row: condensed title, mono date bar, day/week switch, stamp action, 1.5px ink rule.",
+      "html": "<header class=\"ds-head\"><h1 class=\"ds-head-title\">კალენდარი</h1><div class=\"ds-head-actions\"><span class=\"ds-datebar\"><button class=\"ds-datebtn\" aria-label=\"წინა\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m15 18-6-6 6-6\"/></svg></button><span class=\"ds-datestamp\">ხუთ <span class=\"ds-num\">23.10</span></span><button class=\"ds-datebtn\" aria-label=\"შემდეგი\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m9 18 6-6-6-6\"/></svg></button><button class=\"ds-datebtn\">დღეს</button></span><span class=\"ds-seg\"><button aria-pressed=\"true\">დღე</button><button aria-pressed=\"false\">კვირა</button></span><button class=\"ds-pstamp\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 5v14M5 12h14\"/></svg>ჯავშანი</button></div></header>",
+      "css": ".ds-head{--ink:#23235e;--ink-soft:#4a4b85;--rule:#cfd1ea;--rule-strong:#9fa3d1;--stamp:#5a2fc2;--desk:#1c1b48;--desk-soft:#2a2960;--on-desk:#eceefb;--on-desk-soft:#b9bce6;--ease:cubic-bezier(0.16,1,0.3,1);font-family:\"Noto Sans Georgian\",Sora,system-ui,sans-serif;display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:.6rem 1rem;padding:1rem 1rem .7rem;background:#fdfdfb;border-bottom:1.5px solid var(--ink);color:var(--ink);}.ds-head-title{margin:0;font-size:clamp(1.5rem,1.1rem + 1.2vw,2rem);font-stretch:80%;font-weight:800;line-height:1.1;letter-spacing:-.01em;}.ds-head-actions{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;}.ds-datebar{display:inline-flex;align-items:center;gap:.25rem;}.ds-datebtn{display:inline-grid;place-items:center;min-width:2.25rem;min-height:2.25rem;padding:0 .6rem;border:1px solid var(--rule-strong);border-radius:4px;background:#fff;color:var(--ink);font:inherit;font-size:.85rem;font-weight:800;font-stretch:85%;cursor:pointer;}.ds-datebtn:hover{background:#eff0f8;}.ds-datebtn:focus-visible,.ds-pstamp:focus-visible{outline:3px solid var(--stamp);outline-offset:2px;}.ds-datestamp{padding:0 .25rem;font-size:.95rem;font-weight:700;}.ds-num{font-family:\"Martian Mono\",ui-monospace,monospace;font-variant-numeric:tabular-nums;font-weight:600;font-size:.9rem;}.ds-seg{display:inline-flex;border:1.5px solid var(--ink);border-radius:4px;overflow:hidden;background:#fff;}.ds-seg button{min-height:2.25rem;min-width:3rem;padding:0 .7rem;border:0;background:transparent;font:inherit;font-size:.85rem;font-weight:800;font-stretch:85%;color:var(--ink);cursor:pointer;}.ds-seg button+button{border-left:1.5px solid var(--ink);}.ds-seg button[aria-pressed=\"true\"]{background:var(--ink);color:#fff;}.ds-seg button:focus-visible{outline:3px solid var(--stamp);outline-offset:-3px;}.ds-pstamp{display:inline-flex;align-items:center;gap:.4rem;min-height:2.25rem;padding:0 .85rem;border:0;border-radius:4px;background:var(--stamp);color:#fff;font:inherit;font-weight:800;font-stretch:85%;font-size:.9rem;cursor:pointer;box-shadow:0 6px 14px -8px rgba(58,28,134,.75);transition:background-color 160ms var(--ease),transform 160ms var(--ease);}.ds-pstamp:hover{background:#4a22a8;}.ds-pstamp:active{transform:translateY(1px);box-shadow:0 2px 6px -4px rgba(58,28,134,.75);}@media (prefers-reduced-motion:reduce){.ds-pstamp{transition:none;}}"
+    },
+    {
+      "name": "Panel Status and Count Marks",
+      "kind": "chip",
+      "refersTo": "status-mark",
+      "description": "Status vocabulary (Status Stub Rule) plus the ink-outline mono count mark.",
+      "html": "<div class=\"ds-marks\"><span class=\"ds-mk\" data-tone=\"warning\">მოლოდინში</span><span class=\"ds-mk\" data-tone=\"info\">დადასტურებული</span><span class=\"ds-mk\" data-tone=\"violet\">მიმდინარე</span><span class=\"ds-mk\" data-tone=\"success\">დასრულებული</span><span class=\"ds-mk\" data-tone=\"danger\">გაუქმებული</span><span class=\"ds-mk\" data-tone=\"count\">12</span></div>",
+      "css": ".ds-marks{--ink:#23235e;--ink-soft:#4a4b85;--rule:#cfd1ea;--rule-strong:#9fa3d1;--stamp:#5a2fc2;--desk:#1c1b48;--desk-soft:#2a2960;--on-desk:#eceefb;--on-desk-soft:#b9bce6;--ease:cubic-bezier(0.16,1,0.3,1);font-family:\"Noto Sans Georgian\",Sora,system-ui,sans-serif;display:flex;flex-wrap:wrap;gap:.5rem;}.ds-mk{display:inline-flex;align-items:center;min-height:1.5rem;white-space:nowrap;line-height:1.2;border:1px solid var(--mk-line,var(--rule));border-radius:3px;padding:.05rem .45rem;font-size:.75rem;font-weight:700;background:var(--mk-bg,transparent);color:var(--mk-ink,var(--ink-soft));}.ds-mk[data-tone=\"success\"]{--mk-bg:#cfd1ea;--mk-ink:#23235e;--mk-line:#9fa3d1;}.ds-mk[data-tone=\"warning\"]{--mk-bg:#f6e17a;--mk-ink:#5f4800;--mk-line:var(--stamp);}.ds-mk[data-tone=\"danger\"]{--mk-bg:#e7e8f5;--mk-ink:#4a4b85;--mk-line:#cfd1ea;text-decoration:line-through;}.ds-mk[data-tone=\"info\"]{--mk-bg:#bfe0f7;--mk-ink:#0d4a7f;--mk-line:#94c8ec;}.ds-mk[data-tone=\"violet\"]{--mk-bg:var(--stamp);--mk-ink:#fff;--mk-line:var(--stamp);}.ds-mk[data-tone=\"count\"]{--mk-ink:var(--ink);--mk-line:var(--ink);font-family:\"Martian Mono\",ui-monospace,monospace;font-variant-numeric:tabular-nums;font-weight:600;}"
+    },
+    {
+      "name": "Panel Sheet and Metric",
+      "kind": "card",
+      "refersTo": "panel-sheet",
+      "description": "Sheet-white section with a 1.5px ink head rule; untinted metric tile with mono value.",
+      "html": "<section class=\"ds-sheet\"><div class=\"ds-sheet-head\"><h2>დღის მიმოხილვა</h2></div><div class=\"ds-sheet-body\"><div class=\"ds-metric\"><p class=\"ds-metric-label\">ჯავშნები</p><p class=\"ds-metric-value\">18</p><p class=\"ds-metric-help\">3 მოლოდინში</p></div><div class=\"ds-metric\"><p class=\"ds-metric-label\">შემოსავალი</p><p class=\"ds-metric-value\">1 240 ₾</p></div></div></section>",
+      "css": ".ds-sheet{--ink:#23235e;--ink-soft:#4a4b85;--rule:#cfd1ea;--rule-strong:#9fa3d1;--stamp:#5a2fc2;--desk:#1c1b48;--desk-soft:#2a2960;--on-desk:#eceefb;--on-desk-soft:#b9bce6;--ease:cubic-bezier(0.16,1,0.3,1);font-family:\"Noto Sans Georgian\",Sora,system-ui,sans-serif;max-width:28rem;border:1px solid var(--rule);border-radius:4px;background:#fff;color:var(--ink);}.ds-sheet-head{padding:.65rem 1rem .55rem;border-bottom:1.5px solid var(--ink);}.ds-sheet-head h2{margin:0;font-size:1.05rem;font-stretch:85%;font-weight:800;line-height:1.3;}.ds-sheet-body{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;padding:1rem;}.ds-metric{padding:.75rem 1rem;border:1px solid var(--rule);border-radius:4px;background:#fff;}.ds-metric p{margin:0;}.ds-metric-label{font-size:.72rem;font-weight:700;letter-spacing:.04em;color:var(--ink-soft);}.ds-metric .ds-metric-value{margin-top:.35rem;font-family:\"Martian Mono\",ui-monospace,monospace;font-variant-numeric:tabular-nums;font-weight:600;font-size:1.35rem;line-height:1.2;}.ds-metric .ds-metric-help{margin-top:.35rem;font-size:.75rem;line-height:1.4;color:var(--ink-soft);}"
+    },
+    {
+      "name": "Board Ticket",
+      "kind": "custom",
+      "refersTo": "board-ticket",
+      "description": "Signature: a booking on the timetable board, stub coloured by status, notched and perforated, with the in-place action.",
+      "html": "<div class=\"ds-board\"><div class=\"ds-bt\" data-status=\"PENDING\" style=\"top:8px;height:84px\"><span class=\"ds-stub\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"M12 6v6l4 2\"/></svg></span><div class=\"ds-tb\"><span class=\"ds-tn\">ნინო ბ.</span><span class=\"ds-ts\">მანიკიური</span><span class=\"ds-tt\">10:00–11:00</span><span class=\"ds-tst\">მოლოდინში</span></div><button class=\"ds-tact\">დადასტურება</button></div><div class=\"ds-bt\" data-status=\"IN_SERVICE\" style=\"top:100px;height:60px\"><span class=\"ds-stub\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><polygon points=\"6 3 20 12 6 21 6 3\"/></svg></span><div class=\"ds-tb\"><span class=\"ds-tn\">მარიამ კ.</span><span class=\"ds-ts\">თმის შეჭრა</span><span class=\"ds-tt\">11:00–11:45</span></div><button class=\"ds-tact\">დასრულება</button></div><div class=\"ds-bt\" data-status=\"CANCELLED\" style=\"top:168px;height:44px\"><span class=\"ds-stub\"></span><div class=\"ds-tb\"><span class=\"ds-tn\">ანა ლ.</span><span class=\"ds-tt\">12:00–12:30</span></div></div></div>",
+      "css": ".ds-board{--ink:#23235e;--ink-soft:#4a4b85;--rule:#cfd1ea;--rule-strong:#9fa3d1;--stamp:#5a2fc2;--desk:#1c1b48;--desk-soft:#2a2960;--on-desk:#eceefb;--on-desk-soft:#b9bce6;--ease:cubic-bezier(0.16,1,0.3,1);font-family:\"Noto Sans Georgian\",Sora,system-ui,sans-serif;position:relative;width:20rem;height:13.5rem;border:1px solid var(--rule);border-radius:4px;background-color:#fff;background-image:linear-gradient(to bottom,var(--rule) 1px,transparent 1px);background-size:100% 64px;}.ds-bt{position:absolute;left:6px;right:6px;display:flex;overflow:hidden;border:1px solid var(--rule);border-radius:4px;background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(35,35,94,.08);transition:box-shadow 160ms var(--ease);-webkit-mask:radial-gradient(circle 4px at 1.15rem 0,#0000 97%,#000) top/100% 51% no-repeat,radial-gradient(circle 4px at 1.15rem 100%,#0000 97%,#000) bottom/100% 51% no-repeat;mask:radial-gradient(circle 4px at 1.15rem 0,#0000 97%,#000) top/100% 51% no-repeat,radial-gradient(circle 4px at 1.15rem 100%,#0000 97%,#000) bottom/100% 51% no-repeat;}.ds-bt:hover{border-color:var(--rule-strong);background:color-mix(in srgb,#fff 94%,var(--stamp));}.ds-bt:focus-within{outline:2px solid var(--stamp);outline-offset:-2px;}.ds-stub{display:flex;width:1.15rem;flex-shrink:0;justify-content:center;padding-top:.3rem;border-right:1.5px dashed var(--rule-strong);background:var(--st-bg);color:var(--st-ink);}.ds-stub svg{width:.7rem;height:.7rem;}.ds-bt[data-status=\"PENDING\"]{--st-bg:#f6e17a;--st-ink:#23235e;}.ds-bt[data-status=\"CONFIRMED\"]{--st-bg:#bfe0f7;--st-ink:#0d4a7f;}.ds-bt[data-status=\"IN_SERVICE\"]{--st-bg:#5a2fc2;--st-ink:#fff;}.ds-bt[data-status=\"COMPLETED\"]{--st-bg:#cfd1ea;--st-ink:#23235e;}.ds-bt[data-status=\"CANCELLED\"]{--st-bg:repeating-linear-gradient(45deg,#cfd1ea 0 3px,transparent 3px 6px);--st-ink:#4a4b85;border-style:dashed;}.ds-bt[data-status=\"CANCELLED\"] .ds-tn{text-decoration:line-through;color:var(--ink-soft);}.ds-tb{display:flex;flex:1;min-width:0;flex-direction:column;gap:.05rem;padding:.25rem .5rem;}.ds-tn{font-size:.82rem;font-stretch:85%;font-weight:800;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}.ds-ts{font-size:.74rem;line-height:1.3;color:var(--ink-soft);}.ds-tt{font-family:\"Martian Mono\",ui-monospace,monospace;font-variant-numeric:tabular-nums;font-weight:600;font-size:.72rem;color:var(--ink-soft);}.ds-tst{font-size:.72rem;font-weight:700;letter-spacing:.04em;color:var(--ink-soft);}.ds-tact{align-self:center;margin:0 .35rem 0 auto;min-height:1.75rem;padding:0 .6rem;border:0;border-radius:3px;background:var(--stamp);color:#fff;font:inherit;font-size:.75rem;font-weight:800;font-stretch:85%;cursor:pointer;}.ds-tact:hover{background:#4a22a8;}.ds-tact:focus-visible{outline:3px solid var(--stamp);outline-offset:2px;}@media (prefers-reduced-motion:reduce){.ds-bt{transition:none;}}"
     }
   ],
   "narrative": {
     "northStar": "The Appointment Card",
-    "overview": "The public catalog is a printed form lying on an indigo desk. White form paper is ruled in a single indigo form ink; questions are boxed fields with small printed captions; the three verticals are carbon copies of the same form in pink (beauty), canary (aesthetics) and sky blue (dental); the one action ink is a violet rubber stamp. Businesses appear as numbered tear-off tickets with die-cut notches and a dashed perforation between stub and body. Every device is something a real appointment card, carbon triplicate or ticket roll actually has.\n\nDensity is that of a form: hairline rules (1.5px ink, 1px pale rule) carry structure, not cards floating on whitespace. Desk bands (header, hero, business band, footer) frame the paper; paper set on the desk keeps paper colours. Headlines are condensed, very heavy Georgian set at narrow width; every number (dates, ticket №, counts, domain) is typewriter mono with tabular digits. Motion is physical and short: sheets slide, tabs lift, tickets rise a few pixels, all on one out-expo curve, and all of it switches off under reduced motion.\n\nThe world explicitly rejects the category default it replaces: a soft pink gradient banner carousel over rows of rounded photo cards. No glass and no decorative colour gradients.",
+    "overview": "The public catalog is a printed form lying on an indigo desk. White form paper is ruled in a single indigo form ink; questions are boxed fields with small printed captions; the three verticals are carbon copies of the same form in pink (beauty), canary (aesthetics) and sky blue (dental); the one action ink is a violet rubber stamp. Businesses appear as numbered tear-off tickets with die-cut notches and a dashed perforation between stub and body. Every device is something a real appointment card, carbon triplicate or ticket roll actually has.\n\nDensity is that of a form: hairline rules (1.5px ink, 1px pale rule) carry structure, not cards floating on whitespace. Desk bands (header, hero, business band, footer) frame the paper; paper set on the desk keeps paper colours. Headlines are condensed, very heavy Georgian set at narrow width; every number (dates, ticket №, counts, domain) is typewriter mono with tabular digits. Motion is physical and short: sheets slide, tabs lift, tickets rise a few pixels, all on one out-expo curve, and all of it switches off under reduced motion.\n\nThe business panel (Operate mode, /app/*) is the back office of the same card. Navigation sits on the indigo desk as a rail; work happens on form paper in sheet-white sheets ruled with a 1.5px ink head rule. The calendar is a timetable board on which every booking is a small torn-off ticket whose stub is coloured by status. Operate mode is denser than the catalog: a smaller type ramp, 2.25rem controls on desktop, one compact head row per page, and no explanatory paragraphs.\n\nThe world explicitly rejects the category default it replaces: a soft pink gradient banner carousel over rows of rounded photo cards, and in the panel a pastel SaaS dashboard with gradient hero headers, coloured metric cards and pill buttons. No glass and no decorative colour gradients.",
     "keyCharacteristics": [
       "One indigo ink for all text and rules; one violet stamp for actions, statuses and promotion marks.",
-      "Vertical colour is carbon-copy colour: it owns a whole region (tab, sheet, stub, ledger head), never a stray accent.",
+      "Vertical colour is carbon-copy colour: it owns a whole region (tab, sheet, stub, ledger head), never a stray accent. In the panel, canary and sky also carry booking status on ticket stubs and status marks, under the named Status Stub exception.",
       "Square-ish corners (2-6px), hairline rules, perforations and die-cut notches as the edge language.",
-      "Condensed heavy Georgian display; mono tabular numerals for anything counted or dated.",
-      "Soft, ink-tinted drop shadows only where paper sits on the desk or lifts on interaction."
+      "Condensed heavy Georgian display; mono tabular numerals for anything counted, timed or dated.",
+      "Soft, ink-tinted drop shadows only where paper sits on the desk or lifts on interaction.",
+      "Panel: desk rail, one head row, sheets, ticket board."
     ],
     "rules": [
       {
@@ -490,27 +680,37 @@
       },
       {
         "name": "The Carbon Copy Rule",
-        "body": "A vertical colour fills a whole region tied to that vertical (tab, sheet, ticket stub, ledger head, tint of the chosen card at 16%). It is never used as a generic accent, button colour, or decoration detached from a vertical.",
+        "body": "A vertical colour fills a whole region tied to that vertical (tab, sheet, ticket stub, ledger head, tint of the chosen card at 16%, the org's vertical chip on the rail). It is never used as a generic accent, button colour, or decoration detached from a vertical. The one sanctioned exception is the Status Stub Rule below.",
+        "section": "colors"
+      },
+      {
+        "name": "The Status Stub Rule",
+        "body": "In Operate mode, booking status is printed on the ticket stub and on status marks with a fixed vocabulary: pending = Carbon Canary stub with Form Ink glyph; confirmed = Carbon Sky with Dental Ink; checked-in and in-service = Rubber-Stamp Violet with white; completed = Pale Rule with Form Ink; cancelled and no-show = a 45deg hatch of Pale Rule (3px on, 3px off), dashed ticket border and the client name struck through in Faded Ink. Status marks follow the same map (warning = canary with a violet outline, info = sky, success = pale rule, danger = ruled wash struck through, violet = stamp fill). Every stub also carries a line icon and, where height allows, the status word, so status never rides on colour alone. Carbon Pink is never a status colour. Outside the stub and the mark, canary and sky mean their vertical only.",
         "section": "colors"
       },
       {
         "name": "The Stamp Rule",
-        "body": "Violet means \"act\" or \"officially marked\". Primary actions, links to book, focus, and promotion/status stamps; nothing else.",
+        "body": "Violet means \"act\" or \"officially marked\". Primary actions, links to book, focus, promotion/status stamps, the now-line, and the in-service stub; nothing else.",
         "section": "colors"
       },
       {
         "name": "The Stamped Numeral Rule",
-        "body": "Every date, count, ticket number and the domain is set in Martian Mono with tabular digits. Prose never is.",
+        "body": "Every date, time, count, price, ticket number and the domain is set in Martian Mono with tabular digits. Prose never is.",
         "section": "typography"
       },
       {
         "name": "The Condensed Voice Rule",
-        "body": "Emphasis comes from width and weight (75-85% width, 800-850), not from a second display family or colour.",
+        "body": "Emphasis comes from width and weight (75-90% width, 800-850), not from a second display family or colour.",
+        "section": "typography"
+      },
+      {
+        "name": "The Text Floor Rule",
+        "body": "Georgian text never goes below 0.72rem; mono numerals may go to 0.7rem. Density comes from fewer words, not smaller ones.",
         "section": "typography"
       },
       {
         "name": "The Paper Only Lifts Rule",
-        "body": "Surfaces are flat at rest except the card on the desk. Every other shadow is a response to state: chosen, pressed, hovered.",
+        "body": "Surfaces are flat at rest except the card on the desk and the pinned board ticket's 1px contact shadow. Every other shadow is a response to state: chosen, pressed, hovered. Panel sheets, metrics and toolbars carry no shadow.",
         "section": "elevation"
       }
     ],
@@ -522,16 +722,22 @@
       "Do use perforations, die-cut notches, dashed tear lines and ruled lines as the edge vocabulary.",
       "Do keep corners between 2px and 6px and borders at 1.5px ink or 1px pale rule.",
       "Do show unbuilt features honestly as dashed outlines with a \"მალე\" stamp, not as hidden or fake content.",
-      "Do run all motion on cubic-bezier(0.16, 1, 0.3, 1) and disable it under prefers-reduced-motion."
+      "Do run all motion on cubic-bezier(0.16, 1, 0.3, 1) and disable it under prefers-reduced-motion.",
+      "Do open every /app page with the one head row (condensed title, actions right, 1.5px ink rule), and put navigation on the desk rail.",
+      "Do print booking status on stubs and marks with the Status Stub vocabulary, always with an icon or word beside the colour.",
+      "Do show every count in the panel as a count mark: Form Ink outline, mono digits.",
+      "Do keep panel controls at 2.25rem on desktop and 2.75rem under 768px."
     ],
     "donts": [
       "Don't use pill-shaped buttons, chips or badges.",
-      "Don't use glass, backdrop blur, or decorative colour gradients (mask and ruling gradients that cut perforations or draw lines are fine).",
+      "Don't use glass, backdrop blur, or decorative colour gradients (mask and ruling gradients that cut perforations, draw lines or hatch a cancelled stub are fine).",
       "Don't use hard offset shadows; shadows are soft and ink-tinted.",
-      "Don't use a vertical colour as a generic accent or a second action colour.",
-      "Don't set body text, captions or labels below 0.72rem.",
+      "Don't use a vertical colour as a generic accent or a second action colour; canary and sky carry status only on stubs and status marks, and pink never does.",
+      "Don't set Georgian text below 0.72rem, or numerals below 0.7rem.",
       "Don't add a second display family; emphasis is width and weight of Noto Sans Georgian.",
-      "Don't pull values from the legacy `sf-` tokens in client/src/index.css for public catalog surfaces."
+      "Don't put an eyebrow, kicker or second header band above a panel title, or colour metric tiles by tone.",
+      "Don't use `rounded-xl`, `rounded-2xl` or `rounded-full` in the panel; they fall off the 2-6px ramp.",
+      "Don't read the `--sf-salon-*` tokens or add new `sf-` names; core `sf-` names are aliases of this palette, and new work uses `cw-` / `cwk-` tokens."
     ]
   }
 }

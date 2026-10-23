@@ -1,3 +1,4 @@
+import { formatKaDateTime } from "@/lib/presentation";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -9,7 +10,7 @@ import { FormEvent, useState } from "react";
 import { toast } from "sonner";
 
 const conditionStyle = (value: string | undefined) => DENTAL_CONDITIONS.find(item => item.value === value);
-const formatDate = (value: Date | string) => new Intl.DateTimeFormat("ka-GE", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
+const formatDate = (value: Date | string) => formatKaDateTime(new Date(value));
 
 export function DentalChart({ organizationId, clientId, appointmentId }: { organizationId: string; clientId: string; appointmentId?: string }) {
   const [primary, setPrimary] = useState(false);
@@ -48,13 +49,13 @@ export function DentalChart({ organizationId, clientId, appointmentId }: { organ
 
   return <div className="space-y-4">
     <div className="flex flex-wrap items-center justify-between gap-2">
-      <p className="text-sm text-muted-foreground">აირჩიეთ კბილი ისტორიის სანახავად და ახალი ჩანაწერის დასამატებლად.</p>
+      <p className="text-sm text-muted-foreground">აირჩიეთ კბილი.</p>
       <Button type="button" variant="outline" size="sm" className="min-h-11" aria-pressed={primary} onClick={() => { setPrimary(value => !value); setSelected(null); }}>{primary ? "მუდმივი კბილები" : "რძის კბილები"}</Button>
     </div>
     {chart.isLoading ? <WorkspaceState kind="loading" title="კბილების ფორმულა იტვირთება…" /> : null}
     {chart.isError ? <WorkspaceState kind="error" title="კბილების ფორმულა ვერ ჩაიტვირთა" description={chart.error.message} /> : null}
     {chart.data ? <>
-      <div className="overflow-x-auto rounded-xl border bg-card p-3" tabIndex={0} aria-label="კბილების ფორმულა">
+      <div className="overflow-x-auto rounded-md border bg-card p-3" tabIndex={0} aria-label="კბილების ფორმულა">
         <div className="mx-auto flex w-max flex-col gap-3">
           <p className="text-center text-[11px] font-medium text-muted-foreground">მარჯვენა · ზედა ყბა · მარცხენა</p>
           {renderArch("ზედა ყბა", layout.upper)}
@@ -90,7 +91,7 @@ function ToothPanel({ organizationId, clientId, appointmentId, toothCode, onClos
     record.mutate({ organizationId, clientId, appointmentId, toothCode, condition, surfaces: surfaces.length ? TOOTH_SURFACE_OPTIONS.filter(item => surfaces.includes(item.value)).map(item => item.value).join("") : undefined, note: note.trim() || undefined });
   };
 
-  return <section className="space-y-4 rounded-xl border bg-muted/15 p-4" aria-label={`კბილი ${toothCode}`}>
+  return <section className="space-y-4 rounded-md border bg-muted/15 p-4" aria-label={`კბილი ${toothCode}`}>
     <div className="flex items-center justify-between gap-2"><h3 className="text-base font-semibold">კბილი {toothCode}</h3><Button type="button" variant="ghost" size="sm" className="min-h-11" onClick={onClose}>დახურვა</Button></div>
     <form onSubmit={submit} className="space-y-3">
       <div className="grid gap-1.5"><Label htmlFor="tooth-condition">მდგომარეობა</Label>
@@ -106,7 +107,7 @@ function ToothPanel({ organizationId, clientId, appointmentId, toothCode, onClos
       {history.isLoading ? <p className="text-sm text-muted-foreground">ისტორია იტვირთება…</p> : null}
       {history.isError ? <p className="text-sm text-destructive">{history.error.message}</p> : null}
       {history.data && !history.data.length ? <p className="text-sm text-muted-foreground">ამ კბილზე ჩანაწერები ჯერ არ არის.</p> : null}
-      <ul className="space-y-2">{history.data?.map(row => <li key={row.id} className="rounded-lg border bg-background p-3 text-sm"><p className="font-medium">{conditionLabel(row.condition)}{row.surfaces ? ` · ${row.surfaces}` : ""}</p>{row.note ? <p className="mt-1 whitespace-pre-wrap text-muted-foreground">{row.note}</p> : null}<p className="mt-1 text-xs text-muted-foreground">{formatDate(row.recordedAt)}{row.recordedByName ? ` · ${row.recordedByName}` : ""}</p></li>)}</ul>
+      <ul className="space-y-2">{history.data?.map(row => <li key={row.id} className="rounded-md border bg-background p-3 text-sm"><p className="font-medium">{conditionLabel(row.condition)}{row.surfaces ? ` · ${row.surfaces}` : ""}</p>{row.note ? <p className="mt-1 whitespace-pre-wrap text-muted-foreground">{row.note}</p> : null}<p className="mt-1 text-xs text-muted-foreground">{formatDate(row.recordedAt)}{row.recordedByName ? ` · ${row.recordedByName}` : ""}</p></li>)}</ul>
     </div>
   </section>;
 }

@@ -53,18 +53,18 @@ describe("Today dashboard experience", () => {
 
   it("gives an owner operational focus, attention queue and only incomplete readiness steps", () => {
     const markup = renderToStaticMarkup(<Today />);
-    expect(markup).toContain("დღის ფოკუსი");
+    expect(markup).toContain("ახლა და შემდეგი");
     expect(markup).toContain("ნინო ბერიძე");
-    expect(markup).toContain("დღის მოქმედებები");
+    expect(markup).toContain("დღის რიგი");
     expect(markup).toContain("სალონის მზადყოფნა");
     expect(markup).toContain("სერვისები");
-    expect(markup).toContain("Booking ბმული");
+    expect(markup).toContain("ჩაწერის ბმული");
   });
 
   it("keeps the staff dashboard limited to own-day context and profile/calendar actions", () => {
     state.role = "STAFF";
     const markup = renderToStaticMarkup(<Today />);
-    expect(markup).toContain("ჩემი დღე");
+    expect(markup).toContain("ახლა და შემდეგი");
     expect(markup).toContain("ჩემი პროფილი");
     expect(markup).not.toContain("სალონის მზადყოფნა");
     expect(markup).not.toContain("დაგეგმილი თანხა");

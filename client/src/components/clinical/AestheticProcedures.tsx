@@ -1,3 +1,4 @@
+import { formatKaDateTime } from "@/lib/presentation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -12,7 +13,7 @@ import { FormEvent, useState } from "react";
 import { toast } from "sonner";
 
 const NO_PRACTITIONER = "none";
-const formatDateTime = (value: Date | string) => new Intl.DateTimeFormat("ka-GE", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
+const formatDateTime = (value: Date | string) => formatKaDateTime(new Date(value));
 const emptyForm = { procedureName: "", productName: "", batchNumber: "", productExpiry: "", dose: "", doseUnit: "UNITS" as DoseUnit, staffProfileId: NO_PRACTITIONER, treatmentAreas: "", notes: "", performedAt: "" };
 
 export function AestheticProcedures({ organizationId, clientId, appointmentId, ownProfileOnly = false }: { organizationId: string; clientId: string; appointmentId?: string; ownProfileOnly?: boolean }) {
@@ -67,7 +68,7 @@ export function AestheticProcedures({ organizationId, clientId, appointmentId, o
     {list.isError ? <WorkspaceState kind="error" title="პროცედურები ვერ ჩაიტვირთა" description={list.error.message} /> : null}
     {list.data && !list.data.length ? <WorkspaceState kind="empty" title="პროცედურები ჯერ არ არის" description="პირველი ჩანაწერის დასამატებლად დააჭირეთ „ახალი ჩანაწერი“." /> : null}
     <ul className="space-y-3">
-      {list.data?.map(row => <li key={row.id} className="rounded-xl border bg-card p-4 text-sm">
+      {list.data?.map(row => <li key={row.id} className="rounded-md border bg-card p-3 text-sm">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div><p className={`font-semibold ${row.isVoided ? "line-through text-muted-foreground" : ""}`}>{row.procedureName}</p><p className="text-xs text-muted-foreground">{formatDateTime(row.performedAt)}{staffName(row.staffProfileId) ? ` · ${staffName(row.staffProfileId)}` : ""}</p></div>
           {row.isVoided ? <Badge variant="outline">გაუქმებული</Badge> : <Button type="button" variant="outline" size="sm" className="min-h-11" onClick={() => { setVoidReason(""); setVoidId(row.id); }}>გაუქმება</Button>}

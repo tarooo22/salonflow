@@ -8,7 +8,7 @@ describe("dashboard role-safe navigation groups", () => {
     expect(source).toContain("დღის მართვა");
     expect(source).toContain("კლიენტები და გაყიდვა");
     expect(source).toContain("სალონის მართვა");
-    expect(source).toContain("Trial requests");
+    expect(source).toContain("საცდელი მოთხოვნები");
     expect(source).toContain("სალონების კონტროლი");
     expect(source).toContain("/app/organization-governance");
     expect(source).toContain("platformAdminItems");
@@ -29,5 +29,7 @@ describe("dashboard role-safe navigation groups", () => {
     expect(source).toContain('item.path === "/app/today"');
     expect(source).toContain('location !== "/app/billing"');
     expect(source).toContain("პაკეტის გააქტიურება");
+    // the guided tour is mounted only after the user opens it from "დახმარება"; it must not pop up on load
+    expect(source).toContain("{helpOpen && organizations.data?.[0]?.organization.id ? <GuidedHelpTour");
   });
 });

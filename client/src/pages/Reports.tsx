@@ -2,29 +2,46 @@ import { RevenueTrendChart, CommissionDistributionChart } from "@/components/rep
 import { BookingForecastPanel, PeakHourHeatmapPanel, RetentionCohortPanel, WeekComparisonPanel } from "@/components/reports/AdvancedAnalyticsPanels";
 import { FeedbackConsentInsights } from "@/components/reports/FeedbackConsentInsights";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { WorkspaceFilterBar, WorkspaceMetric, WorkspacePageHeader, WorkspaceSection, WorkspaceState, WorkspaceStatusPill } from "@/components/workspace/WorkspacePrimitives";
+import { CompactMetricRail, MetricCell } from "@/components/workspace/DashboardModules";
+import { WorkspaceFilterBar, WorkspacePageHeader, WorkspaceSection, WorkspaceState, WorkspaceStatusPill } from "@/components/workspace/WorkspacePrimitives";
 import { SavedViewMenu, type SavedViewPayload } from "@/components/workspace/SavedViewMenu";
 import { gelInputToTetri } from "@/lib/money";
-import { formatGelTetri, formatPaymentMethod } from "@/lib/presentation";
+import { formatGelTetri, formatKaDate, formatKaDateTime, formatPaymentMethod } from "@/lib/presentation";
 import { trpc } from "@/lib/trpc";
-import { ChevronLeft, ChevronRight, Download, Percent, PlayCircle, Plus, ReceiptText, Trash2, TrendingUp, Wallet, WalletCards } from "lucide-react";
-import { FormEvent, useCallback, useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight, Download, PlayCircle, Plus, Trash2, Wallet } from "lucide-react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { dateKeyInTimeZone, localInputToUtc } from "@shared/timezones";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
 
 const HISTORY_PAGE_SIZE = 10;
 
 const statusLabels: Record<string, string> = { PENDING: "მოლოდინში", CONFIRMED: "დადასტურებული", CHECKED_IN: "მიღებულია", IN_SERVICE: "მომსახურებაში", COMPLETED: "დასრულებული", CANCELLED: "გაუქმებული", NO_SHOW: "არ გამოცხადდა" };
-const statusStyles: Record<string, string> = { PENDING: "bg-amber-100 text-amber-800", CONFIRMED: "bg-emerald-100 text-emerald-800", CHECKED_IN: "bg-sky-100 text-sky-800", IN_SERVICE: "bg-violet-100 text-violet-800", COMPLETED: "bg-emerald-100 text-emerald-800", CANCELLED: "bg-rose-100 text-rose-800", NO_SHOW: "bg-slate-200 text-slate-700" };
+const statusTones: Record<string, "neutral" | "success" | "warning" | "danger" | "violet" | "info"> = { PENDING: "warning", CONFIRMED: "info", CHECKED_IN: "violet", IN_SERVICE: "violet", COMPLETED: "success", CANCELLED: "danger", NO_SHOW: "danger" };
 
 const gel = (value: number) => formatGelTetri(value);
-const formatAppointmentDate = (value: Date) => new Intl.DateTimeFormat("ka-GE", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(value);
-const formatExpenseDate = (value: Date) => new Intl.DateTimeFormat("ka-GE", { day: "2-digit", month: "short", year: "numeric" }).format(value);
+
+const keyToDisplay = (key: string) => { const [y, m, d] = key.split("-"); return `${d}.${m}.${y}`; };
+function parseDisplayDate(text: string) {
+  const match = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(text.trim());
+  if (!match) return null;
+  const [d, m, y] = [Number(match[1]), Number(match[2]), Number(match[3])] as [number, number, number];
+  const check = new Date(Date.UTC(y, m - 1, d));
+  if (check.getUTCFullYear() !== y || check.getUTCMonth() !== m - 1 || check.getUTCDate() !== d) return null;
+  return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
+// Georgian DD.MM.YYYY text field: the native date input prints the browser's locale (US MM/DD/YYYY).
+function DateKeyInput({ label, value, onCommit }: { label: string; value: string; onCommit: (key: string) => void }) {
+  const [text, setText] = useState(keyToDisplay(value));
+  useEffect(() => setText(keyToDisplay(value)), [value]);
+  const commit = () => { const key = parseDisplayDate(text); if (key) onCommit(key); else setText(keyToDisplay(value)); };
+  return <label className="grid gap-1 text-xs font-medium text-muted-foreground">{label}<Input value={text} inputMode="numeric" placeholder="დდ.თთ.წწწწ" maxLength={10} className="cwk-num w-36" onChange={event => setText(event.target.value)} onBlur={commit} onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); commit(); } }} /></label>;
+}
+const feedbackHasData = (data: { feedback: { total: number }; consent: { currentOptIns: { marketingSms: number; marketingEmail: number; bookingTerms: number }; activity: { granted: number; withdrawn: number } } }) => data.feedback.total > 0 || data.consent.currentOptIns.marketingSms + data.consent.currentOptIns.marketingEmail + data.consent.currentOptIns.bookingTerms + data.consent.activity.granted + data.consent.activity.withdrawn > 0;
 
 function SectionLoading({ title }: { title: string }) { return <WorkspaceState kind="loading" title={title} />; }
 function SectionEmpty({ title }: { title: string }) { return <WorkspaceState kind="empty" title={title} />; }
@@ -102,7 +119,7 @@ export default function Reports() {
     event.preventDefault();
     if (!organization || !expenseLocationId) { setExpenseFormError("აირჩიეთ აქტიური ფილიალი."); return; }
     const amountTetri = gelInputToTetri(expenseAmount);
-    if (amountTetri === null || amountTetri <= 0) { setExpenseFormError("მიუთითეთ დადებითი თანხა ლარში ორი ათწილადის სიზუსტით."); return; }
+    if (amountTetri === null || amountTetri <= 0) { setExpenseFormError("მიუთითეთ თანხა ლარში."); return; }
     setExpenseFormError("");
     createExpense.mutate({ organizationId: organization.id, locationId: expenseLocationId, category: expenseCategory, amountTetri, expenseDate: new Date(`${expenseDate}T12:00:00`), description: expenseDescription || undefined });
   };
@@ -118,6 +135,7 @@ export default function Reports() {
     URL.revokeObjectURL(url);
   };
 
+  const rangeTimeZone = locations.data?.[0]?.timezone ?? "Asia/Tbilisi";
   const summary = report.data?.summary;
   const history = bookingHistory.data;
   const pageStart = history?.total ? offset + 1 : 0;
@@ -138,106 +156,97 @@ export default function Reports() {
     <DashboardLayout>
       <div className="sf-workspace-page mx-auto w-full max-w-7xl space-y-5">
         <WorkspacePageHeader
-          eyebrow="ფინანსური მიმოხილვა"
           title="ანგარიშები"
-          description="არჩეული პერიოდის ჯავშნები, შემოსავლები, საკომისიოები, ხარჯები და CSV ექსპორტი."
-          actions={<>{organization && canManageFinance ? <Button onClick={() => { setExpenseFormError(""); setExpenseOpen(true); }}><Plus className="mr-2 size-4" />ხარჯის დამატება</Button> : null}<Button variant="outline" disabled={!organization || csvExport.isFetching} onClick={download}><Download className="mr-2 size-4" />{csvExport.isFetching ? "ექსპორტი მზადდება…" : "CSV ექსპორტი"}</Button></>}
+          actions={<>{organization && canManageFinance ? <Button onClick={() => { setExpenseFormError(""); setExpenseOpen(true); }}><Plus className="mr-2 size-4" />ხარჯი</Button> : null}<Button variant="outline" disabled={!organization || csvExport.isFetching} onClick={download}><Download className="mr-2 size-4" />{csvExport.isFetching ? "მზადდება…" : "CSV"}</Button></>}
         />
 
         <WorkspaceFilterBar>
-          <label className="grid gap-1 text-xs font-medium text-muted-foreground">დაწყება<Input type="date" value={range.startsAt.toISOString().slice(0, 10)} onChange={event => setRange(current => ({ ...current, startsAt: new Date(`${event.target.value}T00:00:00.000Z`) }))} /></label>
-          <label className="grid gap-1 text-xs font-medium text-muted-foreground">დასრულება<Input type="date" value={range.endsAt.toISOString().slice(0, 10)} onChange={event => setRange(current => ({ ...current, endsAt: new Date(`${event.target.value}T23:59:59.999Z`) }))} /></label>
-          {organization ? <SavedViewMenu organizationId={organization.id} route="/app/reports" filterPayload={{ period: currentPeriod }} onApply={applySavedView} /> : null}<WorkspaceStatusPill tone="info">{new Intl.DateTimeFormat("ka-GE", { dateStyle: "medium" }).format(range.startsAt)} – {new Intl.DateTimeFormat("ka-GE", { dateStyle: "medium" }).format(range.endsAt)}</WorkspaceStatusPill>
+          <DateKeyInput label="დაწყება" value={dateKeyInTimeZone(range.startsAt, rangeTimeZone)} onCommit={key => { const startsAt = localInputToUtc(`${key}T00:00`, rangeTimeZone); setRange(current => ({ ...current, startsAt })); setOffset(0); }} />
+          <DateKeyInput label="დასრულება" value={dateKeyInTimeZone(range.endsAt, rangeTimeZone)} onCommit={key => { const endsAt = new Date(localInputToUtc(`${key}T00:00`, rangeTimeZone).getTime() + 86_400_000 - 1); setRange(current => ({ ...current, endsAt })); setOffset(0); }} />
+          {organization ? <SavedViewMenu organizationId={organization.id} route="/app/reports" filterPayload={{ period: currentPeriod }} onApply={applySavedView} /> : null}<WorkspaceStatusPill tone="neutral"><span className="cwk-num">{formatKaDate(range.startsAt, rangeTimeZone)} – {formatKaDate(range.endsAt, rangeTimeZone)}</span></WorkspaceStatusPill>
         </WorkspaceFilterBar>
 
-        {report.isError ? <WorkspaceState kind="error" title="ანგარიშის მონაცემები დროებით მიუწვდომელია" /> : null}
+        {report.isError ? <WorkspaceState kind="error" title="მონაცემები მიუწვდომელია" /> : null}
         {!organization && !organizations.isLoading ? <WorkspaceState kind="empty" title="ჯერ შექმენით სამუშაო სივრცე" /> : null}
 
         {organization ? <>
-          <div className="grid gap-3 sm:grid-cols-3">
-            <WorkspaceMetric icon={TrendingUp} label="აკუმულირებული შემოსავალი" value={report.isLoading ? "…" : gel(summary?.collectedRevenueTetri ?? 0)} helper="დარიცხული გადახდები მინუს დაბრუნებები" tone="jade" />
-            <WorkspaceMetric icon={WalletCards} label="დარჩენილი ბალანსი" value={report.isLoading ? "…" : gel(summary?.unpaidBalanceTetri ?? 0)} helper="ჯავშნებზე გადასახდელი თანხა" tone="terracotta" />
-            <WorkspaceMetric icon={ReceiptText} label="ხარჯები" value={report.isLoading ? "…" : gel(summary?.expensesTetri ?? 0)} helper="აქტიური ხარჯები არჩეულ პერიოდში" tone="violet" />
-          </div>
+          <CompactMetricRail label="ფინანსური მაჩვენებლები"><MetricCell label="შემოსავალი" value={report.isLoading ? "…" : gel(summary?.collectedRevenueTetri ?? 0)} /><MetricCell label="დარჩენილი ბალანსი" value={report.isLoading ? "…" : gel(summary?.unpaidBalanceTetri ?? 0)} /><MetricCell label="ხარჯები" value={report.isLoading ? "…" : gel(summary?.expensesTetri ?? 0)} /></CompactMetricRail>
 
-          <WorkspaceSection title="შეფასებები და თანხმობები" description="რეალური feedback-ის სტატისტიკა და კლიენტების მიმდინარე consent არჩევანები aggregate დონეზე. კომენტარი, კლიენტის სახელი და საკონტაქტო მონაცემი ამ ხედში არ ჩანს.">
-            {feedbackInsights.isLoading ? <SectionLoading title="Feedback და consent მონაცემები იტვირთება…" /> : null}
-            {feedbackInsights.isError ? <WorkspaceState kind="error" title="Feedback და consent მონაცემები დროებით მიუწვდომელია" /> : null}
-            {!feedbackInsights.isLoading && !feedbackInsights.isError && feedbackInsights.data ? <FeedbackConsentInsights data={feedbackInsights.data} /> : null}
-          </WorkspaceSection>
 
-          <div className="grid gap-4 xl:grid-cols-[.9fr_1.1fr]">
-            <WorkspaceSection title="კვირის შედარება" description="ეს კვირის აქტიური ჯავშნები წინა კვირის იმავე კალენდარულ ფანჯარასთან.">
-              {analytics.isLoading ? <SectionLoading title="კვირის შედარება იტვირთება…" /> : null}
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[.9fr_1.1fr]">
+            <WorkspaceSection title="კვირის შედარება">
+              {analytics.isLoading ? <SectionLoading title="იტვირთება…" /> : null}
               {!analytics.isLoading && analytics.data ? <WeekComparisonPanel data={analytics.data.weekComparison} /> : null}
             </WorkspaceSection>
-            <WorkspaceSection title="მომდევნო 7 დღის პროგნოზი" description="მხოლოდ არსებული ჯავშნებიდან დაგეგმილი და ჯერ გადასახდელი თანხა.">
-              {analytics.isLoading ? <SectionLoading title="პროგნოზი იტვირთება…" /> : null}
+            <WorkspaceSection title="პროგნოზი: მომდევნო 7 დღე">
+              {analytics.isLoading ? <SectionLoading title="იტვირთება…" /> : null}
               {!analytics.isLoading && analytics.data ? <BookingForecastPanel data={analytics.data.bookingForecast} /> : null}
             </WorkspaceSection>
           </div>
 
-          <WorkspaceSection title="გადახდის მეთოდები" description="მიღებული გადახდების განაწილება არჩეულ პერიოდში.">
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-              {Object.entries(report.data?.paymentMethods ?? { CASH: 0, CARD_TERMINAL: 0, BANK_TRANSFER: 0, ONLINE: 0, OTHER: 0 }).map(([method, amount]) => <div key={method} className="rounded-xl border bg-muted/20 p-3"><p className="text-xs font-medium text-muted-foreground">{formatPaymentMethod(method)}</p><p className="mt-1 text-base font-semibold">{gel(amount)}</p></div>)}
-            </div>
+          <WorkspaceSection title="გადახდის მეთოდები">
+            <dl className="divide-y divide-border">
+              {Object.entries(report.data?.paymentMethods ?? { CASH: 0, CARD_TERMINAL: 0, BANK_TRANSFER: 0, ONLINE: 0, OTHER: 0 }).map(([method, amount]) => <div key={method} className="flex items-center justify-between gap-3 py-2 text-sm"><dt className="text-muted-foreground">{formatPaymentMethod(method)}</dt><dd className="cwk-num font-semibold">{gel(amount)}</dd></div>)}
+            </dl>
           </WorkspaceSection>
 
-          <div className="grid gap-4 xl:grid-cols-[1.15fr_.85fr]">
-            <WorkspaceSection title="შემოსავალი" description="გაარკვიეთ რომელი დღეები ქმნის ფინანსურ მოძრაობას.">
-              {analytics.isLoading ? <SectionLoading title="შემოსავლის გრაფიკი იტვირთება…" /> : null}
-              {!analytics.isLoading && !revenueTrend.length ? <SectionEmpty title="არჩეულ პერიოდში შემოსავლის მონაცემი არ არის" /> : null}
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.15fr_.85fr]">
+            <WorkspaceSection title="შემოსავალი დღეების მიხედვით">
+              {analytics.isLoading ? <SectionLoading title="იტვირთება…" /> : null}
+              {!analytics.isLoading && !revenueTrend.length ? <SectionEmpty title="ამ პერიოდში შემოსავალი არ არის" /> : null}
               {!analytics.isLoading && revenueTrend.length ? <RevenueTrendChart data={revenueTrend} /> : null}
             </WorkspaceSection>
 
-            <WorkspaceSection title="გუნდის შედეგები" description="არჩეული პერიოდის სპეციალისტის მაჩვენებლები.">
-              {analytics.isLoading ? <SectionLoading title="გუნდის შედეგები იტვირთება…" /> : null}
-              {!analytics.isLoading && !analytics.data?.staffMetrics.length ? <SectionEmpty title="სპეციალისტის მონაცემი არ არის" /> : null}
-              <div className="space-y-2">{analytics.data?.staffMetrics.slice(0, 5).map(staff => <div key={staff.staffProfileId} className="rounded-lg border px-3 py-2 text-sm"><div className="flex items-center justify-between gap-3"><p className="font-medium">{staff.publicDisplayName}</p><p className="font-semibold">{gel(staff.bookedRevenueTetri)}</p></div><p className="text-xs text-muted-foreground">{staff.completedAppointments} დასრულებული · {staff.bookingCount} მომსახურება</p></div>)}</div>
-              {!analytics.isLoading ? <div className="mt-3 rounded-lg bg-muted/35 p-3 text-sm"><p className="text-muted-foreground">ხარჯების წნეხი ჯავშნის შემოსავალზე</p><p className="mt-1 text-lg font-semibold">{analytics.data?.expensePressureBasisPoints === null ? "—" : `${((analytics.data?.expensePressureBasisPoints ?? 0) / 100).toFixed(2)}%`}</p><p className="mt-1 text-xs text-muted-foreground">ხარჯი {gel(analytics.data?.expensesTetri ?? 0)} · ჯავშნები {gel(analytics.data?.bookedRevenueTetri ?? 0)}</p></div> : null}
+            <WorkspaceSection title="გუნდი">
+              {analytics.isLoading ? <SectionLoading title="იტვირთება…" /> : null}
+              {!analytics.isLoading && !analytics.data?.staffMetrics.length ? <SectionEmpty title="მონაცემი არ არის" /> : null}
+              <div className="divide-y divide-border">{analytics.data?.staffMetrics.slice(0, 5).map(staff => <div key={staff.staffProfileId} className="flex items-center justify-between gap-3 py-2 text-sm"><div className="min-w-0"><p className="truncate font-medium">{staff.publicDisplayName}</p><p className="text-xs text-muted-foreground">შესრულებული: <span className="cwk-num">{staff.completedAppointments}</span> · სერვისები: <span className="cwk-num">{staff.bookingCount}</span></p></div><p className="cwk-num shrink-0 font-semibold">{gel(staff.bookedRevenueTetri)}</p></div>)}</div>
+              {!analytics.isLoading ? <div className="mt-3 border-t border-border pt-3 text-sm"><p className="text-muted-foreground">ხარჯი / ჯავშნების თანხა</p><p className="mt-1 cwk-num text-lg font-semibold">{analytics.data?.expensePressureBasisPoints === null ? "—" : `${((analytics.data?.expensePressureBasisPoints ?? 0) / 100).toFixed(2)}%`}</p><p className="mt-1 cwk-num text-xs text-muted-foreground">{gel(analytics.data?.expensesTetri ?? 0)} / {gel(analytics.data?.bookedRevenueTetri ?? 0)}</p></div> : null}
             </WorkspaceSection>
           </div>
 
-          <div className="grid gap-4 xl:grid-cols-[.9fr_1.1fr]">
-            <WorkspaceSection title="სერვისების მიქსი" description="სერვისების ჯავშნის მოცულობა და შემოსავალი.">
-              {analytics.isLoading ? <SectionLoading title="სერვისების მიქსი იტვირთება…" /> : null}
-              {!analytics.isLoading && !analytics.data?.serviceMix.length ? <SectionEmpty title="სერვისების ისტორიული მონაცემი არ არის" /> : null}
-              <div className="space-y-2">{analytics.data?.serviceMix.slice(0, 6).map(service => <div key={service.serviceName} className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm"><div><p className="font-medium">{service.serviceName}</p><p className="text-xs text-muted-foreground">{service.bookingCount} მომსახურება</p></div><p className="font-semibold">{gel(service.revenueTetri)}</p></div>)}</div>
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[.9fr_1.1fr]">
+            <WorkspaceSection title="სერვისები">
+              {analytics.isLoading ? <SectionLoading title="იტვირთება…" /> : null}
+              {!analytics.isLoading && !analytics.data?.serviceMix.length ? <SectionEmpty title="მონაცემი არ არის" /> : null}
+              <div className="divide-y divide-border">{analytics.data?.serviceMix.slice(0, 6).map(service => <div key={service.serviceName} className="flex items-center justify-between gap-3 py-2 text-sm"><div className="min-w-0"><p className="truncate font-medium">{service.serviceName}</p><p className="cwk-num text-xs text-muted-foreground">{service.bookingCount}</p></div><p className="cwk-num shrink-0 font-semibold">{gel(service.revenueTetri)}</p></div>)}</div>
             </WorkspaceSection>
 
-            {canManageFinance ? <WorkspaceSection title="კომისიოები" description="დარიცხული და გადახდილი საკომისიოების სტრუქტურა.">
-              {commissions.isLoading ? <SectionLoading title="კომისიების გრაფიკი იტვირთება…" /> : null}
-              {commissions.isError ? <WorkspaceState kind="error" title="კომისიების მონაცემები დროებით მიუწვდომელია" /> : null}
-              {!commissions.isLoading && !commissions.isError && !commissionData.length ? <SectionEmpty title="არჩეულ პერიოდში კომისიის ჩანაწერი ჯერ არ არის" /> : null}
+            {canManageFinance ? <WorkspaceSection title="კომისიები">
+              {commissions.isLoading ? <SectionLoading title="იტვირთება…" /> : null}
+              {commissions.isError ? <WorkspaceState kind="error" title="მონაცემები მიუწვდომელია" /> : null}
+              {!commissions.isLoading && !commissions.isError && !commissionData.length ? <SectionEmpty title="ამ პერიოდში კომისია არ არის" /> : null}
               {!commissions.isLoading && !commissions.isError && commissionData.length ? <CommissionDistributionChart data={commissionData} /> : null}
-            </WorkspaceSection> : <WorkspaceSection title="საკომისიოები" description="საკომისიოების დეტალები ხელმისაწვდომია მფლობელისა და მენეჯერისთვის."><WorkspaceState kind="empty" title="ამ მონაცემზე წვდომა არ გაქვთ" /></WorkspaceSection>}
+            </WorkspaceSection> : <WorkspaceSection title="კომისიები"><WorkspaceState kind="empty" title="წვდომა არ გაქვთ" description="ხელმისაწვდომია მფლობელისა და მენეჯერისთვის." /></WorkspaceSection>}
           </div>
 
-          <div className="grid gap-4 xl:grid-cols-[1.05fr_.95fr]">
-            <WorkspaceSection title="Retention cohorts" description="თვეში პირველი დასრულებული ვიზიტით დაწყებული კლიენტები და შემდგომ თვეებში დაბრუნება.">
-              {analytics.isLoading ? <SectionLoading title="Retention cohorts იტვირთება…" /> : null}
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.05fr_.95fr]">
+            <WorkspaceSection title="კლიენტების დაბრუნება">
+              {analytics.isLoading ? <SectionLoading title="იტვირთება…" /> : null}
               {!analytics.isLoading && analytics.data ? <RetentionCohortPanel data={analytics.data.retentionCohorts} /> : null}
             </WorkspaceSection>
-            <WorkspaceSection title="Peak hour heatmap" description="არჩეულ პერიოდში კვირის დღე და საათი აქტიური ჯავშნების რაოდენობით.">
-              {analytics.isLoading ? <SectionLoading title="დატვირთულობის heatmap იტვირთება…" /> : null}
+            <WorkspaceSection title="დატვირთვა დღისა და საათის მიხედვით">
+              {analytics.isLoading ? <SectionLoading title="იტვირთება…" /> : null}
               {!analytics.isLoading && analytics.data ? <PeakHourHeatmapPanel data={analytics.data.peakHourHeatmap} /> : null}
             </WorkspaceSection>
           </div>
 
+          {feedbackInsights.isLoading ? <SectionLoading title="იტვირთება…" /> : feedbackInsights.isError ? <WorkspaceState kind="error" title="მონაცემები მიუწვდომელია" /> : feedbackInsights.data && !feedbackHasData(feedbackInsights.data) ? <p className="rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground">შეფასებები და თანხმობები: ამ პერიოდში მონაცემი არ არის.</p> : feedbackInsights.data ? <WorkspaceSection title="შეფასებები და თანხმობები"><FeedbackConsentInsights data={feedbackInsights.data} /></WorkspaceSection> : null}
+
           {canManageFinance ? <>
-            <Card><CardHeader className="flex flex-row items-center justify-between gap-4"><div><CardTitle className="flex items-center gap-2"><Percent className="size-4 text-primary" />კომისიის წესები</CardTitle><p className="mt-1 text-sm text-muted-foreground">დარიცხვის წესები ვრცელდება სპეციალისტზე, სერვისსა და ფილიალზე.</p></div><div className="flex flex-wrap gap-2"><Button variant="outline" size="sm" disabled={runBackfill.isPending || !commissionRules.data?.length} onClick={() => organization && runBackfill.mutate(reportInput)}><PlayCircle className="mr-2 size-4" />{runBackfill.isPending ? "მიმდინარეობს…" : "პერიოდის დარიცხვა"}</Button><Button size="sm" onClick={() => { setRuleError(""); setRuleOpen(true); }}><Plus className="mr-2 size-4" />წესის დამატება</Button></div></CardHeader><CardContent>{commissionRules.isLoading ? <p className="text-sm text-muted-foreground">იტვირთება…</p> : null}{!commissionRules.isLoading && !commissionRules.data?.length ? <p className="rounded-xl border border-dashed p-5 text-sm text-muted-foreground">კომისიის წესი ჯერ არ არის. დაამატეთ ერთი, რომ დარიცხვა ავტომატურად შედგეს.</p> : null}<div className="space-y-2">{commissionRules.data?.map(row => <div key={row.rule.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3"><div className="min-w-0 flex-1"><p className="font-medium">{row.rule.type === "PERCENTAGE" ? `${(row.rule.valueTetri / 100).toFixed(2)}%` : gel(row.rule.valueTetri)} <span className="text-sm text-muted-foreground">— {row.staff?.publicDisplayName ?? "ყველა სპეც."} · {row.service?.nameKa ?? "ყველა სერვისი"}{row.location?.name ? ` · ${row.location.name}` : ""}</span></p></div><Button variant="ghost" size="sm" onClick={() => organization && deleteRule.mutate({ organizationId: organization.id, id: row.rule.id })} disabled={deleteRule.isPending} aria-label="კომისიის წესის წაშლა"><Trash2 className="size-4 text-destructive" /></Button></div>)}</div></CardContent></Card>
-            <div className="grid gap-4 xl:grid-cols-2">
-              <Card><CardHeader><CardTitle>კომისიების მიმოხილვა</CardTitle></CardHeader><CardContent>{commissions.isLoading ? <p className="text-sm text-muted-foreground">კომისიები იტვირთება…</p> : null}{!commissions.isLoading ? <><div className="grid gap-3 sm:grid-cols-2"><div className="rounded-xl bg-primary/5 p-4"><p className="text-sm text-muted-foreground">დარიცხული კომისია</p><p className="mt-2 text-xl font-semibold">{gel(commissions.data?.totalTetri ?? 0)}</p></div><div className="rounded-xl bg-primary/5 p-4"><p className="text-sm text-muted-foreground">გადახდილი კომისია</p><p className="mt-2 text-xl font-semibold">{gel(commissions.data?.paidTetri ?? 0)}</p></div></div></> : null}</CardContent></Card>
-              <Card><CardHeader className="flex flex-row items-center justify-between gap-4"><CardTitle>ბოლო ხარჯები</CardTitle><span className="text-sm text-muted-foreground">{expenses.data?.length ?? 0} აქტიური ჩანაწერი</span></CardHeader><CardContent><div className="space-y-3">{expenses.isLoading ? <p className="text-sm text-muted-foreground">ხარჯები იტვირთება…</p> : null}{expenses.isError ? <p className="text-sm text-destructive">ხარჯების ჩატვირთვა ვერ მოხერხდა.</p> : null}{!expenses.isLoading && !expenses.isError && !expenses.data?.length ? <p className="rounded-xl border border-dashed p-5 text-sm text-muted-foreground">აქტიური ხარჯი ჯერ არ არის. პირველი ჩანაწერი შეგიძლიათ ზემოთ დაამატოთ.</p> : null}{expenses.data?.slice(0, 5).map(expense => <div key={expense.id} className="flex flex-col gap-1 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-medium">{expense.category}</p><p className="mt-1 text-sm text-muted-foreground">{formatExpenseDate(expense.expenseDate)}{expense.description ? ` · ${expense.description}` : ""}</p></div><p className="font-semibold">{gel(expense.amountTetri)}</p></div>)}</div></CardContent></Card>
+            <WorkspaceSection title="კომისიის წესები" action={<div className="flex flex-wrap gap-2"><Button variant="outline" size="sm" disabled={runBackfill.isPending || !commissionRules.data?.length} onClick={() => organization && runBackfill.mutate(reportInput)}><PlayCircle className="mr-2 size-4" />{runBackfill.isPending ? "მიმდინარეობს…" : "პერიოდის დარიცხვა"}</Button><Button size="sm" onClick={() => { setRuleError(""); setRuleOpen(true); }}><Plus className="mr-2 size-4" />წესი</Button></div>}>{commissionRules.isLoading ? <p className="text-sm text-muted-foreground">იტვირთება…</p> : null}{!commissionRules.isLoading && !commissionRules.data?.length ? <p className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">კომისიის წესი ჯერ არ არის.</p> : null}<div className="space-y-2">{commissionRules.data?.map(row => <div key={row.rule.id} className="flex flex-wrap items-center justify-between gap-3 rounded-md border p-3"><div className="min-w-0 flex-1"><p className="font-medium"><span className="cwk-num">{row.rule.type === "PERCENTAGE" ? `${(row.rule.valueTetri / 100).toFixed(2)}%` : gel(row.rule.valueTetri)}</span> <span className="text-sm text-muted-foreground">— {row.staff?.publicDisplayName ?? "ყველა სპეციალისტი"} · {row.service?.nameKa ?? "ყველა სერვისი"}{row.location?.name ? ` · ${row.location.name}` : ""}</span></p></div><Button variant="ghost" size="sm" onClick={() => organization && deleteRule.mutate({ organizationId: organization.id, id: row.rule.id })} disabled={deleteRule.isPending} aria-label="კომისიის წესის წაშლა"><Trash2 className="size-4 text-destructive" /></Button></div>)}</div></WorkspaceSection>
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+              <WorkspaceSection title="კომისიები">{commissions.isLoading ? <p className="text-sm text-muted-foreground">იტვირთება…</p> : null}{!commissions.isLoading ? <CompactMetricRail label="კომისიები"><MetricCell label="დარიცხული" value={gel(commissions.data?.totalTetri ?? 0)} /><MetricCell label="გადახდილი" value={gel(commissions.data?.paidTetri ?? 0)} /></CompactMetricRail> : null}</WorkspaceSection>
+              <WorkspaceSection title="ბოლო ხარჯები" action={<span className="cwk-num text-sm text-muted-foreground">{expenses.data?.length ?? 0}</span>}><div className="space-y-2">{expenses.isLoading ? <p className="text-sm text-muted-foreground">იტვირთება…</p> : null}{expenses.isError ? <p className="text-sm text-destructive">ჩატვირთვა ვერ მოხერხდა.</p> : null}{!expenses.isLoading && !expenses.isError && !expenses.data?.length ? <p className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">ხარჯი ჯერ არ არის.</p> : null}{expenses.data?.slice(0, 5).map(expense => <div key={expense.id} className="flex items-center justify-between gap-3 rounded-md border p-3"><div className="min-w-0"><p className="truncate font-medium">{expense.category}</p><p className="truncate text-sm text-muted-foreground"><span className="cwk-num">{formatKaDate(expense.expenseDate)}</span>{expense.description ? ` · ${expense.description}` : ""}</p></div><p className="shrink-0 cwk-num font-semibold">{gel(expense.amountTetri)}</p></div>)}</div></WorkspaceSection>
             </div>
           </> : null}
 
-          <Card><CardHeader className="flex flex-row items-center justify-between gap-4"><div><CardTitle>ჯავშნების ისტორია</CardTitle><p className="mt-1 text-sm text-muted-foreground">არჩეული პერიოდის ჯავშნები, ახალი ჩანაწერიდან ძველისკენ.</p></div><span className="shrink-0 text-sm text-muted-foreground">{history?.total ?? 0} ჩანაწერი</span></CardHeader><CardContent>{bookingHistory.isError ? <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-5 text-sm text-destructive">ჯავშნების ისტორია დროებით მიუწვდომელია.</div> : null}{bookingHistory.isLoading ? <div className="rounded-xl border border-dashed p-5 text-sm text-muted-foreground">ჯავშნების ისტორია იტვირთება…</div> : null}{!bookingHistory.isLoading && !bookingHistory.isError && !history?.items.length ? <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">ამ პერიოდში ჯავშანი ჯერ არ არის.</div> : null}{!bookingHistory.isLoading && !bookingHistory.isError && history?.items.length ? <><div className="overflow-x-auto rounded-xl border"><table className="w-full min-w-[670px] text-left text-sm"><thead className="bg-muted/60 text-xs font-semibold uppercase tracking-wide text-muted-foreground"><tr><th className="px-4 py-3">რეფერენსი</th><th className="px-4 py-3">თარიღი და დრო</th><th className="px-4 py-3">სტატუსი</th><th className="px-4 py-3 text-right">ჯამი</th></tr></thead><tbody className="divide-y">{history.items.map(appointment => <tr key={appointment.id} className="transition-colors hover:bg-muted/40"><td className="px-4 py-3 font-mono text-xs font-medium">#{appointment.id.slice(-8).toUpperCase()}</td><td className="px-4 py-3 text-muted-foreground">{formatAppointmentDate(appointment.startsAt)}</td><td className="px-4 py-3"><span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${statusStyles[appointment.status] ?? "bg-muted text-muted-foreground"}`}>{statusLabels[appointment.status] ?? appointment.status}</span></td><td className="px-4 py-3 text-right font-semibold">{gel(appointment.totalTetri)}</td></tr>)}</tbody></table></div><div className="mt-4 flex flex-col gap-3 text-sm sm:flex-row sm:items-center sm:justify-between"><p className="text-muted-foreground">ნაჩვენებია {pageStart}–{pageEnd} {history.total}-დან</p><div className="flex gap-2"><Button variant="outline" size="sm" onClick={() => setOffset(current => Math.max(0, current - HISTORY_PAGE_SIZE))} disabled={offset === 0}><ChevronLeft className="mr-1 size-4" />წინა</Button><Button variant="outline" size="sm" onClick={() => setOffset(current => current + HISTORY_PAGE_SIZE)} disabled={offset + HISTORY_PAGE_SIZE >= history.total}>შემდეგი<ChevronRight className="ml-1 size-4" /></Button></div></div></> : null}</CardContent></Card>
+          <WorkspaceSection title="ჯავშნების ისტორია" action={<span className="cwk-num text-sm text-muted-foreground">{history?.total ?? 0}</span>}>{bookingHistory.isError ? <div className="rounded-md border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">ისტორია მიუწვდომელია.</div> : null}{bookingHistory.isLoading ? <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">იტვირთება…</div> : null}{!bookingHistory.isLoading && !bookingHistory.isError && !history?.items.length ? <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">ამ პერიოდში ჯავშანი არ არის.</div> : null}{!bookingHistory.isLoading && !bookingHistory.isError && history?.items.length ? <><div className="overflow-x-auto rounded-md border"><table className="w-full min-w-[30rem] text-left text-sm"><thead className="bg-muted/60 text-xs font-semibold text-muted-foreground"><tr><th className="px-4 py-2.5">ნომერი</th><th className="px-4 py-2.5">თარიღი და დრო</th><th className="px-4 py-2.5">სტატუსი</th><th className="px-4 py-2.5 text-right">ჯამი</th></tr></thead><tbody className="divide-y">{history.items.map(appointment => <tr key={appointment.id} className="transition-colors hover:bg-muted/40"><td className="px-4 py-2.5 cwk-num text-xs font-medium">#{appointment.id.slice(-8).toUpperCase()}</td><td className="px-4 py-2.5 cwk-num text-muted-foreground">{formatKaDateTime(new Date(appointment.startsAt))}</td><td className="px-4 py-2.5"><WorkspaceStatusPill tone={statusTones[appointment.status] ?? "neutral"}>{statusLabels[appointment.status] ?? appointment.status}</WorkspaceStatusPill></td><td className="px-4 py-2.5 text-right cwk-num font-semibold">{gel(appointment.totalTetri)}</td></tr>)}</tbody></table></div><div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-sm"><p className="cwk-num text-muted-foreground">{pageStart}–{pageEnd} / {history.total}</p><div className="flex gap-2"><Button variant="outline" size="sm" onClick={() => setOffset(current => Math.max(0, current - HISTORY_PAGE_SIZE))} disabled={offset === 0}><ChevronLeft className="mr-1 size-4" />წინა</Button><Button variant="outline" size="sm" onClick={() => setOffset(current => current + HISTORY_PAGE_SIZE)} disabled={offset + HISTORY_PAGE_SIZE >= history.total}>შემდეგი<ChevronRight className="ml-1 size-4" /></Button></div></div></> : null}</WorkspaceSection>
         </> : null}
       </div>
 
-      <Dialog open={ruleOpen} onOpenChange={setRuleOpen}><DialogContent><DialogHeader><DialogTitle>კომისიის წესის დამატება</DialogTitle><DialogDescription>თუ ველი ცარიელია, წესი ვრცელდება ყველა შესაბამის სპეციალისტზე/სერვისზე/ფილიალზე.</DialogDescription></DialogHeader><form onSubmit={submitRule} className="space-y-4"><div className="grid gap-3 sm:grid-cols-2"><div className="space-y-2"><Label>ტიპი</Label><Select value={ruleType} onValueChange={value => setRuleType(value as "PERCENTAGE" | "FIXED")}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="PERCENTAGE">პროცენტი</SelectItem><SelectItem value="FIXED">ფიქსირებული (₾)</SelectItem></SelectContent></Select></div><div className="space-y-2"><Label>{ruleType === "PERCENTAGE" ? "პროცენტი" : "თანხა (₾)"}</Label><Input value={ruleValue} onChange={event => setRuleValue(event.target.value)} inputMode="decimal" placeholder={ruleType === "PERCENTAGE" ? "მაგ. 40" : "მაგ. 25.00"} required /></div></div><div className="grid gap-3 sm:grid-cols-2"><div className="space-y-2"><Label>სპეციალისტი (არასავალდ.)</Label><Select value={ruleStaffId || "all"} onValueChange={value => setRuleStaffId(value === "all" ? "" : value)}><SelectTrigger><SelectValue placeholder="ყველა" /></SelectTrigger><SelectContent><SelectItem value="all">ყველა სპეციალისტი</SelectItem>{staffList.data?.map(item => <SelectItem key={item.profile.id} value={item.profile.id}>{item.profile.publicDisplayName}</SelectItem>)}</SelectContent></Select></div><div className="space-y-2"><Label>სერვისი (არასავალდ.)</Label><Select value={ruleServiceId || "all"} onValueChange={value => setRuleServiceId(value === "all" ? "" : value)}><SelectTrigger><SelectValue placeholder="ყველა" /></SelectTrigger><SelectContent><SelectItem value="all">ყველა სერვისი</SelectItem>{catalog.data?.map(item => <SelectItem key={item.service.id} value={item.service.id}>{item.service.nameKa}</SelectItem>)}</SelectContent></Select></div></div>{locations.data?.length ? <div className="space-y-2"><Label>ფილიალი (არასავალდ.)</Label><Select value={ruleLocationId || "all"} onValueChange={value => setRuleLocationId(value === "all" ? "" : value)}><SelectTrigger><SelectValue placeholder="ყველა" /></SelectTrigger><SelectContent><SelectItem value="all">ყველა ფილიალი</SelectItem>{locations.data.map(location => <SelectItem key={location.id} value={location.id}>{location.name}</SelectItem>)}</SelectContent></Select></div> : null}{ruleError ? <p className="text-sm text-destructive">{ruleError}</p> : null}<DialogFooter><Button type="submit" disabled={createRule.isPending}><Wallet className="mr-2 size-4" />{createRule.isPending ? "ინახება…" : "წესის შენახვა"}</Button></DialogFooter></form></DialogContent></Dialog>
-      <Dialog open={expenseOpen} onOpenChange={setExpenseOpen}><DialogContent><DialogHeader><DialogTitle>ხარჯის დამატება</DialogTitle><DialogDescription>თანხა გადაიყვანება მთელ თეთრებში და არჩეული ფილიალი სერვერზე მოწმდება თქვენი ორგანიზაციის ფარგლებში.</DialogDescription></DialogHeader><form onSubmit={submitExpense} className="space-y-4"><div className="space-y-2"><Label htmlFor="expense-location">ფილიალი</Label><Select value={expenseLocationId} onValueChange={setExpenseLocationId}><SelectTrigger id="expense-location"><SelectValue placeholder="აირჩიეთ ფილიალი" /></SelectTrigger><SelectContent>{locations.data?.map(location => <SelectItem key={location.id} value={location.id}>{location.name}</SelectItem>)}</SelectContent></Select></div><div className="grid gap-4 sm:grid-cols-2"><div className="space-y-2"><Label htmlFor="expense-category">კატეგორია</Label><Input id="expense-category" value={expenseCategory} onChange={event => setExpenseCategory(event.target.value)} placeholder="მაგ. ქირა" minLength={2} maxLength={100} required /></div><div className="space-y-2"><Label htmlFor="expense-amount">თანხა (₾)</Label><Input id="expense-amount" value={expenseAmount} onChange={event => setExpenseAmount(event.target.value)} inputMode="decimal" placeholder="120.00" required /></div></div><div className="space-y-2"><Label htmlFor="expense-date">თარიღი</Label><Input id="expense-date" type="date" value={expenseDate} onChange={event => setExpenseDate(event.target.value)} required /></div><div className="space-y-2"><Label htmlFor="expense-description">შენიშვნა <span className="text-muted-foreground">(არასავალდებულო)</span></Label><Input id="expense-description" value={expenseDescription} onChange={event => setExpenseDescription(event.target.value)} maxLength={5000} /></div>{expenseFormError ? <p className="text-sm text-destructive">{expenseFormError}</p> : null}<DialogFooter><Button type="submit" disabled={createExpense.isPending}>{createExpense.isPending ? "ინახება…" : "ხარჯის შენახვა"}</Button></DialogFooter></form></DialogContent></Dialog>
+      <Dialog open={ruleOpen} onOpenChange={setRuleOpen}><DialogContent><DialogHeader><DialogTitle>კომისიის წესის დამატება</DialogTitle><DialogDescription>ცარიელი ველი — წესი ყველასთვის მოქმედებს.</DialogDescription></DialogHeader><form onSubmit={submitRule} className="space-y-4"><div className="grid gap-3 sm:grid-cols-2"><div className="space-y-2"><Label>ტიპი</Label><Select value={ruleType} onValueChange={value => setRuleType(value as "PERCENTAGE" | "FIXED")}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="PERCENTAGE">პროცენტი</SelectItem><SelectItem value="FIXED">ფიქსირებული (₾)</SelectItem></SelectContent></Select></div><div className="space-y-2"><Label>{ruleType === "PERCENTAGE" ? "პროცენტი" : "თანხა (₾)"}</Label><Input value={ruleValue} onChange={event => setRuleValue(event.target.value)} inputMode="decimal" placeholder={ruleType === "PERCENTAGE" ? "მაგ. 40" : "მაგ. 25.00"} required /></div></div><div className="grid gap-3 sm:grid-cols-2"><div className="space-y-2"><Label>სპეციალისტი (არასავალდ.)</Label><Select value={ruleStaffId || "all"} onValueChange={value => setRuleStaffId(value === "all" ? "" : value)}><SelectTrigger><SelectValue placeholder="ყველა" /></SelectTrigger><SelectContent><SelectItem value="all">ყველა სპეციალისტი</SelectItem>{staffList.data?.map(item => <SelectItem key={item.profile.id} value={item.profile.id}>{item.profile.publicDisplayName}</SelectItem>)}</SelectContent></Select></div><div className="space-y-2"><Label>სერვისი (არასავალდ.)</Label><Select value={ruleServiceId || "all"} onValueChange={value => setRuleServiceId(value === "all" ? "" : value)}><SelectTrigger><SelectValue placeholder="ყველა" /></SelectTrigger><SelectContent><SelectItem value="all">ყველა სერვისი</SelectItem>{catalog.data?.map(item => <SelectItem key={item.service.id} value={item.service.id}>{item.service.nameKa}</SelectItem>)}</SelectContent></Select></div></div>{locations.data?.length ? <div className="space-y-2"><Label>ფილიალი (არასავალდ.)</Label><Select value={ruleLocationId || "all"} onValueChange={value => setRuleLocationId(value === "all" ? "" : value)}><SelectTrigger><SelectValue placeholder="ყველა" /></SelectTrigger><SelectContent><SelectItem value="all">ყველა ფილიალი</SelectItem>{locations.data.map(location => <SelectItem key={location.id} value={location.id}>{location.name}</SelectItem>)}</SelectContent></Select></div> : null}{ruleError ? <p className="text-sm text-destructive">{ruleError}</p> : null}<DialogFooter><Button type="submit" disabled={createRule.isPending}><Wallet className="mr-2 size-4" />{createRule.isPending ? "ინახება…" : "შენახვა"}</Button></DialogFooter></form></DialogContent></Dialog>
+      <Dialog open={expenseOpen} onOpenChange={setExpenseOpen}><DialogContent><DialogHeader><DialogTitle>ხარჯის დამატება</DialogTitle></DialogHeader><form onSubmit={submitExpense} className="space-y-4"><div className="space-y-2"><Label htmlFor="expense-location">ფილიალი</Label><Select value={expenseLocationId} onValueChange={setExpenseLocationId}><SelectTrigger id="expense-location"><SelectValue placeholder="აირჩიეთ ფილიალი" /></SelectTrigger><SelectContent>{locations.data?.map(location => <SelectItem key={location.id} value={location.id}>{location.name}</SelectItem>)}</SelectContent></Select></div><div className="grid gap-4 sm:grid-cols-2"><div className="space-y-2"><Label htmlFor="expense-category">კატეგორია</Label><Input id="expense-category" value={expenseCategory} onChange={event => setExpenseCategory(event.target.value)} placeholder="მაგ. ქირა" minLength={2} maxLength={100} required /></div><div className="space-y-2"><Label htmlFor="expense-amount">თანხა (₾)</Label><Input id="expense-amount" value={expenseAmount} onChange={event => setExpenseAmount(event.target.value)} inputMode="decimal" placeholder="120.00" required /></div></div><div className="space-y-2"><Label htmlFor="expense-date">თარიღი</Label><Input id="expense-date" type="date" value={expenseDate} onChange={event => setExpenseDate(event.target.value)} required /></div><div className="space-y-2"><Label htmlFor="expense-description">შენიშვნა <span className="text-muted-foreground">(არასავალდებულო)</span></Label><Input id="expense-description" value={expenseDescription} onChange={event => setExpenseDescription(event.target.value)} maxLength={5000} /></div>{expenseFormError ? <p className="text-sm text-destructive">{expenseFormError}</p> : null}<DialogFooter><Button type="submit" disabled={createExpense.isPending}>{createExpense.isPending ? "ინახება…" : "შენახვა"}</Button></DialogFooter></form></DialogContent></Dialog>
     </DashboardLayout>
   );
 }

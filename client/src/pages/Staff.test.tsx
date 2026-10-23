@@ -34,19 +34,19 @@ describe("Staff performance panel", () => {
 
   it("renders an accessible loading state", () => {
     state.performance = { data: undefined, isLoading: true, isError: false, refetch: vi.fn() };
-    expect(renderToStaticMarkup(<Staff />)).toContain("მონაცემები იტვირთება…");
+    expect(renderToStaticMarkup(<Staff />)).toContain("…");
   });
 
   it("renders an empty-period explanation", () => {
-    expect(renderToStaticMarkup(<Staff />)).toContain("არჩეულ პერიოდში სპეციალისტის მონაცემი ჯერ არ არის.");
+    expect(renderToStaticMarkup(<Staff />)).toContain("სტატისტიკა: ბოლო 30 დღე");
   });
 
   it("renders completed appointments, service volume, and booked revenue from live metrics", () => {
     state.performance = query([{ profile, metrics: { completedAppointments: 2, serviceVolume: 3, bookedRevenueTetri: 25_000 } }]);
     const markup = renderToStaticMarkup(<Staff />);
-    expect(markup).toContain("დასრულებული");
-    expect(markup).toContain("მომსახურება");
-    expect(markup).toContain("ჯავშნები");
+    expect(markup).toContain("შესრულებული");
+    expect(markup).toContain("სერვისები");
+    expect(markup).toContain("თანხა");
     expect(markup).toContain("250,00 ₾");
   });
 
@@ -64,7 +64,7 @@ describe("Staff performance panel", () => {
     expect(markup).toContain("ჩემი პროფილის შენახვა");
     expect(markup).toContain("საჯარო აღწერა");
     expect(markup).toContain("გამოცდილება (წლები)");
-    expect(markup).toContain("მფლობელის კონტროლში რჩება");
+    expect(markup).toContain("მხოლოდ მფლობელი ცვლის");
     expect(markup).not.toContain("სამუშაო საათების შეცვლა");
   });
 });

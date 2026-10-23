@@ -10,7 +10,7 @@ export function VerticalPicker({ value, onChange, disabled = false, legend = "�
   return <fieldset className="grid gap-2" disabled={disabled}>
     <legend className="mb-1 text-sm font-medium">{legend}</legend>
     <div className="grid gap-3 sm:grid-cols-3">
-      {VERTICAL_OPTIONS.map(option => <label key={option.value} className={`flex min-h-11 cursor-pointer flex-col gap-1 rounded-xl border p-4 text-sm has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring ${value === option.value ? "border-primary bg-primary/10" : "bg-card hover:bg-muted/40"}`}>
+      {VERTICAL_OPTIONS.map(option => <label key={option.value} className={`flex min-h-11 cursor-pointer flex-col gap-1 rounded-md border p-3 text-sm has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring ${value === option.value ? "border-primary bg-primary/10" : "bg-card hover:bg-muted/40"}`}>
         <input type="radio" name="organization-vertical" className="sr-only" value={option.value} checked={value === option.value} onChange={() => onChange(option.value)} />
         <span className="font-semibold">{option.label}</span>
         <span className="text-xs leading-5 text-muted-foreground">{option.description}</span>
@@ -28,7 +28,7 @@ export function VerticalSetting({ organizationId, vertical }: { organizationId: 
     onSuccess: async () => { await utils.organizations.listMine.invalidate(); setConfirmOpen(false); toast.success("საქმიანობის სფერო განახლდა."); },
     onError: error => { setConfirmOpen(false); toast.error(error.message || "საქმიანობის სფეროს შეცვლა ვერ მოხერხდა."); },
   });
-  return <div className="mb-4 space-y-3 rounded-2xl border bg-muted/10 p-4">
+  return <div className="mb-4 space-y-3 rounded-md border p-4">
     <VerticalPicker value={draft} onChange={setDraft} disabled={setVertical.isPending} />
     <Button type="button" className="min-h-11" disabled={draft === vertical || setVertical.isPending} onClick={() => setConfirmOpen(true)}>საქმიანობის სფეროს შეცვლა</Button>
     <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>

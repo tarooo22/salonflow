@@ -1,85 +1,27 @@
 import DashboardLayout from "@/components/DashboardLayout";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarDays, ChevronLeft, ChevronRight, Clock3, MapPin, UsersRound } from "lucide-react";
+import { Check, CheckCheck, ChevronLeft, ChevronRight, Clock3, MapPin, Play, Plus, UserCheck, UserX, X, type LucideIcon } from "lucide-react";
 import { trpc } from "@/lib/trpc";
-import { DragEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { DragEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { dateKeyInTimeZone, formatTimeInTimeZone, zonedDateTimeToUtc } from "@shared/timezones";
 import { toast } from "sonner";
-import { canManageAppointmentQueue, nextAppointmentAction } from "@/lib/appointmentPresentation";
+import { nextAppointmentAction } from "@/lib/appointmentPresentation";
 import { AppointmentQuickAction } from "@/components/AppointmentQuickAction";
 import { ClinicalRecordsButton } from "@/components/clinical/ClinicalRecordsButton";
-import { WorkspaceFilterBar, WorkspacePageHeader, WorkspaceSection, WorkspaceState, WorkspaceStatusPill } from "@/components/workspace/WorkspacePrimitives";
+import { WalkInQuickEntry } from "@/components/WalkInQuickEntry";
+import { WorkspacePageHeader, WorkspaceState } from "@/components/workspace/WorkspacePrimitives";
 import { SavedViewMenu, type SavedViewPayload } from "@/components/workspace/SavedViewMenu";
-import { formatPaymentState } from "@/lib/presentation";
+import { DATE_NAMES } from "@/components/public/BookingPrimitives";
+import { useIsMobile } from "@/hooks/useMobile";
 
 const statusLabels: Record<string, string> = { PENDING: "დასადასტურებელი", CONFIRMED: "დადასტურებული", CHECKED_IN: "მიღებულია", IN_SERVICE: "მომსახურებაშია", COMPLETED: "დასრულებული", CANCELLED: "გაუქმებული", NO_SHOW: "არ გამოცხადდა" };
-const statusTone: Record<string, string> = { PENDING: "border-[var(--sf-amber)]/35 bg-[var(--sf-amber)]/15 text-[var(--sf-amber)]", CONFIRMED: "border-[var(--sf-jade)]/30 bg-[var(--sf-jade)]/10 text-[var(--sf-jade)]", CHECKED_IN: "border-[var(--sf-jade)]/30 bg-[var(--sf-jade)]/10 text-[var(--sf-jade)]", IN_SERVICE: "border-primary/30 bg-primary/10 text-primary", COMPLETED: "border-[var(--sf-muted)]/20 bg-[var(--sf-muted)]/10 text-[var(--sf-muted)]", CANCELLED: "border-destructive/30 bg-destructive/10 text-destructive", NO_SHOW: "border-destructive/30 bg-destructive/10 text-destructive" };
+const statusIcons: Record<string, LucideIcon> = { PENDING: Clock3, CONFIRMED: Check, CHECKED_IN: UserCheck, IN_SERVICE: Play, COMPLETED: CheckCheck, CANCELLED: X, NO_SHOW: UserX };
 const FIRST_HOUR = 8;
 const LAST_HOUR = 21;
-const PIXELS_PER_MINUTE = 1;
 const hours = Array.from({ length: LAST_HOUR - FIRST_HOUR }, (_, index) => FIRST_HOUR + index);
+const names = DATE_NAMES.ka;
 
-function startOfWeek(value: Date) { const date = new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate())); date.setUTCDate(date.getUTCDate() - ((date.getUTCDay() + 6) % 7)); return date; }
-function addDays(value: Date, days: number) { const date = new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate())); date.setUTCDate(date.getUTCDate() + days); return date; }
-function dayStart(value: Date, timezone: string) { return zonedDateTimeToUtc({ year: value.getUTCFullYear(), month: value.getUTCMonth() + 1, day: value.getUTCDate(), hour: 0, minute: 0, second: 0 }, timezone); }
-function minuteOfDay(value: Date, timezone: string) { const parts = new Intl.DateTimeFormat("en-CA", { timeZone: timezone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(value); return Number(parts.find(part => part.type === "hour")?.value ?? 0) * 60 + Number(parts.find(part => part.type === "minute")?.value ?? 0); }
-function dayTitle(value: Date, timezone: string) { return new Intl.DateTimeFormat("ka-GE", { timeZone: timezone, weekday: "short", day: "numeric", month: "short" }).format(dayStart(value, timezone)); }
-function dropSlot(event: DragEvent<HTMLDivElement>, day: Date, timezone: string) { const rect = event.currentTarget.getBoundingClientRect(); const rawMinutes = FIRST_HOUR * 60 + Math.round((event.clientY - rect.top) / (15 * PIXELS_PER_MINUTE)) * 15; const minutes = Math.max(FIRST_HOUR * 60, Math.min((LAST_HOUR - 1) * 60 + 45, rawMinutes)); return zonedDateTimeToUtc({ year: day.getUTCFullYear(), month: day.getUTCMonth() + 1, day: day.getUTCDate(), hour: Math.floor(minutes / 60), minute: minutes % 60, second: 0 }, timezone); }
-
-export function canUseCalendarSpecialistFilter(role?: string) {
-  return role === "OWNER" || role === "MANAGER";
-}
-
-export default function Calendar() {
-  const organizations = trpc.organizations.listMine.useQuery();
-  const organizationEntry = organizations.data?.[0];
-  const organization = organizationEntry?.organization;
-  const isStaff = organizationEntry?.membership.role === "STAFF";
-  const canManageCalendar = canUseCalendarSpecialistFilter(organizationEntry?.membership.role);
-  const utils = trpc.useUtils();
-  const locations = trpc.organizations.listLocations.useQuery({ organizationId: organization?.id ?? "" }, { enabled: Boolean(organization?.id) });
-  const [activeLocationId, setActiveLocationId] = useState("");
-  const selectedLocation = locations.data?.find(location => location.id === activeLocationId) ?? locations.data?.[0];
-  const timezone = selectedLocation?.timezone ?? organization?.defaultTimezone ?? "Asia/Tbilisi";
-  const [view, setView] = useState<"day" | "week">("day");
-  const [cursor, setCursor] = useState(() => startOfWeek(new Date()));
-  const [staffFilter, setStaffFilter] = useState("ALL");
-
-  useEffect(() => { if (!activeLocationId && locations.data?.[0]) setActiveLocationId(locations.data[0].id); }, [activeLocationId, locations.data]);
-
-  const days = useMemo(() => view === "week" ? Array.from({ length: 7 }, (_, index) => addDays(startOfWeek(cursor), index)) : [cursor], [cursor, view]);
-  const range = useMemo(() => ({ startsAt: dayStart(days[0], timezone), endsAt: dayStart(addDays(days[days.length - 1], 1), timezone) }), [days, timezone]);
-  const calendarInput = useMemo(() => ({ organizationId: organization?.id ?? "", locationId: selectedLocation?.id, ...range, staffProfileId: staffFilter === "ALL" ? undefined : staffFilter }), [organization?.id, range, selectedLocation?.id, staffFilter]);
-  const appointments = trpc.appointments.listRange.useQuery(calendarInput, { enabled: Boolean(organization?.id && selectedLocation?.id) });
-  const staff = trpc.staff.list.useQuery({ organizationId: organization?.id ?? "", locationId: selectedLocation?.id }, { enabled: Boolean(organization?.id && selectedLocation?.id) });
-  const updateStatus = trpc.appointments.updateStatus.useMutation({ onSuccess: async () => { await Promise.all([utils.appointments.listRange.invalidate(), utils.appointments.dashboard.invalidate()]); toast.success("ჯავშნის სტატუსი განახლდა."); }, onError: () => toast.error("სტატუსის განახლება ვერ მოხერხდა.") });
-  const reschedule = trpc.appointments.reschedule.useMutation({ onSuccess: async () => { await Promise.all([utils.appointments.listRange.invalidate(), utils.appointments.dashboard.invalidate()]); toast.success("ჯავშანი კალენდარში განახლდა."); }, onError: error => toast.error(error.message || "ჯავშნის გადატანა ვერ მოხერხდა.") });
-  const visibleStaff = useMemo(() => {
-    const all = staff.data ?? [];
-    if (isStaff) return all.filter(item => item.membership.id === organizationEntry?.membership.id);
-    if (staffFilter !== "ALL") return all.filter(item => item.profile.id === staffFilter);
-    return all;
-  }, [isStaff, organizationEntry?.membership.id, staff.data, staffFilter]);
-  const periodLabel = view === "week" ? `${dayTitle(days[0], timezone)} – ${dayTitle(days[6], timezone)}` : new Intl.DateTimeFormat("ka-GE", { timeZone: timezone, weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(dayStart(days[0], timezone));
-  const move = (direction: -1 | 1) => setCursor(current => addDays(current, direction * (view === "week" ? 7 : 1)));
-  const switchView = (next: "day" | "week") => { setView(next); setCursor(current => next === "week" ? startOfWeek(current) : current); };
-  const calendarAppointments = appointments.data ?? [];
-  const applySavedView = useCallback((payload: SavedViewPayload) => {
-    if (payload.view) switchView(payload.view);
-    if (payload.locationId && locations.data?.some(location => location.id === payload.locationId)) setActiveLocationId(payload.locationId);
-    if (payload.staffFilter && (payload.staffFilter === "ALL" || staff.data?.some(item => item.profile.id === payload.staffFilter))) setStaffFilter(payload.staffFilter);
-  }, [locations.data, staff.data]);
-
-  const advance = (appointment: AppointmentEntry) => { const action = nextAppointmentAction(appointment.status); if (action) updateStatus.mutate({ organizationId: organization!.id, appointmentId: appointment.id, nextStatus: action.status }); };
-  const moveAppointment = (appointment: AppointmentEntry, startsAt: Date, staffProfileId?: string) => { if (!organization || !canManageCalendar) return; reschedule.mutate({ organizationId: organization.id, appointmentId: appointment.id, startsAt, staffProfileId, reason: "CALENDAR_DRAG_DROP" }); };
-  return <DashboardLayout><div className="sf-workspace-page mx-auto w-full max-w-7xl space-y-5"><WorkspacePageHeader eyebrow="გუნდის ოპერაციები" title="კალენდარი" description={`${periodLabel} · ფილიალისა და სპეციალისტის მიხედვით დალაგებული დროითი ჯავშნები.`} actions={<>{locations.data?.length ? <Select value={activeLocationId || locations.data[0]?.id} onValueChange={setActiveLocationId}><SelectTrigger className="min-w-48 bg-card"><MapPin className="mr-2 h-4 w-4 text-primary" /><SelectValue placeholder="ფილიალი" /></SelectTrigger><SelectContent>{locations.data.map(location => <SelectItem key={location.id} value={location.id}>{location.name}</SelectItem>)}</SelectContent></Select> : null}<div className="flex rounded-xl border border-border bg-card p-1"><Button variant={view === "day" ? "default" : "ghost"} size="sm" onClick={() => switchView("day")}>დღე</Button><Button variant={view === "week" ? "default" : "ghost"} size="sm" onClick={() => switchView("week")}>კვირა</Button></div></>} />
-    {organizations.isLoading ? <WorkspaceState kind="loading" title="სამუშაო სივრცე იტვირთება…" /> : null}{organizations.isError ? <WorkspaceState kind="error" title="სამუშაო სივრცის მონაცემები მიუწვდომელია" /> : null}{!organizations.isLoading && !organizations.isError && !organization ? <WorkspaceState kind="empty" title="ჯერ შექმენით სამუშაო სივრცე" description="კალენდარი ხელმისაწვდომი გახდება პირველი ფილიალის შექმნის შემდეგ." /> : null}
-    {organization ? <><WorkspaceFilterBar><div className="flex items-center gap-2"><Button variant="outline" size="icon" onClick={() => move(-1)} aria-label="წინა პერიოდი"><ChevronLeft className="h-4 w-4" /></Button><p className="min-w-48 text-center text-sm font-semibold">{periodLabel}</p><Button variant="outline" size="icon" onClick={() => move(1)} aria-label="შემდეგი პერიოდი"><ChevronRight className="h-4 w-4" /></Button></div>{canManageCalendar ? <label className="grid min-w-0 gap-1.5 text-sm font-medium"><span>სპეციალისტის მიხედვით</span><Select value={staffFilter} onValueChange={setStaffFilter}><SelectTrigger aria-label="სპეციალისტის მიხედვით გაფილტვრა" className="w-full bg-card sm:w-64"><SelectValue placeholder="ყველა სპეციალისტი" /></SelectTrigger><SelectContent><SelectItem value="ALL">ყველა სპეციალისტი</SelectItem>{staff.data?.map(item => <SelectItem key={item.profile.id} value={item.profile.id}>{item.profile.publicDisplayName}</SelectItem>)}</SelectContent></Select></label> : <p className="text-sm text-muted-foreground">ნაჩვენებია მხოლოდ თქვენი განრიგი.</p>}<SavedViewMenu organizationId={organization.id} route="/app/calendar" filterPayload={{ view, locationId: selectedLocation?.id, ...(staffFilter !== "ALL" ? { staffFilter } : {}) }} onApply={applySavedView} /><WorkspaceStatusPill tone="info">{appointments.isLoading ? "…" : `${calendarAppointments.length} ჯავშანი`}</WorkspaceStatusPill></WorkspaceFilterBar><WorkspaceSection title={view === "day" ? "დღის განრიგი" : "კვირის განრიგი"} description={`${canManageCalendar ? "გადათრიეთ pending/confirmed ბლოკი სხვა დროზე ან სპეციალისტზე · " : ""}აქტიური ფილიალი · ${timezone}`} action={<WorkspaceStatusPill tone="neutral">{visibleStaff.length} სპეციალისტი</WorkspaceStatusPill>}>{locations.isLoading || appointments.isLoading || staff.isLoading ? <WorkspaceState kind="loading" title="კალენდარი იტვირთება…" /> : null}{locations.isError || appointments.isError || staff.isError ? <WorkspaceState kind="error" title="კალენდრის მონაცემები ვერ ჩაიტვირთა" /> : null}{!locations.isLoading && !locations.data?.length ? <WorkspaceState kind="empty" title="ჯერ არ არის აქტიური ფილიალი" /> : null}{!appointments.isLoading && !staff.isLoading && selectedLocation && !visibleStaff.length ? <WorkspaceState kind="empty" title="ამ ფილიალზე სპეციალისტი არ არის მიბმული" description="დაამატეთ სპეციალისტი გუნდის გვერდიდან." /> : null}{!appointments.isLoading && !staff.isLoading && visibleStaff.length ? <><div className="lg:hidden"><AgendaList appointments={calendarAppointments} timezone={timezone} canManageCalendar={canManageCalendar} onAdvance={advance} isUpdating={updateStatus.isPending || reschedule.isPending} /></div><div className="hidden lg:block">{view === "day" ? <DayResourceGrid day={days[0]} timezone={timezone} staff={visibleStaff.map(item => item.profile)} appointments={calendarAppointments} canManageCalendar={canManageCalendar} onAdvance={advance} onMove={moveAppointment} isUpdating={updateStatus.isPending || reschedule.isPending} /> : <WeekTimeGrid days={days} timezone={timezone} appointments={calendarAppointments} canManageCalendar={canManageCalendar} onAdvance={advance} onMove={moveAppointment} isUpdating={updateStatus.isPending || reschedule.isPending} />}</div></> : null}</WorkspaceSection></> : null}</div></DashboardLayout>;
-}
-
+type View = "day" | "week";
 type AppointmentEntry = {
   id: string;
   clientId: string | null;
@@ -92,21 +34,236 @@ type AppointmentEntry = {
   services: Array<{ id: string; serviceNameSnapshot: string; durationMinutesSnapshot: number; priceTetriSnapshot: number }>;
   payment?: { state: string };
 };
-type StaffProfile = { id: string; publicDisplayName: string; color: string };
+type BoardColumn = { key: string; day: Date; label: string; dot?: string; sub: React.ReactNode; staffProfileId?: string; appointments: AppointmentEntry[] };
 
-function DayResourceGrid({ day, timezone, staff, appointments, canManageCalendar, onAdvance, onMove, isUpdating }: { day: Date; timezone: string; staff: StaffProfile[]; appointments: AppointmentEntry[]; canManageCalendar: boolean; onAdvance: (appointment: AppointmentEntry) => void; onMove: (appointment: AppointmentEntry, startsAt: Date, staffProfileId?: string) => void; isUpdating: boolean }) {
-  const key = dateKeyInTimeZone(dayStart(day, timezone), timezone);
-  return <div className="overflow-x-auto rounded-xl border"><div className="grid min-w-[52rem]" style={{ gridTemplateColumns: `4rem repeat(${staff.length}, minmax(13rem, 1fr))` }}><div className="border-b bg-muted/30" />{staff.map(member => <div key={member.id} className="border-b border-l bg-muted/30 px-3 py-3"><div className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: member.color }} /><p className="truncate text-sm font-semibold">{member.publicDisplayName}</p></div><p className="mt-1 text-xs text-muted-foreground">{dayTitle(day, timezone)}</p></div>)}<TimeLabels />{staff.map(member => <TimeColumn key={member.id} day={day} targetStaffProfileId={member.id} timezone={timezone} appointments={appointments.filter(appointment => appointment.staffProfileId === member.id && dateKeyInTimeZone(new Date(appointment.startsAt), timezone) === key)} canManageCalendar={canManageCalendar} onAdvance={onAdvance} onMove={onMove} isUpdating={isUpdating} />)}</div></div>;
+// A "day" is a Date at UTC midnight carrying the calendar y/m/d of the location, so arithmetic never drifts with the browser zone.
+function keyToDay(key: string) { const [y, m, d] = key.split("-").map(Number) as [number, number, number]; return new Date(Date.UTC(y, m - 1, d)); }
+function dayKey(day: Date) { return day.toISOString().slice(0, 10); }
+function addDays(value: Date, days: number) { const date = new Date(value); date.setUTCDate(date.getUTCDate() + days); return date; }
+function startOfWeek(value: Date) { return addDays(value, -((value.getUTCDay() + 6) % 7)); }
+function weekdayIndex(day: Date) { return (day.getUTCDay() + 6) % 7; }
+function dayStart(value: Date, timezone: string) { return zonedDateTimeToUtc({ year: value.getUTCFullYear(), month: value.getUTCMonth() + 1, day: value.getUTCDate(), hour: 0, minute: 0, second: 0 }, timezone); }
+function minuteOfDay(value: Date, timezone: string) { const parts = new Intl.DateTimeFormat("en-CA", { timeZone: timezone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(value); return Number(parts.find(part => part.type === "hour")?.value ?? 0) * 60 + Number(parts.find(part => part.type === "minute")?.value ?? 0); }
+function dropSlot(event: DragEvent<HTMLDivElement>, day: Date, timezone: string, pixelsPerMinute: number) { const rect = event.currentTarget.getBoundingClientRect(); const rawMinutes = FIRST_HOUR * 60 + Math.round((event.clientY - rect.top) / (15 * pixelsPerMinute)) * 15; const minutes = Math.max(FIRST_HOUR * 60, Math.min((LAST_HOUR - 1) * 60 + 45, rawMinutes)); return zonedDateTimeToUtc({ year: day.getUTCFullYear(), month: day.getUTCMonth() + 1, day: day.getUTCDate(), hour: Math.floor(minutes / 60), minute: minutes % 60, second: 0 }, timezone); }
+
+const Num = ({ children }: { children: React.ReactNode }) => <span className="cwk-num">{children}</span>;
+/** "პარასკევი, 23 ოქტომბერი" with the numerals in mono. The browser has no ka-GE names, so the words come from our own table. */
+function DayStamp({ day, withYear, short }: { day: Date; withYear?: boolean; short?: boolean }) {
+  if (short) return <>{names.weekdayShort[weekdayIndex(day)]}, <Num>{day.getUTCDate()}</Num> {names.monthShort[day.getUTCMonth()]}</>;
+  return <>{names.weekdayFull[weekdayIndex(day)]}, <Num>{day.getUTCDate()}</Num> {names.monthFull[day.getUTCMonth()]}{withYear ? <> <Num>{day.getUTCFullYear()}</Num></> : null}</>;
+}
+function RangeStamp({ first, last }: { first: Date; last: Date }) {
+  if (first.getUTCMonth() === last.getUTCMonth()) return <><Num>{first.getUTCDate()}</Num> – <Num>{last.getUTCDate()}</Num> {names.monthFull[last.getUTCMonth()]}</>;
+  return <><Num>{first.getUTCDate()}</Num> {names.monthShort[first.getUTCMonth()]} – <Num>{last.getUTCDate()}</Num> {names.monthShort[last.getUTCMonth()]}</>;
 }
 
-function WeekTimeGrid({ days, timezone, appointments, canManageCalendar, onAdvance, onMove, isUpdating }: { days: Date[]; timezone: string; appointments: AppointmentEntry[]; canManageCalendar: boolean; onAdvance: (appointment: AppointmentEntry) => void; onMove: (appointment: AppointmentEntry, startsAt: Date, staffProfileId?: string) => void; isUpdating: boolean }) {
-  return <div className="overflow-x-auto rounded-xl border"><div className="grid min-w-[74rem]" style={{ gridTemplateColumns: "4rem repeat(7, minmax(10rem, 1fr))" }}><div className="border-b bg-muted/30" />{days.map(day => <div key={day.toISOString()} className="border-b border-l bg-muted/30 px-3 py-3"><p className="text-sm font-semibold">{dayTitle(day, timezone)}</p><p className="mt-1 text-xs text-muted-foreground">{appointments.filter(appointment => dateKeyInTimeZone(new Date(appointment.startsAt), timezone) === dateKeyInTimeZone(dayStart(day, timezone), timezone)).length} ჯავშანი</p></div>)}<TimeLabels />{days.map(day => <TimeColumn key={day.toISOString()} day={day} timezone={timezone} compact appointments={appointments.filter(appointment => dateKeyInTimeZone(new Date(appointment.startsAt), timezone) === dateKeyInTimeZone(dayStart(day, timezone), timezone))} canManageCalendar={canManageCalendar} onAdvance={onAdvance} onMove={onMove} isUpdating={isUpdating} />)}</div></div>;
+export function canUseCalendarSpecialistFilter(role?: string) {
+  return role === "OWNER" || role === "MANAGER";
 }
 
-function TimeLabels() { return <div className="relative h-[780px] bg-muted/20">{hours.map(hour => <p key={hour} className="absolute right-2 -translate-y-2 text-[11px] text-muted-foreground" style={{ top: `${(hour - FIRST_HOUR) * 60}px` }}>{String(hour).padStart(2, "0")}:00</p>)}</div>; }
+export default function Calendar() {
+  const organizations = trpc.organizations.listMine.useQuery();
+  const organizationEntry = organizations.data?.[0];
+  const organization = organizationEntry?.organization;
+  const isStaff = organizationEntry?.membership.role === "STAFF";
+  const canManageCalendar = canUseCalendarSpecialistFilter(organizationEntry?.membership.role);
+  const utils = trpc.useUtils();
+  const isMobile = useIsMobile();
+  const locations = trpc.organizations.listLocations.useQuery({ organizationId: organization?.id ?? "" }, { enabled: Boolean(organization?.id) });
+  const [activeLocationId, setActiveLocationId] = useState("");
+  const selectedLocation = locations.data?.find(location => location.id === activeLocationId) ?? locations.data?.[0];
+  const timezone = selectedLocation?.timezone ?? organization?.defaultTimezone ?? "Asia/Tbilisi";
+  const [view, setView] = useState<View>("day");
+  // null = follow "today" in the location's timezone; the day view opens on today, the week view on that week's Monday.
+  const [cursorKey, setCursorKey] = useState<string | null>(null);
+  const [staffFilter, setStaffFilter] = useState("ALL");
+  const [walkInOpen, setWalkInOpen] = useState(false);
+  const [mobileKey, setMobileKey] = useState("");
+  const [now, setNow] = useState(() => new Date());
+  const todayKey = dateKeyInTimeZone(now, timezone);
+  const cursor = keyToDay(cursorKey ?? todayKey);
+  const pixelsPerMinute = isMobile ? 1.5 : 1.1;
 
-function TimeColumn({ day, targetStaffProfileId, timezone, appointments, compact = false, canManageCalendar, onAdvance, onMove, isUpdating }: { day: Date; targetStaffProfileId?: string; timezone: string; appointments: AppointmentEntry[]; compact?: boolean; canManageCalendar: boolean; onAdvance: (appointment: AppointmentEntry) => void; onMove: (appointment: AppointmentEntry, startsAt: Date, staffProfileId?: string) => void; isUpdating: boolean }) { const drop = (event: DragEvent<HTMLDivElement>) => { event.preventDefault(); if (!canManageCalendar || isUpdating) return; const encoded = event.dataTransfer.getData("application/x-salonflow-appointment"); if (!encoded) return; try { const appointment = JSON.parse(encoded) as AppointmentEntry; onMove(appointment, dropSlot(event, day, timezone), targetStaffProfileId); } catch { /* malformed drag payload is ignored */ } }; return <div onDragOver={event => { if (canManageCalendar) event.preventDefault(); }} onDrop={drop} className={`relative h-[780px] border-l bg-[repeating-linear-gradient(to_bottom,transparent,transparent_59px,hsl(var(--border)/0.7)_60px)] ${canManageCalendar ? "transition-colors hover:bg-primary/5" : ""}`}>{appointments.map(appointment => <AppointmentCard key={appointment.id} appointment={appointment} timezone={timezone} compact={compact} canManageCalendar={canManageCalendar} onAdvance={onAdvance} isUpdating={isUpdating} />)}</div>; }
+  useEffect(() => { if (!activeLocationId && locations.data?.[0]) setActiveLocationId(locations.data[0].id); }, [activeLocationId, locations.data]);
+  useEffect(() => { const timer = setInterval(() => setNow(new Date()), 60_000); return () => clearInterval(timer); }, []);
 
-function AgendaList({ appointments, timezone, canManageCalendar, onAdvance, isUpdating }: { appointments: AppointmentEntry[]; timezone: string; canManageCalendar: boolean; onAdvance: (appointment: AppointmentEntry) => void; isUpdating: boolean }) { const ordered = [...appointments].sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime()); if (!ordered.length) return <WorkspaceState kind="empty" title="არჩეულ პერიოდში ჯავშანი არ არის" description="შეცვალეთ თარიღი, ფილიალი ან სპეციალისტის ფილტრი." />; return <div className="divide-y divide-border/70">{ordered.map(appointment => { const client = appointment.client ? `${appointment.client.firstName} ${appointment.client.lastName ?? ""}`.trim() : "კლიენტი არ არის მითითებული"; return <article key={appointment.id} className="py-3"><div className="flex gap-3"><div className="w-14 shrink-0 rounded-lg bg-muted px-2 py-1.5 text-center"><p className="font-mono text-sm font-semibold">{formatTimeInTimeZone(new Date(appointment.startsAt), timezone)}</p><p className="mt-0.5 text-[11px] text-muted-foreground">{formatTimeInTimeZone(new Date(appointment.endsAt), timezone)}</p></div><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-1.5"><p className="font-semibold">{client}</p><WorkspaceStatusPill tone={appointment.status === "PENDING" ? "warning" : appointment.status === "CANCELLED" || appointment.status === "NO_SHOW" ? "danger" : appointment.status === "IN_SERVICE" ? "violet" : "success"}>{statusLabels[appointment.status] ?? appointment.status}</WorkspaceStatusPill><WorkspaceStatusPill tone={appointment.payment?.state === "PAID" ? "success" : appointment.payment?.state === "PARTIAL" ? "warning" : "neutral"}>{formatPaymentState(appointment.payment?.state)}</WorkspaceStatusPill></div><p className="mt-1 text-sm text-muted-foreground">{appointment.services.map(service => service.serviceNameSnapshot).join(", ") || "სერვისი"}</p><p className="mt-1 text-xs text-muted-foreground">{appointment.staff.publicDisplayName}</p><div className="mt-2 empty:hidden"><ClinicalRecordsButton appointment={appointment} /></div></div>{canManageCalendar ? <AppointmentQuickAction role="RECEPTIONIST" status={appointment.status} cardHeight={70} context="calendar" disabled={isUpdating} onAction={() => onAdvance(appointment)} /> : null}</div></article>; })}</div>; }
+  const days = useMemo(() => view === "week" ? Array.from({ length: 7 }, (_, index) => addDays(startOfWeek(cursor), index)) : [cursor], [cursor.getTime(), view]);
+  const range = useMemo(() => ({ startsAt: dayStart(days[0], timezone), endsAt: dayStart(addDays(days[days.length - 1], 1), timezone) }), [days, timezone]);
+  const calendarInput = useMemo(() => ({ organizationId: organization?.id ?? "", locationId: selectedLocation?.id, ...range, staffProfileId: staffFilter === "ALL" ? undefined : staffFilter }), [organization?.id, range, selectedLocation?.id, staffFilter]);
+  const appointments = trpc.appointments.listRange.useQuery(calendarInput, { enabled: Boolean(organization?.id && selectedLocation?.id) });
+  const staff = trpc.staff.list.useQuery({ organizationId: organization?.id ?? "", locationId: selectedLocation?.id }, { enabled: Boolean(organization?.id && selectedLocation?.id) });
+  const invalidate = () => Promise.all([utils.appointments.listRange.invalidate(), utils.appointments.dashboard.invalidate()]);
+  const updateStatus = trpc.appointments.updateStatus.useMutation({ onSuccess: async () => { await invalidate(); toast.success("ჯავშნის სტატუსი განახლდა."); }, onError: () => toast.error("სტატუსის განახლება ვერ მოხერხდა.") });
+  const reschedule = trpc.appointments.reschedule.useMutation({ onSuccess: async () => { await invalidate(); toast.success("ჯავშანი კალენდარში განახლდა."); }, onError: error => toast.error(error.message || "ჯავშნის გადატანა ვერ მოხერხდა.") });
+  const visibleStaff = useMemo(() => {
+    const all = staff.data ?? [];
+    if (isStaff) return all.filter(item => item.membership.id === organizationEntry?.membership.id);
+    if (staffFilter !== "ALL") return all.filter(item => item.profile.id === staffFilter);
+    return all;
+  }, [isStaff, organizationEntry?.membership.id, staff.data, staffFilter]);
+  const calendarAppointments = (appointments.data ?? []) as AppointmentEntry[];
+  const move = (direction: -1 | 1) => setCursorKey(dayKey(addDays(cursor, direction * (view === "week" ? 7 : 1))));
+  const switchView = (next: View) => setView(next);
+  const applySavedView = useCallback((payload: SavedViewPayload) => {
+    if (payload.view) switchView(payload.view);
+    if (payload.locationId && locations.data?.some(location => location.id === payload.locationId)) setActiveLocationId(payload.locationId);
+    if (payload.staffFilter && (payload.staffFilter === "ALL" || staff.data?.some(item => item.profile.id === payload.staffFilter))) setStaffFilter(payload.staffFilter);
+  }, [locations.data, staff.data]);
 
-function AppointmentCard({ appointment, timezone, compact, canManageCalendar, onAdvance, isUpdating }: { appointment: AppointmentEntry; timezone: string; compact: boolean; canManageCalendar: boolean; onAdvance: (appointment: AppointmentEntry) => void; isUpdating: boolean }) { const startMinute = minuteOfDay(new Date(appointment.startsAt), timezone); const endMinute = minuteOfDay(new Date(appointment.endsAt), timezone); const top = Math.max(0, (startMinute - FIRST_HOUR * 60) * PIXELS_PER_MINUTE + 2); const height = Math.max(42, Math.min((LAST_HOUR - FIRST_HOUR) * 60 - top - 2, (endMinute - startMinute) * PIXELS_PER_MINUTE - 4)); const clientName = appointment.client ? `${appointment.client.firstName} ${appointment.client.lastName ?? ""}`.trim() : "კლიენტი"; const role = canManageCalendar ? "RECEPTIONIST" : "STAFF"; const draggable = canManageCalendar && (appointment.status === "PENDING" || appointment.status === "CONFIRMED"); return <article draggable={draggable} onDragStart={event => { event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("application/x-salonflow-appointment", JSON.stringify(appointment)); }} title={draggable ? "გადათრიეთ სხვა დროზე ან სპეციალისტზე" : undefined} className={`absolute inset-x-1 overflow-hidden rounded-lg border px-2 py-1.5 shadow-sm ${draggable ? "cursor-grab active:cursor-grabbing" : ""} ${statusTone[appointment.status] ?? "border-primary/30 bg-primary/10 text-primary"}`} style={{ top: `${top}px`, height: `${height}px`, borderLeftWidth: "3px", borderLeftColor: appointment.staff.color }} aria-label={`${formatTimeInTimeZone(new Date(appointment.startsAt), timezone)} ${clientName}`}><p className="truncate text-xs font-semibold">{formatTimeInTimeZone(new Date(appointment.startsAt), timezone)} · {clientName}</p><p className="mt-0.5 truncate text-[11px] leading-4 opacity-85">{appointment.services.map(service => service.serviceNameSnapshot).join(", ") || "სერვისი"}</p>{!compact ? <p className="mt-0.5 truncate text-[10px] opacity-75">{statusLabels[appointment.status] ?? appointment.status}</p> : null}<AppointmentQuickAction role={role} status={appointment.status} cardHeight={height} context="calendar" disabled={isUpdating} onAction={() => onAdvance(appointment)} />{height >= 96 ? <div className="mt-1"><ClinicalRecordsButton appointment={appointment} className="h-6 px-2 text-[10px]" /></div> : null}</article>; }
+  const advance = (appointment: AppointmentEntry) => { const action = nextAppointmentAction(appointment.status); if (action) updateStatus.mutate({ organizationId: organization!.id, appointmentId: appointment.id, nextStatus: action.status }); };
+  const moveAppointment = (appointment: AppointmentEntry, startsAt: Date, staffProfileId?: string) => { if (!organization || !canManageCalendar) return; reschedule.mutate({ organizationId: organization.id, appointmentId: appointment.id, startsAt, staffProfileId, reason: "CALENDAR_DRAG_DROP" }); };
+
+  const columns: BoardColumn[] = useMemo(() => {
+    const inDay = (day: Date) => calendarAppointments.filter(appointment => dateKeyInTimeZone(new Date(appointment.startsAt), timezone) === dayKey(day));
+    if (view === "week") return days.map(day => { const list = inDay(day); return { key: dayKey(day), day, label: names.weekdayFull[weekdayIndex(day)], sub: <><Num>{day.getUTCDate()}</Num> {names.monthShort[day.getUTCMonth()]} · <Num>{list.length}</Num></>, appointments: list }; });
+    const list = inDay(days[0]);
+    return visibleStaff.map(member => { const own = list.filter(appointment => appointment.staffProfileId === member.profile.id); return { key: member.profile.id, day: days[0], label: member.profile.publicDisplayName, dot: member.profile.color, sub: <><Num>{own.length}</Num> ჯავშანი</>, staffProfileId: member.profile.id, appointments: own }; });
+  }, [calendarAppointments, days, timezone, view, visibleStaff]);
+  const activeKey = columns.some(column => column.key === mobileKey) ? mobileKey : (columns.find(column => column.key === todayKey) ?? columns[0])?.key ?? "";
+
+  const busy = updateStatus.isPending || reschedule.isPending;
+  const loading = locations.isLoading || appointments.isLoading || staff.isLoading;
+  const failed = locations.isError || appointments.isError || staff.isError;
+  const showBoard = Boolean(organization && selectedLocation && !loading && !failed && columns.length);
+  const isToday = days.some(day => dayKey(day) === todayKey);
+  const nowMinute = minuteOfDay(now, timezone);
+  const boardRef = useRef<HTMLDivElement>(null);
+  const rangeKey = `${view}:${dayKey(days[0])}`;
+  // Open the board near the current time on today's date, at the first hour otherwise.
+  useEffect(() => { if (!showBoard || !boardRef.current) return; boardRef.current.scrollTop = isToday ? Math.max(0, (nowMinute - 60 - FIRST_HOUR * 60) * pixelsPerMinute) : 0; }, [showBoard, rangeKey, pixelsPerMinute]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const dateControls = <div className="cwk-datebar">
+    <button type="button" className="cwk-datebtn" onClick={() => move(-1)} aria-label="წინა პერიოდი"><ChevronLeft className="size-4" aria-hidden="true" /></button>
+    <span className="cwk-datestamp" aria-live="polite">{view === "week" ? <RangeStamp first={days[0]} last={days[6]} /> : <DayStamp day={days[0]} short withYear={days[0].getUTCFullYear() !== now.getUTCFullYear()} />}</span>
+    <button type="button" className="cwk-datebtn" onClick={() => move(1)} aria-label="შემდეგი პერიოდი"><ChevronRight className="size-4" aria-hidden="true" /></button>
+    <button type="button" className="cwk-datebtn" onClick={() => setCursorKey(null)}>დღეს</button>
+  </div>;
+
+  return <DashboardLayout><div className="sf-workspace-page mx-auto w-full max-w-[96rem] space-y-4">
+    <WorkspacePageHeader title="კალენდარი" className="cwk-head--split" actions={organization ? <>
+      {dateControls}
+      <div className="cwk-seg" role="group" aria-label="ხედი"><button type="button" aria-pressed={view === "day"} onClick={() => switchView("day")}>დღე</button><button type="button" aria-pressed={view === "week"} onClick={() => switchView("week")}>კვირა</button></div>
+      {(locations.data?.length ?? 0) > 1 ? <Select value={activeLocationId || locations.data![0]?.id} onValueChange={setActiveLocationId}><SelectTrigger aria-label="ფილიალი" className="cwk-loc h-9 w-44 bg-card max-md:h-11 max-md:w-auto"><MapPin className="mr-1 size-4 shrink-0 text-[var(--cwk-ink-soft)]" aria-hidden="true" /><SelectValue placeholder="ფილიალი" /></SelectTrigger><SelectContent>{locations.data!.map(location => <SelectItem key={location.id} value={location.id}>{location.name}</SelectItem>)}</SelectContent></Select> : null}
+      {canManageCalendar ? <Select value={staffFilter} onValueChange={setStaffFilter}><SelectTrigger aria-label="სპეციალისტი" className="cwk-off h-9 w-auto min-w-44 bg-card"><SelectValue placeholder="ყველა სპეციალისტი" /></SelectTrigger><SelectContent><SelectItem value="ALL">ყველა სპეციალისტი</SelectItem>{staff.data?.map(item => <SelectItem key={item.profile.id} value={item.profile.id}>{item.profile.publicDisplayName}</SelectItem>)}</SelectContent></Select> : null}
+      <span className="cwk-views"><SavedViewMenu organizationId={organization.id} route="/app/calendar" filterPayload={{ view, locationId: selectedLocation?.id, ...(staffFilter !== "ALL" ? { staffFilter } : {}) }} onApply={applySavedView} /></span>
+      {canManageCalendar && selectedLocation ? <button type="button" className="cwk-stampbtn ml-auto" aria-expanded={walkInOpen} onClick={() => setWalkInOpen(open => !open)}><Plus className="size-4" aria-hidden="true" />ჯავშანი</button> : null}
+    </> : null} />
+    {organizations.isLoading ? <WorkspaceState kind="loading" title="სამუშაო სივრცე იტვირთება…" /> : null}
+    {organizations.isError ? <WorkspaceState kind="error" title="სამუშაო სივრცის მონაცემები მიუწვდომელია" /> : null}
+    {!organizations.isLoading && !organizations.isError && !organization ? <WorkspaceState kind="empty" title="ჯერ შექმენით სამუშაო სივრცე" description="კალენდარი გამოჩნდება პირველი ფილიალის შექმნის შემდეგ." /> : null}
+    {organization && selectedLocation && canManageCalendar && walkInOpen ? <WalkInQuickEntry organizationId={organization.id} locationId={selectedLocation.id} open={walkInOpen} onOpenChange={setWalkInOpen} /> : null}
+    {organization ? <>
+      {loading ? <WorkspaceState kind="loading" title="კალენდარი იტვირთება…" /> : null}
+      {failed ? <WorkspaceState kind="error" title="კალენდრის მონაცემები ვერ ჩაიტვირთა" /> : null}
+      {!locations.isLoading && !locations.data?.length ? <WorkspaceState kind="empty" title="ჯერ არ არის აქტიური ფილიალი" /> : null}
+      {!loading && !failed && selectedLocation && !columns.length ? <WorkspaceState kind="empty" title="ფილიალზე სპეციალისტი არ არის" description="დაამატეთ სპეციალისტი გუნდის გვერდზე." /> : null}
+      {showBoard ? <>
+        <div className="cwk-strip" role="group" aria-label={view === "week" ? "დღე" : "სპეციალისტი"}>{columns.map(column => <button key={column.key} type="button" aria-pressed={column.key === activeKey} onClick={() => setMobileKey(column.key)}>{column.dot ? <span className="cwk-dot" style={{ backgroundColor: column.dot }} aria-hidden="true" /> : null}{view === "week" ? <>{names.weekdayShort[weekdayIndex(column.day)]} <Num>{column.day.getUTCDate()}</Num></> : column.label}</button>)}</div>
+        <Board innerRef={boardRef} columns={columns} activeKey={activeKey} timezone={timezone} pixelsPerMinute={pixelsPerMinute} weekView={view === "week"} todayKey={todayKey} nowMinute={nowMinute} canManageCalendar={canManageCalendar} busy={busy} onAdvance={advance} onMove={moveAppointment} />
+      </> : null}
+    </> : null}
+  </div></DashboardLayout>;
+}
+
+type PlacedTicket = { appointment: AppointmentEntry; start: number; end: number; lane: number; lanes: number };
+
+/** Greedy lane assignment so overlapping bookings sit side by side instead of on top of each other. */
+export function placeTickets(items: Array<{ appointment: AppointmentEntry; start: number; end: number }>): PlacedTicket[] {
+  const sorted = [...items].sort((a, b) => a.start - b.start || a.end - b.end);
+  const placed: PlacedTicket[] = [];
+  let cluster: PlacedTicket[] = [];
+  let laneEnds: number[] = [];
+  let clusterEnd = -1;
+  const flush = () => { cluster.forEach(ticket => { ticket.lanes = laneEnds.length; }); placed.push(...cluster); cluster = []; laneEnds = []; clusterEnd = -1; };
+  for (const item of sorted) {
+    if (cluster.length && item.start >= clusterEnd) flush();
+    let lane = laneEnds.findIndex(end => end <= item.start);
+    if (lane === -1) { lane = laneEnds.length; laneEnds.push(item.end); } else laneEnds[lane] = item.end;
+    cluster.push({ ...item, lane, lanes: 1 });
+    clusterEnd = Math.max(clusterEnd, item.end);
+  }
+  flush();
+  return placed;
+}
+
+function Board({ innerRef, columns, activeKey, timezone, pixelsPerMinute, weekView, todayKey, nowMinute, canManageCalendar, busy, onAdvance, onMove }: { innerRef: React.Ref<HTMLDivElement>; columns: BoardColumn[]; activeKey: string; timezone: string; pixelsPerMinute: number; weekView: boolean; todayKey: string; nowMinute: number; canManageCalendar: boolean; busy: boolean; onAdvance: (appointment: AppointmentEntry) => void; onMove: (appointment: AppointmentEntry, startsAt: Date, staffProfileId?: string) => void }) {
+  const hourHeight = 60 * pixelsPerMinute;
+  const bodyHeight = (LAST_HOUR - FIRST_HOUR) * hourHeight;
+  const nowTop = (nowMinute - FIRST_HOUR * 60) * pixelsPerMinute;
+  const nowVisible = nowTop >= 0 && nowTop <= bodyHeight && columns.some(column => dayKey(column.day) === todayKey);
+  const ruling = { backgroundImage: "linear-gradient(to bottom, var(--cwk-rule) 1px, transparent 1px), linear-gradient(to bottom, color-mix(in srgb, var(--cwk-rule) 45%, transparent) 1px, transparent 1px)", backgroundSize: `100% ${hourHeight}px, 100% ${hourHeight / 2}px`, height: bodyHeight } as const;
+  const hidden = (key: string) => (key === activeKey ? "" : "cwk-off");
+  return <div ref={innerRef} className="cwk-board" role="region" aria-label="ჯავშნების დაფა" tabIndex={0}>
+    <div className="cwk-board-grid" style={{ "--cwk-cols": `3.5rem repeat(${columns.length}, minmax(${weekView ? "9.5rem" : "11rem"}, 1fr))` } as React.CSSProperties}>
+      <div className="cwk-corner" />
+      {columns.map(column => <div key={column.key} className={`cwk-colhead ${hidden(column.key)}`}>
+        <p className="cwk-colhead-name">{column.dot ? <span className="cwk-dot" style={{ backgroundColor: column.dot }} aria-hidden="true" /> : null}<span>{column.label}</span></p>
+        <p className="cwk-colhead-sub">{column.sub}</p>
+      </div>)}
+      <div className="cwk-gutter" style={{ height: bodyHeight }}>
+        {hours.map((hour, index) => <span key={hour} className="cwk-hour cwk-num" style={{ top: index * hourHeight, ...(index === 0 ? { transform: "none" } : {}) }}>{String(hour).padStart(2, "0")}:00</span>)}
+        {nowVisible ? <span className="cwk-now-tag" style={{ position: "absolute", top: nowTop - 9, right: 4, left: "auto", zIndex: 7 }}>ახლა</span> : null}
+      </div>
+      {columns.map(column => {
+        const items = column.appointments.map(appointment => ({ appointment, start: minuteOfDay(new Date(appointment.startsAt), timezone), end: minuteOfDay(new Date(appointment.endsAt), timezone) }));
+        const isTodayColumn = dayKey(column.day) === todayKey;
+        const drop = (event: DragEvent<HTMLDivElement>) => {
+          event.preventDefault();
+          if (!canManageCalendar || busy) return;
+          const encoded = event.dataTransfer.getData("application/x-salonflow-appointment");
+          if (!encoded) return;
+          try { onMove(JSON.parse(encoded) as AppointmentEntry, dropSlot(event, column.day, timezone, pixelsPerMinute), column.staffProfileId); } catch { /* malformed drag payload is ignored */ }
+        };
+        return <div key={column.key} className={`cwk-col ${hidden(column.key)}`} style={ruling} onDragOver={event => { if (canManageCalendar) event.preventDefault(); }} onDrop={drop}>
+          {placeTickets(items).map(ticket => <Ticket key={ticket.appointment.id} ticket={ticket} timezone={timezone} pixelsPerMinute={pixelsPerMinute} showStaff={weekView} canManageCalendar={canManageCalendar} busy={busy} onAdvance={onAdvance} />)}
+          {nowVisible && isTodayColumn ? <div className="cwk-now" style={{ top: nowTop }} aria-hidden="true" /> : null}
+        </div>;
+      })}
+    </div>
+  </div>;
+}
+
+function Ticket({ ticket, timezone, pixelsPerMinute, showStaff, canManageCalendar, busy, onAdvance }: { ticket: PlacedTicket; timezone: string; pixelsPerMinute: number; showStaff: boolean; canManageCalendar: boolean; busy: boolean; onAdvance: (appointment: AppointmentEntry) => void }) {
+  const { appointment, start, end, lane, lanes } = ticket;
+  const minutes = Math.max(end - start, 15);
+  const top = Math.max(0, (start - FIRST_HOUR * 60) * pixelsPerMinute) + 1;
+  const height = Math.max(26, Math.min((LAST_HOUR - FIRST_HOUR) * 60 * pixelsPerMinute - top - 1, minutes * pixelsPerMinute - 2));
+  const short = minutes <= 30;
+  const clientName = appointment.client ? `${appointment.client.firstName} ${appointment.client.lastName ?? ""}`.trim() : "კლიენტი";
+  const service = appointment.services.map(item => item.serviceNameSnapshot).join(", ") || "სერვისი";
+  const time = `${formatTimeInTimeZone(new Date(appointment.startsAt), timezone)}–${formatTimeInTimeZone(new Date(appointment.endsAt), timezone)}`;
+  const draggable = canManageCalendar && (appointment.status === "PENDING" || appointment.status === "CONFIRMED");
+  const StatusIcon = statusIcons[appointment.status] ?? Clock3;
+  const state = statusLabels[appointment.status] ?? appointment.status;
+  const [pressed, setPressed] = useState(false);
+  const lastStatus = useRef(appointment.status);
+  // A status change recolours the stub with a short stamp press (skipped on first render).
+  useEffect(() => { if (lastStatus.current === appointment.status) return; lastStatus.current = appointment.status; setPressed(true); const timer = setTimeout(() => setPressed(false), 260); return () => clearTimeout(timer); }, [appointment.status]);
+  const action = (className: string) => <AppointmentQuickAction role={canManageCalendar ? "RECEPTIONIST" : "STAFF"} status={appointment.status} cardHeight={height >= 40 ? 70 : 0} context="calendar" disabled={busy} onAction={() => onAdvance(appointment)} className={className} />;
+  return <article
+    draggable={draggable}
+    onDragStart={event => { event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("application/x-salonflow-appointment", JSON.stringify(appointment)); }}
+    title={draggable ? `${clientName} · ${service} · ${time} — გადათრიეთ სხვა დროზე ან სპეციალისტზე` : `${clientName} · ${service} · ${time}`}
+    className="cwk-ticket"
+    data-status={appointment.status}
+    data-short={short}
+    style={{ top, height, left: `calc(${(lane / lanes) * 100}% + 2px)`, width: `calc(${100 / lanes}% - 4px)` }}
+    aria-label={`${time} ${clientName}, ${service}, ${state}`}
+  >
+    <span className="cwk-stub" data-pressed={pressed} aria-hidden="true"><StatusIcon /></span>
+    <div className="cwk-tbody" data-line={short}>
+      {short ? <>
+        <span className="cwk-tname">{clientName}</span>
+        <span className="cwk-ttime cwk-num">{formatTimeInTimeZone(new Date(appointment.startsAt), timezone)}</span>
+      </> : <>
+        <span className="cwk-tname">{showStaff ? <span className="cwk-dot mr-1.5 inline-block" style={{ backgroundColor: appointment.staff.color }} aria-hidden="true" /> : null}{clientName}</span>
+        {height >= 60 ? <span className="cwk-tsvc">{service}</span> : null}
+        <span className="cwk-ttime cwk-num">{time}</span>
+        {height >= 76 ? <span className="cwk-tstate">{state}</span> : null}
+        {lanes > 1 && height >= 64 ? action("cwk-tact cwk-tact-flow") : null}
+        {height >= 96 && lanes === 1 ? <div className="mt-1 empty:hidden"><ClinicalRecordsButton appointment={appointment} className="h-7 px-2 text-xs" /></div> : null}
+      </>}
+    </div>
+    {lanes === 1 ? action("cwk-tact") : null}
+  </article>;
+}
