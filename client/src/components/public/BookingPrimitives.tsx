@@ -65,7 +65,7 @@ export function BookingRail({ steps, current, label }: { steps: string[]; curren
   </div>;
 }
 
-export function BookingBusinessStrip({ name, address, children }: { name: string; address?: string | null; children?: ReactNode }) {
+export function BookingBusinessStrip({ name, address, action, children }: { name: string; address?: string | null; action?: ReactNode; children?: ReactNode }) {
   return <>
     <div className="cwb-biz">
       <span className="cwb-biz-thumb" aria-hidden="true">{name.trim().charAt(0).toLocaleUpperCase() || "·"}</span>
@@ -73,6 +73,7 @@ export function BookingBusinessStrip({ name, address, children }: { name: string
         <p className="cwb-biz-name">{name}</p>
         {address ? <p className="cwb-biz-address">{address}</p> : null}
       </div>
+      {action}
     </div>
     {children}
   </>;
@@ -154,12 +155,13 @@ export function BookingNotice({ tone = "info", title, children, noticeRef, role 
 
 // Sticky bottom bar: running summary + total, and the one primary button. The button uses
 // aria-disabled (not disabled) so it stays focusable and its reason is announced via the hint.
-export function BookingBar({ summary, total, label, blocked, hint, onClick, conversionEvent }: { summary: string; total: string; label: string; blocked: boolean; hint?: string; onClick: () => void; conversionEvent?: string }) {
-  return <div className="cwb-bar">
-    <div>
+export function BookingBar({ summary, total, label, blocked, hint, onClick, conversionEvent }: { summary?: string; total?: string; label: string; blocked: boolean; hint?: string; onClick: () => void; conversionEvent?: string }) {
+  // Nothing chosen yet: the bar is just the disabled button, no empty summary or 0,00 total.
+  return <div className="cwb-bar" data-bare={!summary}>
+    {summary ? <div>
       <p className="cwb-bar-sum">{summary}</p>
       <p className="cwb-bar-total">{total}</p>
-    </div>
+    </div> : null}
     <button type="button" className="cwb-btn cwb-btn-primary" aria-disabled={blocked} aria-describedby={hint ? "booking-bar-hint" : undefined} data-conversion-event={blocked ? undefined : conversionEvent} onClick={onClick}>{label}</button>
     {hint ? <p id="booking-bar-hint" className="cwb-bar-hint">{hint}</p> : null}
   </div>;

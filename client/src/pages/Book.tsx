@@ -57,7 +57,7 @@ export function DiscoveryResults({ locations, category, onCategoryChange, query 
 }
 
 export const ui = {
-  ka: { metaTitle: "ონლაინ ჩაწერა", metaDescription: "აირჩიეთ ფილიალი, სერვისი, სპეციალისტი და თავისუფალი დრო და ჩაეწერეთ ონლაინ ზარის გარეშე." },
+  ka: { metaTitle: "ონლაინ ჩაწერა", metaDescription: "აირჩიე ფილიალი, სერვისი, სპეციალისტი და თავისუფალი დრო და ჩაეწერე ონლაინ ზარის გარეშე." },
   en: { metaTitle: "Online booking", metaDescription: "Choose a location, service, specialist and free time and book online, no phone call needed." },
   ru: { metaTitle: "Онлайн-запись", metaDescription: "Выберите филиал, услугу, специалиста и свободное время и запишитесь онлайн, без звонков." },
 } as const;
@@ -70,7 +70,7 @@ export default function Book() {
   const [query, setQuery] = useState("");
   const activeLocations = useMemo(() => locations.data ?? [], [locations.data]);
 
-  return <div className="cw min-h-screen">
+  return <div className="cw">
     <CatalogHeader />
     <main id="main-content">
       <section className="cw-container pg-intro" aria-labelledby="book-title">

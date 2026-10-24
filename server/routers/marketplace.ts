@@ -55,12 +55,12 @@ export function marketplacePublicMapPoint(input: { mapVisibility: boolean; latit
 
 export function marketplaceLaunchReadiness(input: { hasCoverImage: boolean; hasCoverAlt: boolean; hasPublicDescription: boolean; hasOnlineServices: boolean; hasCategoryLinks: boolean; bookingEnabled: boolean; mapVisibility: boolean; hasConfirmedMapPoint: boolean }) {
   const items = [
-    { key: "cover", label: "cover ფოტო", complete: input.hasCoverImage, action: "დაამატეთ რეალური cover „მედია და პროფილი“ გვერდიდან." },
-    { key: "alt", label: "ფოტოს აღწერა", complete: input.hasCoverImage && input.hasCoverAlt, action: "დაამატეთ cover ფოტოს მოკლე ქართული აღწერა." },
+    { key: "cover", label: "ტიტულური ფოტო", complete: input.hasCoverImage, action: "ტიტულური ფოტო ატვირთეთ გვერდზე „მედია და პროფილი“." },
+    { key: "alt", label: "ფოტოს აღწერა", complete: input.hasCoverImage && input.hasCoverAlt, action: "დაამატეთ ტიტულური ფოტოს მოკლე აღწერა ქართულად." },
     { key: "description", label: "საჯარო აღწერა", complete: input.hasPublicDescription, action: "დაამატეთ მოკლე, ფაქტობრივი საჯარო აღწერა." },
-    { key: "booking", label: "online booking", complete: input.bookingEnabled && input.hasOnlineServices, action: "ჩართეთ booking და დატოვეთ მინიმუმ ერთი აქტიური online-bookable სერვისი." },
-    { key: "categories", label: "Marketplace კატეგორია", complete: input.hasCategoryLinks, action: "დააკავშირეთ კატეგორია რეალურ online-bookable სერვისთან." },
-    { key: "map", label: "რუკის თანხმობა", complete: !input.mapVisibility || input.hasConfirmedMapPoint, action: "რუკაზე გამოჩენისთვის ჯერ დაადასტურეთ location point." },
+    { key: "booking", label: "ონლაინ ჩაწერა", complete: input.bookingEnabled && input.hasOnlineServices, action: "ჩართეთ ონლაინ ჩაწერა და დატოვეთ მინიმუმ ერთი აქტიური სერვისი, რომელზეც ონლაინ ჩაწერა შეიძლება." },
+    { key: "categories", label: "კატალოგის კატეგორია", complete: input.hasCategoryLinks, action: "კატეგორია დააკავშირეთ სერვისთან, რომელზეც ონლაინ ჩაწერა შეიძლება." },
+    { key: "map", label: "რუკის თანხმობა", complete: !input.mapVisibility || input.hasConfirmedMapPoint, action: "რუკაზე გამოსაჩენად ჯერ დაადასტურეთ ადგილის წერტილი." },
   ];
   return { items, completed: items.filter(item => item.complete).length, total: items.length, readyForReview: items.every(item => item.complete) };
 }
@@ -117,7 +117,7 @@ export function approvedPublicLocationCondition() {
 }
 
 function requireMarketplaceAdmin(user: { role: string } | null) {
-  if (!user || user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Marketplace მართვისთვის platform admin წვდომა აუცილებელია." });
+  if (!user || user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "კატალოგის სამართავად პლატფორმის ადმინისტრატორის წვდომაა საჭირო." });
 }
 
 async function assertOwnerLocation(user: Parameters<typeof requireOrganizationRole>[0], organizationId: string, locationId: string) {
@@ -289,11 +289,11 @@ export const marketplaceRouter = router({
     if (input.categoryServiceLinks) {
       const requestedServiceIds = input.categoryServiceLinks.flatMap(link => link.serviceIds);
       const eligibleServices = requestedServiceIds.length ? await db.select({ id: services.id }).from(services).where(and(inArray(services.id, requestedServiceIds), eq(services.organizationId, location.organizationId), eq(services.status, "ACTIVE"), eq(services.onlineBookingEnabled, true))) : [];
-      if (eligibleServices.length !== new Set(requestedServiceIds).size) throw new TRPCError({ code: "BAD_REQUEST", message: "Marketplace კატეგორიას მხოლოდ თქვენი აქტიური online-bookable სერვისი შეიძლება დაუკავშიროთ." });
+      if (eligibleServices.length !== new Set(requestedServiceIds).size) throw new TRPCError({ code: "BAD_REQUEST", message: "კატალოგის კატეგორიას მხოლოდ თქვენი აქტიური online-bookable სერვისი შეიძლება დაუკავშიროთ." });
       // Validate every category first, then swap the links atomically so a failure cannot wipe an approved listing.
       for (const link of input.categoryServiceLinks) {
         const [category] = await db.select({ id: marketplaceCategories.id }).from(marketplaceCategories).where(and(eq(marketplaceCategories.id, link.categoryId), eq(marketplaceCategories.isActive, true))).limit(1);
-        if (!category) throw new TRPCError({ code: "BAD_REQUEST", message: "არჩეული Marketplace კატეგორია მიუწვდომელია." });
+        if (!category) throw new TRPCError({ code: "BAD_REQUEST", message: "არჩეული კატალოგის კატეგორია მიუწვდომელია." });
       }
       await db.transaction(async tx => {
         await tx.delete(marketplaceLocationCategoryServices).where(eq(marketplaceLocationCategoryServices.locationId, location.id));
@@ -312,8 +312,8 @@ export const marketplaceRouter = router({
     const { db, location } = await assertOwnerLocation(ctx.user, input.organizationId, input.locationId);
     const [profile] = await db.select().from(locationMarketplaceProfiles).where(eq(locationMarketplaceProfiles.locationId, location.id)).limit(1);
     const links = await db.select({ categoryId: marketplaceLocationCategories.categoryId }).from(marketplaceLocationCategories).where(eq(marketplaceLocationCategories.locationId, location.id));
-    if (!profile || !links.length) throw new TRPCError({ code: "BAD_REQUEST", message: "გაგზავნამდე დაამატეთ Marketplace კატეგორია და public listing დეტალები." });
-    if (!canTransitionMarketplaceListing(profile.status, "SUBMITTED", false)) throw new TRPCError({ code: "BAD_REQUEST", message: "ამ listing-ის გაგზავნა მიმდინარე მდგომარეობიდან შეუძლებელია." });
+    if (!profile || !links.length) throw new TRPCError({ code: "BAD_REQUEST", message: "გაგზავნამდე დაამატეთ კატალოგის კატეგორია და საჯარო პროფილის დეტალები." });
+    if (!canTransitionMarketplaceListing(profile.status, "SUBMITTED", false)) throw new TRPCError({ code: "BAD_REQUEST", message: "ამ პროფილის გაგზავნა მიმდინარე მდგომარეობიდან შეუძლებელია." });
     await db.update(locationMarketplaceProfiles).set({ status: "SUBMITTED", ownerSubmittedAt: new Date(), reviewNoteKa: null }).where(eq(locationMarketplaceProfiles.locationId, location.id));
     await db.insert(marketplaceListingEvents).values({ id: nanoid(21), locationId: location.id, eventType: "OWNER_LISTING_SUBMITTED", actorUserId: ctx.user.id });
     return { success: true };

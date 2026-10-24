@@ -18,7 +18,7 @@ describe("Marketplace map page shell", () => {
   const source = readFileSync(new URL("./MarketplaceMap.tsx", import.meta.url), "utf8");
 
   it("uses the catalog world, shared salon cards and Chawera meta, keeping URL-synced filters and the Google Maps link", () => {
-    expect(source).toContain('<div className="cw min-h-screen">');
+    expect(source).toContain('<div className="cw">');
     expect(source).toContain('<main id="main-content">');
     expect(source).toContain("BRAND.name");
     expect(source).not.toContain("SalonFlow");

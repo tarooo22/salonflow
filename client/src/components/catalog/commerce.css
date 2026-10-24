@@ -12,7 +12,6 @@
 /* Filter card under the vertical tabs. */
 .cwx-filters { display: grid; gap: 16px; padding: 16px; background: var(--sf-surface); border: 1px solid var(--sf-border); border-radius: var(--sf-r-card); box-shadow: var(--sf-shadow-sm); }
 @media (min-width: 640px) { .cwx-filters { padding: 20px; } }
-.cwx-filter-meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; font-size: 14px; color: var(--sf-muted); font-variant-numeric: tabular-nums; }
 .cwx-filter-form { display: grid; gap: 16px; }
 .cwx-filter-row { display: grid; gap: 12px; }
 @media (min-width: 640px) { .cwx-filter-row { grid-template-columns: minmax(0, 1fr) auto; align-items: end; } }
@@ -84,9 +83,7 @@
 .cwx-skeleton-tall { min-height: 288px; }
 @keyframes cwx-pulse { 50% { opacity: 0.55; } }
 .cwx-empty { display: grid; justify-items: start; gap: 8px; padding: 24px; border-radius: var(--sf-r-card); background: var(--sf-surface-2); }
-.cwx-empty-title { margin: 0; font-size: 16px; line-height: 1.4; font-weight: 700; color: var(--sf-text); }
 .cwx-empty-text { margin: 0; font-size: 16px; line-height: 1.6; color: var(--sf-muted); }
-.cwx-empty-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; }
 
 /* Vacancy detail. */
 .cwx-narrow { max-width: 48rem; }

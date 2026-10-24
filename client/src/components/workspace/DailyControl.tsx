@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { formatKaDayKey } from "@/lib/presentation";
 import { trpc } from "@/lib/trpc";
 import { Bell, ChevronRight, CheckCircle2, Check, Circle, CircleAlert, X } from "lucide-react";
 import React from "react";
@@ -36,7 +37,7 @@ export function DayCloseChecklist({ organizationId, locationId, businessDate, lo
   const toggle = (key: typeof rows[number]["key"]) => { const next = completed.includes(key) ? completed.filter(item => item !== key) : [...completed, key]; save.mutate({ organizationId, locationId, businessDate, completedKeys: next }); };
   return <section aria-label="დღის დახურვის სია" className="cwk-sheet">
     <div className="cwk-sheet-head">
-      <div className="min-w-0"><h2 className="cwk-sheet-title">დღის დახურვა</h2><p className="cwk-sheet-desc"><span>{locationName}</span> · <span className="cwk-num">{businessDate}</span></p></div>
+      <div className="min-w-0"><h2 className="cwk-sheet-title">დღის დახურვა</h2><p className="cwk-sheet-desc"><span>{locationName}</span> · <span>{formatKaDayKey(businessDate)}</span></p></div>
       {state.data?.closedAt ? <span className="cwk-mark" data-tone="success"><CheckCircle2 aria-hidden="true" />დახურულია</span> : <span className="cwk-mark" data-tone="count"><span className="cwk-num">{completed.length}/4</span></span>}
     </div>
     <ul className="divide-y divide-border">{rows.map(row => {

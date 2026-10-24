@@ -32,7 +32,7 @@ export function AdminVacanciesSection() {
           const date = localInputToDate(value);
           return <article key={v.id} className="grid gap-3 py-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
             <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2"><p className="font-semibold">{v.title}</p><WorkspaceStatusPill tone={status.tone}>{status.label}</WorkspaceStatusPill>{v.isVip ? <WorkspaceStatusPill tone="violet"><Star className="mr-1 inline h-3 w-3" />VIP</WorkspaceStatusPill> : null}</div>
+              <div className="flex flex-wrap items-center gap-2"><p className="font-semibold">{v.title}</p><WorkspaceStatusPill tone={status.tone}>{status.label}</WorkspaceStatusPill>{v.isVip ? <WorkspaceStatusPill tone="accent"><Star className="mr-1 inline h-3 w-3" />VIP</WorkspaceStatusPill> : null}</div>
               <p className="mt-1 text-sm text-muted-foreground">{v.businessName} · {v.locationName}{v.isVip && v.vipUntil ? ` · VIP: ${formatKaDateTime(new Date(v.vipUntil))}` : ""}</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">

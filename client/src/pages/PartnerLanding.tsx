@@ -1,5 +1,6 @@
 import { CatalogFooter, CatalogHeader } from "@/components/catalog/CatalogChrome";
 import "@/components/catalog/marketing.css";
+import { HeroIn } from "@/components/catalog/HomeMotion";
 import { usePublicMeta } from "@/components/public/PublicMeta";
 import { VERTICALS } from "@/lib/verticals";
 import { BRAND } from "@shared/brand";
@@ -16,7 +17,7 @@ const START_STEPS = [
 
 const FEATURES = [
   { icon: CalendarCheck, title: "ონლაინ ჯავშნები", text: "კლიენტი თავად ირჩევს სერვისს, სპეციალისტს და თავისუფალ დროს — ზარების გარეშე." },
-  { icon: LayoutDashboard, title: "დღე ერთი ეკრანიდან", text: "Today და კალენდარი აერთიანებს ჩაწერებს, სტატუსებს, სპეციალისტებსა და შემდეგ მოქმედებას." },
+  { icon: LayoutDashboard, title: "დღე ერთი ეკრანიდან", text: "„დღეს“ და „კალენდარი“ აერთიანებს ჩაწერებს, სტატუსებს, სპეციალისტებსა და შემდეგ მოქმედებას." },
   { icon: UsersRound, title: "კლიენტები და გუნდი", text: "კლიენტების ბაზა ისტორიით, თანამშრომლების გრაფიკები, სამუშაო საათები და როლები." },
   { icon: Wallet, title: "გადახდები და ანგარიშები", text: "POS გადახდები, შემოსავლები, ხარჯები და საკომისიოები ერთ ადგილას — თქვენი ორგანიზაციის ფარგლებში." },
   { icon: Globe, title: "საკუთარი საჯარო გვერდი", text: "პროფილი ფასებით, გუნდით და სამუშაო საათებით, ჯავშნის ბმულით. კატალოგში ჩანხართ პროფილის დამტკიცების შემდეგ." },
@@ -32,7 +33,7 @@ const PAIN_POINTS = [
 const JOURNEY = [
   { title: "კლიენტი ირჩევს სერვისს", text: "საჯარო ჯავშნის გვერდზე ჩანს მხოლოდ აქტიური სერვისები და მათი რეალური ხანგრძლივობა და ფასი." },
   { title: "სისტემა ამოწმებს დროს", text: "სპეციალისტი და თავისუფალი დრო მოწმდება არჩეული სერვისისა და მიმდინარე განრიგის მიხედვით. დადასტურებისას სერვერი ხელახლა ამოწმებს კონფლიქტს." },
-  { title: "თქვენ მართავთ დღეს", text: "Today და კალენდარი აჩვენებს მოთხოვნას, სტატუსს და შემდეგ ოპერაციულ მოქმედებას." },
+  { title: "თქვენ მართავთ დღეს", text: "„დღეს“ და „კალენდარი“ აჩვენებს მოთხოვნას, სტატუსს და შემდეგ ოპერაციულ მოქმედებას." },
 ];
 
 const ROLES = [
@@ -57,8 +58,10 @@ function Hero() {
           <div className="mkt-head-row"><span className="mkt-caption">ბიზნესისთვის</span><span className="tabular-nums text-xs">{BRAND.domain}</span></div>
           <div className="mt-6 grid gap-8 lg:grid-cols-[1.15fr_1fr] lg:items-center">
             <div>
-              <h1 className="mkt-h1">მართვის პროგრამა სალონისთვის, ესთეტიკის ცენტრისთვის და სტომატოლოგიური კლინიკისთვის.</h1>
-              <p className="mkt-lede mt-4">ჩაწერები, გუნდი, კლიენტები და გადახდები ერთ ქართულ სამუშაო სივრცეში. დამტკიცების შემდეგ თქვენი პროფილი ჩანს კატალოგში, ხოლო კლიენტები ონლაინ ჯავშნიან.</p>
+              <HeroIn>
+                <h1 className="mkt-h1">მართვის პროგრამა სალონისთვის, ესთეტიკის ცენტრისთვის და სტომატოლოგიური კლინიკისთვის.</h1>
+                <p className="mkt-lede mt-4">ჩაწერები, გუნდი, კლიენტები და გადახდები ერთ ქართულ სამუშაო სივრცეში. დამტკიცების შემდეგ თქვენი პროფილი ჩანს კატალოგში, ხოლო კლიენტები ონლაინ ჯავშნიან.</p>
+              </HeroIn>
               <ul className="mt-5 flex flex-wrap gap-2">{VERTICALS.map(item => <li key={item.id} className="mkt-vtag" data-vertical={item.id}>{item.label}{item.id === "dental" ? " · მალე" : ""}</li>)}</ul>
               <div className="mt-7 flex flex-wrap gap-3">
                 <Link href="/register" className="mkt-btn mkt-btn-primary">რეგისტრაცია <ArrowRight className="size-5" aria-hidden="true" /></Link>
@@ -120,11 +123,13 @@ function Pains() {
   return <section className="mkt-section mkt-section-rule" aria-labelledby="partner-pains-title">
     <div className="mkt-container">
       <h2 id="partner-pains-title" className="mkt-h2 max-w-3xl">დღის მართვა არ უნდა იწყებოდეს ქაოსის დალაგებით.</h2>
-      <ul className="mkt-grid mt-8">
-        {PAIN_POINTS.map(item => <li key={item.title} className="mkt-card grid items-start gap-2 md:grid-cols-[9rem_1fr_1fr] md:gap-6">
-          <span className="mkt-h3">{item.title}</span>
-          <span className="font-normal leading-6 mkt-muted"><span className="mkt-caption block">ახლა</span>{item.before}</span>
-          <span className="flex gap-2 font-normal leading-6"><Check className="mt-1 size-4 shrink-0" aria-hidden="true" /><span><span className="mkt-caption block">{BRAND.name}-ით</span>{item.after}</span></span>
+      <ul className="mkt-compare mt-8">
+        {PAIN_POINTS.map(item => <li key={item.title} className="mkt-card">
+          <span className="mkt-h3 block">{item.title}</span>
+          <div className="mkt-compare-cols">
+            <span className="font-normal leading-6 mkt-muted"><span className="mkt-caption block">ახლა</span>{item.before}</span>
+            <span className="flex gap-2 font-normal leading-6"><Check className="mt-1 size-4 shrink-0" aria-hidden="true" /><span><span className="mkt-caption block">{BRAND.name}-ით</span>{item.after}</span></span>
+          </div>
         </li>)}
       </ul>
     </div>

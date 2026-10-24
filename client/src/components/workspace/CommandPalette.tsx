@@ -8,14 +8,14 @@ import { useLocation } from "wouter";
 type CommandRoute = { label: string; hint: string; path: string; roles: WorkspaceRole[]; icon: typeof CalendarDays };
 
 const commandRoutes: CommandRoute[] = [
-  { label: "დღეს", hint: "დღის ფოკუსი და queue", path: "/app/today", roles: ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"], icon: LayoutDashboard },
+  { label: "დღეს", hint: "დღის ფოკუსი და რიგი", path: "/app/today", roles: ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"], icon: LayoutDashboard },
   { label: "კალენდარი", hint: "დღის ან კვირის განრიგი", path: "/app/calendar", roles: ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"], icon: CalendarDays },
   { label: "კლიენტები", hint: "რეესტრი და ვიზიტების ისტორია", path: "/app/clients", roles: ["OWNER", "MANAGER", "RECEPTIONIST"], icon: UsersRound },
   { label: "ოპერაციები", hint: "დღიური პროცესები", path: "/app/operations", roles: ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"], icon: ClipboardList },
   { label: "სერვისები", hint: "სერვისები და ფასები", path: "/app/services", roles: ["OWNER"], icon: FileText },
   { label: "გუნდი", hint: "სპეციალისტები და სამუშაო კონტექსტი", path: "/app/staff", roles: ["OWNER", "STAFF"], icon: Users },
   { label: "ანგარიშები", hint: "რეალური მონაცემების ანალიზი", path: "/app/reports", roles: ["OWNER"], icon: BarChart3 },
-  { label: "პარამეტრები", hint: "სამუშაო სივრცე და booking ბმული", path: "/app/settings", roles: ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"], icon: Settings2 },
+  { label: "პარამეტრები", hint: "სამუშაო სივრცე და ჩაწერის ბმული", path: "/app/settings", roles: ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"], icon: Settings2 },
 ];
 
 export function CommandPalette({ open, onOpenChange, organizationId, role, restricted }: { open: boolean; onOpenChange: (open: boolean) => void; organizationId?: string; role: WorkspaceRole; restricted: boolean }) {

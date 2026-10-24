@@ -1,23 +1,24 @@
 import { CatalogFooter, CatalogHeader } from "@/components/catalog/CatalogChrome";
 import "@/components/catalog/marketing.css";
 import { usePublicMeta } from "@/components/public/PublicMeta";
+import { HeroIn } from "@/components/catalog/HomeMotion";
 import { BRAND } from "@shared/brand";
 import { ArrowRight, CalendarDays, CheckCircle2, ChevronRight, CreditCard, KeyRound, LayoutDashboard, ShieldCheck, UsersRound } from "lucide-react";
 import React from "react";
 import { Link } from "wouter";
 
 const groups = [
-  { icon: CalendarDays, title: "ჩაწერები და კალენდარი", text: "დღის queue, day/week კალენდარი, სწრაფი ჩაწერა და conflict-safe დროის გადამოწმება ერთ ოპერაციულ ხედში.", items: ["ფილიალის timezone კონტექსტი", "სპეციალისტების სვეტები", "უსაფრთხო გადატანა და სტატუსები"] },
-  { icon: UsersRound, title: "კლიენტები და გუნდი", text: "კლიენტის ისტორია, თანხმობები, თანამშრომლების ხელმისაწვდომობა და სამუშაო საათები რეალური role scope-ით.", items: ["ძიებადი კლიენტების რეესტრი", "ფილიალზე მიბმული სპეციალისტები", "განრიგის წესები და გამონაკლისები"] },
-  { icon: CreditCard, title: "ფინანსები და ანგარიშები", text: "GEL/tetri სიზუსტით შემოსავალი, ხარჯები, საკომისიო და გადახდის სტატუსები, არსებული ანგარიშების მონაცემებზე დაფუძნებით.", items: ["დაცული CSV export", "პერიოდის მიხედვით ანალიტიკა", "გადახდის მეთოდების ქართული label-ები"] },
-  { icon: ShieldCheck, title: "ონლაინ ჩაწერა", text: "სერვისი, სპეციალისტი ან თავისუფალი არჩევანი, ხელმისაწვდომობის server-side check და საბოლოო დადასტურება.", items: ["მობილურ-first booking flow", "იდემპოტენტური დადასტურება", "როლებისა და scope-ის დაცვა"] },
+  { icon: CalendarDays, title: "ჩაწერები და კალენდარი", text: "დღის რიგი, დღისა და კვირის კალენდარი, სწრაფი ჩაწერა და დროის გადამოწმება, რომ ერთი დრო ორჯერ არ დაიჯავშნოს.", items: ["ფილიალის დროის სარტყელი", "სპეციალისტების სვეტები", "უსაფრთხო გადატანა და სტატუსები"] },
+  { icon: UsersRound, title: "კლიენტები და გუნდი", text: "კლიენტის ისტორია, თანხმობები, თანამშრომლების ხელმისაწვდომობა და სამუშაო საათები, თითოეულისთვის საკუთარი როლის წვდომით.", items: ["ძიებადი კლიენტების რეესტრი", "ფილიალზე მიბმული სპეციალისტები", "განრიგის წესები და გამონაკლისები"] },
+  { icon: CreditCard, title: "ფინანსები და ანგარიშები", text: "თეთრის სიზუსტით შემოსავალი, ხარჯები, საკომისიო და გადახდის სტატუსები, არსებული ანგარიშების მონაცემებზე დაფუძნებით.", items: ["დაცული CSV ექსპორტი", "პერიოდის მიხედვით ანალიტიკა", "გადახდის მეთოდების ქართული label-ები"] },
+  { icon: ShieldCheck, title: "ონლაინ ჩაწერა", text: "სერვისი, სპეციალისტი ან თავისუფალი არჩევანი, სერვერზე ხელმისაწვდომობის შემოწმება და საბოლოო დადასტურება.", items: ["ჩაწერა, მობილურზე მორგებული", "იდემპოტენტური დადასტურება", "როლებისა და scope-ის დაცვა"] },
 ];
 
 const faq = [
   [`ვისთვის არის ${BRAND.name}?`, `${BRAND.name} შექმნილია სალონების, ესთეტიკის ცენტრების, სპა სივრცეების და მომსახურებაზე დაფუძნებული გუნდების ყოველდღიური ოპერაციების სამართავად. სტომატოლოგიური კლინიკებისთვის — მალე.`],
-  ["არის თუ არა მრავალფილიალიანი მხარდაჭერა?", "დიახ. სამუშაო სივრცე ორგანიზაციასა და აქტიურ ფილიალებს აერთიანებს IANA timezone და public booking slug კონტექსტით."],
+  ["არის თუ არა მრავალფილიალიანი მხარდაჭერა?", "დიახ. სამუშაო სივრცე ორგანიზაციასა და აქტიურ ფილიალებს აერთიანებს, თითოეულს თავისი დროის სარტყლითა და ჩაწერის ბმულით."],
   ["როგორ მუშაობს ონლაინ ჩაწერა?", "სტუმარი ირჩევს აქტიურ მომსახურებას, სპეციალისტს ან თავისუფალ არჩევანს, დროსა და საჭირო კონტაქტს. საბოლოო ჩაწერამდე სისტემა ხელმისაწვდომობას ხელახლა ამოწმებს."],
-  ["იგზავნება თუ არა შეტყობინებები?", "ავტომატური email/SMS მიწოდება ჯერ არ არის ჩართული, რადგან verified sender domain და provider configuration ჯერ არ არის დამატებული."],
+  ["იგზავნება თუ არა შეტყობინებები?", "ავტომატური შეტყობინებები ელფოსტითა და SMS-ით ჯერ არ იგზავნება."],
 ];
 
 function MarketingLayout({ eyebrow, title, description, canonicalPath, children }: { eyebrow: string; title: string; description: string; canonicalPath: string; children: React.ReactNode }) {
@@ -29,8 +30,10 @@ function MarketingLayout({ eyebrow, title, description, canonicalPath, children 
         <div className="mkt-container">
           <p className="mkt-caption">{eyebrow}</p>
           <div className="mt-3 mkt-rule-top pt-6">
-            <h1 id="marketing-title" className="mkt-h1 max-w-4xl">{title}</h1>
-            <p className="mkt-lede mt-5">{description}</p>
+            <HeroIn>
+              <h1 id="marketing-title" className="mkt-h1 max-w-4xl">{title}</h1>
+              <p className="mkt-lede mt-5">{description}</p>
+            </HeroIn>
           </div>
         </div>
       </section>
@@ -45,7 +48,6 @@ function PageCTA({ title, description, secondary = true }: { title: string; desc
     <div className="mkt-container">
       <div className="mkt-band">
         <div>
-          <p className="mkt-caption">{BRAND.name}</p>
           <h2 id="marketing-cta-title" className="mkt-h2 mt-3 max-w-3xl">{title}</h2>
           <p className="mkt-lede mt-4">{description}</p>
           <div className="mt-7 flex flex-wrap gap-3">
@@ -66,7 +68,7 @@ function LedgerHead({ icon: Icon, title, index }: { icon: typeof LayoutDashboard
 }
 
 export function FeaturesPage() {
-  return <MarketingLayout eyebrow="შესაძლებლობები" title="ერთი workflow — ჩაწერებიდან ანგარიშებამდე." description={`${BRAND.name} აერთიანებს მხოლოდ იმ ოპერაციულ მოდულებს, რომლებიც უკვე მხარდაჭერილია პროდუქტში და რეალურ role/organization საზღვრებს იცავს.`} canonicalPath="/features">
+  return <MarketingLayout eyebrow="შესაძლებლობები" title="ერთი სამუშაო პროცესი — ჩაწერიდან ანგარიშებამდე." description={`${BRAND.name} აერთიანებს მხოლოდ იმ ოპერაციულ მოდულებს, რომლებიც უკვე მხარდაჭერილია პროდუქტში და რეალურ role/organization საზღვრებს იცავს.`} canonicalPath="/features">
     <section className="mkt-section" aria-label="მოდულები">
       <div className="mkt-container grid gap-5 md:grid-cols-2">
         {groups.map(({ icon, title, text, items }, index) => <article key={title} className="mkt-card">
@@ -76,32 +78,32 @@ export function FeaturesPage() {
         </article>)}
       </div>
     </section>
-    <PageCTA title="თქვენი ყოველდღიური პროცესები უფრო მშვიდ workflow-ში." description="შექმენით სამუშაო სივრცე, დაამატეთ პირველი ფილიალი და დაიწყეთ არსებული, დაცული ფუნქციებით." />
+    <PageCTA title="თქვენი ყოველდღიური საქმე — უფრო მშვიდ რიტმში." description="შექმენით სამუშაო სივრცე, დაამატეთ პირველი ფილიალი და დაიწყეთ არსებული, დაცული ფუნქციებით." />
   </MarketingLayout>;
 }
 
 export function PricingPage() {
-  return <MarketingLayout eyebrow="ტარიფები" title="ფასები უნდა იყოს ისეთივე მკაფიო, როგორც თქვენი ოპერაციები." description={`${BRAND.name}-ის ამ deployment-ში subscription გეგმები, billing rules და გამოქვეყნებული ფასები ჯერ არ არის კონფიგურირებული. ამიტომ არ ვაჩვენებთ გამოგონილ ტარიფებს ან პირობებს.`} canonicalPath="/pricing">
+  return <MarketingLayout eyebrow="ტარიფები" title="ფასები უნდა იყოს ისეთივე მკაფიო, როგორც თქვენი ოპერაციები." description="ფასები და გადახდის პირობები ჯერ არ გამოქვეყნებულა. გამოგონილ ტარიფებს არ ვაჩვენებთ." canonicalPath="/pricing">
     <section className="mkt-section" aria-labelledby="pricing-note-title">
       <div className="mkt-container">
         <div className="mkt-card max-w-3xl">
-          <CreditCard className="size-7" aria-hidden="true" />
-          <h2 id="pricing-note-title" className="mkt-h2 mt-5">გამჭვირვალე ინფორმაცია გამოქვეყნდება მხოლოდ რეალური billing configuration-ის შემდეგ.</h2>
-          <p className="mt-4 max-w-2xl leading-7 mkt-muted">მანამდე შეგიძლიათ შექმნათ local ანგარიში და გაეცნოთ არსებულ სამუშაო/booking გამოცდილებას. ეს გვერდი შეგნებულად არ ასახელებს გეგმებს, რეკომენდაციებს, ფასებს ან ვალდებულებებს, რომლებიც სისტემაში ჯერ არ არსებობს.</p>
-          <p className="mt-6 flex items-start gap-3 mkt-rule-top pt-4 text-sm font-semibold leading-6"><ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden="true" />ამ გვერდზე არ ჩნდება subscription ან გადახდის ვალდებულება, სანამ billing წესები რეალურად არ კონფიგურდება.</p>
+          <span className="mkt-icon-tile"><CreditCard className="size-5" aria-hidden="true" /></span>
+          <h2 id="pricing-note-title" className="mkt-h2 mt-5">ტარიფებს გამოვაქვეყნებთ, როცა გადახდის პირობები საბოლოოდ დადგინდება.</h2>
+          <p className="mt-4 max-w-2xl leading-7 mkt-muted">მანამდე შეგიძლიათ შექმნათ ანგარიში და გაეცნოთ სამუშაო სივრცესა და ონლაინ ჩაწერას.</p>
+          <p className="mt-6 flex items-start gap-3 mkt-rule-top pt-4 text-sm font-semibold leading-6"><ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden="true" />ამ გვერდზე გამოწერის ან გადახდის ვალდებულება არ ჩნდება.</p>
           <Link href="/register" className="mkt-btn mkt-btn-primary mt-7">ანგარიშის შექმნა <ArrowRight className="size-5" aria-hidden="true" /></Link>
         </div>
       </div>
     </section>
-    <PageCTA title="პროდუქტის შემოწმება რეალური workflow-ით დაიწყეთ." description="შექმენით საკუთარი დაცული სამუშაო სივრცე და ნახეთ არსებული ოპერაციული გამოცდილება." secondary={false} />
+    <PageCTA title="პროდუქტი რეალურ სამუშაო დღეზე გამოსცადეთ." description="შექმენით საკუთარი დაცული სამუშაო სივრცე და ნახეთ არსებული ოპერაციული გამოცდილება." secondary={false} />
   </MarketingLayout>;
 }
 
 export function DemoPage() {
-  return <MarketingLayout eyebrow="პროდუქტის დათვალიერება" title="იხილეთ workflow, არა გამოგონილი dashboard." description={`საჯარო ვიზუალები ასახავს ${BRAND.name}-ის მხარდაჭერილ კალენდრის, კლიენტის, გუნდის, ანგარიშების და ონლაინ ჩაწერის კონცეფტებს; საჯარო shared demo workspace არ არის ჩართული, რათა რეალური მონაცემის კონფიდენციალურობა შენარჩუნდეს.`} canonicalPath="/demo">
+  return <MarketingLayout eyebrow="პროდუქტის დათვალიერება" title="ნახეთ რეალური სამუშაო პროცესი და არა გამოგონილი პანელი." description={`საჯარო ვიზუალები ასახავს ${BRAND.name}-ის მხარდაჭერილ კალენდრის, კლიენტის, გუნდის, ანგარიშების და ონლაინ ჩაწერის კონცეფტებს; საჯარო shared demo workspace არ არის ჩართული, რათა რეალური მონაცემის კონფიდენციალურობა შენარჩუნდეს.`} canonicalPath="/demo">
     <section className="mkt-section" aria-label="დათვალიერება">
       <div className="mkt-container grid gap-5 md:grid-cols-3">
-        <DemoTile icon={LayoutDashboard} title="ოპერაციები" text="Today queue, სტატუსები და სწრაფი მოქმედებები." index={1} />
+        <DemoTile icon={LayoutDashboard} title="ოპერაციები" text="„დღეს“: რიგი, სტატუსები და სწრაფი მოქმედებები." index={1} />
         <DemoTile icon={CalendarDays} title="კალენდარი" text="სპეციალისტების დრო, ხელმისაწვდომობა და უსაფრთხო გადატანა." index={2} />
         <DemoTile icon={KeyRound} title="ონლაინ ჩაწერა" text="მომსახურება, სპეციალისტი, დრო და დადასტურება." index={3} />
       </div>
@@ -129,12 +131,12 @@ export function FaqPage() {
         </div>
       </div>
     </section>
-    <PageCTA title="თუ მზად ხართ, დაიწყეთ პირველი ფილიალით." description={`${BRAND.name}-ის setup flow ნაბიჯ-ნაბიჯ აგროვებს მხოლოდ იმ მონაცემს, რომელიც თქვენს პირველ ოპერაციულ დღეს სჭირდება.`} />
+    <PageCTA title="თუ მზად ხართ, დაიწყეთ პირველი ფილიალით." description="დაწყებისას ნაბიჯ-ნაბიჯ ვითხოვთ მხოლოდ იმ მონაცემებს, რომლებიც პირველ სამუშაო დღეს გჭირდებათ." />
   </MarketingLayout>;
 }
 
 export function ContactPage() {
-  return <MarketingLayout eyebrow="კონტაქტი" title="კონტაქტის არხი უნდა იყოს რეალური, არა დეკორაცია." description={`ამ ეტაპზე ${BRAND.name}-ში არ არის კონფიგურირებული საჯარო მხარდაჭერის ფორმა, email მისამართი ან ticketing integration. ამიტომ ეს გვერდი არ გვაჩვენებს გამოგონილ საკონტაქტო არხს.`} canonicalPath="/contact">
+  return <MarketingLayout eyebrow="კონტაქტი" title="კონტაქტის არხი უნდა იყოს რეალური, არა დეკორაცია." description="საჯარო საკონტაქტო ფორმა და ელფოსტა ჯერ არ გვაქვს, ამიტომ გამოგონილ არხს არ ვაჩვენებთ." canonicalPath="/contact">
     <section className="mkt-section" aria-labelledby="contact-note-title">
       <div className="mkt-container">
         <div className="mkt-card max-w-3xl">

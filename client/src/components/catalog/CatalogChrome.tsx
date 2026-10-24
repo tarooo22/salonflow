@@ -61,7 +61,7 @@ export function CatalogHeader({ withSkipLink = true }: { withSkipLink?: boolean 
   const isAuthenticated = useSignedIn();
   const text = ui[locale];
   return <header className="cw-header">
-    {withSkipLink ? <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-3 focus:z-50 focus:rounded focus:bg-white focus:px-4 focus:py-2 focus:text-[var(--cw-ink)]">{t("skip")}</a> : null}
+    {withSkipLink ? <a href="#main-content" className="sf-skip-link">{t("skip")}</a> : null}
     <div className="cw-container cw-header-bar">
       <Link href="/" aria-label={`${BRAND.nameKa} — ${text.home}`}><CatalogWordmark /></Link>
       <nav aria-label={t("mainNav")} className="cw-nav">{navigation.map(item => <NavItem key={item.href} {...item} />)}</nav>

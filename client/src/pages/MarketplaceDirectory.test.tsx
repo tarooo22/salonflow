@@ -29,7 +29,7 @@ describe("Marketplace Directory discovery handoff", () => {
   });
 
   it("lives in the catalog world: shared salon cards in one grid, filter bar with vertical chips, Chawera meta", () => {
-    expect(source).toContain('<div className="cw min-h-screen">');
+    expect(source).toContain('<div className="cw">');
     expect(source).toContain('<main id="main-content">');
     expect(source).toContain("BRAND.name");
     expect(source).not.toContain("SalonFlow");

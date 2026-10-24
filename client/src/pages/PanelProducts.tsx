@@ -1,6 +1,7 @@
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FilePicker } from "@/components/ui/file-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -113,9 +114,9 @@ export default function PanelProducts() {
             <div className="space-y-2"><Label htmlFor="prod-desc">აღწერა (არასავალდებულო)</Label><Textarea id="prod-desc" value={form.description} onChange={e => set("description", e.target.value)} rows={3} maxLength={600} /></div>
             <label className="flex items-center justify-between gap-3 rounded-md border p-3 text-sm"><span className="font-medium">მარაგშია</span><Switch checked={form.inStock} onCheckedChange={v => set("inStock", v)} /></label>
             <div className="space-y-2 rounded-md border p-3">
-              <Label htmlFor="prod-image">ფოტო (არასავალდებულო, JPEG/PNG/WebP, 5MB-მდე)</Label>
+              <Label htmlFor="prod-image">ფოტო (არასავალდებულო, JPEG/PNG/WebP, 5 MB-მდე)</Label>
               {preview ? <img src={preview} alt="არჩეული ფოტოს გადახედვა" className="h-24 w-24 rounded-md border object-cover" /> : null}
-              <Input id="prod-image" type="file" accept="image/jpeg,image/png,image/webp" onChange={e => { void chooseFile(e.target.files?.[0]); e.target.value = ""; }} />
+              <FilePicker id="prod-image" accept="image/jpeg,image/png,image/webp" onChange={file => { void chooseFile(file ?? undefined); }} />
               {form.imageDataUrl || (editing?.imageUrl && !form.removeImage) ? <div className="space-y-2"><Label htmlFor="prod-alt">ფოტოს მოკლე აღწერა</Label><Input id="prod-alt" value={form.imageAltKa} onChange={e => set("imageAltKa", e.target.value)} placeholder="მაგ. შამპუნის ცისფერი ბოთლი" maxLength={160} /></div> : null}
               {editing?.imageUrl && !form.imageDataUrl ? <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.removeImage} onChange={e => set("removeImage", e.target.checked)} className="h-4 w-4 accent-primary" />ამჟამინდელი ფოტოს წაშლა</label> : null}
             </div>

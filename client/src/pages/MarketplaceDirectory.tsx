@@ -1,4 +1,5 @@
 import { CatalogFooter, CatalogHeader } from "@/components/catalog/CatalogChrome";
+import { HeroIn } from "@/components/catalog/HomeMotion";
 import { EmptyCatalog, listingMatchesVertical, newestListings, SalonGrid, SalonLoading, type CatalogListing as Listing } from "@/components/catalog/Tickets";
 import { DiscoveryFilters, DiscoveryHead, marketplaceDiscoveryFilters, marketplaceDiscoveryHref } from "@/components/public/MarketplaceDiscovery";
 import { usePublicMeta } from "@/components/public/PublicMeta";
@@ -117,14 +118,16 @@ export default function MarketplaceDirectory() {
   const verticalName = vertical ? verticalLabel(vertical, locale) : null;
   const canShowMore = (directory.data?.total ?? 0) > allItems.length && limit < PAGE_MAX;
 
-  return <div className="cw min-h-screen">
+  return <div className="cw">
     <CatalogHeader />
     <main id="main-content">
-      <DiscoveryHead
-        title={text.heroTitle}
-        note={!directory.isLoading && !directory.isError ? <p role="status" aria-live="polite" className="pg-count">{text.countBefore}<span className="cw-num">{ordered.length}</span>{text.countAfter}</p> : null}
-        action={<Link href={mapHref} data-conversion-event="DIRECTORY_MAP_OPENED" className="pg-action"><Map className="size-5" aria-hidden="true" />{text.viewMap}</Link>}
-      />
+      <HeroIn>
+        <DiscoveryHead
+          title={text.heroTitle}
+          note={!directory.isLoading && !directory.isError ? <p role="status" aria-live="polite" className="pg-count">{text.countBefore}<span className="cw-num">{ordered.length}</span>{text.countAfter}</p> : null}
+          action={<Link href={mapHref} data-conversion-event="DIRECTORY_MAP_OPENED" className="pg-action"><Map className="size-5" aria-hidden="true" />{text.viewMap}</Link>}
+        />
+      </HeroIn>
       <DiscoveryFilters
         idPrefix="dir"
         vertical={vertical}
@@ -149,7 +152,7 @@ export default function MarketplaceDirectory() {
             <button type="button" className="cw-btn cw-btn-line mt-3 min-h-11" onClick={() => directory.refetch()}>{text.retry}</button>
           </div>
           : ordered.length ? <>
-            <SalonGrid items={ordered} />
+            <SalonGrid items={ordered} reveal />
             {canShowMore ? <div className="pg-more"><button type="button" className="cw-btn cw-btn-line" onClick={() => setLimit(current => Math.min(PAGE_MAX, current + PAGE_STEP))}>{text.showMore}</button></div> : null}
             <p className="pg-note">{text.resultsLede}</p>
           </>

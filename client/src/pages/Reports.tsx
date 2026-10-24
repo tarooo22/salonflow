@@ -155,7 +155,7 @@ export default function Reports() {
       <div className="sf-workspace-page mx-auto w-full max-w-7xl space-y-5">
         <WorkspacePageHeader
           title="ანგარიშები"
-          actions={<>{organization && canManageFinance ? <Button onClick={() => { setExpenseFormError(""); setExpenseOpen(true); }}><Plus className="mr-2 size-4" aria-hidden="true" />ხარჯი</Button> : null}<Button variant="outline" disabled={!organization || csvExport.isFetching} onClick={download}><Download className="mr-2 size-4" />{csvExport.isFetching ? "მზადდება…" : "CSV"}</Button></>}
+          actions={<>{organization && canManageFinance ? <Button onClick={() => { setExpenseFormError(""); setExpenseOpen(true); }}><Plus className="mr-2 size-4" aria-hidden="true" />ხარჯი</Button> : null}<Button variant="outline" disabled={!organization || csvExport.isFetching} onClick={download} title="CSV ფაილად ჩამოტვირთვა"><Download className="mr-2 size-4" />{csvExport.isFetching ? "მზადდება…" : "ექსპორტი"}</Button></>}
         />
 
         <WorkspaceFilterBar>

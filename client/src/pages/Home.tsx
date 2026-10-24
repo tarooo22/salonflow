@@ -27,7 +27,7 @@ export const ui = {
     bannerLabel: "გამორჩეული ადგილები", slideLabel: (index: number, total: number) => `${index} / ${total}`, prev: "წინა", next: "შემდეგი",
     categoriesTitle: "კატეგორიები",
     verticalsTitle: "აირჩიე სფერო", allCategories: "ყველა კატეგორია",
-    chipConfirmed: "ჯავშანი დადასტურდა", chipCategories: (count: number) => `${count} კატეგორია`, chipFields: (count: number) => `${count} სფერო`,
+    chipCategories: (count: number) => `${count} კატეგორია`, chipFields: (count: number) => `${count} სფერო`,
     vip: "VIP ადგილები", recommended: "რეკომენდებული", paidNote: "ფასიანი განთავსება", fresh: "ახალი კატალოგში", allPlaces: "ყველა ადგილი", viewAll: "ყველას ნახვა",
     loading: "იტვირთება", placesFailed: "ადგილების ჩატვირთვა ვერ მოხერხდა.", retry: "სცადე თავიდან",
     emptyDental: "სტომატოლოგიური კლინიკები მალე დაემატება.", emptyVertical: (label: string) => `${label} — პირველი ადგილები მალე გამოჩნდება.`, emptyDefault: "პირველი გადამოწმებული ადგილები მალე გამოჩნდება.",
@@ -56,7 +56,7 @@ export const ui = {
     bannerLabel: "Featured places", slideLabel: (index: number, total: number) => `${index} / ${total}`, prev: "Previous", next: "Next",
     categoriesTitle: "Categories",
     verticalsTitle: "Choose a field", allCategories: "All categories",
-    chipConfirmed: "Booking confirmed", chipCategories: (count: number) => `${count} ${count === 1 ? "category" : "categories"}`, chipFields: (count: number) => `${count} ${count === 1 ? "field" : "fields"}`,
+    chipCategories: (count: number) => `${count} ${count === 1 ? "category" : "categories"}`, chipFields: (count: number) => `${count} ${count === 1 ? "field" : "fields"}`,
     vip: "VIP places", recommended: "Recommended", paidNote: "Paid placement", fresh: "New in the catalog", allPlaces: "All places", viewAll: "View all",
     loading: "Loading", placesFailed: "Places could not be loaded.", retry: "Try again",
     emptyDental: "Dental clinics will be added soon.", emptyVertical: (label: string) => `${label} — the first places will appear soon.`, emptyDefault: "The first verified places will appear soon.",
@@ -85,7 +85,7 @@ export const ui = {
     bannerLabel: "Избранные места", slideLabel: (index: number, total: number) => `${index} / ${total}`, prev: "Назад", next: "Вперёд",
     categoriesTitle: "Категории",
     verticalsTitle: "Выберите сферу", allCategories: "Все категории",
-    chipConfirmed: "Запись подтверждена", chipCategories: (count: number) => `${count} ${plural(count, "категория", "категории", "категорий")}`, chipFields: (count: number) => `${count} ${plural(count, "сфера", "сферы", "сфер")}`,
+    chipCategories: (count: number) => `${count} ${plural(count, "категория", "категории", "категорий")}`, chipFields: (count: number) => `${count} ${plural(count, "сфера", "сферы", "сфер")}`,
     vip: "VIP-места", recommended: "Рекомендуем", paidNote: "Платное размещение", fresh: "Новое в каталоге", allPlaces: "Все места", viewAll: "Смотреть все",
     loading: "Загрузка", placesFailed: "Не удалось загрузить места.", retry: "Повторить",
     emptyDental: "Стоматологические клиники скоро появятся.", emptyVertical: (label: string) => `${label} — первые места скоро появятся.`, emptyDefault: "Первые проверенные места скоро появятся.",
@@ -194,7 +194,7 @@ function Banner({ items }: { items: Listing[] }) {
   </section>;
 }
 
-/** Hero: brand photo with the search on it. The two chips are decoration (a mock confirmation and real catalog counts), hidden from assistive tech. */
+/** Hero: brand photo with the search on it. The chip shows real catalog counts and is decoration, hidden from assistive tech. */
 function Hero({ categoryCount }: { categoryCount: number }) {
   const { locale } = usePublicLocale();
   const text = ui[locale];
@@ -230,13 +230,7 @@ function Hero({ categoryCount }: { categoryCount: number }) {
         </form>
       </HeroIn>
       <div className="hh-chips" aria-hidden="true">
-        <Float className="hh-chip-pos">
-          <div className="hh-chip">
-            <span className="hh-chip-icon" data-tone="ok"><CalendarCheck className="size-5" /></span>
-            <span><span className="hh-chip-title">{text.chipConfirmed}</span><span className="hh-chip-sub">14:30</span></span>
-          </div>
-        </Float>
-        {categoryCount > 0 ? <Float className="hh-chip-pos hh-chip-pos--2" delay={0.9} period={4.2}>
+        {categoryCount > 0 ? <Float className="hh-chip-pos">
           <div className="hh-chip">
             <span className="hh-chip-icon"><Sparkles className="size-5" /></span>
             <span><span className="hh-chip-title">{text.chipCategories(categoryCount)} · {text.chipFields(VERTICALS.length)}</span></span>
@@ -321,6 +315,9 @@ function Categories({ vertical, categories }: { vertical: Vertical | null; categ
     if (!category || (vertical && field !== vertical)) return [];
     return [{ key: group.key, photo: group.photo, slug: category.slug, name: group.vertical ? verticalLabel(group.vertical, locale) : category.nameKa, Icon: categoryIcon(category.iconKey) }];
   }), [categories, vertical, locale]);
+  // The chip list below the photo tiles only carries categories that have no tile of their own.
+  const tiled = new Set(tiles.map(tile => tile.slug));
+  const rest = shown.filter(category => !tiled.has(category.slug));
   if (!shown.length) return null;
   return <Zone labelledBy="hm-categories-title">
     <RevealGroup className="hm-head"><RevealItem><h2 id="hm-categories-title" className="cw-h2">{text.categoriesTitle}</h2></RevealItem></RevealGroup>
@@ -333,15 +330,17 @@ function Categories({ vertical, categories }: { vertical: Vertical | null; categ
         </Link>
       </RevealItem>)}
     </RevealGroup> : null}
+    {rest.length ? <>
     <h3 className="hq-title">{text.allCategories}</h3>
     <ul className="hq">
-      {shown.map(category => {
+      {rest.map(category => {
         const Icon = categoryIcon(category.iconKey);
         return <li key={category.id}>
           <Link href={marketplaceDiscoveryHref("/salons", category.slug)} className="hq-chip"><Icon className="size-[18px]" aria-hidden="true" />{category.nameKa}</Link>
         </li>;
       })}
     </ul>
+    </> : null}
   </Zone>;
 }
 
@@ -475,7 +474,7 @@ export default function Home() {
   const slides = all.filter(item => item.promotion?.tier === "VIP" && item.coverImageUrl).slice(0, MAX_SLIDES);
   const items = all.filter(item => listingMatchesVertical(item, vertical));
 
-  return <div className="cw min-h-screen">
+  return <div className="cw">
     <CatalogHeader />
     <main id="main-content" className="hm">
       <div className="hm-top">

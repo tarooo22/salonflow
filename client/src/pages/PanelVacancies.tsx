@@ -75,7 +75,7 @@ export default function PanelVacancies() {
           <div className="divide-y divide-border">
             {vacancies.isLoading ? <WorkspaceState kind="loading" title="იტვირთება…" /> : null}
             {vacancies.isError ? <WorkspaceState kind="error" title="ჩატვირთვა ვერ მოხერხდა" /> : null}
-            {vacancies.data?.length === 0 ? <WorkspaceState kind="empty" title="ვაკანსია ჯერ არ გაქვთ" action={<Button variant="outline" size="sm" onClick={openCreate}><Plus className="mr-1.5 h-4 w-4" />ვაკანსიის დამატება</Button>} /> : null}
+            {vacancies.data?.length === 0 ? <WorkspaceState kind="empty" title="ვაკანსია ჯერ არ გაქვთ" /> : null}
             {vacancies.data?.map(v => {
               const status = vacancyStatusInfo(v);
               return <article key={v.id} className="grid gap-3 py-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
@@ -83,7 +83,7 @@ export default function PanelVacancies() {
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="font-semibold">{v.title}</p>
                     <WorkspaceStatusPill tone={status.tone}>{status.label}</WorkspaceStatusPill>
-                    {v.isVip ? <WorkspaceStatusPill tone="violet"><Star className="mr-1 inline h-3 w-3" />VIP</WorkspaceStatusPill> : null}
+                    {v.isVip ? <WorkspaceStatusPill tone="accent"><Star className="mr-1 inline h-3 w-3" />VIP</WorkspaceStatusPill> : null}
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">{v.locationName} · {employmentTypeLabel[v.employmentType as EmploymentType]} · {salaryText(v.salaryFromTetri, v.salaryToTetri)}</p>
                   {v.status === "PUBLISHED" && v.expiresAt ? <p className="mt-1 text-xs text-muted-foreground">{v.isExpired ? "ვადა გაუვიდა" : "მოქმედებს"}: {formatKaDateTime(new Date(v.expiresAt))}</p> : null}

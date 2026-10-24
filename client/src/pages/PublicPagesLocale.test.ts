@@ -45,7 +45,7 @@ describe("public pages: en and ru dictionaries mirror ka", () => {
 
   it("keeps the wizard's Georgian validation copy by default and localizes it on request", () => {
     const input = { step: 3, serviceId: "s", staffProfileId: "p", startsAt: new Date(), available: true, firstName: "", phone: "", termsAccepted: false };
-    expect(getBookingValidationIssue(input)).toMatchObject({ kind: "contact", title: "მიუთითეთ სახელი" });
+    expect(getBookingValidationIssue(input)).toMatchObject({ kind: "contact", title: "მიუთითე სახელი" });
     expect(getBookingValidationIssue({ ...input, locale: "en" })?.title).toBe("Enter your first name");
     expect(getBookingValidationIssue({ ...input, locale: "ru" })?.title).toBe("Укажите имя");
     expect(weekdayName(0)).toBe("ორშაბათი");

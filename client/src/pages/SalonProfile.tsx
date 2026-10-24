@@ -1,9 +1,11 @@
 import { CatalogFooter, CatalogHeader } from "@/components/catalog/CatalogChrome";
 import { ProductGrid } from "@/components/catalog/Commerce";
+import { HeroIn } from "@/components/catalog/HomeMotion";
 import { cssVars } from "@/components/catalog/Tickets";
 import "@/components/catalog/profile.css";
 import { usePublicMeta } from "@/components/public/PublicMeta";
 import { usePublicLocale, type PublicLocale } from "@/contexts/PublicLocaleContext";
+import { formatPhoneDisplay } from "@/lib/phone";
 import { formatGelTetri } from "@/lib/presentation";
 import { trpc } from "@/lib/trpc";
 import { verticalForCategory, verticalStyle, verticalsForListing } from "@/lib/verticals";
@@ -19,17 +21,17 @@ import { Link, useRoute } from "wouter";
 
 const copy = {
   ka: {
-    crumb: "კატალოგი", loading: "ბიზნესის გვერდი იტვირთება…", unavailable: "ბიზნესის გვერდი დროებით მიუწვდომელია", retry: "შეამოწმეთ კავშირი და სცადეთ მოგვიანებით.", retryButton: "ხელახლა ცდა",
+    crumb: "კატალოგი", loading: "ბიზნესის გვერდი იტვირთება…", unavailable: "ბიზნესის გვერდი დროებით მიუწვდომელია", retry: "შეამოწმე კავშირი და სცადე მოგვიანებით.", retryButton: "ხელახლა ცდა",
     missing: "ბიზნესი ვერ მოიძებნა", missingLead: "ბმული შეიძლება შეიცვალა ან გვერდი აღარ არის ხელმისაწვდომი.", all: "მთელი კატალოგი",
-    noDescription: "ბიზნესის აღწერა მალე დაემატება.", bookingPaused: "ონლაინ ჩაწერა ამ ბიზნესისთვის დროებით მიუწვდომელია. ინფორმაცია და საჯარო გვერდი შენარჩუნებულია; დეტალებისთვის დაუკავშირდით ბიზნესს.",
+    noDescription: "ბიზნესის აღწერა მალე დაემატება.", bookingPaused: "ონლაინ ჩაწერა ამ ბიზნესისთვის დროებით მიუწვდომელია. ინფორმაცია და საჯარო გვერდი შენარჩუნებულია; დეტალებისთვის დაუკავშირდი ბიზნესს.",
     website: "ვებგვერდი", verified: "დამტკიცებული პროფილი", ad: "რეკლამა", recommended: "რჩეული",
     tabs: "პროფილის განყოფილებები", tabServices: "სერვისები", tabTeam: "გუნდი", tabHours: "სამუშაო საათები", tabProducts: "პროდუქტები", productsTitle: "პროდუქტები", productsNote: "შეძენა ხდება უშუალოდ ბიზნესში; ონლაინ გადახდა არ არის.",
     searchLabel: "მომსახურების ძებნა", searchPlaceholder: "სახელი ან კატეგორია", found: "ნაპოვნია", nothingFound: "ამ მოთხოვნით მომსახურება ვერ მოიძებნა.", minutes: "წთ", noServices: "საჯარო მომსახურებები ჯერ არ არის დამატებული.",
-    toggleGroup: "კატეგორიის გახსნა ან დახურვა", limit: `ერთდროულად მაქსიმუმ ${MAX_SELECTED_SERVICES} მომსახურების არჩევა შეგიძლიათ.`, selectService: "მომსახურების არჩევა",
+    toggleGroup: "კატეგორიის გახსნა ან დახურვა", limit: `ერთდროულად მაქსიმუმ ${MAX_SELECTED_SERVICES} მომსახურების არჩევა შეგიძლია.`, selectService: "მომსახურების არჩევა",
     team: "გუნდი", specialist: "სპეციალისტი", noTeam: "საჯარო გუნდის პროფილები ჯერ არ არის დამატებული.", experience: "წლის გამოცდილება",
     hours: "სამუშაო საათები", hoursNote: "გუნდის გრაფიკის მიხედვით. კონკრეტული დრო ჯავშნისას მოწმდება.", hoursLoading: "სამუშაო საათები იტვირთება…", hoursMissing: "სამუშაო საათები ჯერ არ არის გამოქვეყნებული.", closedDay: "დახურულია",
     openUntil: "ღიაა, იკეტება {t}-ზე", closed: "დაკეტილია", opensAt: "იხსნება {d} {t}-ზე", today: "დღეს", tomorrow: "ხვალ",
-    summary: "თქვენი ჩანაწერი", selected: "არჩეულია", selectedCount: "არჩეულია: {n} სერვისი", total: "ჯამი", duration: "ხანგრძლივობა", nothingSelected: "მომსახურება არ არის არჩეული.",
+    summary: "შენი ჩანაწერი", selected: "არჩეულია", selectedCount: "არჩეულია: {n} სერვისი", total: "ჯამი", duration: "ხანგრძლივობა", nothingSelected: "მომსახურება არ არის არჩეული.",
     from: "{p}-დან", book: "დაჯავშნა", pickTime: "დროის არჩევა", pickService: "აირჩიე სერვისი", recheck: "დრო საბოლოოდ მოწმდება ჩაწერის დადასტურებისას.", unavailableNote: "ონლაინ ჩაწერა დროებით მიუწვდომელია.",
     beforeAfter: "მანამდე / შემდეგ", consent: "აქ ჩანს მხოლოდ კლიენტის ცალკე თანხმობით საჯაროდ გამოქვეყნებული შედეგები.", before: "მანამდე", after: "შემდეგ",
     latest: "ახალი პუბლიკაციები",
@@ -152,7 +154,7 @@ export default function SalonProfile() {
   else if (!profile.data) body = <StateBlock title={ui.missing} lead={ui.missingLead} action={<Link href="/salons" className="cwp-btn cwp-btn-primary">{ui.all}</Link>} />;
   else body = <ProfileView data={profile.data} slug={slug} ui={ui} locale={locale} categories={marketplace.data?.categories ?? []} promotion={marketplace.data?.promotion ?? null} approved={Boolean(marketplace.data)} />;
 
-  return <div className="cw min-h-screen">
+  return <div className="cw">
     <CatalogHeader />
     <main id="main-content">{body}</main>
     <CatalogFooter />
@@ -255,20 +257,20 @@ function ProfileView({ data, slug, ui, locale, categories, promotion, approved }
     </div>
 
     <section className="cw-container cwp-intro" aria-labelledby="profile-title">
-      <h1 id="profile-title" className="cwp-title">{salon.name}</h1>
+      <HeroIn><h1 id="profile-title" className="cwp-title">{salon.name}</h1></HeroIn>
       <div className="cwp-badges">
         {status && statusText ? <span className="cwp-status" data-open={status.open}><Clock className="size-4 shrink-0" aria-hidden="true" />{statusText}</span> : null}
         {approved ? <span className="cwp-badge"><ShieldCheck className="size-4" aria-hidden="true" />{ui.verified}</span> : null}
         {promotion ? <span className="inline-flex flex-wrap items-center gap-2"><span className="cwp-badge cwp-badge-accent">{promotion.tier === "VIP" ? "VIP" : promotion.tier === "RECOMMENDED" ? ui.recommended : ui.ad}</span>{promotion.disclosure ? <span className="cwp-muted text-sm">{promotion.disclosure}</span> : null}</span> : null}
       </div>
-      <p className="cwp-lede">{salon.publicDescription || ui.noDescription}</p>
+      <HeroIn delay={0.08}><p className="cwp-lede">{salon.publicDescription || ui.noDescription}</p></HeroIn>
       {categories.length ? <ul className="cwp-chips" aria-label={ui.tabServices}>{categories.map(category => {
         const style = verticalStyle(verticalForCategory(category.slug));
         return <li key={category.id}><span className="cwp-chip" style={cssVars({ "--chip-bg": style.bg, "--chip-ink": style.ink })}>{category.nameKa}</span></li>;
       })}</ul> : null}
       <ul className="cwp-contact">
         {hasAddress ? <li><MapPin className="size-4 shrink-0" aria-hidden="true" /><span>{salon.address}</span></li> : null}
-        {salon.phone ? <li><Phone className="size-4 shrink-0" aria-hidden="true" /><a href={`tel:${salon.phone}`} className="cw-num">{salon.phone}</a></li> : null}
+        {salon.phone ? <li><Phone className="size-4 shrink-0" aria-hidden="true" /><a href={`tel:${salon.phone}`} className="cwp-tel cw-num">{formatPhoneDisplay(salon.phone)}</a></li> : null}
         {social.instagram ? <li><Instagram className="size-4 shrink-0" aria-hidden="true" /><a href={social.instagram} target="_blank" rel="noreferrer">Instagram<span className="sr-only"> ↗</span></a></li> : null}
         {social.website ? <li><ExternalLink className="size-4 shrink-0" aria-hidden="true" /><a href={social.website} target="_blank" rel="noreferrer">{ui.website}<span className="sr-only"> ↗</span></a></li> : null}
       </ul>

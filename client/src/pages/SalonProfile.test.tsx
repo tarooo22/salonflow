@@ -8,7 +8,7 @@ const styles = readFileSync(new URL("../components/catalog/profile.css", import.
 
 describe("SalonProfile catalog world", () => {
   it("renders inside the cw catalog chrome with a skip target", () => {
-    expect(source).toContain('<div className="cw min-h-screen">');
+    expect(source).toContain('<div className="cw">');
     expect(source).toContain("<CatalogHeader />");
     expect(source).toContain("<CatalogFooter />");
     expect(source).toContain('<main id="main-content">');
@@ -84,7 +84,7 @@ describe("SalonProfile truthfulness", () => {
   it("keeps the vertical colour scoped to regions via custom properties", () => {
     expect(styles).toContain("--v-bg");
     expect(styles).toContain("prefers-reduced-motion: reduce");
-    expect(styles).not.toMatch(/linear-gradient|radial-gradient/);
+    expect(styles.replace(/mask-image:[^;]*;/g, "")).not.toMatch(/linear-gradient|radial-gradient/); // the tab strip edge-fade is a mask, not a background
   });
 });
 

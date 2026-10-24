@@ -11,14 +11,14 @@ describe("truthful public product-information routes", () => {
   });
 
   it("does not invent a subscription amount while billing is unconfigured", () => {
-    expect(source).toContain("ჯერ არ არის კონფიგურირებული");
-    expect(source).toContain("არ ვაჩვენებთ გამოგონილ ტარიფებს");
+    expect(source).toContain("ჯერ არ გამოქვეყნებულა");
+    expect(source).toContain("გამოგონილ ტარიფებს არ ვაჩვენებთ");
     expect(source).not.toContain("₾35");
   });
 
   it("does not expose a fabricated public support channel", () => {
-    expect(source).toContain("არ არის კონფიგურირებული საჯარო მხარდაჭერის ფორმა");
-    expect(source).toContain("გამოგონილ საკონტაქტო არხს");
+    expect(source).toContain("საჯარო საკონტაქტო ფორმა და ელფოსტა ჯერ არ გვაქვს");
+    expect(source).toContain("გამოგონილ არხს");
   });
 
   it("uses the shared brand constant instead of the retired product name", () => {

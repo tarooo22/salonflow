@@ -1,11 +1,12 @@
 import { CatalogFooter, CatalogHeader } from "@/components/catalog/CatalogChrome";
 import { COMMERCE_PAGE_SIZE, CommerceEmpty, CommerceFilters, LoadingGrid, LoadMoreButton, useLoadMore, type VacancyItem, VacancyTicket } from "@/components/catalog/Commerce";
-import { DiscoveryHero } from "@/components/public/MarketplaceDiscovery";
+import { HeroIn } from "@/components/catalog/HomeMotion";
 import { usePublicMeta } from "@/components/public/PublicMeta";
 import { usePublicLocale } from "@/contexts/PublicLocaleContext";
 import { trpc } from "@/lib/trpc";
 import type { Vertical } from "@/lib/verticals";
 import { BRAND } from "@shared/brand";
+import { Briefcase, Search } from "lucide-react";
 import { useState } from "react";
 import { Link } from "wouter";
 
@@ -14,10 +15,10 @@ export const ui = {
     metaTitle: "ვაკანსიები", metaDescription: "სამუშაო ადგილები სილამაზის, ესთეტიკის და სტომატოლოგიის სფეროში — მხოლოდ დამტკიცებული ბიზნესებისგან, პირდაპირი კონტაქტით.",
     heroTitle: "ვაკანსიები", heroLede: "სამუშაო ადგილები ოსტატებისთვის, კოსმეტოლოგებისთვის და ექიმებისთვის. განცხადებას ბიზნესი თავად აქვეყნებს; დაუკავშირდი მას პირდაპირ.",
     searchCaption: "ვაკანსიების ძებნა", openTitle: "ღია ვაკანსიები", openLede: "„VIP“ ფასიანი განთავსებაა და არა ბიზნესის შეფასება. ვადაგასული განცხადებები აქ აღარ ჩანს.",
-    loadFailedBefore: "ვაკანსიების ჩატვირთვა ვერ მოხერხდა. სცადეთ რამდენიმე წუთში ან ", refresh: "განაახლეთ",
-    filteredTitle: "ამ ფილტრში ვაკანსია ვერ მოიძებნა.", filteredText: "სცადეთ სხვა სფერო, კატეგორია ან უბანი.", clear: "ფილტრის გასუფთავება",
+    loadFailedBefore: "ვაკანსიების ჩატვირთვა ვერ მოხერხდა. სცადე რამდენიმე წუთში ან ", refresh: "განაახლე",
+    filteredTitle: "ამ ფილტრში ვაკანსია ვერ მოიძებნა.", filteredText: "სცადე სხვა სფერო, კატეგორია ან უბანი.", clear: "ფილტრის გასუფთავება",
     emptyTitle: "ამჟამად გამოქვეყნებული ვაკანსია არ არის.", emptyText: "როცა დამტკიცებული ბიზნესი ვაკანსიას გამოაქვეყნებს, აქ გამოჩნდება.", forBusiness: "ბიზნესისთვის",
-    moreFailed: "მეტის ჩატვირთვა ვერ მოხერხდა. სცადეთ ხელახლა.",
+    moreFailed: "მეტის ჩატვირთვა ვერ მოხერხდა. სცადე ხელახლა.",
   },
   en: {
     metaTitle: "Vacancies", metaDescription: "Jobs in beauty, aesthetics and dentistry — only from approved businesses, with direct contact.",
@@ -50,11 +51,11 @@ function VacancyResults({ filters, onClear }: { filters: Filters; onClear: () =>
   if (list.isError && !list.items.length) return <p role="alert" className="mkt-alert">{text.loadFailedBefore}<button type="button" className="mkt-linkbtn" onClick={() => list.refetch()}>{text.refresh}</button>.</p>;
   if (!list.items.length) {
     return filtered
-      ? <CommerceEmpty title={text.filteredTitle} text={text.filteredText}>
-        <button type="button" className="mkt-btn mkt-btn-secondary" onClick={onClear}>{text.clear}</button>
+      ? <CommerceEmpty icon={Search} title={text.filteredTitle} text={text.filteredText}>
+        <button type="button" className="cw-btn cw-btn-line" onClick={onClear}>{text.clear}</button>
       </CommerceEmpty>
-      : <CommerceEmpty title={text.emptyTitle} text={text.emptyText}>
-        <Link href="/partner" className="mkt-btn mkt-btn-primary">{text.forBusiness}</Link>
+      : <CommerceEmpty icon={Briefcase} title={text.emptyTitle} text={text.emptyText}>
+        <Link href="/partner" className="cw-btn cw-btn-stamp">{text.forBusiness}</Link>
       </CommerceEmpty>;
   }
   return <>
@@ -77,9 +78,17 @@ export default function Vacancies() {
   return <div className="cw min-h-screen">
     <CatalogHeader />
     <main id="main-content">
-      <DiscoveryHero title={text.heroTitle} lede={text.heroLede}>
-        <CommerceFilters idPrefix="vac" vertical={vertical} onVertical={next => { setVertical(next); setCategory(undefined); }} area={area} onArea={setArea} category={category} onCategory={setCategory} captionWhere={text.searchCaption} />
-      </DiscoveryHero>
+      <section className="mkt-hero" aria-labelledby="vac-hero-title">
+        <div className="mkt-container">
+          <HeroIn>
+            <h1 id="vac-hero-title" className="mkt-h1">{text.heroTitle}</h1>
+            <p className="mkt-lede mt-3">{text.heroLede}</p>
+          </HeroIn>
+          <div className="mt-8">
+            <CommerceFilters idPrefix="vac" vertical={vertical} onVertical={next => { setVertical(next); setCategory(undefined); }} area={area} onArea={setArea} category={category} onCategory={setCategory} captionWhere={text.searchCaption} />
+          </div>
+        </div>
+      </section>
       <section className="mkt-section" aria-labelledby="vac-results-title">
         <div className="mkt-container">
           <h2 id="vac-results-title" className="mkt-h2">{text.openTitle}</h2>

@@ -14,33 +14,33 @@ import { Link, useRoute } from "wouter";
 
 export const ui = {
   ka: {
-    metaTitle: "მოლოდინის სია", metaDescription: "დატოვეთ მოთხოვნა მოლოდინის სიაში — თუ სასურველი დრო გათავისუფლდება, ადგილის გუნდი ამას დაინახავს.",
-    back: "← ჩაწერაზე დაბრუნება", eyebrow: "მოლოდინის სია · მოთხოვნა", title: "დარჩით მოლოდინის სიაში.", lede: "თუ სასურველი დრო გათავისუფლდება, თქვენი მოთხოვნა გუნდს დაეხმარება პრიორიტეტების ნახვაში. ეს არ არის დადასტურებული ჩაწერა და შეტყობინება ჯერ ავტომატურად არ იგზავნება.",
-    formAria: "მოლოდინის სიის ფორმა", loading: "მონაცემები იტვირთება…", unavailable: "ამ ფილიალის მოლოდინის სია ახლა მიუწვდომელია.", goBack: "დაბრუნდით ჩაწერის გვერდზე.", bookingPage: "ჩაწერის გვერდი",
-    received: "მოთხოვნა მიღებულია", receivedText: "თქვენი სასურველი დრო მოლოდინის სიას დაემატა. ეს არ წარმოადგენს დადასტურებულ ჯავშანს და ავტომატური შეტყობინება არ იგზავნება.", backToBooking: "ჩაწერის გვერდზე დაბრუნება",
-    yourVisit: "თქვენი სასურველი ვიზიტი", required: "* სავალდებულო", dateHint: "აირჩიეთ თარიღი ქართულ კალენდარში. წარსული დღეები და მიმდინარე დღის გასული საათები მიუწვდომელია.",
-    step1: "სერვისი და დრო", service: "სერვისი", chooseService: "აირჩიეთ სერვისი", specialist: "სპეციალისტი", anyStaff: "ნებისმიერი თავისუფალი სპეციალისტი", wantedDate: "სასურველი თარიღი", wantedTime: "სასურველი დრო (არასავალდებულო)", selectedService: "არჩეული სერვისი: ",
-    step2: "თქვენი მონაცემები", firstName: "სახელი", lastName: "გვარი", phone: "მობილურის ნომერი", phoneHint: "ფორმატი: 5XX XX XX XX ან +995 5XX XX XX XX.", phonePlaceholder: "მაგ. 555 12 34 56", email: "ელფოსტა", note: "კომენტარი ადგილისთვის",
-    consent: "ვეთანხმები, რომ ბიზნესმა ეს მონაცემები გამოიყენოს მხოლოდ მოლოდინის სიის მოთხოვნის დამუშავებისთვის. *", validation: "შეავსეთ სერვისი, სახელი, მობილურის ნომერი და დაადასტურეთ პირობები.", sending: "იგზავნება…", send: "მოთხოვნის გაგზავნა",
+    metaTitle: "მოლოდინის სია", metaDescription: "დატოვე მოთხოვნა მოლოდინის სიაში — თუ სასურველი დრო გათავისუფლდება, ადგილის გუნდი ამას დაინახავს.",
+    back: "ჩაწერაზე დაბრუნება", eyebrow: "მოლოდინის სია · მოთხოვნა", title: "დარჩი მოლოდინის სიაში.", lede: "თუ სასურველი დრო გათავისუფლდება, შენი მოთხოვნა გუნდს დაეხმარება პრიორიტეტების ნახვაში. ეს არ არის დადასტურებული ჩაწერა და შეტყობინება ჯერ ავტომატურად არ იგზავნება.",
+    formAria: "მოლოდინის სიის ფორმა", loading: "მონაცემები იტვირთება…", unavailable: "ამ ფილიალის მოლოდინის სია ახლა მიუწვდომელია.", goBack: "დაბრუნდი ჩაწერის გვერდზე.", bookingPage: "ჩაწერის გვერდი",
+    received: "მოთხოვნა მიღებულია", receivedText: "შენი სასურველი დრო მოლოდინის სიას დაემატა. ეს არ წარმოადგენს დადასტურებულ ჯავშანს და ავტომატური შეტყობინება არ იგზავნება.", backToBooking: "ჩაწერის გვერდზე დაბრუნება",
+    yourVisit: "შენი სასურველი ვიზიტი", required: "* სავალდებულო", dateHint: "აირჩიე თარიღი ქართულ კალენდარში. წარსული დღეები და მიმდინარე დღის გასული საათები მიუწვდომელია.",
+    step1: "სერვისი და დრო", service: "სერვისი", chooseService: "აირჩიე სერვისი", specialist: "სპეციალისტი", anyStaff: "ნებისმიერი სპეციალისტი", wantedDate: "სასურველი თარიღი", wantedTime: "სასურველი დრო (არასავალდებულო)", selectedService: "არჩეული სერვისი: ",
+    step2: "შენი მონაცემები", firstName: "სახელი", lastName: "გვარი", phone: "მობილურის ნომერი", phoneHint: "ფორმატი: 5XX XX XX XX", phonePlaceholder: "მაგ. 555 12 34 56", email: "ელფოსტა", note: "კომენტარი ადგილისთვის",
+    consent: "ვეთანხმები, რომ ბიზნესმა ეს მონაცემები გამოიყენოს მხოლოდ მოლოდინის სიის მოთხოვნის დამუშავებისთვის. *", validation: "შეავსე სერვისი, სახელი, მობილურის ნომერი და დაადასტურე პირობები.", sending: "იგზავნება…", send: "მოთხოვნის გაგზავნა",
   },
   en: {
     metaTitle: "Waitlist", metaDescription: "Leave a waitlist request — if the time you want becomes free, the team will see it.",
-    back: "← Back to booking", eyebrow: "Waitlist · request", title: "Stay on the waitlist.", lede: "If a preferred time becomes free, your request helps the team see priorities. This is not a confirmed booking, and notifications are not sent automatically yet.",
+    back: "Back to booking", eyebrow: "Waitlist · request", title: "Stay on the waitlist.", lede: "If a preferred time becomes free, your request helps the team see priorities. This is not a confirmed booking, and notifications are not sent automatically yet.",
     formAria: "Waitlist form", loading: "Loading data…", unavailable: "The waitlist for this location is unavailable right now.", goBack: "Go back to the booking page.", bookingPage: "Booking page",
     received: "Request received", receivedText: "Your preferred time has been added to the waitlist. This is not a confirmed booking, and no automatic notification is sent.", backToBooking: "Back to the booking page",
     yourVisit: "Your preferred visit", required: "* required", dateHint: "Choose a date in the calendar. Past days and hours that have already passed today are unavailable.",
     step1: "Service and time", service: "Service", chooseService: "Choose a service", specialist: "Specialist", anyStaff: "Any available specialist", wantedDate: "Preferred date", wantedTime: "Preferred time (optional)", selectedService: "Selected service: ",
-    step2: "Your details", firstName: "First name", lastName: "Last name", phone: "Mobile number", phoneHint: "Format: 5XX XX XX XX or +995 5XX XX XX XX.", phonePlaceholder: "e.g. 555 12 34 56", email: "Email", note: "Note for the place",
+    step2: "Your details", firstName: "First name", lastName: "Last name", phone: "Mobile number", phoneHint: "Format: 5XX XX XX XX", phonePlaceholder: "e.g. 555 12 34 56", email: "Email", note: "Note for the place",
     consent: "I agree that the business may use this data only to process my waitlist request. *", validation: "Fill in the service, first name and mobile number, and accept the terms.", sending: "Sending…", send: "Send request",
   },
   ru: {
     metaTitle: "Лист ожидания", metaDescription: "Оставьте запрос в листе ожидания — если нужное время освободится, команда это увидит.",
-    back: "← Вернуться к записи", eyebrow: "Лист ожидания · запрос", title: "Оставайтесь в листе ожидания.", lede: "Если желаемое время освободится, ваш запрос поможет команде увидеть приоритеты. Это не подтверждённая запись, и уведомления пока не отправляются автоматически.",
+    back: "Вернуться к записи", eyebrow: "Лист ожидания · запрос", title: "Оставайтесь в листе ожидания.", lede: "Если желаемое время освободится, ваш запрос поможет команде увидеть приоритеты. Это не подтверждённая запись, и уведомления пока не отправляются автоматически.",
     formAria: "Форма листа ожидания", loading: "Загрузка данных…", unavailable: "Лист ожидания этого филиала сейчас недоступен.", goBack: "Вернитесь на страницу записи.", bookingPage: "Страница записи",
     received: "Запрос принят", receivedText: "Желаемое время добавлено в лист ожидания. Это не подтверждённая запись, и автоматическое уведомление не отправляется.", backToBooking: "Вернуться на страницу записи",
     yourVisit: "Желаемый визит", required: "* обязательно", dateHint: "Выберите дату в календаре. Прошедшие дни и уже прошедшие часы сегодняшнего дня недоступны.",
     step1: "Услуга и время", service: "Услуга", chooseService: "Выберите услугу", specialist: "Специалист", anyStaff: "Любой свободный специалист", wantedDate: "Желаемая дата", wantedTime: "Желаемое время (необязательно)", selectedService: "Выбранная услуга: ",
-    step2: "Ваши данные", firstName: "Имя", lastName: "Фамилия", phone: "Номер мобильного телефона", phoneHint: "Формат: 5XX XX XX XX или +995 5XX XX XX XX.", phonePlaceholder: "напр. 555 12 34 56", email: "Эл. почта", note: "Комментарий для заведения",
+    step2: "Ваши данные", firstName: "Имя", lastName: "Фамилия", phone: "Номер мобильного телефона", phoneHint: "Формат: 5XX XX XX XX", phonePlaceholder: "напр. 555 12 34 56", email: "Эл. почта", note: "Комментарий для заведения",
     consent: "Я согласен(на), что бизнес использует эти данные только для обработки моего запроса в листе ожидания. *", validation: "Заполните услугу, имя и номер мобильного телефона и подтвердите условия.", sending: "Отправка…", send: "Отправить запрос",
   },
 } as const;
@@ -116,13 +116,13 @@ export default function Waitlist() {
               <div className="cwb-fields cwb-two">
                 <Field label={text.service} required>
                   <Select value={serviceId} onValueChange={value => { setServiceId(value); setStaffProfileId("ANY"); }}>
-                    <SelectTrigger><SelectValue placeholder={text.chooseService} /></SelectTrigger>
+                    <SelectTrigger className="w-full min-w-0"><SelectValue placeholder={text.chooseService} /></SelectTrigger>
                     <SelectContent>{catalog.data.catalog.map(({ service }) => <SelectItem key={service.id} value={service.id}>{service.nameKa}</SelectItem>)}</SelectContent>
                   </Select>
                 </Field>
                 <Field label={text.specialist}>
                   <Select value={staffProfileId} onValueChange={setStaffProfileId}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="w-full min-w-0"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="ANY">{text.anyStaff}</SelectItem>
                       {eligibleTeam.map(member => <SelectItem key={member.id} value={member.id}>{member.name}</SelectItem>)}

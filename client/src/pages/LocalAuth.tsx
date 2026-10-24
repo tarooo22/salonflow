@@ -1,5 +1,6 @@
 import { CatalogFooter, CatalogHeader } from "@/components/catalog/CatalogChrome";
 import "@/components/catalog/marketing.css";
+import { HeroIn } from "@/components/catalog/HomeMotion";
 import { usePublicMeta } from "@/components/public/PublicMeta";
 import { trpc } from "@/lib/trpc";
 import { BRAND } from "@shared/brand";
@@ -18,9 +19,9 @@ function PasswordField({ value, onChange, autoComplete, minLength, error }: { va
   return <div>
     <div className="mkt-field">
       <label htmlFor="auth-password">პაროლი</label>
-      <div className="mkt-field-row">
+      <div className="mkt-field-wrap">
         <input id="auth-password" value={value} onChange={event => onChange(event.target.value)} autoComplete={autoComplete} minLength={minLength} type={visible ? "text" : "password"} aria-invalid={Boolean(error)} aria-describedby={minLength >= 10 ? "auth-password-hint" : undefined} required />
-        <button type="button" className="mkt-field-btn" aria-label={visible ? "პაროლის დამალვა" : "პაროლის ჩვენება"} aria-pressed={visible} onClick={() => setVisible(current => !current)}>{visible ? <EyeOff className="size-5" aria-hidden="true" /> : <Eye className="size-5" aria-hidden="true" />}</button>
+        <button type="button" className="mkt-field-btn" aria-label={visible ? "პაროლის დამალვა" : "პაროლის ჩვენება"} onClick={() => setVisible(current => !current)}>{visible ? <EyeOff className="size-5" aria-hidden="true" /> : <Eye className="size-5" aria-hidden="true" />}</button>
       </div>
     </div>
     {minLength >= 10 ? <p id="auth-password-hint" className="mkt-hint mkt-hint-top">მინიმუმ 10 სიმბოლო.</p> : null}
@@ -66,9 +67,9 @@ export default function LocalAuth({ mode }: { mode: "login" | "register" | "clai
   const alternate = isRegister ? "/login" : "/register";
   const alternateLabel = isRegister ? "უკვე გაქვთ ანგარიში? შედით" : "ჯერ არ გაქვთ ანგარიში? დარეგისტრირდით";
   const title = isRegister ? "შექმენით თქვენი სამუშაო სივრცის ანგარიში" : isClaim ? "აღადგინეთ ძველი ანგარიში" : "კეთილი იყოს თქვენი დაბრუნება";
-  const description = isRegister ? `რეგისტრაციის შემდეგ შეიტანთ სალონის საცდელ მოთხოვნას; 7-დღიანი წვდომა გაიხსნება მხოლოდ ${BRAND.name} platform admin-ის ხელით დამტკიცების შემდეგ.` : isClaim ? `შეიყვანეთ ${BRAND.name}-ისგან მიღებული აღდგენის კოდი, თქვენი მიმდინარე პაროლი და ახალი ელფოსტა.` : `შედით თქვენი ${BRAND.name} ელფოსტითა და პაროლით.`;
+  const description = isRegister ? `რეგისტრაციის შემდეგ შეიტანთ სალონის საცდელ მოთხოვნას; 7-დღიანი წვდომა გაიხსნება მხოლოდ პლატფორმის ადმინისტრატორის მიერ ხელით დამტკიცების შემდეგ.` : isClaim ? `შეიყვანეთ ${BRAND.name}-ისგან მიღებული აღდგენის კოდი, თქვენი მიმდინარე პაროლი და ახალი ელფოსტა.` : `შედით თქვენი ${BRAND.name} ელფოსტითა და პაროლით.`;
   const submitLabel = isRegister ? "ანგარიშის შექმნა" : isClaim ? "ანგარიშის აღდგენა" : "შესვლა";
-  const modeLabel = isRegister ? "ახალი სივრცე" : isClaim ? "უსაფრთხო აღდგენა" : "დაცული შესვლა";
+  const modeLabel = isRegister ? "ახალი სამუშაო სივრცე" : isClaim ? "უსაფრთხო აღდგენა" : "დაცული შესვლა";
 
   usePublicMeta({ title: `${isRegister ? "რეგისტრაცია" : isClaim ? "ანგარიშის აღდგენა" : "შესვლა"} | ${BRAND.name}`, description, canonicalPath: isRegister ? "/register" : isClaim ? "/claim-account" : "/login", robots: "noindex,nofollow" });
 
@@ -76,11 +77,12 @@ export default function LocalAuth({ mode }: { mode: "login" | "register" | "clai
     <CatalogHeader />
     <main id="main-content" tabIndex={-1} className="mkt-auth">
       <div className="mkt-auth-inner">
-        <p className="mkt-wordmark">{BRAND.nameKa}</p>
         <div className="mkt-auth-card">
-          <p className="mkt-caption">{BRAND.name} · {modeLabel}</p>
-          <h1 className="mkt-auth-title">{title}</h1>
-          <p className="mkt-hint mkt-auth-desc">{description}</p>
+          <p className="mkt-caption">{modeLabel}</p>
+          <HeroIn>
+            <h1 className="mkt-auth-title">{title}</h1>
+            <p className="mkt-hint mkt-auth-desc">{description}</p>
+          </HeroIn>
           <form className="mkt-form" onSubmit={submit} noValidate>
             {isRegister ? <div className="mkt-field">
               <label htmlFor="auth-name">სახელი</label>
@@ -110,7 +112,7 @@ export default function LocalAuth({ mode }: { mode: "login" | "register" | "clai
           <ul className="mkt-list mkt-auth-promises">
             <AuthPromise text="ადგილობრივი ელფოსტა და პაროლი" />
             <AuthPromise text="როლზე და ორგანიზაციაზე დაფუძნებული წვდომა" />
-            <AuthPromise text="ქართული-first სამუშაო სივრცე" />
+            <AuthPromise text="სამუშაო სივრცე ქართულ ენაზე" />
           </ul>
         </div>
       </div>

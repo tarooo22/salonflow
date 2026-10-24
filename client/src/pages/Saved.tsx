@@ -1,11 +1,13 @@
+import "@/components/catalog/discovery.css";
 import { CatalogFooter, CatalogHeader } from "@/components/catalog/CatalogChrome";
+import { HeroIn } from "@/components/catalog/HomeMotion";
 import { SalonGrid, type CatalogListing } from "@/components/catalog/Tickets";
 import { usePublicMeta } from "@/components/public/PublicMeta";
 import { usePublicLocale } from "@/contexts/PublicLocaleContext";
 import { useSavedSalons } from "@/lib/deviceSaved";
 import { trpc } from "@/lib/trpc";
 import { BRAND } from "@shared/brand";
-import { Trash2 } from "lucide-react";
+import { Heart, Trash2 } from "lucide-react";
 import { Link } from "wouter";
 
 export const ui = {
@@ -28,23 +30,24 @@ export default function Saved() {
   const complete = directory.isSuccess && (directory.data?.total ?? 0) <= DIRECTORY_LIMIT;
   const gone = complete ? slugs.filter(slug => !items.some(item => item.publicSlug === slug)) : [];
 
-  return <div className="cw min-h-screen">
+  return <div className="cw">
     <CatalogHeader />
     <main id="main-content" tabIndex={-1} className="cw-container">
-      <div className="cw-page-head">
+      <HeroIn className="cw-page-head">
         <h1>{text.title}</h1>
         <p className="cw-page-note">{text.note}</p>
-      </div>
+      </HeroIn>
       {slugs.length === 0
-        ? <div className="cw-device-empty">
+        ? <div className="cw-empty mb-12">
+          <span className="cw-empty-icon"><Heart aria-hidden="true" /></span>
           <h2>{text.emptyTitle}</h2>
           <p>{text.emptyBody}</p>
-          <Link href="/salons" className="cw-btn cw-btn-stamp mt-2 min-h-11">{text.find}</Link>
+          <Link href="/salons" className="cw-btn cw-btn-stamp min-h-11">{text.find}</Link>
         </div>
         : directory.isLoading ? <p role="status" className="cw-page-note pb-12">{text.loading}</p>
         : directory.isError ? <div role="alert" className="cw-device-empty"><h2>{text.failed}</h2><button type="button" className="cw-btn cw-btn-line min-h-11" onClick={() => directory.refetch()}>{text.retry}</button></div>
         : <>
-          {found.length ? <div className="pb-12"><SalonGrid items={found} /></div> : null}
+          {found.length ? <div className="pb-12"><SalonGrid items={found} reveal /></div> : null}
           {gone.length ? <div className="cw-device-empty">
             <p>{text.gone}</p>
             <ul className="grid gap-1">{gone.map(slug => <li key={slug} className="flex flex-wrap items-center gap-2"><span className="font-semibold">{slug}</span><button type="button" className="cw-device-remove" onClick={() => remove(slug)}><Trash2 className="size-4" aria-hidden="true" />{text.remove}</button></li>)}</ul>

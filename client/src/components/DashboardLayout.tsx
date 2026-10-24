@@ -20,6 +20,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
+import { MotionConfig } from "framer-motion";
 import { BarChart3, BriefcaseBusiness, Package,CalendarDays, CalendarHeart, ChevronDown, CircleHelp, Clock3, Images, LayoutDashboard, ListChecks, LogOut, MessageSquareText, MoreHorizontal, PanelLeft, ReceiptText, Scissors, Search, Settings2, Store, Users } from "lucide-react";
 import { BRAND } from "@shared/brand";
 import "@/components/workspace/panel.css";
@@ -146,6 +147,9 @@ function DashboardLayoutContent({
   const role = organizations.data?.[0]?.membership.role;
   const organizationId = organizations.data?.[0]?.organization.id;
   const workspaceStatus = trpc.billing.workspaceStatus.useQuery({ organizationId: organizationId ?? "" }, { enabled: Boolean(organizationId) });
+  // The saved "reduce animations" setting (Settings page) drives framer-motion and the CSS rule in index.css.
+  const preferences = trpc.productivity.preferences.useQuery({ organizationId: organizationId ?? "" }, { enabled: Boolean(organizationId) });
+  const reduceMotion = preferences.data?.settings?.reducedMotion === true;
   const workspaceLocked = workspaceStatus.data?.locked === true;
   const workspaceRestricted = Boolean(organizationId && (workspaceStatus.isLoading || workspaceStatus.isError || workspaceLocked));
   const lockedOwnerItems = workspaceRestricted && role === "OWNER" ? [{ icon: ReceiptText, label: "პაკეტის გააქტიურება", path: "/app/billing", group: "წვდომის აღდგენა", roles: ["OWNER"] }] : [];
@@ -163,6 +167,10 @@ function DashboardLayoutContent({
     ? visibleMenuItems.slice(0, 3)
     : ["/app/today", "/app/calendar", role === "STAFF" ? "/app/staff" : "/app/clients"].map(path => visibleMenuItems.find(item => item.path === path)).filter((item): item is typeof visibleMenuItems[number] => Boolean(item));
 
+  useEffect(() => {
+    document.documentElement.dataset.reduceMotion = String(reduceMotion);
+    return () => { delete document.documentElement.dataset.reduceMotion; };
+  }, [reduceMotion]);
   useEffect(() => { if (workspaceLocked && location !== "/app/today" && location !== "/app/billing" && user?.role !== "admin") setLocation("/app/today"); }, [location, setLocation, user?.role, workspaceLocked]);
   useEffect(() => { if (managementItems.some(item => item.path === location)) setManagementOpen(true); }, [location, managementItems]);
 
@@ -217,7 +225,7 @@ function DashboardLayoutContent({
   const groupCaption = (label: string) => (!isCollapsed ? <p className="cwk-group-caption">{label}</p> : null);
 
   return (
-    <>
+    <MotionConfig reducedMotion={reduceMotion ? "always" : "user"}>
       <div className="relative" ref={sidebarRef}>
         <Sidebar collapsible="icon" className="cwk-rail border-r-0" disableTransition={isResizing}>
           <SidebarHeader className="cwk-rail-head justify-center p-0">
@@ -324,7 +332,7 @@ function DashboardLayoutContent({
             <div className="flex items-center gap-2"><button type="button" onClick={() => setCommandOpen(true)} className="cwk-topbtn" aria-label="სწრაფი ძიება"><Search className="size-4" /></button><button type="button" onClick={() => setHelpOpen(true)} className="cwk-topbtn" aria-label="სამუშაო სივრცის დახმარება"><CircleHelp className="size-4" /></button></div>
           </div>
         )}
-        <main className="cwk-main sf-motion-enter flex-1 p-3 pb-24 sm:p-5 sm:pb-5 xl:p-6">{children}</main>
+        <main key={location} className="cwk-main sf-motion-enter flex-1 p-3 pb-24 sm:p-5 sm:pb-5 xl:p-6">{children}</main>
         {isMobile ? <nav aria-label="სწრაფი ნავიგაცია" className="cwk-tabbar fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 gap-1 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2">
           {mobileQuickItems.map(item => { const isActive = location === item.path; return <button key={item.path} type="button" onClick={() => setLocation(item.path)} aria-current={isActive ? "page" : undefined} className="cwk-tab"><item.icon className="size-[22px]" aria-hidden="true" /><span className="mt-0.5 max-w-20 truncate">{item.path === "/app/staff" && role === "STAFF" ? "პროფილი" : item.label}</span></button>; })}
           <button type="button" onClick={toggleSidebar} className="cwk-tab"><MoreHorizontal className="size-[22px]" aria-hidden="true" /><span className="mt-0.5">მეტი</span></button>
@@ -333,6 +341,6 @@ function DashboardLayoutContent({
       {/* Mounted only while open: the tour must never pop up on its own. */}
       {helpOpen && organizations.data?.[0]?.organization.id ? <GuidedHelpTour organizationId={organizations.data[0].organization.id} role={role} open={helpOpen} onOpenChange={setHelpOpen} /> : null}
       <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} organizationId={organizationId} role={role} restricted={workspaceRestricted} />
-    </>
+    </MotionConfig>
   );
 }

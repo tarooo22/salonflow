@@ -8,7 +8,7 @@ describe("manual package activation presentation", () => {
     expect(source).toContain("გადარიცხვა ავტომატურად არ მტკიცდება");
     expect(source).toContain("SUBMITTED\", \"UNDER_REVIEW");
     expect(source).toContain("წინა ქვითარი უკვე შემოწმებას ელოდება");
-    expect(source).toContain("თქვენი სალონის ID / გადარიცხვის კომენტარი");
+    expect(source).toContain("თქვენი გადახდის კოდი / გადარიცხვის კომენტარი");
     expect(source).toContain("ქვითარი ხელით შემოწმდება");
     expect(source).toContain("1-თვიანი პაკეტი გააქტიურებულია");
   });

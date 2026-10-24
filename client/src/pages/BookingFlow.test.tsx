@@ -62,7 +62,7 @@ describe("public booking conversion helpers", () => {
 
   it("shows the server-resolved specialist and calendar action in the final confirmation", () => {
     const markup = renderToStaticMarkup(<BookingConfirmation confirmationToken="safe-confirmation" assignedStaffName="ნინო" serviceName="თმის შეჭრა" startsAt={new Date("2026-08-20T08:30:00.000Z")} endsAt={new Date("2026-08-20T09:15:00.000Z")} locationName="ვაკე" />);
-    expect(markup).toContain("თქვენი სპეციალისტი:");
+    expect(markup).toContain("შენი სპეციალისტი:");
     expect(markup).toContain("ნინო");
     expect(markup).toContain("კალენდარში დამატება");
     expect(markup).toContain("ჩაწერილია");
@@ -73,8 +73,8 @@ describe("public booking conversion helpers", () => {
   it("gives a focused, non-technical recovery message when a booking step is incomplete", () => {
     const timeIssue = getBookingValidationIssue({ step: 2, serviceId: "service-a", staffProfileId: "staff-1", startsAt: null, firstName: "", phone: "", termsAccepted: false });
     const contactIssue = getBookingValidationIssue({ step: 3, serviceId: "service-a", staffProfileId: "staff-1", startsAt: new Date("2026-08-16T10:00:00Z"), available: true, firstName: "ანა", phone: "", termsAccepted: false });
-    expect(timeIssue).toMatchObject({ kind: "time", title: "დაამატეთ სასურველი თარიღი და დრო" });
-    expect(contactIssue).toMatchObject({ kind: "contact", title: "მიუთითეთ მობილურის ნომერი" });
+    expect(timeIssue).toMatchObject({ kind: "time", title: "დაამატე სასურველი თარიღი და დრო" });
+    expect(contactIssue).toMatchObject({ kind: "contact", title: "მიუთითე მობილურის ნომერი" });
     expect(contactIssue?.description).not.toContain("tRPC");
   });
 

@@ -14,7 +14,7 @@ export const ui = {
   ka: {
     metaFallbackTitle: "ვაკანსია", metaFallbackDescription: "ვაკანსიის დეტალები.", allVacancies: "ყველა ვაკანსია", loading: "იტვირთება",
     notFoundTitle: "ვაკანსია ვერ მოიძებნა ან უკვე დახურულია.", loadFailedTitle: "ვაკანსიის ჩატვირთვა ვერ მოხერხდა.",
-    notFoundText: "განცხადების ვადა შეიძლება ამოიწურა. იხილეთ მიმდინარე ვაკანსიები.", loadFailedText: "სცადეთ რამდენიმე წუთში.",
+    notFoundText: "განცხადების ვადა შეიძლება ამოიწურა. იხილე მიმდინარე ვაკანსიები.", loadFailedText: "სცადე რამდენიმე წუთში.",
     paid: "ფასიანი განთავსება", adSr: " — რეკლამა", employmentType: "დასაქმების ტიპი", salary: "ანაზღაურება", validity: "განცხადება მოქმედებს", until: "-მდე", untilPrefix: "",
     description: "აღწერა", contact: "დაკავშირება", contactLede: "განცხადებას აქვეყნებს ბიზნესი. დაუკავშირდი მას პირდაპირ.", businessPage: "ბიზნესის გვერდი",
   },

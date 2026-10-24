@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AppointmentQuickAction } from "@/components/AppointmentQuickAction";
 import { ClinicalRecordsButton } from "@/components/clinical/ClinicalRecordsButton";
 import { WalkInQuickEntry } from "@/components/WalkInQuickEntry";
-import { WorkspacePageHeader, WorkspaceSection, WorkspaceState, WorkspaceStatusPill, type WorkspaceStatus } from "@/components/workspace/WorkspacePrimitives";
+import { WorkspacePageHeader, WorkspaceRevealItem, WorkspaceRevealScope, WorkspaceSection, WorkspaceState, WorkspaceStatusPill, type WorkspaceStatus } from "@/components/workspace/WorkspacePrimitives";
 import { ActionTile, CompactMetricRail, MetricCell, PriorityModule } from "@/components/workspace/DashboardModules";
 import { DayCloseChecklist, NotificationCenter } from "@/components/workspace/DailyControl";
 import { MetricPreferenceMenu } from "@/components/workspace/MetricPreferenceMenu";
@@ -17,7 +17,7 @@ import { canManageAppointmentQueue } from "@/lib/appointmentPresentation";
 import { formatGelTetri, formatPaymentState } from "@/lib/presentation";
 import { DATE_NAMES, schemaWeekdayOf } from "@/components/public/BookingPrimitives";
 import { formatTimeInTimeZone } from "@shared/timezones";
-import { CalendarCheck2, CalendarDays, CircleAlert, Link2, MapPin, Plus, ReceiptText, Scissors, UserPlus, UsersRound } from "lucide-react";
+import { CalendarCheck2, CalendarDays, CircleAlert, Link2, MapPin, Plus, ReceiptText, Scissors, UserPlus, UsersRound, Wallet } from "lucide-react";
 import React, { FormEvent, useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
 import { toast } from "sonner";
@@ -102,14 +102,14 @@ export default function Today() {
     return [...priority, ...defaultMetricKeys.filter(key => !priority.includes(key))];
   }, [defaultMetricKeys, productivityPreferences.data?.metricKeys, role]);
   const operationalFocus = nextOperationalAppointment(appointments) as TodayFocus;
+  // The next appointment is already shown in the NOW/NEXT row, so the cue only says when the day is done.
   const timelineCue = useMemo(() => {
     const now = Date.now();
     const active = appointments.find(appointment => new Date(appointment.startsAt).getTime() <= now && new Date(appointment.endsAt).getTime() > now && !["CANCELLED", "NO_SHOW", "COMPLETED"].includes(appointment.status));
     const anchor = active ? new Date(active.endsAt).getTime() : now;
     const following = appointments.find(appointment => new Date(appointment.startsAt).getTime() >= anchor && !["CANCELLED", "NO_SHOW", "COMPLETED"].includes(appointment.status));
-    if (active) return following ? `შემდეგი: ${formatTimeInTimeZone(new Date(following.startsAt), timezone)}` : "დღეს მეტი ჯავშანი არ არის";
-    return following ? `თავისუფალი დრო → ${formatTimeInTimeZone(new Date(following.startsAt), timezone)}` : "დღეს მეტი ჯავშანი არ არის";
-  }, [appointments, timezone]);
+    return following ? null : "დღეს მეტი ჯავშანი აღარ არის.";
+  }, [appointments]);
   const pendingCount = (dashboard.data?.counts as Record<string, number> | undefined)?.PENDING ?? 0;
   const nonStaffAttention = role !== "STAFF";
   const workspaceLocked = Boolean(workspaceStatus.data?.locked);
@@ -155,7 +155,7 @@ export default function Today() {
         <CompactMetricRail>{metricKeys.map(metricKey => <DashboardMetric key={metricKey} metricKey={metricKey} appointmentCount={appointments.length} pendingCount={pendingCount} scheduledTetri={metrics.scheduledTetri} outstandingTetri={metrics.outstandingTetri} focus={operationalFocus} timezone={timezone} />)}</CompactMetricRail>
         {appointments.length ? <NowNextRow focus={operationalFocus} timezone={timezone} timelineCue={timelineCue} /> : null}
         {!dashboard.isError && dashboard.data?.location && appointments.length === 0 ? <WorkspaceState kind="empty" title="დღეს ჯავშანი არ არის" description={role === "OWNER" ? "ონლაინ ჩაწერის გასაშვებად გააგრძელეთ მომდევნო ნაბიჯით." : undefined} action={<Button asChild variant="outline"><Link href={emptyNextAction.href}>{emptyNextAction.label}</Link></Button>} /> : null}
-        {!dashboard.isError && appointments.length ? <WorkspaceSection title="დღის რიგი" description={dashboard.data?.location?.name} action={<WorkspaceStatusPill tone="count"><span className="cwk-num">{appointments.length}</span>&nbsp;ჯავშანი</WorkspaceStatusPill>}><div className="divide-y divide-border">{appointments.map(appointment => { const balance = balanceByAppointment.get(appointment.id); const balanceTetri = balance?.balanceTetri ?? appointment.totalTetri; const clientName = appointment.client ? `${appointment.client.firstName} ${appointment.client.lastName ?? ""}`.trim() : "კლიენტი მითითებული არ არის"; return <article key={appointment.id} className="sf-queue-item grid grid-cols-[4.25rem_minmax(0,1fr)] gap-x-3 gap-y-2 py-3 lg:grid-cols-[4.25rem_minmax(0,1fr)_auto] lg:items-center"><div className="cwk-num"><p className="text-base font-semibold text-foreground">{formatTimeInTimeZone(new Date(appointment.startsAt), timezone)}</p><p className="text-xs text-muted-foreground">{formatTimeInTimeZone(new Date(appointment.endsAt), timezone)}</p></div><div className="min-w-0"><div className="flex flex-wrap items-center gap-x-2 gap-y-1"><p className="font-semibold">{clientName}</p><StatusPill status={appointment.status} /><WorkspaceStatusPill tone="neutral">{formatPaymentState(appointment.payment?.state)}</WorkspaceStatusPill></div><p className="mt-0.5 text-sm text-muted-foreground">{appointment.services.map(service => service.serviceNameSnapshot).join(", ") || "სერვისი მითითებული არ არის"} · {appointment.staff.publicDisplayName}{role !== "STAFF" ? <> · <span className="cwk-num whitespace-nowrap text-foreground">{money(appointment.totalTetri)}</span>{balanceTetri !== appointment.totalTetri ? <> (ნაშთი <span className="cwk-num whitespace-nowrap">{money(balanceTetri)}</span>)</> : null}</> : null}</p></div><div className="col-span-2 flex flex-wrap items-center gap-2 lg:col-span-1 lg:justify-end"><ClinicalRecordsButton appointment={appointment} /><AppointmentQuickAction role={canConfirmAppointment ? role : "STAFF"} status={appointment.status} cardHeight={72} context="today" disabled={updateStatus.isPending} onAction={() => updateStatus.mutate({ organizationId: organization.id, appointmentId: appointment.id, nextStatus: appointment.status === "PENDING" ? "CONFIRMED" : appointment.status === "CONFIRMED" ? "CHECKED_IN" : appointment.status === "CHECKED_IN" ? "IN_SERVICE" : "COMPLETED" })} className="cwk-stampbtn max-md:min-h-11 disabled:cursor-not-allowed disabled:opacity-60" /></div></article>; })}</div></WorkspaceSection> : null}
+        {!dashboard.isError && appointments.length ? <WorkspaceSection title="დღის რიგი" description={dashboard.data?.location?.name} action={<WorkspaceStatusPill tone="count"><span className="cwk-num">{appointments.length}</span>&nbsp;ჯავშანი</WorkspaceStatusPill>}><WorkspaceRevealScope><div className="divide-y divide-border">{appointments.map((appointment, index) => { const balance = balanceByAppointment.get(appointment.id); const balanceTetri = balance?.balanceTetri ?? appointment.totalTetri; const clientName = appointment.client ? `${appointment.client.firstName} ${appointment.client.lastName ?? ""}`.trim() : "კლიენტი მითითებული არ არის"; return <WorkspaceRevealItem key={appointment.id} index={index} as="article" className="sf-queue-item grid grid-cols-[4.25rem_minmax(0,1fr)] gap-x-3 gap-y-2 py-3 lg:grid-cols-[4.25rem_minmax(0,1fr)_auto] lg:items-center"><div className="cwk-num"><p className="text-base font-semibold text-foreground">{formatTimeInTimeZone(new Date(appointment.startsAt), timezone)}</p><p className="text-xs text-muted-foreground">{formatTimeInTimeZone(new Date(appointment.endsAt), timezone)}</p></div><div className="min-w-0"><div className="flex flex-wrap items-center gap-x-2 gap-y-1"><p className="font-semibold">{clientName}</p><StatusPill status={appointment.status} /><WorkspaceStatusPill tone="neutral">{(appointment.payment?.state ?? "UNPAID") === "UNPAID" ? <Wallet aria-hidden="true" /> : null}{formatPaymentState(appointment.payment?.state)}</WorkspaceStatusPill></div><p className="mt-0.5 text-sm text-muted-foreground">{appointment.services.map(service => service.serviceNameSnapshot).join(", ") || "სერვისი მითითებული არ არის"} · {appointment.staff.publicDisplayName}{role !== "STAFF" ? <> · <span className="cwk-num whitespace-nowrap text-foreground">{money(appointment.totalTetri)}</span>{balanceTetri !== appointment.totalTetri ? <> (ნაშთი <span className="cwk-num whitespace-nowrap">{money(balanceTetri)}</span>)</> : null}</> : null}</p></div><div className="col-span-2 flex flex-wrap items-center gap-2 lg:col-span-1 lg:justify-end"><ClinicalRecordsButton appointment={appointment} /><AppointmentQuickAction role={canConfirmAppointment ? role : "STAFF"} status={appointment.status} cardHeight={72} context="today" disabled={updateStatus.isPending} onAction={() => updateStatus.mutate({ organizationId: organization.id, appointmentId: appointment.id, nextStatus: appointment.status === "PENDING" ? "CONFIRMED" : appointment.status === "CONFIRMED" ? "CHECKED_IN" : appointment.status === "CHECKED_IN" ? "IN_SERVICE" : "COMPLETED" })} className="cwk-stampbtn max-md:min-h-11 disabled:cursor-not-allowed disabled:opacity-60" /></div></WorkspaceRevealItem>; })}</div></WorkspaceRevealScope></WorkspaceSection> : null}
         {(showAccessExpiryReminder || (canManageOrganization && readiness.length)) ? <SalonStatusPanel accessDaysRemaining={showAccessExpiryReminder ? activeAccessDaysRemaining : null} readiness={canManageOrganization ? readiness : []} /> : null}
         {organization && dashboard.data?.location && dashboard.data.dateKey ? <DayCloseChecklist organizationId={organization.id} locationId={dashboard.data.location.id} businessDate={dashboard.data.dateKey} locationName={dashboard.data.location.name} timezone={timezone} pendingCount={pendingCount} completedCount={completedCount} outstandingLabel={money(metrics.outstandingTetri)} outstandingTetri={metrics.outstandingTetri} canClose={canCloseDay} /> : null}
         <QuickActions actions={quickActions.filter(action => !(action === "WALK_IN" && canManageCalendar && activeLocation))} onWalkIn={() => setWalkInMode(true)} />
@@ -174,18 +174,18 @@ function SalonStatusPanel({ accessDaysRemaining, readiness }: { accessDaysRemain
   </PriorityModule>;
 }
 
-function NowNextRow({ focus, timezone, timelineCue }: { focus: TodayFocus; timezone: string; timelineCue: string }) {
+function NowNextRow({ focus, timezone, timelineCue }: { focus: TodayFocus; timezone: string; timelineCue: string | null }) {
   const appointment = focus?.appointment;
   const clientName = appointment?.client ? `${appointment.client.firstName} ${appointment.client.lastName ?? ""}`.trim() : "კლიენტი მითითებული არ არის";
   return <section aria-label="ახლა და შემდეგი" className="cwk-sheet flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3">
-    <span className="text-sm font-extrabold text-[var(--sf-accent-ink)]">{focus?.kind === "NOW" ? "ახლა" : "შემდეგი"}</span>
+    <span className="text-sm font-extrabold text-[var(--sf-accent-ink)]">{focus?.kind === "NOW" ? "ახლა" : "შემდეგი ჯავშანი"}</span>
     {appointment ? <>
       <span className="cwk-num text-sm font-semibold">{formatTimeInTimeZone(new Date(appointment.startsAt), timezone)}–{formatTimeInTimeZone(new Date(appointment.endsAt), timezone)}</span>
       <span className="font-semibold">{clientName}</span>
       <StatusPill status={appointment.status} />
       <span className="min-w-0 truncate text-sm text-muted-foreground">{appointment.services.map(service => service.serviceNameSnapshot).join(", ") || "სერვისი მითითებული არ არის"} · {appointment.staff.publicDisplayName}</span>
     </> : <span className="text-sm text-muted-foreground">თავისუფალი დროა</span>}
-    <span className="text-xs text-muted-foreground sm:ml-auto">{timelineCue}</span>
+    {timelineCue ? <span className="text-xs text-muted-foreground sm:ml-auto">{timelineCue}</span> : null}
   </section>;
 }
 

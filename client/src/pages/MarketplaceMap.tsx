@@ -1,4 +1,5 @@
 import { CatalogFooter, CatalogHeader } from "@/components/catalog/CatalogChrome";
+import { HeroIn } from "@/components/catalog/HomeMotion";
 import { listingMatchesVertical, SalonCard, type CatalogListing } from "@/components/catalog/Tickets";
 import { DiscoveryFilters, DiscoveryHead, marketplaceDiscoveryFilters, marketplaceDiscoveryHref } from "@/components/public/MarketplaceDiscovery";
 import { usePublicMeta } from "@/components/public/PublicMeta";
@@ -28,16 +29,16 @@ export function marketplaceMapMarkerPosition(point: MapPoint, points: MapPoint[]
 
 export const ui = {
   ka: {
-    metaTitle: "ადგილები რუკაზე", metaDescription: "იხილეთ მხოლოდ იმ დამტკიცებული ადგილების რუკა, რომლებმაც საჯარო მდებარეობის გაზიარებაზე დამოუკიდებლად განაცხადეს თანხმობა.",
+    metaTitle: "ადგილები რუკაზე", metaDescription: "ნახე მხოლოდ იმ დამტკიცებული ადგილების რუკა, რომლებმაც საჯარო მდებარეობის გაზიარებაზე დამოუკიდებლად განაცხადეს თანხმობა.",
     heroTitle: "ადგილები რუკაზე", viewList: "სიის ნახვა",
     canvasTitle: "ადგილები რუკაზე", summary: (places: number, markers: number) => `${places} ადგილი · ${markers} მონიშვნა`,
     canvasNote: "ეს არის გაზიარებული მდებარეობების ვიზუალური განლაგება. ერთ წერტილში რამდენიმე ადგილი ერთ მონიშვნაში ჯგუფდება; ზუსტი მიმართულება იხსნება Google Maps-ში, ხოლო სრული ტექსტური სია გვერდითაა.",
     markersGroup: "რუკის მონიშვნები", clusterLabel: (count: number) => `${count} ადგილი ერთ მონიშვნაში`, markerLabel: (name: string, number: string) => `${name} — რუკის მონიშვნა, № ${number}`,
-    selectedMarker: "არჩეული მონიშვნა", pickMarker: "აირჩიეთ მონიშვნა რუკაზე.",
-    mapAndList: "რუკა და სია", consentNote: "რუკის წერტილი მხოლოდ მფლობელის აშკარა თანხმობის შემდეგ ჩანს; ჩვეულებრივი კატალოგი კოორდინატებს არ აბრუნებს.", loading: "იტვირთება",
-    unavailableTitle: "რუკა ახლა მიუწვდომელია", unavailableText: "ტექსტური სიისთვის დაბრუნდით კატალოგში და სცადეთ მოგვიანებით.", backToCatalog: "კატალოგში დაბრუნება",
-    emptyTitle: "ამ ფილტრში რუკაზე გამოჩენილი ადგილი ჯერ არ არის.", emptyText: "ეს შეიძლება ნიშნავდეს, რომ ჯერ არცერთმა დამტკიცებულმა ადგილმა არ დაადასტურა წერტილი და არ მისცა რუკაზე გამოჩენის თანხმობა. გამოგონილ ან თანხმობის გარეშე მონაცემებს არ ვაჩვენებთ.",
-    clear: "ფილტრის გასუფთავება", catalogList: "კატალოგის სია", listTitle: "სია და მიმართულება", listNote: "თითოეული ბარათი მიუთითებს ადგილის საჯარო გვერდზე; მიმართულება იხსნება ცალკე რუკის სერვისში.",
+    selectedMarker: "არჩეული მონიშვნა", pickMarker: "აირჩიე მონიშვნა რუკაზე.",
+    mapAndList: "რუკა და სია", loading: "იტვირთება",
+    unavailableTitle: "რუკა ახლა მიუწვდომელია", unavailableText: "ტექსტური სიისთვის დაბრუნდი კატალოგში და სცადე მოგვიანებით.", backToCatalog: "კატალოგში დაბრუნება",
+    emptyTitle: "ამ ფილტრით რუკაზე ადგილი ჯერ არ ჩანს.", emptyText: "ადგილი რუკაზე მხოლოდ მფლობელის თანხმობით ჩნდება.",
+    listTitle: "სია და მიმართულება", listNote: "თითოეული ბარათი მიუთითებს ადგილის საჯარო გვერდზე; მიმართულება იხსნება ცალკე რუკის სერვისში.",
     directions: "Google Maps-ში მიმართულება", newTab: " (ახალ ჩანართში)",
   },
   en: {
@@ -47,10 +48,10 @@ export const ui = {
     canvasNote: "This is a visual layout of shared locations. Several places at the same point are grouped into one marker; exact directions open in Google Maps, and the full text list is alongside.",
     markersGroup: "Map markers", clusterLabel: (count: number) => `${count} places in one marker`, markerLabel: (name: string, number: string) => `${name} — map marker, № ${number}`,
     selectedMarker: "Selected marker", pickMarker: "Select a marker on the map.",
-    mapAndList: "Map and list", consentNote: "A map point appears only after the owner's explicit consent; the regular catalog does not return coordinates.", loading: "Loading",
+    mapAndList: "Map and list", loading: "Loading",
     unavailableTitle: "The map is unavailable right now", unavailableText: "For the text list, go back to the catalog and try again later.", backToCatalog: "Back to the catalog",
-    emptyTitle: "No places are shown on the map for this filter yet.", emptyText: "This may mean that no approved place has confirmed a point and agreed to appear on the map yet. We do not show invented data or data without consent.",
-    clear: "Clear filters", catalogList: "Catalog list", listTitle: "List and directions", listNote: "Each card links to the place's public page; directions open in a separate map service.",
+    emptyTitle: "No place shows on the map for this filter yet.", emptyText: "A place appears on the map only with the owner's consent.",
+    listTitle: "List and directions", listNote: "Each card links to the place's public page; directions open in a separate map service.",
     directions: "Directions in Google Maps", newTab: " (opens in a new tab)",
   },
   ru: {
@@ -60,10 +61,10 @@ export const ui = {
     canvasNote: "Это визуальное расположение открытых местоположений. Несколько мест в одной точке объединяются в одну метку; точный маршрут открывается в Google Maps, а полный текстовый список находится рядом.",
     markersGroup: "Метки на карте", clusterLabel: (count: number) => `Мест в одной метке: ${count}`, markerLabel: (name: string, number: string) => `${name} — метка на карте, № ${number}`,
     selectedMarker: "Выбранная метка", pickMarker: "Выберите метку на карте.",
-    mapAndList: "Карта и список", consentNote: "Точка на карте видна только после явного согласия владельца; обычный каталог координаты не возвращает.", loading: "Загрузка",
+    mapAndList: "Карта и список", loading: "Загрузка",
     unavailableTitle: "Карта сейчас недоступна", unavailableText: "Для текстового списка вернитесь в каталог и повторите позже.", backToCatalog: "Вернуться в каталог",
-    emptyTitle: "По этому фильтру на карте пока нет мест.", emptyText: "Возможно, ни одно одобренное место ещё не подтвердило точку и не согласилось на показ на карте. Выдуманные данные и данные без согласия мы не показываем.",
-    clear: "Сбросить фильтры", catalogList: "Список каталога", listTitle: "Список и маршрут", listNote: "Каждая карточка ведёт на публичную страницу места; маршрут открывается в отдельном картографическом сервисе.",
+    emptyTitle: "По этому фильтру на карте пока нет мест.", emptyText: "Место появляется на карте только с согласия владельца.",
+    listTitle: "Список и маршрут", listNote: "Каждая карточка ведёт на публичную страницу места; маршрут открывается в отдельном картографическом сервисе.",
     directions: "Маршрут в Google Maps", newTab: " (откроется в новой вкладке)",
   },
 } as const;
@@ -178,13 +179,15 @@ export default function MarketplaceMap() {
   const hasFilters = queryFilters || vertical !== null;
   const listHref = marketplaceDiscoveryHref("/salons", categorySlug, search, area);
 
-  return <div className="cw min-h-screen">
+  return <div className="cw">
     <CatalogHeader />
     <main id="main-content">
-      <DiscoveryHead
-        title={text.heroTitle}
-        action={<Link href={listHref} className="pg-action"><List className="size-5" aria-hidden="true" />{text.viewList}</Link>}
-      />
+      <HeroIn>
+        <DiscoveryHead
+          title={text.heroTitle}
+          action={<Link href={listHref} className="pg-action"><List className="size-5" aria-hidden="true" />{text.viewList}</Link>}
+        />
+      </HeroIn>
       <DiscoveryFilters
           idPrefix="map"
           vertical={vertical}
@@ -204,21 +207,18 @@ export default function MarketplaceMap() {
 
       <section className="pg-results" aria-label={text.mapAndList}>
         <div className="cw-container">
-          <p className="text-sm text-[var(--cw-ink-soft)]">{text.consentNote}</p>
-          <div className="mt-6">
+          <div>
             {result.isLoading ? <div className="grid gap-5 lg:grid-cols-[minmax(0,1.05fr)_minmax(20rem,0.95fr)]" aria-busy="true" aria-label={text.loading}><div className="h-96 animate-pulse rounded-[16px] border border-[var(--cw-rule)] bg-[var(--sf-surface)]" /><div className="h-96 animate-pulse rounded-[16px] border border-[var(--cw-rule)] bg-[var(--sf-surface)]" /></div> : null}
             {result.isError ? <div className="cw-notice cw-notice-error" role="alert">
               <h2 className="text-xl font-bold">{text.unavailableTitle}</h2>
               <p className="mt-2">{text.unavailableText}</p>
               <Link href={listHref} className="cw-linkbtn mt-3">{text.backToCatalog}</Link>
             </div> : null}
-            {!result.isLoading && !result.isError && !listings.length ? <div className="cw-notice" role="status">
-              <h2 className="text-xl font-bold">{text.emptyTitle}</h2>
-              <p className="mt-2 max-w-xl text-[var(--cw-ink-soft)]">{text.emptyText}</p>
-              <div className="mt-4 flex flex-wrap gap-3">
-                {hasFilters ? <button type="button" className="cw-btn cw-btn-line min-h-11" onClick={clearFilters}>{text.clear}</button> : null}
-                <Link href={listHref} className="cw-btn cw-btn-stamp min-h-11">{text.catalogList}</Link>
-              </div>
+            {!result.isLoading && !result.isError && !listings.length ? <div className="cw-empty" role="status">
+              <span className="cw-empty-icon"><MapPin aria-hidden="true" /></span>
+              <h2>{text.emptyTitle}</h2>
+              <p>{text.emptyText}</p>
+              <Link href={listHref} className="cw-btn cw-btn-line min-h-11">{text.viewList}</Link>
             </div> : null}
             {listings.length ? <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(20rem,0.95fr)]">
               <div className="lg:sticky lg:top-4"><MarketplaceMapCanvas listings={listings} /></div>

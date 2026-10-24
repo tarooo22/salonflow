@@ -1,4 +1,5 @@
 import { CatalogFooter, CatalogHeader } from "@/components/catalog/CatalogChrome";
+import { EASE } from "@/components/catalog/HomeMotion";
 import { BookingBar, BookingBusinessStrip, BookingChoiceCard, BookingChoiceStrip, BookingDateStrip, BookingNotice, BookingRail, BookingSlotGroup, BookingStepHeader, DATE_NAMES, addDaysKey, formatDateKeyLong, schemaWeekdayOf, type BookingChoice } from "@/components/public/BookingPrimitives";
 import { usePublicMeta } from "@/components/public/PublicMeta";
 import { type PublicLocale, usePublicLocale } from "@/contexts/PublicLocaleContext";
@@ -9,13 +10,14 @@ import { trpc } from "@/lib/trpc";
 import { BRAND } from "@shared/brand";
 import { MAX_SELECTED_SERVICES } from "@shared/validation";
 import { dateKeyInTimeZone } from "@shared/timezones";
-import { CalendarClock, CalendarPlus, Check, ChevronLeft, CircleAlert, Mail, Phone, RefreshCw, Users, X } from "lucide-react";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion, useReducedMotionConfig } from "framer-motion";
+import { CalendarClock, CalendarPlus, Check, ChevronDown, ChevronLeft, CircleAlert, Clock, Mail, Phone, RefreshCw, Users, X } from "lucide-react";
+import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Link, useRoute, useSearch } from "wouter";
 import "@/components/catalog/booking.css";
 
 export const bookingUi = {
-  ka: { loading: "ჩაწერის კატალოგი იტვირთება…", unavailable: "ჩაწერის მონაცემები დროებით მიუწვდომელია. შეამოწმეთ კავშირი და სცადეთ მოგვიანებით.", inactive: "ეს ჩაწერის ბმული აღარ არის აქტიური", inactiveLead: "ფილიალი შესაძლოა გათიშულია ან ბმული არასწორია. დაბრუნდით კატალოგში და აირჩიეთ აქტიური ფილიალი.", trialPaused: "ონლაინ ჩაწერა ამ სალონისთვის დროებით მიუწვდომელია", trialPausedLead: "სალონის საჯარო ინფორმაცია არ წაშლილა, თუმცა ამ ეტაპზე ახალი ონლაინ ჯავშანი ვერ მიიღება. დეტალებისთვის დაუკავშირდით სალონს.", viewSalon: "სალონის გვერდის ნახვა", received: "მოთხოვნა მიღებულია — ელოდება სალონის დადასტურებას", receivedLead: "თქვენი მოთხოვნა სალონმა უნდა დაადასტუროს. საჭიროების შემთხვევაში შეინახეთ დადასტურების კოდი და გამოიყენეთ დაცული მართვის ბმული.", assigned: "თქვენი სპეციალისტი:", code: "ჯავშნის დადასტურების კოდი", calendar: "კალენდარში დამატება", manage: "ჯავშნის მართვა", returnToList: "კატალოგში დაბრუნება" },
+  ka: { loading: "ჩაწერის კატალოგი იტვირთება…", unavailable: "ჩაწერის მონაცემები დროებით მიუწვდომელია. შეამოწმე კავშირი და სცადე მოგვიანებით.", inactive: "ეს ჩაწერის ბმული აღარ არის აქტიური", inactiveLead: "ფილიალი შესაძლოა გათიშულია ან ბმული არასწორია. დაბრუნდი კატალოგში და აირჩიე აქტიური ფილიალი.", trialPaused: "ონლაინ ჩაწერა ამ სალონისთვის დროებით მიუწვდომელია", trialPausedLead: "სალონის საჯარო ინფორმაცია არ წაშლილა, თუმცა ამ ეტაპზე ახალი ონლაინ ჯავშანი ვერ მიიღება. დეტალებისთვის დაუკავშირდი სალონს.", viewSalon: "სალონის გვერდის ნახვა", received: "მოთხოვნა მიღებულია — ელოდება სალონის დადასტურებას", receivedLead: "შენი მოთხოვნა სალონმა უნდა დაადასტუროს. საჭიროების შემთხვევაში შეინახე დადასტურების კოდი და გამოიყენე დაცული მართვის ბმული.", assigned: "შენი სპეციალისტი:", code: "ჯავშნის დადასტურების კოდი", calendar: "კალენდარში დამატება", manage: "ჯავშნის მართვა", returnToList: "კატალოგში დაბრუნება" },
   en: { loading: "Loading booking catalog…", unavailable: "Booking data is temporarily unavailable. Check your connection and try again.", inactive: "This booking link is no longer active", inactiveLead: "The location may be inactive or the link may be incorrect. Return to the catalog and choose an active business.", trialPaused: "Online booking is temporarily unavailable", trialPausedLead: "This salon profile remains available, but it is not accepting new online bookings at this time. Please contact the salon for details.", viewSalon: "View salon profile", received: "Booking request received!", receivedLead: "Your booking is awaiting salon confirmation. Save the confirmation code if needed.", assigned: "Your specialist:", code: "Booking confirmation code", calendar: "Add to calendar", manage: "Manage booking", returnToList: "Back to the catalog" },
   ru: { loading: "Загрузка каталога записи…", unavailable: "Данные записи временно недоступны. Проверьте подключение и попробуйте снова.", inactive: "Эта ссылка для записи больше не активна", inactiveLead: "Филиал может быть неактивен или ссылка неверна. Вернитесь в каталог и выберите активный.", trialPaused: "Онлайн-запись временно недоступна", trialPausedLead: "Профиль салона остаётся доступным, но новые онлайн-записи сейчас не принимаются. Свяжитесь с салоном для деталей.", viewSalon: "Страница салона", received: "Заявка на запись принята!", receivedLead: "Запись ожидает подтверждения салоном. При необходимости сохраните код подтверждения.", assigned: "Ваш специалист:", code: "Код подтверждения", calendar: "Добавить в календарь", manage: "Управление записью", returnToList: "Вернуться в каталог" },
 } as const;
@@ -27,36 +29,36 @@ const ruPlural = (n: number, one: string, few: string, many: string) => (n % 10 
 // Wizard copy (steps, validation, review table). Georgian is the source of truth; business data (service and staff names) is never translated.
 export const flowUi = {
   ka: {
-    metaWith: (name: string) => `ჩაწერა — ${name}`, metaOnline: "ონლაინ ჩაწერა", metaDescription: "აირჩიეთ სერვისი, სპეციალისტი და თავისუფალი დრო და დაჯავშნეთ ონლაინ.",
+    metaWith: (name: string) => `ჩაწერა — ${name}`, metaOnline: "ონლაინ ჩაწერა", metaDescription: "აირჩიე სერვისი, სპეციალისტი და თავისუფალი დრო და დაჯავშნე ონლაინ.",
     steps: ["სერვისი", "სპეციალისტი", "დრო", "დადასტურება"],
     stepCopy: [
-      { title: "რა გსურთ დღეს?", lede: "აირჩიეთ ერთი ან რამდენიმე სერვისი. შემდეგ ეტაპზე გამოჩნდება მხოლოდ ყველა არჩეული სერვისისთვის შესაბამისი სპეციალისტი." },
-      { title: "ვინ მოგემსახუროთ?", lede: "აირჩიეთ კონკრეტული სპეციალისტი ან ნებისმიერი თავისუფალი." },
-      { title: "რომელი დრო გერგებათ?", lede: "ნაჩვენებია მხოლოდ რეალურად თავისუფალი საათები. არჩეული დრო დაჯავშნისას კვლავ გადამოწმდება." },
-      { title: "გადაამოწმეთ და დაადასტურეთ", lede: "მიუთითეთ საკონტაქტო მონაცემები. ჯავშანს სალონი დაგიდასტურებთ." },
+      { title: "რომელი სერვისი გჭირდება?", lede: "აირჩიე ერთი ან რამდენიმე სერვისი. შემდეგ ეტაპზე გამოჩნდება მხოლოდ ყველა არჩეული სერვისისთვის შესაბამისი სპეციალისტი." },
+      { title: "ვინ მოგემსახურება?", lede: "აირჩიე კონკრეტული სპეციალისტი ან ნებისმიერი თავისუფალი." },
+      { title: "რომელი დრო გერგება?", lede: "ნაჩვენებია მხოლოდ რეალურად თავისუფალი საათები. არჩეული დრო დაჯავშნისას კვლავ გადამოწმდება." },
+      { title: "გადაამოწმე და დაადასტურე", lede: "მიუთითე საკონტაქტო მონაცემები. ჯავშანს სალონი დაგიდასტურებს." },
     ],
     issues: {
-      service: { title: "ჯერ აირჩიეთ სერვისი", description: "მონიშნეთ თქვენთვის სასურველი მომსახურება, შემდეგ კი გადადით სპეციალისტის არჩევაზე." },
-      staff: { title: "ჯერ აირჩიეთ სპეციალისტი", description: "შეგიძლიათ მონიშნოთ კონკრეტული სპეციალისტი ან აირჩიოთ ნებისმიერი თავისუფალი სპეციალისტი." },
-      timeMissing: { title: "დაამატეთ სასურველი თარიღი და დრო", description: `დროის არჩევის შემდეგ ${BRAND.nameKa} ავტომატურად გადაამოწმებს ხელმისაწვდომობას.` },
-      timeUnconfirmed: { title: "ეს დრო ჯერ არ დადასტურებულა", description: "აირჩიეთ სხვა დრო ან დაელოდეთ ხელმისაწვდომობის შემოწმების დასრულებას." },
-      firstName: { title: "მიუთითეთ სახელი", description: "სახელი საჭიროა ჯავშნის მოთხოვნის დასადასტურებლად." },
-      phone: { title: "მიუთითეთ მობილურის ნომერი", description: "მობილურის ნომერი საჭიროა სალონთან თქვენი მოთხოვნის დასაკავშირებლად." },
-      terms: { title: "დაადასტურეთ ჯავშნის პირობები", description: "გაგრძელებამდე საჭიროა მონაცემების დამუშავებაზე თანხმობა." },
-      submit: { title: "ჯავშნის მოთხოვნა ვერ გაიგზავნა", description: "მონაცემები არ დაგვიკარგავს. შეამოწმეთ კავშირი და სცადეთ ხელახლა." },
+      service: { title: "ჯერ აირჩიე სერვისი", description: "მონიშნე სასურველი მომსახურება, შემდეგ კი გადადი სპეციალისტის არჩევაზე." },
+      staff: { title: "ჯერ აირჩიე სპეციალისტი", description: "შეგიძლია მონიშნო კონკრეტული სპეციალისტი ან აირჩიო ნებისმიერი თავისუფალი სპეციალისტი." },
+      timeMissing: { title: "დაამატე სასურველი თარიღი და დრო", description: `დროის არჩევის შემდეგ ${BRAND.nameKa} ავტომატურად გადაამოწმებს ხელმისაწვდომობას.` },
+      timeUnconfirmed: { title: "ეს დრო ჯერ არ დადასტურებულა", description: "აირჩიე სხვა დრო ან დაელოდე ხელმისაწვდომობის შემოწმების დასრულებას." },
+      firstName: { title: "მიუთითე სახელი", description: "სახელი საჭიროა ჯავშნის მოთხოვნის დასადასტურებლად." },
+      phone: { title: "მიუთითე მობილურის ნომერი", description: "მობილურის ნომერი საჭიროა, რომ სალონმა შენს მოთხოვნაზე დაგიკავშირდეს." },
+      terms: { title: "დაადასტურე ჯავშნის პირობები", description: "გაგრძელებამდე საჭიროა მონაცემების დამუშავებაზე თანხმობა." },
+      submit: { title: "ჯავშნის მოთხოვნა ვერ გაიგზავნა", description: "მონაცემები არ დაგვიკარგავს. შეამოწმე კავშირი და სცადე ხელახლა." },
       network: { title: "კავშირი გაწყდა. სცადე თავიდან.", description: "შენი მონაცემები არ დაგვიკარგავს." },
     },
     retry: "თავიდან ცდა", autoPicked: (name: string) => `${name} (ავტომატურად შეირჩა)`, anyStaff: "ნებისმიერი თავისუფალი სპეციალისტი",
-    back: "უკან", profile: "პროფილი", catalog: "კატალოგი", onlineBooking: "ონლაინ ჩაწერა", closeBooking: "ჩაწერის დახურვა", progress: "ჯავშნის პროგრესი", hoursAndContact: "სამუშაო საათები და კონტაქტი",
-    summary: (count: number, minutes: number) => `${count} სერვისი · ${minutes} წთ`, noService: "სერვისი არ არის არჩეული", next: "შემდეგი", sending: "იგზავნება…", book: "დაჯავშნა",
+    back: "უკან", profile: "პროფილი", catalog: "კატალოგი", onlineBooking: "ჩაწერა", closeBooking: "ჩაწერის დახურვა", progress: "ჯავშნის პროგრესი", hoursAndContact: "სამუშაო საათები და კონტაქტი",
+    summary: (count: number, minutes: number) => `${count} სერვისი · ${minutes} წთ`, noService: "სერვისი არ არის არჩეული", pickService: "აირჩიე სერვისი", from: (price: string) => `${price}-დან`, next: "შემდეგი", sending: "იგზავნება…", book: "დაჯავშნა",
     staffHours: "ხელმისაწვდომი სპეციალისტების საათები", noHours: "სამუშაო საათები ჯერ არ არის მითითებული. დროის არჩევისას ხელმისაწვდომობა მაინც ავტომატურად შემოწმდება.", dayFallback: "დღე",
-    noServicesTitle: "ონლაინ სერვისი ჯერ არ არის", noServicesText: "ამ ფილიალში ონლაინ ჩასაწერი სერვისები ჯერ არ არის. დაუკავშირდით სალონს.", choose: (name: string) => `${name} არჩევა`, minutes: "წთ",
-    noStaffTitle: "სპეციალისტი ვერ მოიძებნა", noStaffText: "არჩეული სერვისების ერთობლიობისთვის ამ ფილიალში აქტიური ონლაინ სპეციალისტი ჯერ არ არის. აირჩიეთ სხვა სერვისი ან დაუკავშირდით სალონს.", changeServices: "სერვისების შეცვლა", specialist: "სპეციალისტი",
+    noServicesTitle: "ონლაინ სერვისი ჯერ არ არის", noServicesText: "ამ ფილიალში ონლაინ ჩასაწერი სერვისები ჯერ არ არის. დაუკავშირდი სალონს.", choose: (name: string) => `${name} არჩევა`, minutes: "წთ",
+    noStaffTitle: "სპეციალისტი ვერ მოიძებნა", noStaffText: "არჩეული სერვისების ერთობლიობისთვის ამ ფილიალში აქტიური ონლაინ სპეციალისტი ჯერ არ არის. აირჩიე სხვა სერვისი ან დაუკავშირდი სალონს.", changeServices: "სერვისების შეცვლა", specialist: "სპეციალისტი",
     anyStaffLabel: "ნებისმიერი თავისუფალი სპეციალისტის არჩევა", anyStaffMeta: "სისტემა დროის არჩევისას მოძებნის მხოლოდ არჩეული სერვისებისთვის რეალურად თავისუფალ სპეციალისტს.",
-    duration: "ხანგრძლივობა: ", closedDay: "ამ დღეს დაკეტილია.", slotsLoading: "თავისუფალი დრო იტვირთება…", slotsFailed: "თავისუფალი დროის ჩატვირთვა ვერ მოხერხდა. სცადეთ ხელახლა.",
+    duration: "ხანგრძლივობა: ", closedDay: "ამ დღეს დაკეტილია.", slotsLoading: "თავისუფალი დრო იტვირთება…", slotsFailed: "თავისუფალი დროის ჩატვირთვა ვერ მოხერხდა. სცადე ხელახლა.",
     morning: "დილა", afternoon: "შუადღე", evening: "საღამო",
-    noSlotsTitle: "ამ დღეს თავისუფალი დრო აღარ არის.", noSlotsText: "შეგიძლიათ აირჩიოთ სხვა დღე ან დატოვოთ waitlist მოთხოვნა. ეს არ არის დადასტურებული ჯავშანი და ავტომატური შეტყობინება ჯერ არ იგზავნება.", waitlist: "Waitlist მოთხოვნა", nextDay: "შემდეგი დღე", choicesLabel: "თქვენი არჩევანი",
-    checking: "ხელმისაწვდომობა მოწმდება…", available: "ეს დრო ხელმისაწვდომია — შეგიძლიათ გააგრძელოთ.", taken: "ეს დრო ახლახან დაიკავეს. აირჩიე სხვა დრო.",
+    noSlotsTitle: "ამ დღეს თავისუფალი დრო აღარ არის.", noSlotsText: "შეგიძლია აირჩიო სხვა დღე ან დატოვო მოთხოვნა მოლოდინის სიაში. ეს არ არის დადასტურებული ჯავშანი და ავტომატური შეტყობინება ჯერ არ იგზავნება.", waitlist: "მოლოდინის სიის მოთხოვნა", nextDay: "შემდეგი დღე", choicesLabel: "შენი არჩევანი",
+    checking: "ხელმისაწვდომობა მოწმდება…", available: "ეს დრო ხელმისაწვდომია — შეგიძლია გააგრძელო.", taken: "ეს დრო ახლახან დაიკავეს. აირჩიე სხვა დრო.",
     change: "შეცვლა", changeAria: (label: string) => `${label} — შეცვლა`, summaryCaption: "ჯავშნის შეჯამება", business: "ბიზნესი", dateTime: "თარიღი და დრო", duration2: "ხანგრძლივობა", services: "სერვისები", total: "ჯამი",
     firstName: "სახელი *", lastName: "გვარი", optional: "(არასავალდებულო)", phone: "მობილურის ნომერი *", phonePlaceholder: "მაგ. 555 12 34 56", phoneHelp: "ფორმატი: 5XX XX XX XX. ნომერი გამოყენებული იქნება მხოლოდ ამ მოთხოვნისთვის.",
     email: "ელფოსტა", note: "კომენტარი სალონისთვის", consent: "ვეთანხმები, რომ სალონმა ჩემი მონაცემები გამოიყენოს მხოლოდ ამ ჯავშნის მოთხოვნის დამუშავებისა და დადასტურებისთვის. *",
@@ -84,7 +86,7 @@ export const flowUi = {
     },
     retry: "Try again", autoPicked: (name: string) => `${name} (assigned automatically)`, anyStaff: "Any available specialist",
     back: "Back", profile: "Profile", catalog: "Catalog", onlineBooking: "Online booking", closeBooking: "Close booking", progress: "Booking progress", hoursAndContact: "Working hours and contact",
-    summary: (count: number, minutes: number) => `${count} ${count === 1 ? "service" : "services"} · ${minutes} min`, noService: "No service selected", next: "Next", sending: "Sending…", book: "Book",
+    summary: (count: number, minutes: number) => `${count} ${count === 1 ? "service" : "services"} · ${minutes} min`, noService: "No service selected", pickService: "Choose a service", from: (price: string) => `From ${price}`, next: "Next", sending: "Sending…", book: "Book",
     staffHours: "Specialists' available hours", noHours: "Working hours have not been set yet. Availability is still checked automatically when you choose a time.", dayFallback: "Day",
     noServicesTitle: "No online services yet", noServicesText: "This location has no services available for online booking yet. Please contact the salon.", choose: (name: string) => `Select ${name}`, minutes: "min",
     noStaffTitle: "No specialist found", noStaffText: "No active online specialist at this location can do the selected combination of services. Choose a different service or contact the salon.", changeServices: "Change services", specialist: "Specialist",
@@ -120,7 +122,7 @@ export const flowUi = {
     },
     retry: "Попробовать ещё раз", autoPicked: (name: string) => `${name} (выбран автоматически)`, anyStaff: "Любой свободный специалист",
     back: "Назад", profile: "Профиль", catalog: "Каталог", onlineBooking: "Онлайн-запись", closeBooking: "Закрыть запись", progress: "Ход записи", hoursAndContact: "Часы работы и контакты",
-    summary: (count: number, minutes: number) => `${count} ${ruPlural(count, "услуга", "услуги", "услуг")} · ${minutes} мин`, noService: "Услуга не выбрана", next: "Далее", sending: "Отправка…", book: "Записаться",
+    summary: (count: number, minutes: number) => `${count} ${ruPlural(count, "услуга", "услуги", "услуг")} · ${minutes} мин`, noService: "Услуга не выбрана", pickService: "Выберите услугу", from: (price: string) => `от ${price}`, next: "Далее", sending: "Отправка…", book: "Записаться",
     staffHours: "Доступные часы специалистов", noHours: "Часы работы пока не указаны. Доступность всё равно проверяется автоматически при выборе времени.", dayFallback: "День",
     noServicesTitle: "Онлайн-услуг пока нет", noServicesText: "В этом филиале пока нет услуг для онлайн-записи. Свяжитесь с салоном.", choose: (name: string) => `Выбрать: ${name}`, minutes: "мин",
     noStaffTitle: "Специалист не найден", noStaffText: "В этом филиале нет активного онлайн-специалиста для выбранного сочетания услуг. Выберите другую услугу или свяжитесь с салоном.", changeServices: "Изменить услуги", specialist: "Специалист",
@@ -137,7 +139,7 @@ export const flowUi = {
 } as const;
 
 export type BookingTeamMember = { id: string; name: string; specialty: string | null; bio: string | null; eligibleServiceIds: string[] };
-type BookingService = { id: string; nameKa: string; defaultDurationMinutes: number; priceTetri: number };
+type BookingService = { id: string; nameKa: string; defaultDurationMinutes: number; priceTetri: number; isFromPrice?: boolean };
 type BookingLocation = { name: string; timezone: string; address: string | null; phone: string | null; email: string | null; publicDescription: string | null; workingHours: Array<{ weekday: number; startLocalTime: string; endLocalTime: string }> };
 type BookingIssueKind = "service" | "staff" | "time" | "contact" | "submit";
 export type BookingValidationIssue = { kind: BookingIssueKind; title: string; description: string };
@@ -150,6 +152,9 @@ export function getEligibleTeam(team: BookingTeamMember[], serviceIds?: string |
 export function formatGel(tetri: number) {
   return formatGelTetri(tetri);
 }
+
+// "40,00 ₾-დან" for services priced "from"; shown the same way on the salon profile.
+const priceLabel = (text: { from: (price: string) => string }, tetri: number, from?: boolean) => from ? text.from(formatGel(tetri)) : formatGel(tetri);
 
 export function getBookingValidationIssue(input: { step: number; serviceId?: string; staffProfileId?: string; startsAt: Date | null; available?: boolean; firstName: string; phone: string; termsAccepted: boolean; locale?: PublicLocale }): BookingValidationIssue | null {
   const issues = flowUi[input.locale ?? "ka"].issues;
@@ -212,8 +217,10 @@ export default function BookingFlow() {
   const [interactionError, setInteractionError] = useState<BookingValidationIssue | null>(null);
   const [slotTaken, setSlotTaken] = useState(false);
   const errorRef = useRef<HTMLDivElement>(null);
-  const titleRef = useRef<HTMLHeadingElement>(null);
   const focusTitle = useRef(false);
+  const reduceMotion = useReducedMotionConfig();
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreId = useId();
 
   // Once the catalog arrives, apply ?services= : keep only ids that exist, preselect them and start at the specialist step.
   if (catalog.data && !initialised) {
@@ -257,6 +264,8 @@ export default function BookingFlow() {
   const selectedServices = catalog.data?.catalog.filter(item => serviceIds.includes(item.service.id)).map(item => item.service) ?? [];
   const totalMinutes = selectedServices.reduce((sum, service) => sum + service.defaultDurationMinutes, 0);
   const totalTetri = selectedServices.reduce((sum, service) => sum + service.priceTetri, 0);
+  const anyFrom = selectedServices.some(service => service.isFromPrice);
+  const money = (tetri: number, from?: boolean) => priceLabel(text, tetri, from);
   const selectedStaff = catalog.data?.team.find(member => member.id === staffProfileId);
   const eligibleTeam = getEligibleTeam(catalog.data?.team ?? [], serviceIds);
   const staffLabel = staffProfileId === ANY_AVAILABLE ? (availability.data?.staffName ? text.autoPicked(availability.data.staffName) : text.anyStaff) : selectedStaff?.name;
@@ -267,12 +276,12 @@ export default function BookingFlow() {
     return () => cancelAnimationFrame(frame);
   }, [interactionError]);
 
-  // After the user moves between steps, put focus on the new step title so screen-reader and keyboard users land on it.
-  useEffect(() => {
-    if (!focusTitle.current) return;
+  // After the user moves between steps, put focus on the new step title (the new step mounts after the old one fades out).
+  const focusStepTitle = (node: HTMLHeadingElement | null) => {
+    if (!node || !focusTitle.current) return;
     focusTitle.current = false;
-    titleRef.current?.focus();
-  }, [step]);
+    node.focus();
+  };
 
   const goToStep = (target: number) => { focusTitle.current = true; setInteractionError(null); setSlotTaken(false); setStep(target); };
   const clearIssue = (kind?: BookingIssueKind) => setInteractionError(current => !kind || current?.kind === kind ? null : current);
@@ -302,7 +311,7 @@ export default function BookingFlow() {
     return <div className="cw min-h-screen">
       <CatalogHeader />
       <main id="main-content" tabIndex={-1} className="cwb-page">
-        <BookingConfirmation confirmationToken={confirmation.token} assignedStaffName={confirmation.assignedStaffName} serviceName={selectedServices.map(service => service.nameKa).join(" + ")} services={selectedServices.map(service => ({ name: service.nameKa, priceTetri: service.priceTetri }))} totalTetri={totalTetri} startsAt={startsAt} endsAt={confirmation.endsAt} locationName={catalog.data.location.name} locationAddress={catalog.data.location.address} timeZone={catalog.data.location.timezone} />
+        <BookingConfirmation confirmationToken={confirmation.token} assignedStaffName={confirmation.assignedStaffName} serviceName={selectedServices.map(service => service.nameKa).join(" + ")} services={selectedServices.map(service => ({ name: service.nameKa, priceTetri: service.priceTetri, isFromPrice: service.isFromPrice }))} totalTetri={totalTetri} totalIsFrom={anyFrom} startsAt={startsAt} endsAt={confirmation.endsAt} locationName={catalog.data.location.name} locationAddress={catalog.data.location.address} timeZone={catalog.data.location.timezone} />
       </main>
       <CatalogFooter />
     </div>;
@@ -315,7 +324,7 @@ export default function BookingFlow() {
   if (step >= 1 && selectedServices.length) choices.push({ id: "services", text: selectedServices.map(service => service.nameKa).join(" + "), onChange: () => goToStep(0), changeLabel: text.change, changeAria: text.changeAria(text.services) });
   if (step >= 2 && staffLabel) choices.push({ id: "staff", text: staffLabel, onChange: () => goToStep(1), changeLabel: text.change, changeAria: text.changeAria(text.specialist) });
   if (step >= 3 && startsAt) choices.push({ id: "time", text: formatDateTimeForLocale(startsAt, locale, timeZone), onChange: () => goToStep(2), changeLabel: text.change, changeAria: text.changeAria(text.dateTime) });
-  if (step >= 1 && selectedServices.length) choices.push({ id: "price", text: formatGel(totalTetri) });
+  if (step >= 1 && selectedServices.length) choices.push({ id: "price", text: money(totalTetri, anyFrom) });
 
   return <div className="cw min-h-screen">
     <CatalogHeader />
@@ -338,25 +347,27 @@ export default function BookingFlow() {
 
         {catalog.data && available ? <>
           <BookingRail steps={[...text.steps]} current={step} label={text.progress} />
-          <BookingBusinessStrip name={catalog.data.location.name} address={catalog.data.location.address} />
-          <details className="cwb-more"><summary>{text.hoursAndContact}</summary><LocationContext location={catalog.data.location} /></details>
+          <BookingBusinessStrip name={catalog.data.location.name} address={catalog.data.location.address} action={<button type="button" className="cwb-more-btn" aria-expanded={moreOpen} aria-controls={moreId} onClick={() => setMoreOpen(open => !open)}><Clock className="size-4 shrink-0" aria-hidden="true" /><span>{text.hoursAndContact}</span><ChevronDown className="cwb-more-chevron size-4 shrink-0" aria-hidden="true" /></button>} />
+          {moreOpen ? <div id={moreId} className="cwb-more"><LocationContext location={catalog.data.location} /></div> : null}
           <BookingChoiceStrip choices={choices} label={text.choicesLabel} />
           {interactionError ? <div className="cwb-pad"><BookingErrorNotice issue={interactionError} errorRef={errorRef} onRetry={interactionError.kind === "submit" ? submitBooking : undefined} /></div> : null}
-          <div className="cwb-step" key={step}>
-            <BookingStepHeader title={text.stepCopy[step]!.title} description={text.stepCopy[step]!.lede} headingRef={titleRef} />
+          <AnimatePresence mode="wait" initial={false}>
+          <motion.div className="cwb-step" key={step} initial={reduceMotion ? false : { opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0, transition: { duration: 0.18, ease: EASE } }} exit={reduceMotion ? undefined : { opacity: 0, transition: { duration: 0.12, ease: [0.4, 0, 1, 1] } }}>
+            <BookingStepHeader title={text.stepCopy[step]!.title} description={text.stepCopy[step]!.lede} headingRef={focusStepTitle} />
             <div className="mt-4">
               {step === 0 ? <ServiceStep catalog={catalog.data.catalog} selectedIds={serviceIds} onSelect={selectService} /> : null}
               {step === 1 ? <StaffStep team={eligibleTeam} selectedId={staffProfileId} onSelect={selectStaff} onEditServices={() => goToStep(0)} /> : null}
               {step === 2 ? <TimeStep slug={slug} serviceId={serviceId} serviceIds={serviceIds} multiService={isMultiService} staffProfileId={staffProfileId} workingHours={catalog.data.location.workingHours} timezone={catalog.data.location.timezone} dateTime={dateTime} durationMinutes={totalMinutes} onChange={selectDateTime} availability={availability} slotTaken={slotTaken} /> : null}
-              {step === 3 ? <ConfirmStep location={catalog.data.location} services={selectedServices} staffLabel={staffLabel} startsAt={startsAt} totalMinutes={totalMinutes} totalTetri={totalTetri} onEdit={goToStep} contactError={interactionError?.kind === "contact"} firstName={firstName} lastName={lastName} phone={phone} email={email} customerNote={customerNote} termsAccepted={termsAccepted} onFirstName={value => { setFirstName(value); clearIssue("contact"); }} onLastName={setLastName} onPhone={value => { setPhone(value); clearIssue("contact"); }} onEmail={setEmail} onNote={setCustomerNote} onTerms={value => { setTermsAccepted(value); clearIssue("contact"); }} /> : null}
+              {step === 3 ? <ConfirmStep location={catalog.data.location} services={selectedServices} staffLabel={staffLabel} startsAt={startsAt} totalMinutes={totalMinutes} totalTetri={totalTetri} totalIsFrom={anyFrom} onEdit={goToStep} contactError={interactionError?.kind === "contact"} firstName={firstName} lastName={lastName} phone={phone} email={email} customerNote={customerNote} termsAccepted={termsAccepted} onFirstName={value => { setFirstName(value); clearIssue("contact"); }} onLastName={setLastName} onPhone={value => { setPhone(value); clearIssue("contact"); }} onEmail={setEmail} onNote={setCustomerNote} onTerms={value => { setTermsAccepted(value); clearIssue("contact"); }} /> : null}
             </div>
-          </div>
+          </motion.div>
+          </AnimatePresence>
           <BookingBar
-            summary={selectedServices.length ? text.summary(selectedServices.length, totalMinutes) : text.noService}
-            total={formatGel(totalTetri)}
-            label={step < 3 ? text.next : submitting ? text.sending : text.book}
+            summary={selectedServices.length ? text.summary(selectedServices.length, totalMinutes) : undefined}
+            total={selectedServices.length ? money(totalTetri, anyFrom) : undefined}
+            label={!selectedServices.length ? text.pickService : step < 3 ? text.next : submitting ? text.sending : text.book}
             blocked={barBlocked}
-            hint={blockedIssue?.title}
+            hint={selectedServices.length ? blockedIssue?.title : undefined}
             conversionEvent={step === 3 ? "BOOKING_SUBMIT_SELECTED" : undefined}
             onClick={advanceBooking}
           />
@@ -396,7 +407,7 @@ function ServiceStep({ catalog, selectedIds, onSelect }: { catalog: Array<{ serv
     return <div key={group.name} className="cwb-group" role="group" aria-labelledby={`booking-group-${index}`}>
       <div className="cwb-group-head"><h2 id={`booking-group-${index}`}>{group.name}</h2><span className="cwb-group-count cw-num">{picked ? `${picked} / ${group.items.length}` : group.items.length}</span></div>
       {group.items.map(service => <BookingChoiceCard key={service.id} conversionEvent="BOOKING_SERVICE_SELECTED" label={text.choose(service.nameKa)} selected={selectedIds.includes(service.id)} onSelect={() => onSelect(service.id)}>
-        <span className="cwb-row-line"><span className="cwb-row-title">{service.nameKa}</span><span className="cwb-price">{formatGel(service.priceTetri)}</span></span>
+        <span className="cwb-row-line"><span className="cwb-row-title">{service.nameKa}</span><span className="cwb-price">{priceLabel(text, service.priceTetri, service.isFromPrice)}</span></span>
         <span className="cwb-row-meta block"><span className="cw-num">{service.defaultDurationMinutes} {text.minutes}</span></span>
       </BookingChoiceCard>)}
     </div>;
@@ -492,7 +503,7 @@ function FieldError({ id, children }: { id: string; children: React.ReactNode })
   return <p id={id} className="cwb-error"><CircleAlert className="size-4" aria-hidden="true" />{children}</p>;
 }
 
-function ConfirmStep({ location, services, staffLabel, startsAt, totalMinutes, totalTetri, onEdit, contactError, firstName, lastName, phone, email, customerNote, termsAccepted, onFirstName, onLastName, onPhone, onEmail, onNote, onTerms }: { location: BookingLocation; services: BookingService[]; staffLabel?: string; startsAt: Date | null; totalMinutes: number; totalTetri: number; onEdit: (step: number) => void; contactError: boolean; firstName: string; lastName: string; phone: string; email: string; customerNote: string; termsAccepted: boolean; onFirstName: (value: string) => void; onLastName: (value: string) => void; onPhone: (value: string) => void; onEmail: (value: string) => void; onNote: (value: string) => void; onTerms: (value: boolean) => void }) {
+function ConfirmStep({ location, services, staffLabel, startsAt, totalMinutes, totalTetri, totalIsFrom, onEdit, contactError, firstName, lastName, phone, email, customerNote, termsAccepted, onFirstName, onLastName, onPhone, onEmail, onNote, onTerms }: { location: BookingLocation; services: BookingService[]; staffLabel?: string; startsAt: Date | null; totalMinutes: number; totalTetri: number; totalIsFrom: boolean; onEdit: (step: number) => void; contactError: boolean; firstName: string; lastName: string; phone: string; email: string; customerNote: string; termsAccepted: boolean; onFirstName: (value: string) => void; onLastName: (value: string) => void; onPhone: (value: string) => void; onEmail: (value: string) => void; onNote: (value: string) => void; onTerms: (value: boolean) => void }) {
   const { locale } = usePublicLocale();
   const text = flowUi[locale];
   const edit = (label: string, target: number) => <button type="button" className="cwb-link" aria-label={text.changeAria(label)} onClick={() => onEdit(target)}>{text.change}</button>;
@@ -505,8 +516,8 @@ function ConfirmStep({ location, services, staffLabel, startsAt, totalMinutes, t
       <tr><th scope="row">{text.dateTime}</th><td className="cw-num">{startsAt ? formatDateTimeForLocale(startsAt, locale, location.timezone) : "—"}</td><td className="cwb-review-edit">{edit(text.dateTime, 2)}</td></tr>
       <tr><th scope="row">{text.specialist}</th><td>{staffLabel ?? "—"}</td><td className="cwb-review-edit">{edit(text.specialist, 1)}</td></tr>
       <tr><th scope="row">{text.duration2}</th><td colSpan={2} className="cw-num">{totalMinutes} {text.minutes}</td></tr>
-      <tr><th scope="row">{text.services}</th><td><ul className="cwb-review-services">{services.map(service => <li key={service.id}><span>{service.nameKa}</span><span className="cwb-price">{formatGel(service.priceTetri)}</span></li>)}</ul></td><td className="cwb-review-edit">{edit(text.services, 0)}</td></tr>
-      <tr className="cwb-review-total"><th scope="row">{text.total}</th><td colSpan={2} className="cw-num">{formatGel(totalTetri)}</td></tr>
+      <tr><th scope="row">{text.services}</th><td><ul className="cwb-review-services">{services.map(service => <li key={service.id}><span>{service.nameKa}</span><span className="cwb-price">{priceLabel(text, service.priceTetri, service.isFromPrice)}</span></li>)}</ul></td><td className="cwb-review-edit">{edit(text.services, 0)}</td></tr>
+      <tr className="cwb-review-total"><th scope="row">{text.total}</th><td colSpan={2} className="cw-num">{priceLabel(text, totalTetri, totalIsFrom)}</td></tr>
     </tbody></table></div>
     <div className="cwb-fields">
       <div className="cwb-fields cwb-two">
@@ -548,7 +559,7 @@ function ConfirmStep({ location, services, staffLabel, startsAt, totalMinutes, t
   </div>;
 }
 
-export function BookingConfirmation({ confirmationToken, assignedStaffName, serviceName, services, totalTetri, startsAt, endsAt, locationName, locationAddress, timeZone }: { confirmationToken: string; assignedStaffName?: string; serviceName: string; services?: Array<{ name: string; priceTetri: number }>; totalTetri?: number; startsAt: Date; endsAt: Date; locationName: string; locationAddress?: string | null; timeZone?: string }) {
+export function BookingConfirmation({ confirmationToken, assignedStaffName, serviceName, services, totalTetri, totalIsFrom, startsAt, endsAt, locationName, locationAddress, timeZone }: { confirmationToken: string; assignedStaffName?: string; serviceName: string; services?: Array<{ name: string; priceTetri: number; isFromPrice?: boolean }>; totalTetri?: number; totalIsFrom?: boolean; startsAt: Date; endsAt: Date; locationName: string; locationAddress?: string | null; timeZone?: string }) {
   const { locale } = usePublicLocale();
   const ui = bookingUi[locale];
   const text = flowUi[locale];
@@ -570,8 +581,8 @@ export function BookingConfirmation({ confirmationToken, assignedStaffName, serv
         <tr><th scope="row">{text.business}</th><td>{locationName}{locationAddress ? <span className="block text-sm font-normal text-muted-foreground">{locationAddress}</span> : null}</td></tr>
         <tr><th scope="row">{text.dateTime}</th><td className="cw-num">{formatDateTimeForLocale(startsAt, locale, timeZone)}</td></tr>
         {assignedStaffName ? <tr><th scope="row">{text.specialist}</th><td><span className="sr-only">{ui.assigned} </span>{assignedStaffName}</td></tr> : null}
-        <tr><th scope="row">{text.services}</th><td>{services?.length ? <ul className="cwb-review-services">{services.map(service => <li key={service.name}><span>{service.name}</span><span className="cwb-price">{formatGel(service.priceTetri)}</span></li>)}</ul> : serviceName}</td></tr>
-        {totalTetri !== undefined ? <tr className="cwb-review-total"><th scope="row">{text.total}</th><td className="cw-num">{formatGel(totalTetri)}</td></tr> : null}
+        <tr><th scope="row">{text.services}</th><td>{services?.length ? <ul className="cwb-review-services">{services.map(service => <li key={service.name}><span>{service.name}</span><span className="cwb-price">{priceLabel(text, service.priceTetri, service.isFromPrice)}</span></li>)}</ul> : serviceName}</td></tr>
+        {totalTetri !== undefined ? <tr className="cwb-review-total"><th scope="row">{text.total}</th><td className="cw-num">{priceLabel(text, totalTetri, totalIsFrom)}</td></tr> : null}
       </tbody></table></div>
       <div>
         <p className="cwb-caption">{ui.code}</p>

@@ -5,9 +5,8 @@ import { type PublicLocale, usePublicLocale } from "@/contexts/PublicLocaleConte
 import { formatGelTetri } from "@/lib/presentation";
 import { trpc } from "@/lib/trpc";
 import { VERTICALS, verticalForCategory, verticalLabel, type Vertical } from "@/lib/verticals";
-import { BRAND } from "@shared/brand";
 import type { inferRouterOutputs } from "@trpc/server";
-import { ArrowRight, MapPin, Package, Search, X } from "lucide-react";
+import { ArrowRight, MapPin, Package, Search, X, type LucideIcon } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { Link } from "wouter";
 import type { AppRouter } from "../../../../server/routers";
@@ -101,8 +100,6 @@ export function CommerceFilters({ idPrefix, vertical, onVertical, area, onArea, 
   const [draft, setDraft] = useState(area);
   const categories = trpc.marketplace.categories.useQuery(undefined, { enabled: Boolean(onCategory) });
   const shownCategories = (categories.data ?? []).filter(item => !vertical || verticalForCategory(item.slug) === vertical);
-  const now = new Date();
-  const today = `${String(now.getDate()).padStart(2, "0")}.${String(now.getMonth() + 1).padStart(2, "0")}.${now.getFullYear()}`;
   const submit = (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); onArea(draft.trim()); };
   const clear = () => { setDraft(""); onArea(""); onCategory?.(undefined); onVertical(null); };
   const hasFilters = Boolean(vertical || area || category);
@@ -115,10 +112,6 @@ export function CommerceFilters({ idPrefix, vertical, onVertical, area, onArea, 
       </button>)}
     </div>
     <div className="cwx-filters">
-      <div className="cwx-filter-meta">
-        <span>{text.date} <span>{today}</span></span>
-        <span>{BRAND.domain}</span>
-      </div>
       <form onSubmit={submit} role="search" aria-label={captionWhere} className="cwx-filter-form">
         <div className="cwx-filter-row">
           <label className="cwx-field">
@@ -198,12 +191,13 @@ export function LoadingGrid({ ticket = true }: { ticket?: boolean }) {
   </div>;
 }
 
-/** Honest empty state: one muted line and one action, no invented rows and no dashed box. */
-export function CommerceEmpty({ title, text, children }: { title: string; text: string; children?: React.ReactNode }) {
-  return <div className="cwx-empty" role="status">
-    <h3 className="cwx-empty-title">{title}</h3>
-    <p className="cwx-empty-text">{text}</p>
-    {children ? <div className="cwx-empty-actions">{children}</div> : null}
+/** Honest empty state: an icon, one line and one action; no invented rows. */
+export function CommerceEmpty({ icon: Icon, title, text, children }: { icon: LucideIcon; title: string; text: string; children?: React.ReactNode }) {
+  return <div className="cw-empty" role="status">
+    <span className="cw-empty-icon"><Icon aria-hidden="true" /></span>
+    <h2>{title}</h2>
+    <p>{text}</p>
+    {children}
   </div>;
 }
 

@@ -1,11 +1,12 @@
 import { CatalogFooter, CatalogHeader } from "@/components/catalog/CatalogChrome";
 import { COMMERCE_PAGE_SIZE, CommerceEmpty, CommerceFilters, LoadingGrid, LoadMoreButton, ProductGrid, type ProductItem, useLoadMore } from "@/components/catalog/Commerce";
-import { DiscoveryHero } from "@/components/public/MarketplaceDiscovery";
+import { HeroIn } from "@/components/catalog/HomeMotion";
 import { usePublicMeta } from "@/components/public/PublicMeta";
 import { usePublicLocale } from "@/contexts/PublicLocaleContext";
 import { trpc } from "@/lib/trpc";
 import type { Vertical } from "@/lib/verticals";
 import { BRAND } from "@shared/brand";
+import { Package, Search } from "lucide-react";
 import { useState } from "react";
 import { Link } from "wouter";
 
@@ -14,10 +15,10 @@ export const ui = {
     metaTitle: "პროდუქტები", metaDescription: "სალონების, ესთეტიკის ცენტრებისა და კლინიკების პროდუქტები ერთ ვიტრინაში. შეძენა ხდება უშუალოდ ბიზნესში.",
     heroTitle: "პროდუქტები", heroLede: "სალონების, ესთეტიკის ცენტრებისა და კლინიკების პროდუქტები ერთ ვიტრინაში.", searchCaption: "პროდუქტების ძებნა",
     shopTitle: "ვიტრინა", shopLede: "ონლაინ შეძენა და კალათა არ არის: პროდუქტს იღებ და იხდი უშუალოდ ბიზნესში. ფასი და მარაგი შეიძლება შეიცვალოს, ამიტომ ვიზიტამდე გადაამოწმე.",
-    loadFailedBefore: "პროდუქტების ჩატვირთვა ვერ მოხერხდა. სცადეთ რამდენიმე წუთში ან ", refresh: "განაახლეთ",
-    filteredTitle: "ამ ფილტრში პროდუქტი ვერ მოიძებნა.", filteredText: "სცადეთ სხვა სფერო ან უბანი.", clear: "ფილტრის გასუფთავება",
+    loadFailedBefore: "პროდუქტების ჩატვირთვა ვერ მოხერხდა. სცადე რამდენიმე წუთში ან ", refresh: "განაახლე",
+    filteredTitle: "ამ ფილტრში პროდუქტი ვერ მოიძებნა.", filteredText: "სცადე სხვა სფერო ან უბანი.", clear: "ფილტრის გასუფთავება",
     emptyTitle: "ამჟამად პროდუქტები არ არის დამატებული.", emptyText: "როცა დამტკიცებული ბიზნესი თავის პროდუქტებს დაამატებს, აქ გამოჩნდება.", forBusiness: "ბიზნესისთვის",
-    moreFailed: "მეტის ჩატვირთვა ვერ მოხერხდა. სცადეთ ხელახლა.",
+    moreFailed: "მეტის ჩატვირთვა ვერ მოხერხდა. სცადე ხელახლა.",
   },
   en: {
     metaTitle: "Products", metaDescription: "Products from salons, aesthetics centres and clinics in one showcase. You buy directly at the business.",
@@ -50,11 +51,11 @@ function ProductResults({ filters, onClear }: { filters: Filters; onClear: () =>
   if (list.isError && !list.items.length) return <p role="alert" className="mkt-alert">{text.loadFailedBefore}<button type="button" className="mkt-linkbtn" onClick={() => list.refetch()}>{text.refresh}</button>.</p>;
   if (!list.items.length) {
     return filtered
-      ? <CommerceEmpty title={text.filteredTitle} text={text.filteredText}>
-        <button type="button" className="mkt-btn mkt-btn-secondary" onClick={onClear}>{text.clear}</button>
+      ? <CommerceEmpty icon={Search} title={text.filteredTitle} text={text.filteredText}>
+        <button type="button" className="cw-btn cw-btn-line" onClick={onClear}>{text.clear}</button>
       </CommerceEmpty>
-      : <CommerceEmpty title={text.emptyTitle} text={text.emptyText}>
-        <Link href="/partner" className="mkt-btn mkt-btn-primary">{text.forBusiness}</Link>
+      : <CommerceEmpty icon={Package} title={text.emptyTitle} text={text.emptyText}>
+        <Link href="/partner" className="cw-btn cw-btn-stamp">{text.forBusiness}</Link>
       </CommerceEmpty>;
   }
   return <>
@@ -76,9 +77,17 @@ export default function Products() {
   return <div className="cw min-h-screen">
     <CatalogHeader />
     <main id="main-content">
-      <DiscoveryHero title={text.heroTitle} lede={text.heroLede}>
-        <CommerceFilters idPrefix="prod" vertical={vertical} onVertical={setVertical} area={area} onArea={setArea} captionWhere={text.searchCaption} />
-      </DiscoveryHero>
+      <section className="mkt-hero" aria-labelledby="prod-hero-title">
+        <div className="mkt-container">
+          <HeroIn>
+            <h1 id="prod-hero-title" className="mkt-h1">{text.heroTitle}</h1>
+            <p className="mkt-lede mt-3">{text.heroLede}</p>
+          </HeroIn>
+          <div className="mt-8">
+            <CommerceFilters idPrefix="prod" vertical={vertical} onVertical={setVertical} area={area} onArea={setArea} captionWhere={text.searchCaption} />
+          </div>
+        </div>
+      </section>
       <section className="mkt-section" aria-labelledby="prod-results-title">
         <div className="mkt-container">
           <h2 id="prod-results-title" className="mkt-h2">{text.shopTitle}</h2>

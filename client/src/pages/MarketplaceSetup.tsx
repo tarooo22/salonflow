@@ -2,9 +2,11 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { WorkspacePageHeader, WorkspaceSection, WorkspaceState, WorkspaceStatusPill } from "@/components/workspace/WorkspacePrimitives";
 import { trpc } from "@/lib/trpc";
-import { CheckCircle2, CircleCheck, LoaderCircle, MapPin, Search, Send, Tag } from "lucide-react";
+import { CheckCircle2, ChevronDown, CircleCheck, LoaderCircle, MapPin, Plus, Search, Send, Tag, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -13,6 +15,24 @@ type GeocodeCandidate = { placeId: string; formattedAddress: string; latitudeE6:
 
 export function marketplaceListingStatusLabel(status: string | null | undefined) {
   return status === "SUBMITTED" ? "განხილვაზეა" : status === "APPROVED" ? "საჯაროა" : status === "HIDDEN" ? "დამალულია" : status === "REJECTED" ? "დასაზუსტებელია" : "მოსამზადებელია";
+}
+
+type OnlineService = { service: { id: string; nameKa: string; defaultDurationMinutes: number } };
+
+function CategoryLinks({ name, services, linkedIds, onToggle }: { name: string; services: OnlineService[]; linkedIds: string[]; onToggle: (serviceId: string, checked: boolean) => void }) {
+  const [open, setOpen] = useState(false);
+  const linked = services.filter(row => linkedIds.includes(row.service.id));
+  const available = services.filter(row => !linkedIds.includes(row.service.id));
+  return <section className="min-w-0 rounded-xl border border-border p-3" aria-label={name}>
+    <div className="flex items-center gap-2"><Tag className="size-4 shrink-0 text-[var(--sf-accent-ink)]" aria-hidden="true" /><h3 className="min-w-0 flex-1 truncate font-semibold">{name}</h3></div>
+    {linked.length ? <ul className="mt-2 flex flex-wrap gap-2">{linked.map(row => <li key={row.service.id} className="inline-flex min-w-0 max-w-full items-center gap-1 rounded-full bg-[var(--sf-accent-soft)] py-1 pl-3 pr-1 text-sm text-[var(--sf-accent-ink)]"><span className="truncate">{row.service.nameKa}</span><button type="button" onClick={() => onToggle(row.service.id, false)} aria-label={`მოხსნა: ${row.service.nameKa}`} className="grid size-8 shrink-0 place-items-center rounded-full hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-[var(--sf-focus)] md:size-6"><X className="size-3.5" aria-hidden="true" /></button></li>)}</ul> : <p className="mt-2 text-sm text-muted-foreground">სერვისი მიბმული არ არის.</p>}
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild><Button type="button" variant="outline" size="sm" className="mt-3 max-md:h-11" disabled={!available.length}><Plus className="mr-1.5 size-3.5" aria-hidden="true" />სერვისის მიბმა</Button></PopoverTrigger>
+      <PopoverContent align="start" className="w-[min(20rem,calc(100vw-2rem))] p-0">
+        <Command><CommandInput placeholder="სერვისის ძებნა…" /><CommandList><CommandEmpty>სერვისი ვერ მოიძებნა.</CommandEmpty><CommandGroup>{available.map(row => <CommandItem key={row.service.id} value={`${row.service.nameKa} ${row.service.id}`} onSelect={() => { onToggle(row.service.id, true); setOpen(false); }}><span className="min-w-0 flex-1 truncate">{row.service.nameKa}</span><span className="font-mono text-xs text-muted-foreground">{row.service.defaultDurationMinutes} წთ</span></CommandItem>)}</CommandGroup></CommandList></Command>
+      </PopoverContent>
+    </Popover>
+  </section>;
 }
 
 export default function MarketplaceSetup() {
@@ -32,6 +52,7 @@ export default function MarketplaceSetup() {
   const [categorySelections, setCategorySelections] = useState<CategorySelection>({});
   const [geocodeCandidates, setGeocodeCandidates] = useState<GeocodeCandidate[]>([]);
   const [selectedCandidate, setSelectedCandidate] = useState<GeocodeCandidate | null>(null);
+  const [othersOpen, setOthersOpen] = useState(false);
 
   useEffect(() => {
     if (!locationId && locations.data?.[0]?.id) setLocationId(locations.data[0].id);
@@ -95,7 +116,18 @@ export default function MarketplaceSetup() {
         <WorkspaceSection title="კატეგორიები და სერვისები" description="მონიშნეთ მხოლოდ ის, რასაც ამ ფილიალში ონლაინ ჩაწერით სთავაზობთ.">
           {services.isLoading || categories.isLoading ? <p className="text-sm text-muted-foreground">იტვირთება…</p> : null}
           {!onlineServices.length && !services.isLoading ? <WorkspaceState kind="empty" title="ონლაინ ჩაწერის სერვისი ჯერ არ არის" description="დაამატეთ სერვისი სერვისების გვერდზე." /> : null}
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">{categories.data?.map(category => <section key={category.id} className="rounded-md border p-3"><div className="flex items-center gap-2"><Tag className="size-4 text-primary" /><h2 className="font-semibold">{category.nameKa}</h2></div><div className="mt-2 grid gap-1">{onlineServices.map(row => { const checked = categorySelections[category.id]?.includes(row.service.id) ?? false; return <label key={row.service.id} className="flex cursor-pointer items-start gap-3 rounded-md px-2 py-2 transition-colors hover:bg-muted/50"><input type="checkbox" checked={checked} onChange={event => toggleService(category.id, row.service.id, event.target.checked)} className="mt-0.5 size-4 accent-primary" /><span className="min-w-0"><span className="block text-sm font-medium">{row.service.nameKa}</span><span className="block text-xs text-muted-foreground">{row.category.nameKa} · <span className="font-mono">{row.service.defaultDurationMinutes} წთ</span></span></span></label>; })}</div></section>)}</div>
+          {(() => {
+            const all = categories.data ?? [];
+            const withLinks = all.filter(category => categorySelections[category.id]?.length);
+            const without = all.filter(category => !categorySelections[category.id]?.length);
+            const renderCategory = (category: (typeof all)[number]) => <CategoryLinks key={category.id} name={category.nameKa} services={onlineServices} linkedIds={categorySelections[category.id] ?? []} onToggle={(serviceId, checked) => toggleService(category.id, serviceId, checked)} />;
+            const showOthers = othersOpen || !withLinks.length;
+            return <div className="space-y-3">
+              {withLinks.length ? <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">{withLinks.map(renderCategory)}</div> : null}
+              {without.length && withLinks.length ? <Button type="button" variant="ghost" size="sm" className="max-md:h-11" aria-expanded={showOthers} aria-controls="marketplace-other-categories" onClick={() => setOthersOpen(open => !open)}>სხვა კატეგორიები ({without.length})<ChevronDown className={`ml-1.5 size-4 transition-transform ${showOthers ? "rotate-180" : ""}`} aria-hidden="true" /></Button> : null}
+              {without.length && showOthers ? <div id="marketplace-other-categories" className="grid grid-cols-1 gap-3 lg:grid-cols-2">{without.map(renderCategory)}</div> : null}
+            </div>;
+          })()}
         </WorkspaceSection>
         <WorkspaceSection title="ადგილი და რუკა" description="რუკაზე გამოჩნდება მხოლოდ თქვენი თანხმობითა და დადასტურებული წერტილით.">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_auto]"><div className="space-y-2"><Label htmlFor="marketplace-area">ქალაქი / უბანი</Label><Input id="marketplace-area" value={areaLabelKa} onChange={event => setAreaLabelKa(event.target.value)} placeholder="მაგ. თბილისი · ვაკე" maxLength={160} /><p className="text-xs text-muted-foreground">გამოჩნდება კატალოგში; სრული მისამართი არ ქვეყნდება.</p></div><label className="flex max-w-sm items-start gap-3 rounded-md border p-3"><input type="checkbox" disabled={!hasConfirmedPoint} checked={mapVisibility} onChange={event => setMapVisibility(event.target.checked)} className="mt-1 size-4 accent-primary disabled:opacity-45" /><span><span className="flex items-center gap-2 text-sm font-semibold"><MapPin className="size-4 text-primary" />რუკაზე გამოჩენა</span><span className="mt-1 block text-xs text-muted-foreground">{hasConfirmedPoint ? "წერტილი დადასტურებულია." : "ჯერ დაადასტურეთ მისამართი ქვემოთ."}</span></span></label></div>

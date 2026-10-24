@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import React from "react";
+import { motion, useReducedMotionConfig } from "framer-motion";
 import { AlertCircle, CalendarCheck, Check, Clock, Inbox, LoaderCircle, MoreHorizontal, UserCheck, X } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 import { Button } from "@/components/ui/button";
@@ -49,7 +50,7 @@ export function WorkspaceMetric({ label, value, helper, icon: Icon }: {
   value: ReactNode;
   helper?: string;
   icon?: (props: ComponentProps<"svg">) => ReactNode;
-  tone?: "neutral" | "jade" | "terracotta" | "violet" | "fuchsia" | "amber";
+  tone?: "neutral" | "jade" | "terracotta" | "accent" | "fuchsia" | "amber";
 }) {
   return (
     <div className="cwk-metric">
@@ -88,8 +89,8 @@ export function WorkspaceState({ kind, title, description, action }: { kind: "lo
 const STATUS_MARKS = {
   PENDING: { tone: "warning", icon: Clock, label: "დასადასტურებელი" },
   CONFIRMED: { tone: "info", icon: CalendarCheck, label: "დადასტურებული" },
-  CHECKED_IN: { tone: "violet", icon: UserCheck, label: "მიღებულია" },
-  IN_SERVICE: { tone: "violet", icon: UserCheck, label: "მომსახურებაშია" },
+  CHECKED_IN: { tone: "accent", icon: UserCheck, label: "მიღებულია" },
+  IN_SERVICE: { tone: "accent", icon: UserCheck, label: "მომსახურებაშია" },
   COMPLETED: { tone: "success", icon: Check, label: "დასრულებული" },
   CANCELLED: { tone: "muted", icon: X, label: "გაუქმებული" },
   NO_SHOW: { tone: "muted", icon: X, label: "არ გამოცხადდა" },
@@ -98,7 +99,7 @@ export type WorkspaceStatus = keyof typeof STATUS_MARKS;
 
 type WorkspaceStatusPillProps = {
   children?: ReactNode;
-  tone?: "neutral" | "success" | "warning" | "danger" | "info" | "violet" | "muted" | "count";
+  tone?: "neutral" | "success" | "warning" | "danger" | "info" | "accent" | "muted" | "count";
   /** Appointment status: sets tone and icon, and the Georgian word unless `children` is given. */
   status?: WorkspaceStatus;
 };
@@ -107,6 +108,32 @@ export function WorkspaceStatusPill({ children, tone = "neutral", status }: Work
   const mark = status ? STATUS_MARKS[status] : undefined;
   const Icon = mark?.icon;
   return <span className="cwk-mark" data-tone={mark?.tone ?? tone}>{Icon ? <Icon aria-hidden="true" /> : null}{children ?? mark?.label}</span>;
+}
+
+/* List reveal on first load. Wrap a list once in <WorkspaceRevealScope>, give each row <WorkspaceRevealItem index={i}>.
+   Rows that mount within 600ms of the scope's first row fade/rise in (stagger for the first 8); rows that appear later
+   (refetch, new data, pagination) render still. Reduced motion (OS or the Settings toggle) renders the plain element. */
+const RevealScope = React.createContext<{ firstAt: number } | null>(null);
+const REVEAL_WINDOW_MS = 600;
+const revealTags = { div: motion.div, li: motion.li, tr: motion.tr, article: motion.article } as const;
+
+export function WorkspaceRevealScope({ children }: { children: ReactNode }) {
+  const scope = React.useRef({ firstAt: 0 });
+  return <RevealScope.Provider value={scope.current}>{children}</RevealScope.Provider>;
+}
+
+export function WorkspaceRevealItem({ index = 0, as = "div", className, children }: { index?: number; as?: keyof typeof revealTags; className?: string; children: ReactNode }) {
+  const reduce = useReducedMotionConfig();
+  const scope = React.useContext(RevealScope);
+  const [animate] = React.useState(() => {
+    if (!scope) return false;
+    const now = Date.now();
+    if (!scope.firstAt) scope.firstAt = now;
+    return now - scope.firstAt < REVEAL_WINDOW_MS;
+  });
+  if (reduce || !animate) return React.createElement(as, { className }, children);
+  const Tag = revealTags[as];
+  return <Tag className={className} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.26, ease: [0.2, 0, 0, 1], delay: Math.min(index, 7) * 0.04 }}>{children}</Tag>;
 }
 
 export function WorkspaceFilterBar({ children, className }: { children: ReactNode; className?: string }) {

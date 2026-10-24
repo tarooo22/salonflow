@@ -55,16 +55,21 @@
 .cwp-contact svg { margin-top: 0.2rem; color: var(--sf-muted); }
 .cwp-contact a { display: inline-flex; align-items: center; min-height: 2rem; font-weight: 600; color: var(--sf-accent-ink); text-decoration: underline; }
 .cwp-contact a:hover { color: var(--sf-accent-hover); }
+.cwp-contact a.cwp-tel { color: var(--sf-text); text-decoration: none; }
+.cwp-contact a.cwp-tel:hover { color: var(--sf-text); text-decoration: underline; }
+.cwp-contact li:has(> a.cwp-tel) svg { color: var(--sf-text); }
 @media (min-width: 640px) { .cwp-contact { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; } }
 .cwp-notice { display: flex; gap: 0.75rem; align-items: flex-start; margin-top: 1rem; padding: 0.75rem 1rem; border-radius: 12px; background: var(--sf-warning-soft); color: var(--sf-text); font-size: 0.9375rem; line-height: 1.55; }
 .cwp-notice svg { margin-top: 0.1rem; color: var(--sf-warning); }
 
 /* Layout: tabs and panels, summary card on the right from 1024px */
-.cwp-layout { padding-block: 1.5rem 3rem; }
+.cwp-layout { padding-block: 1.5rem calc(88px + env(safe-area-inset-bottom, 0px)); }
 @media (min-width: 1024px) { .cwp-layout { display: grid; grid-template-columns: minmax(0, 1fr) 22rem; align-items: start; gap: 2.5rem; padding-block: 2rem 4.5rem; } }
 
 .cwp-tablist { display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.25rem; scrollbar-width: none; }
 .cwp-tablist::-webkit-scrollbar { display: none; }
+/* shortcut: the right-edge fade is always on below 1024px (it only shows when tabs reach the edge); upgrade to scroll-state detection if it ever clips a short strip */
+@media (max-width: 1023px) { .cwp-tablist { mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); } }
 .cwp-tab { flex: none; min-height: 2.75rem; padding: 0 1rem; border: 1.5px solid var(--sf-border); border-radius: 999px; background: var(--sf-surface); color: var(--sf-text); font-size: 0.9375rem; font-weight: 600; transition: background-color var(--sf-motion-standard), border-color var(--sf-motion-standard); }
 .cwp-tab:hover { background: var(--sf-surface-2); }
 .cwp-tab[aria-selected="true"] { background: var(--sf-accent-soft); border-color: var(--sf-accent-soft); color: var(--sf-accent-ink); font-weight: 700; }

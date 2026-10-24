@@ -78,7 +78,7 @@ export default function POS() {
       <CompactMetricRail label="სალაროს მაჩვენებლები"><MetricCell label="პროდუქტები" value={String(stockRows.length)} /><MetricCell label="კალათის ჯამი" value={formatGelTetri(total)} /><MetricCell label="მარაგი მცირეა" value={String(lowStock.length)} /></CompactMetricRail>
       {canCreateProduct ? <WorkspaceSection title="პროდუქტის დამატება"><form onSubmit={submitProduct} noValidate className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_9rem_7rem_8rem_10.5rem_auto] lg:items-start">
         <FormField label="სახელი"><Input value={newName} onChange={event => setNewName(event.target.value)} maxLength={160} placeholder="მაგ. დამცავი შამპუნი" required /></FormField>
-        <FormField label="კოდი (SKU)" hint="(არასავალდებულო)"><Input value={newSku} onChange={event => setNewSku(event.target.value)} maxLength={96} spellCheck={false} autoComplete="off" autoCapitalize="none" /></FormField>
+        <FormField label="არტიკული" hint="(არასავალდებულო)"><Input value={newSku} onChange={event => setNewSku(event.target.value)} maxLength={96} spellCheck={false} autoComplete="off" autoCapitalize="none" /></FormField>
         <FormField label="ფასი (₾)"><Input inputMode="decimal" value={newPrice} onChange={event => setNewPrice(event.target.value)} required /></FormField>
         <FormField label="საწყისი მარაგი"><Input type="number" inputMode="numeric" min="0" value={newQty} onChange={event => setNewQty(event.target.value)} required /></FormField>
         <FormField label="მინიმალური მარაგი"><Input type="number" inputMode="numeric" min="0" value={newReorder} onChange={event => setNewReorder(event.target.value)} required /></FormField>

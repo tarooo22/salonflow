@@ -19,10 +19,10 @@
 .mkt-container { width: min(100% - 32px, 1200px); margin-inline: auto; }
 .mkt-section { padding-block: 48px; }
 .mkt-section-rule { border-top: 1px solid var(--sf-border); }
-.mkt-hero { padding-block: 32px 48px; }
+.mkt-hero { padding-block: 32px 0; }
 @media (min-width: 1024px) {
   .mkt-section { padding-block: 72px; }
-  .mkt-hero { padding-block: 56px 72px; }
+  .mkt-hero { padding-block: 56px 0; }
 }
 
 /* Type scale. */
@@ -79,28 +79,27 @@
 @media (min-width: 640px) { .mkt-band { padding: 48px 40px; } }
 .mkt-band .mkt-h2 { color: var(--sf-on-band); }
 .mkt-band .mkt-lede { color: var(--sf-on-band-muted); }
+.mkt-band .mkt-link { color: #F48A9B; }
 
-/* Auth: wordmark, one card, one focus ring per field. */
+/* Auth: one card; each field shows only its own input ring. */
 .mkt-auth { padding-block: 24px 64px; }
 @media (min-width: 640px) { .mkt-auth { padding-block: 48px 96px; } }
 .mkt-auth-inner { width: min(100% - 32px, 420px); margin-inline: auto; }
-.mkt-wordmark { margin: 0 0 16px; font-size: 24px; line-height: 1.2; font-weight: 800; color: var(--sf-accent-ink); }
 .mkt-auth-card { padding: 24px; background: var(--sf-surface); border: 1px solid var(--sf-border); border-radius: var(--sf-r-hero); box-shadow: var(--sf-shadow-md); }
 @media (min-width: 640px) { .mkt-auth-card { padding: 32px; } }
 .mkt-auth-title { margin: 8px 0 0; font-size: clamp(22px, 3.2vw, 26px); line-height: 1.25; font-weight: 800; color: var(--sf-text); text-wrap: balance; }
 .mkt-form { display: grid; gap: 16px; margin-top: 24px; }
 .mkt-field { display: grid; gap: 6px; border-radius: 12px; }
-/* The wrapper carries the one focus ring; the input itself draws none. */
-.mkt-field:focus-within { outline: 2px solid var(--sf-focus); outline-offset: 4px; }
 .mkt-field > label { font-size: 14px; font-weight: 600; color: var(--sf-text); }
 .mkt-field input { width: 100%; min-height: 48px; padding: 0 14px; border: 1px solid var(--sf-border-strong); border-radius: 10px; background: var(--sf-surface); color: var(--sf-text); font: inherit; font-size: 16px; }
 .mkt-field input::placeholder { color: var(--sf-muted); }
-.mkt-field input:focus-visible { outline: none; }
+.mkt-field input:focus-visible { outline: 2px solid var(--sf-focus); outline-offset: 2px; }
 .mkt-field input[aria-invalid="true"] { border-color: var(--sf-danger); }
-.mkt-field-row { display: flex; gap: 8px; align-items: stretch; }
-.mkt-field-row input { flex: 1; min-width: 0; }
-.mkt-field-btn { display: grid; place-items: center; flex-shrink: 0; width: 48px; border: 1px solid var(--sf-border-strong); border-radius: 10px; background: var(--sf-surface); color: var(--sf-text); cursor: pointer; transition: background-color 180ms cubic-bezier(0.2, 0, 0, 1); }
-.mkt-field-btn:hover { background: var(--sf-surface-2); }
+/* Password toggle: a 40px ghost button inside the input's right edge; the input keeps room for it (pr-12). */
+.mkt-field-wrap { position: relative; }
+.mkt-field-wrap input { padding-right: 48px; }
+.mkt-field-btn { position: absolute; top: 50%; right: 4px; display: grid; place-items: center; width: 40px; height: 40px; transform: translateY(-50%); border: 0; border-radius: 8px; background: transparent; color: var(--sf-muted); cursor: pointer; transition: background-color 180ms cubic-bezier(0.2, 0, 0, 1), color 180ms cubic-bezier(0.2, 0, 0, 1); }
+.mkt-field-btn:hover { background: var(--sf-surface-2); color: var(--sf-text); }
 .mkt-field-btn:focus-visible { outline: 2px solid var(--sf-focus); outline-offset: 2px; }
 .mkt-hint { margin: 0; font-size: 14px; line-height: 1.5; color: var(--sf-muted); }
 .mkt-links { display: grid; gap: 8px; font-size: 14px; text-align: center; }
@@ -114,8 +113,8 @@
 .mkt-404 { display: flex; flex: 1; align-items: center; padding-block: 56px; }
 @media (min-width: 640px) { .mkt-404 { padding-block: 80px; } }
 .mkt-404-card { width: 100%; max-width: 40rem; margin-inline: auto; }
-.mkt-404-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.mkt-404-title { margin-top: 24px; }
+.mkt-404-code { font-size: 12px; font-weight: 600; color: var(--sf-muted); }
+.mkt-404-title { margin-top: 8px; }
 .mkt-404-lede { margin-top: 16px; }
 .mkt-404-actions { display: flex; flex-direction: column; gap: 12px; margin-top: 28px; }
 @media (min-width: 640px) { .mkt-404-actions { flex-direction: row; flex-wrap: wrap; } }
@@ -144,6 +143,11 @@
 .mkt-card-head { margin-bottom: 8px; }
 .mkt-grid { display: grid; gap: 16px; margin: 0; padding: 0; list-style: none; }
 @media (min-width: 768px) { .mkt-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* Partner comparison: one card per row below 1280, two from 1280; before and after split 50/50 from 640. */
+.mkt-compare { display: grid; gap: 16px; margin: 0; padding: 0; list-style: none; }
+@media (min-width: 1280px) { .mkt-compare { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.mkt-compare-cols { display: grid; gap: 12px; margin-top: 16px; }
+@media (min-width: 640px) { .mkt-compare-cols { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; } }
 .mkt-vcard { border-top: 4px solid var(--tone-bg); }
 .mkt-vhead { display: inline-flex; align-items: center; align-self: flex-start; min-height: 32px; padding: 0 12px; border-radius: 999px; background: var(--tone-bg); color: var(--tone-ink); }
 .mkt-steps { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }

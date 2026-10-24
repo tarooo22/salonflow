@@ -4,6 +4,7 @@ import { verticalLabel, verticalsForListing, verticalStyle, type Vertical } from
 import { Anchor, Baby, Brush, Droplet, Droplets, Eye, Flower2, Heart, MapPin, Ruler, ScanLine, Scissors, Smile, Sparkles, Stethoscope, Syringe, UserRound, Zap, type LucideIcon } from "lucide-react";
 import { type CSSProperties, useId, useState } from "react";
 import { Link } from "wouter";
+import "./discovery.css";
 import { RevealGroup, RevealItem } from "./HomeMotion";
 
 export type CatalogCategory = { id: string; slug: string; nameKa: string; iconKey: string };
@@ -103,7 +104,7 @@ export function SalonGrid({ items, rail = false, reveal = false }: { items: Cata
 
 /** Loading skeletons only; shown while the request is in flight, never as a stand-in for missing data. */
 export function SalonLoading({ label, count = 4 }: { label: string; count?: number }) {
-  return <ul className="sc-grid" aria-busy="true" aria-label={label}>{Array.from({ length: count }, (_, key) => <li key={key}><div className="sc sc-skel" /></li>)}</ul>;
+  return <ul className="sc-grid" aria-busy="true" aria-label={label}>{Array.from({ length: count }, (_, key) => <li key={key}><div className="sc sc-skel"><div className="sc-skel-cover sf-skeleton" /><div className="sc-body"><span className="sc-skel-bar sf-skeleton" style={{ width: "60%" }} /><span className="sc-skel-bar sf-skeleton" style={{ width: "40%" }} /><span className="sc-skel-bar sf-skeleton" style={{ width: "30%" }} /></div></div></li>)}</ul>;
 }
 
 /** Honest empty state: one line and a way to add a business, no invented rows. */

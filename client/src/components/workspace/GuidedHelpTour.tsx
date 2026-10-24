@@ -30,7 +30,7 @@ export function guidedTourSteps(role: TourRole): TourStep[] {
     { title: "კლიენტები", description: "კლიენტის ძიება და ისტორია ყოველთვის ხელმისაწვდომია სწრაფი მომსახურებისთვის.", path: "/app/clients", actionLabel: "კლიენტების გახსნა" },
   ];
   return [
-    { title: "ჩემი დღე", description: "აქ ნახავთ მხოლოდ თქვენს დღევანდელ booking-ებს და შემდეგი კლიენტის დროს.", path: "/app/today", actionLabel: "ჩემი დღის ნახვა" },
+    { title: "ჩემი დღე", description: "აქ ნახავთ მხოლოდ თქვენს დღევანდელ ჯავშნებს და შემდეგი კლიენტის დროს.", path: "/app/today", actionLabel: "ჩემი დღის ნახვა" },
     { title: "ჩემი კალენდარი", description: "კალენდარი გაჩვენებთ მხოლოდ თქვენს სამუშაო კონტექსტს და არ გახსნის სხვის განრიგს.", path: "/app/calendar", actionLabel: "კალენდრის გახსნა" },
     { title: "ჩემი პროფილი", description: "აქ შეგიძლიათ განაახლოთ საკუთარი avatar, აღწერა, გამოცდილება და სპეციალიზაცია. ფილიალი, როლი და ონლაინ ხილვადობა მფლობელის კონტროლში რჩება.", path: "/app/staff", actionLabel: "ჩემი პროფილის გახსნა" },
   ];

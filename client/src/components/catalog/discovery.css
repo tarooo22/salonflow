@@ -36,8 +36,10 @@
   .sc-grid--rail > li { flex: 0 0 78%; min-width: 0; scroll-snap-align: start; }
 }
 
-.sc-skel { min-height: 300px; background: var(--sf-surface-2); animation: sc-pulse 1.4s ease-in-out infinite; }
-@keyframes sc-pulse { 50% { opacity: 0.55; } }
+.sc-skel:hover { transform: none; box-shadow: var(--sf-shadow-sm); }
+.sc-skel-cover { aspect-ratio: 4 / 3; border-radius: calc(var(--sf-r-card) - 1px) calc(var(--sf-r-card) - 1px) 0 0; }
+.sc-skel-bar { display: block; height: 14px; border-radius: 6px; }
+.sc-skel .sc-body { gap: 10px; padding-top: 14px; }
 
 .sc-empty { display: grid; gap: 6px; padding: 24px; background: var(--sf-surface); border: 1px solid var(--sf-border); border-radius: var(--sf-r-card); }
 .sc-empty-title { font-size: 18px; font-weight: 700; line-height: 1.35; }
@@ -138,11 +140,9 @@
   .hh-formwrap { grid-area: 2 / 1; margin: 28px 56px 56px; max-width: 46rem; }
   .hh-form { padding: 8px; border-radius: 20px; }
   .hh-chips { grid-area: 1 / 2 / 3 / 3; z-index: 1; display: grid; align-content: center; justify-items: start; gap: 18px; padding-right: 48px; }
-  .hh-chip-pos--2 { margin-left: -36px; }
 }
 .hh-chip { display: flex; align-items: center; gap: 12px; padding: 12px 16px 12px 12px; border-radius: 16px; background: var(--sf-surface); color: var(--sf-text); box-shadow: var(--sf-shadow-lg); }
 .hh-chip-icon { display: grid; flex: none; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--sf-accent-soft); color: var(--sf-accent-ink); }
-.hh-chip-icon[data-tone="ok"] { background: var(--sf-success-soft); color: var(--sf-success); }
 .hh-chip-title { display: block; font-size: 15px; font-weight: 700; line-height: 1.35; }
 .hh-chip-sub { display: block; font-size: 14px; font-variant-numeric: tabular-nums; color: var(--sf-muted); }
 
@@ -237,7 +237,7 @@
 .hm-band-btn:hover { transform: translateY(-1px); }
 .hm-band-btn--fill { background: #fff; color: #2b1a25; }
 .hm-band-btn--fill:hover { background: var(--sf-accent-soft); }
-.hm-band-btn--line { border: 1.5px solid #fff; color: #fff; }
+.hm-band-btn--line { border: 1px solid #fff; color: #fff; }
 .hm-band-btn--line:hover { background: rgb(255 255 255 / 0.1); }
 .hm-features { display: grid; gap: 12px; margin: 32px 0 0; padding: 0; list-style: none; }
 @media (min-width: 640px) { .hm-features { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
@@ -261,7 +261,9 @@
 
 /* ---- Page head, sticky filter bar ---- */
 
-.pg-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding-block: 20px 12px; }
+.pg-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding-block: 24px 12px; }
+.cw .cw-page-head { padding-block: 24px 16px; }
+@media (min-width: 1024px) { .pg-head { padding-top: 32px; } .cw .cw-page-head { padding-top: 32px; } }
 .pg-head-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
 .pg-head h1, .pg-intro h1 { font-size: clamp(1.75rem, 4vw, 2.5rem); font-weight: 800; line-height: 1.2; letter-spacing: 0; }
 .pg-count { font-size: 14px; color: var(--sf-muted); }
@@ -277,7 +279,9 @@
 .df-bar { position: sticky; top: 56px; z-index: 20; background: var(--sf-surface); border-block: 1px solid var(--sf-border); }
 @media (min-width: 1024px) { .df-bar { top: 64px; } }
 .df-inner { display: grid; gap: 8px; padding-block: 10px; }
-.df-row { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 8px; }
+/* Phones stack the two fields so neither placeholder is cut off. */
+.df-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+@media (min-width: 640px) { .df-row { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); } }
 @media (min-width: 1024px) { .df-row { grid-template-columns: minmax(0, 1fr) 280px; } }
 .df-field { display: flex; align-items: center; gap: 8px; height: 44px; padding-inline: 12px; border: 1px solid var(--sf-border-strong); border-radius: 12px; background: var(--sf-surface); color: var(--sf-muted); }
 .df-field:focus-within { border-color: var(--sf-focus); outline: 2px solid var(--sf-focus); outline-offset: 1px; }
@@ -303,19 +307,6 @@
 .cw-notice { padding: 20px 24px; border: 1px solid var(--sf-border); border-radius: var(--sf-r-card); background: var(--sf-surface); }
 .cw-notice-error { border-color: transparent; background: var(--sf-danger-soft); color: var(--sf-danger); font-weight: 600; }
 .cw-info { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border-radius: 12px; background: var(--sf-accent-soft); font-size: 14px; line-height: 1.5; max-width: 40rem; }
-
-/* ---- Fields shared with waitlist / booking forms ---- */
-
-.cw-field { text-align: left; }
-.cw-field textarea { width: 100%; border: 0; outline: 0; background: transparent; font-size: 1.05rem; font-weight: 600; color: var(--cw-ink); padding: 0.15rem 0 0; resize: vertical; min-height: 4.5rem; font-family: inherit; }
-.cw-field textarea::placeholder { color: var(--sf-muted); font-weight: 500; }
-/* Dropdown triggers inside fields; not the inline icon button of .cw-field-row (password eye). */
-.cw-field button:not(.cw-field-btn) { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; width: 100%; height: auto; min-height: 0; padding: 0.15rem 0 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; font-size: 1.05rem; font-weight: 600; color: var(--cw-ink); text-align: left; }
-.cw-field button:not(.cw-field-btn):hover { background: transparent; color: var(--cw-ink); }
-.cw-field button:disabled { opacity: 0.55; }
-.cw .cw-field textarea:focus-visible, .cw .cw-field button:focus-visible { outline: none; }
-.cw-field-hint { display: block; margin-top: 0.35rem; font-size: 0.8rem; line-height: 1.4; color: var(--cw-ink-soft); font-weight: 400; }
-.cw-field-invalid { border-color: var(--sf-danger); }
 
 .cw-check { display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.8rem 1rem; border: 1px solid var(--sf-border-strong); border-radius: 12px; background: var(--sf-surface); font-size: 0.95rem; line-height: 1.5; }
 .cw-check [role="checkbox"] { margin-top: 0.15rem; }
@@ -347,5 +338,5 @@
   .sc:hover, .sc:hover .sc-cover img, .hv-card:hover, .hv-card:hover img, .hp-tile:hover, .hp-tile:hover img, .hq-chip:hover, .hm-band-btn:hover, .hb-link:hover img, .sc-heart:hover, .hb-nav:hover { transform: none; }
   .hb-slide[data-current="false"] .hb-link { transform: none; }
   .cw-map-marker:hover { transform: translate(-50%, -50%); }
-  .sc-skel { animation: none; }
+  .sc-skel .sf-skeleton { animation: none; }
 }

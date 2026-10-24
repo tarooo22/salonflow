@@ -115,7 +115,7 @@ button.cwk-group-caption:hover { background: var(--cwk-desk-soft); color: var(--
 .cwk-mark[data-tone="warning"] { --mk-bg: var(--sf-warning-soft); --mk-ink: var(--sf-warning); }
 .cwk-mark[data-tone="danger"] { --mk-bg: var(--sf-danger-soft); --mk-ink: var(--sf-danger); }
 .cwk-mark[data-tone="info"] { --mk-bg: var(--sf-info-soft); --mk-ink: var(--sf-info); }
-.cwk-mark[data-tone="violet"] { --mk-bg: var(--sf-accent-soft); --mk-ink: var(--sf-accent-ink); }
+.cwk-mark[data-tone="accent"] { --mk-bg: var(--sf-accent-soft); --mk-ink: var(--sf-accent-ink); }
 .cwk-mark[data-tone="muted"] { --mk-bg: var(--sf-surface-2); --mk-ink: var(--cwk-ink-soft); text-decoration: line-through; }
 .cwk-mark[data-tone="count"] { --mk-bg: var(--sf-surface-2); --mk-ink: var(--cwk-ink); font-variant-numeric: tabular-nums; }
 .cwk-toolbar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.75rem; padding: 0.6rem 0.75rem; border: 1px solid var(--cwk-rule); border-radius: 12px; background: var(--cwk-sheet); }
@@ -194,7 +194,14 @@ button.cwk-group-caption:hover { background: var(--cwk-desk-soft); color: var(--
 .cwk-tact:disabled { background: var(--sf-surface-2); color: var(--cwk-ink-soft); cursor: not-allowed; }
 @media (max-width: 767px) { .cwk-tact { min-height: 2.75rem; min-width: 2.75rem; } }
 
+/* press feedback: 120ms scale, off under reduced motion (OS or the Settings toggle) */
+.cwk-seg button, .cwk-strip button, .cwk-datebtn, .cwk-tab, .cwk-topbtn, .cwk-rail-btn { transition: background-color var(--sf-motion-standard), color var(--sf-motion-standard), transform 120ms var(--sf-ease-out); }
+.cwk-seg button:active, .cwk-strip button:active, .cwk-datebtn:active, .cwk-tab:active, .cwk-topbtn:active, .cwk-rail-btn:active { transform: scale(0.97); }
+[data-reduce-motion="true"] :is(.cwk-seg button, .cwk-strip button, .cwk-datebtn, .cwk-tab, .cwk-topbtn, .cwk-rail-btn):active { transform: none; }
+.cwk-main form [data-slot="select-trigger"] { width: 100%; }
+
 @media (prefers-reduced-motion: reduce) {
+  .cwk-seg button:active, .cwk-strip button:active, .cwk-datebtn:active, .cwk-tab:active, .cwk-topbtn:active, .cwk-rail-btn:active { transform: none; }
   .cwk-ticket, .cwk-stampbtn, .cwk-nav, .cwk-rail-btn, .cwk-rail-link, .cwk-stub, .cwk-topbtn, .cwk-tab, .cwk-seg button, .cwk-strip button, .cwk-datebtn, .cwk-tact, .cwk-resize, button.cwk-group-caption { transition: none; }
   .cwk-stub[data-pressed="true"] { animation: none; }
   .cwk-stampbtn:active { transform: none; }

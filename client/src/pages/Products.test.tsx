@@ -19,6 +19,7 @@ describe("products page", () => {
     expect(commerce).toContain("ამოიწურა");
     expect(commerce).toContain("formatGelTetri(item.priceTetri)");
     expect(page).toContain("ამჟამად პროდუქტები არ არის დამატებული.");
+    expect(commerce).toContain('className="cw-empty"');
   });
 
   it("registers the public routes", () => {
