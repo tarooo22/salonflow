@@ -4,9 +4,9 @@ import { describe, expect, it } from "vitest";
 const source = readFileSync(new URL("./NotFound.tsx", import.meta.url), "utf8");
 
 describe("404 page", () => {
-  it("says the page was not found on a torn ticket and links home and to the catalog", () => {
+  it("says the page was not found in a card and links home and to the catalog", () => {
     expect(source).toContain("ეს გვერდი ვერ მოიძებნა");
-    expect(source).toContain("cw-torn");
+    expect(source).toContain("mkt-404-card");
     expect(source).toContain('href="/"');
     expect(source).toContain('href="/salons"');
     expect(source).toContain("window.history.back()");

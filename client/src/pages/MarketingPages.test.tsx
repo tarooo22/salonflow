@@ -28,9 +28,9 @@ describe("truthful public product-information routes", () => {
 
   it("renders every page in the cw appointment-card world", () => {
     expect(source).toContain('<div className="cw min-h-screen">');
-    expect(source).toContain("cw-ledger");
-    expect(source).toContain("cw-btn-stamp");
-    expect(source).toContain("cw-dashed");
+    expect(source).toContain("mkt-card");
+    expect(source).toContain("mkt-btn-primary");
+    expect(source).not.toContain("cw-dashed");
     expect(source).toContain("CatalogHeader");
     expect(source).toContain("CatalogFooter");
     expect(source).not.toContain("sf-");

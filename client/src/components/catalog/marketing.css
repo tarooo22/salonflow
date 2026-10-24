@@ -1,65 +1,167 @@
-/* Public marketing + auth pages in the appointment-card world.
-   Builds on the `cw-` tokens declared in catalog.css; nothing here redefines them. */
+/* Public marketing, auth, legal and 404 pages, plus the shared buttons, alerts and vertical tones
+   used by commerce.css. Colours come from the --sf-* tokens in index.css; the only local colour
+   is the text on the accent fill, which flips in dark mode. */
 
-/* Lede on the indigo desk (the base .cw-lede is Faded Ink, which is for paper). */
-.cw-lede-desk { color: var(--cw-on-desk-soft); font-size: 1.05rem; line-height: 1.6; max-width: 40rem; }
+:root {
+  --mkt-on-accent: #ffffff;
+  /* Default tone for chips and tags; elements with data-vertical override it below. */
+  --tone-bg: var(--sf-accent-soft);
+  --tone-ink: var(--sf-accent-ink);
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --mkt-on-accent: #2a0e16; } }
+:root[data-theme="dark"] { --mkt-on-accent: #2a0e16; }
 
-/* Inline action link: the stamp ink, underlined. */
-.cw-link { color: var(--cw-stamp); font-weight: 700; text-decoration: underline; }
-.cw-link:hover { color: var(--cw-stamp-hover); }
+[data-vertical="beauty"] { --tone-bg: var(--sf-v-salon); --tone-ink: var(--sf-v-salon-ink); }
+[data-vertical="aesthetics"] { --tone-bg: var(--sf-v-aesthetics); --tone-ink: var(--sf-v-aesthetics-ink); }
+[data-vertical="dental"] { --tone-bg: var(--sf-v-dental); --tone-ink: var(--sf-v-dental-ink); }
 
-/* Not-yet-available things are shown honestly as a dashed outline. */
-.cw-dashed { border: 2px dashed var(--cw-rule-strong); border-radius: 4px; }
-
-/* Plain ledger row: padding and the pale divider only, so layout comes from utilities.
-   (catalog.css is unlayered and beats Tailwind utilities, so .cw-ledger-row cannot be re-laid-out.) */
-.cw-row { padding: 0.9rem 1rem; border-top: 1px solid var(--cw-rule); }
-.cw-row:first-child { border-top: 0; }
-
-/* Neutral ledger head (a ledger that does not belong to a vertical). */
-.cw-ledger-neutral { --ledger-bg: var(--cw-on-desk); --ledger-ink: var(--cw-ink); }
-
-/* FAQ rows: native details/summary on a ledger. */
-.cw-faq summary { list-style: none; cursor: pointer; }
-.cw-faq summary::-webkit-details-marker { display: none; }
-.cw-faq summary svg { transition: transform 200ms var(--cw-ease); }
-.cw-faq details[open] summary svg { transform: rotate(90deg); }
-
-/* Form fields on the auth card. Extends .cw-field with a row for an inline button. */
-.cw-field-row { display: flex; align-items: center; gap: 0.5rem; }
-.cw-field-row input { flex: 1; min-width: 0; }
-.cw-field-btn { display: grid; place-items: center; width: 2.25rem; height: 2.25rem; flex-shrink: 0; margin-top: 0.1rem; border-radius: 3px; color: var(--cw-ink); transition: background-color 160ms var(--cw-ease); }
-.cw-field-btn:hover { background: var(--cw-rule); }
-.cw-field:has(input[aria-invalid="true"]) { border-color: #b3261e; }
-.cw-field input[readonly] { color: var(--cw-ink-soft); }
-
-/* Error message box. Colours checked at 7:1+ on their ground. */
-.cw-alert { border: 1.5px solid #b3261e; border-radius: 3px; background: #fdf0ee; color: #8f1d16; padding: 0.7rem 0.9rem; font-size: 0.95rem; line-height: 1.5; font-weight: 600; }
-
-/* Carbon copies peeking out from behind the auth card. */
-.cw-auth-wrap { position: relative; margin-right: 18px; margin-bottom: 18px; }
-.cw-auth-sheet { position: absolute; inset: 0; border-radius: 4px; }
-.cw-auth-sheet:nth-child(1) { background: var(--cw-dental); transform: translate(18px, 18px); }
-.cw-auth-sheet:nth-child(2) { background: var(--cw-aesthetics); transform: translate(12px, 12px); }
-.cw-auth-sheet:nth-child(3) { background: var(--cw-beauty); transform: translate(6px, 6px); }
-@media (max-width: 640px) {
-  .cw-auth-wrap { margin-right: 10px; margin-bottom: 10px; }
-  .cw-auth-sheet:nth-child(1) { transform: translate(10px, 10px); }
-  .cw-auth-sheet:nth-child(2) { transform: translate(7px, 7px); }
-  .cw-auth-sheet:nth-child(3) { transform: translate(4px, 4px); }
+/* Layout: container 32px gutter, section gap 48 phone / 72 desktop. */
+.mkt-container { width: min(100% - 32px, 1200px); margin-inline: auto; }
+.mkt-section { padding-block: 48px; }
+.mkt-section-rule { border-top: 1px solid var(--sf-border); }
+.mkt-hero { padding-block: 32px 48px; }
+@media (min-width: 1024px) {
+  .mkt-section { padding-block: 72px; }
+  .mkt-hero { padding-block: 56px 72px; }
 }
 
-/* 404: a ticket whose lower edge has been torn off. The shadow sits on the wrapper so it follows the tear. */
-.cw-torn-wrap { filter: drop-shadow(0 10px 18px rgba(35, 35, 94, 0.25)); transform: rotate(-1deg); }
-.cw-torn { background: #fff; border: 1.5px solid var(--cw-ink); border-bottom: 0; border-radius: 4px 4px 0 0; padding-bottom: 1.5rem;
-  -webkit-mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 20px 100%;
-  mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 20px 100%; }
-.cw-torn-stub { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.6rem 1rem; background: var(--cw-ink); color: var(--cw-on-desk); border-bottom: 2px dashed var(--cw-rule-strong); }
+/* Type scale. */
+.mkt-h1 { font-size: clamp(28px, 4vw, 40px); line-height: 1.2; font-weight: 800; color: var(--sf-text); text-wrap: balance; overflow-wrap: anywhere; }
+.mkt-h2 { font-size: clamp(22px, 2.6vw, 28px); line-height: 1.25; font-weight: 750; color: var(--sf-text); text-wrap: balance; }
+.mkt-h3 { font-size: 18px; line-height: 1.35; font-weight: 700; color: var(--sf-text); overflow-wrap: anywhere; }
+.mkt-lede { max-width: 40rem; font-size: 16px; line-height: 1.6; color: var(--sf-muted); }
+.mkt-caption { font-size: 14px; line-height: 1.4; font-weight: 600; color: var(--sf-muted); }
+.mkt-body { font-size: 16px; line-height: 1.6; color: var(--sf-text); }
+.mkt-muted { color: var(--sf-muted); }
+
+.mkt-link { color: var(--sf-accent-ink); font-weight: 600; text-decoration: underline; text-underline-offset: 0.2em; }
+.mkt-link:hover { color: var(--sf-accent-hover); }
+.mkt-linkbtn { padding: 0; border: 0; background: none; font: inherit; font-weight: 600; color: var(--sf-accent-ink); text-decoration: underline; text-underline-offset: 0.2em; cursor: pointer; }
+.mkt-linkbtn:hover { color: var(--sf-accent-hover); }
+
+/* Buttons: 44px tap target, radius 10, press 120ms, hover 180ms. */
+.mkt-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 44px; padding: 0 20px; border: 1px solid transparent; border-radius: 10px;
+  font: inherit; font-size: 16px; font-weight: 700; line-height: 1.2; text-decoration: none; cursor: pointer;
+  transition: background-color 180ms cubic-bezier(0.2, 0, 0, 1), color 180ms cubic-bezier(0.2, 0, 0, 1), border-color 180ms cubic-bezier(0.2, 0, 0, 1), transform 120ms cubic-bezier(0.2, 0, 0, 1);
+}
+.mkt-btn:active { transform: translateY(1px); }
+.mkt-btn:focus-visible { outline: 2px solid var(--sf-focus); outline-offset: 2px; }
+.mkt-btn-primary { background: var(--sf-accent); color: var(--mkt-on-accent); }
+.mkt-btn-primary:hover { background: var(--sf-accent-hover); }
+.mkt-btn-secondary { background: var(--sf-surface); color: var(--sf-text); border-color: var(--sf-border-strong); }
+.mkt-btn-secondary:hover { background: var(--sf-surface-2); }
+.mkt-btn-light { background: var(--sf-on-band); color: var(--sf-band); }
+.mkt-btn-light:hover { background: var(--sf-surface-2); color: var(--sf-band); }
+.mkt-btn-outline-light { background: transparent; color: var(--sf-on-band); border-color: var(--sf-on-band); }
+.mkt-btn-outline-light:hover { background: rgb(255 255 255 / 0.08); }
+.mkt-btn-block { width: 100%; min-height: 48px; }
+.mkt-btn:disabled { background: var(--sf-surface-2); color: var(--sf-muted); border-color: transparent; cursor: not-allowed; transform: none; }
+
+/* Alerts and notices: danger-soft ground, danger ink, always with words. */
+.mkt-alert { padding: 12px 16px; border-radius: 10px; background: var(--sf-danger-soft); color: var(--sf-danger); font-size: 14px; line-height: 1.5; font-weight: 600; }
+
+/* Cards and small parts. */
+.mkt-card { padding: 24px; background: var(--sf-surface); border: 1px solid var(--sf-border); border-radius: var(--sf-r-card); box-shadow: var(--sf-shadow-sm); }
+@media (min-width: 640px) { .mkt-card { padding: 28px; } }
+.mkt-icon-tile { display: grid; place-items: center; flex-shrink: 0; width: 40px; height: 40px; border-radius: 999px; background: var(--sf-accent-soft); color: var(--sf-accent-ink); }
+.mkt-step { display: grid; place-items: center; flex-shrink: 0; width: 32px; height: 32px; border-radius: 999px; background: var(--sf-accent-soft); color: var(--sf-accent-ink); font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.mkt-pill { display: inline-flex; align-items: center; min-height: 28px; padding: 0 10px; border-radius: 999px; background: var(--sf-surface-2); color: var(--sf-muted); font-size: 12px; font-weight: 600; }
+.mkt-vtag { display: inline-flex; align-items: center; min-height: 32px; padding: 0 12px; border-radius: 999px; background: var(--tone-bg); color: var(--tone-ink); font-size: 14px; font-weight: 700; }
+.mkt-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; font-size: 14px; line-height: 1.5; color: var(--sf-text); }
+.mkt-list li { display: flex; align-items: flex-start; gap: 8px; }
+.mkt-list svg { flex-shrink: 0; margin-top: 2px; color: var(--sf-accent-ink); }
+.mkt-divider { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--sf-border); }
+
+/* Dark band: business call to action. */
+.mkt-band { padding: 40px 24px; background: var(--sf-band); color: var(--sf-on-band); border-radius: var(--sf-r-hero); }
+@media (min-width: 640px) { .mkt-band { padding: 48px 40px; } }
+.mkt-band .mkt-h2 { color: var(--sf-on-band); }
+.mkt-band .mkt-lede { color: var(--sf-on-band-muted); }
+
+/* Auth: wordmark, one card, one focus ring per field. */
+.mkt-auth { padding-block: 24px 64px; }
+@media (min-width: 640px) { .mkt-auth { padding-block: 48px 96px; } }
+.mkt-auth-inner { width: min(100% - 32px, 420px); margin-inline: auto; }
+.mkt-wordmark { margin: 0 0 16px; font-size: 24px; line-height: 1.2; font-weight: 800; color: var(--sf-accent-ink); }
+.mkt-auth-card { padding: 24px; background: var(--sf-surface); border: 1px solid var(--sf-border); border-radius: var(--sf-r-hero); box-shadow: var(--sf-shadow-md); }
+@media (min-width: 640px) { .mkt-auth-card { padding: 32px; } }
+.mkt-auth-title { margin: 8px 0 0; font-size: clamp(22px, 3.2vw, 26px); line-height: 1.25; font-weight: 800; color: var(--sf-text); text-wrap: balance; }
+.mkt-form { display: grid; gap: 16px; margin-top: 24px; }
+.mkt-field { display: grid; gap: 6px; border-radius: 12px; }
+/* The wrapper carries the one focus ring; the input itself draws none. */
+.mkt-field:focus-within { outline: 2px solid var(--sf-focus); outline-offset: 4px; }
+.mkt-field > label { font-size: 14px; font-weight: 600; color: var(--sf-text); }
+.mkt-field input { width: 100%; min-height: 48px; padding: 0 14px; border: 1px solid var(--sf-border-strong); border-radius: 10px; background: var(--sf-surface); color: var(--sf-text); font: inherit; font-size: 16px; }
+.mkt-field input::placeholder { color: var(--sf-muted); }
+.mkt-field input:focus-visible { outline: none; }
+.mkt-field input[aria-invalid="true"] { border-color: var(--sf-danger); }
+.mkt-field-row { display: flex; gap: 8px; align-items: stretch; }
+.mkt-field-row input { flex: 1; min-width: 0; }
+.mkt-field-btn { display: grid; place-items: center; flex-shrink: 0; width: 48px; border: 1px solid var(--sf-border-strong); border-radius: 10px; background: var(--sf-surface); color: var(--sf-text); cursor: pointer; transition: background-color 180ms cubic-bezier(0.2, 0, 0, 1); }
+.mkt-field-btn:hover { background: var(--sf-surface-2); }
+.mkt-field-btn:focus-visible { outline: 2px solid var(--sf-focus); outline-offset: 2px; }
+.mkt-hint { margin: 0; font-size: 14px; line-height: 1.5; color: var(--sf-muted); }
+.mkt-links { display: grid; gap: 8px; font-size: 14px; text-align: center; }
+.mkt-subtle-link { color: var(--sf-muted); font-weight: 600; text-decoration: underline; text-underline-offset: 0.2em; }
+.mkt-subtle-link:hover { color: var(--sf-text); }
+.mkt-auth-promises { margin-top: 20px; }
+.mkt-auth-desc { margin-top: 8px; }
+.mkt-hint-top { margin-top: 6px; }
+
+/* 404: a plain card, no notch or tear. */
+.mkt-404 { display: flex; flex: 1; align-items: center; padding-block: 56px; }
+@media (min-width: 640px) { .mkt-404 { padding-block: 80px; } }
+.mkt-404-card { width: 100%; max-width: 40rem; margin-inline: auto; }
+.mkt-404-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.mkt-404-title { margin-top: 24px; }
+.mkt-404-lede { margin-top: 16px; }
+.mkt-404-actions { display: flex; flex-direction: column; gap: 12px; margin-top: 28px; }
+@media (min-width: 640px) { .mkt-404-actions { flex-direction: row; flex-wrap: wrap; } }
+
+/* Privacy: table of contents beside the text on desktop. */
+.mkt-toc { display: grid; gap: 4px; margin: 12px 0 0; padding: 0; list-style: none; font-size: 14px; }
+.mkt-toc a { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 8px 12px; border-radius: 8px; color: var(--sf-text); font-weight: 600; text-decoration: none; }
+.mkt-toc a:hover { background: var(--sf-surface-2); text-decoration: underline; }
+.mkt-toc a:focus-visible { outline: 2px solid var(--sf-focus); outline-offset: 2px; }
+.mkt-legal-section { padding-block: 28px; border-top: 1px solid var(--sf-border); scroll-margin-top: 24px; }
+.mkt-legal-section h2 { display: flex; align-items: baseline; gap: 12px; margin: 0 0 12px; font-size: 20px; line-height: 1.3; font-weight: 750; color: var(--sf-text); }
+.mkt-legal-num { flex-shrink: 0; font-size: 14px; color: var(--sf-muted); font-variant-numeric: tabular-nums; }
+.mkt-legal-body { display: grid; gap: 12px; font-size: 16px; line-height: 1.7; color: var(--sf-text); }
+.mkt-legal-body ul { display: grid; gap: 8px; margin: 0; padding-left: 20px; }
+.mkt-legal-body ul li::marker { color: var(--sf-muted); }
+.mkt-choice-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; font-weight: 700; color: var(--sf-text); }
+.mkt-choice-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
 
 @media (prefers-reduced-motion: reduce) {
-  .cw-faq summary svg, .cw-field-btn { transition: none; }
+  .mkt-btn, .mkt-field-btn { transition: none; }
+  .mkt-btn:active { transform: none; }
 }
 
-.cw-faq .cw-row { padding-block: 0; }
-
-.cw-btn:disabled { opacity: 0.65; cursor: not-allowed; transform: none; }
+/* Partner landing and auth/legal building blocks. */
+.mkt-head-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
+.mkt-card-head { margin-bottom: 8px; }
+.mkt-grid { display: grid; gap: 16px; margin: 0; padding: 0; list-style: none; }
+@media (min-width: 768px) { .mkt-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.mkt-vcard { border-top: 4px solid var(--tone-bg); }
+.mkt-vhead { display: inline-flex; align-items: center; align-self: flex-start; min-height: 32px; padding: 0 12px; border-radius: 999px; background: var(--tone-bg); color: var(--tone-ink); }
+.mkt-steps { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.mkt-step-item { display: flex; align-items: flex-start; gap: 16px; padding: 16px; background: var(--sf-surface); border: 1px solid var(--sf-border); border-radius: 12px; }
+.mkt-faq { padding: 0 20px; background: var(--sf-surface); border: 1px solid var(--sf-border); border-radius: var(--sf-r-card); box-shadow: var(--sf-shadow-sm); }
+.mkt-faq-row { border-top: 1px solid var(--sf-border); }
+.mkt-faq-row:first-of-type { border-top: 0; }
+.mkt-faq summary { list-style: none; cursor: pointer; }
+.mkt-faq summary::-webkit-details-marker { display: none; }
+.mkt-faq summary svg { transition: transform 200ms cubic-bezier(0.2, 0, 0, 1); }
+.mkt-faq details[open] summary svg { transform: rotate(90deg); }
+.mkt-faq summary:focus-visible { outline: 2px solid var(--sf-focus); outline-offset: 2px; }
+.mkt-faq details p { margin: 0; padding-bottom: 16px; }
+@media (prefers-reduced-motion: reduce) { .mkt-faq summary svg { transition: none; } }
+.mkt-list-row { padding-block: 10px; border-top: 1px solid var(--sf-border); }
+.mkt-list-row:first-child { border-top: 0; }
+.mkt-list-row svg { color: var(--sf-accent-ink); }
+.mkt-band .mkt-caption { color: var(--sf-on-band-muted); }
+.mkt-text { color: var(--sf-text); }
+.mkt-accent-text { color: var(--sf-accent-ink); }
+.mkt-rule-top { border-top: 1px solid var(--sf-border); }

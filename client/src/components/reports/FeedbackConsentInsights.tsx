@@ -7,7 +7,7 @@ type FeedbackInsights = {
 };
 
 const statusCopy: Record<string, string> = { PENDING: "მოლოდინში", APPROVED: "გამოქვეყნებული", HIDDEN: "დამალული", REJECTED: "უარყოფილი" };
-const statusTone: Record<string, string> = { PENDING: "bg-[color-mix(in_srgb,var(--sf-amber)_16%,transparent)] text-[var(--sf-amber)]", APPROVED: "bg-[color-mix(in_srgb,var(--sf-jade)_16%,transparent)] text-[var(--sf-jade)]", HIDDEN: "bg-muted text-muted-foreground", REJECTED: "bg-destructive/10 text-destructive" };
+const statusTone: Record<string, string> = { PENDING: "bg-[color-mix(in_srgb,var(--sf-warning)_16%,transparent)] text-[var(--sf-warning)]", APPROVED: "bg-[color-mix(in_srgb,var(--sf-success)_16%,transparent)] text-[var(--sf-success)]", HIDDEN: "bg-muted text-muted-foreground", REJECTED: "bg-destructive/10 text-destructive" };
 
 export function FeedbackConsentInsights({ data }: { data: FeedbackInsights }) {
   const maxRatingCount = Math.max(1, ...data.feedback.ratings.map(item => item.count));

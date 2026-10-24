@@ -1,29 +1,36 @@
 import { CatalogFooter, CatalogHeader } from "@/components/catalog/CatalogChrome";
-import { CommerceEmpty, LoadingGrid, ProductGrid, VacancyTicket } from "@/components/catalog/Commerce";
-import { cssVars, EmptyTickets, listingMatchesVertical, NEW_LISTING_DAYS, newestListings, TicketShelf, type CatalogCategory as Category, type CatalogListing as Listing } from "@/components/catalog/Tickets";
+import { Float, HeroIn, HeroPhoto, RevealGroup, RevealItem } from "@/components/catalog/HomeMotion";
+import { ProductCard, VacancyTicket } from "@/components/catalog/Commerce";
+import { categoryIcon, cssVars, EmptyCatalog, listingMatchesVertical, newestListings, SalonGrid, SalonLoading, ui as ticketsUi, type CatalogCategory as Category, type CatalogListing as Listing } from "@/components/catalog/Tickets";
 import { marketplaceDiscoveryHref } from "@/components/public/MarketplaceDiscovery";
 import { usePublicMeta } from "@/components/public/PublicMeta";
 import { usePublicLocale } from "@/contexts/PublicLocaleContext";
 import { trpc } from "@/lib/trpc";
-import { VERTICALS, verticalForCategory, verticalLabel, verticalStyle, type Vertical } from "@/lib/verticals";
+import { VERTICALS, verticalForCategory, verticalLabel, type Vertical } from "@/lib/verticals";
 import { BRAND } from "@shared/brand";
-import { ArrowRight, CalendarCheck, Globe, MapPin, Search, UsersRound, Wallet } from "lucide-react";
-import { type FormEvent, useMemo, useState } from "react";
+import { ArrowRight, CalendarCheck, Check, ChevronLeft, ChevronRight, Globe, MapPin, Scissors, Search, Smile, Sparkles, UsersRound, Wallet, type LucideIcon } from "lucide-react";
+import { type FormEvent, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
+
+function plural(count: number, one: string, few: string, many: string) {
+  const rule = new Intl.PluralRules("ru").select(count);
+  return rule === "one" ? one : rule === "few" ? few : many;
+}
 
 export const ui = {
   ka: {
     metaTitle: `${BRAND.name} — ონლაინ ჩაწერა სალონში, ესთეტიკის ცენტრსა და სტომატოლოგთან`,
     metaDescription: "იპოვე გადამოწმებული სალონი, ესთეტიკის ცენტრი ან სტომატოლოგიური კლინიკა მთელ საქართველოში და ჩაეწერე ონლაინ — სერვისი, სპეციალისტი და თავისუფალი დრო ერთ ადგილას.",
-    searchSection: "ძებნა", chooseField: "სფეროს არჩევა", all: "ყველა", soon: "მალე", date: "თარიღი",
-    heroTitle: "ჩაეწერე ონლაინ — სალონში, ესთეტიკის ცენტრში და მალე სტომატოლოგთანაც.", heroLede: "მხოლოდ გადამოწმებული ადგილები მთელი საქართველოდან. დრო, რომელსაც ხედავ, ნამდვილად თავისუფალია.",
-    searchForm: "ადგილის ძებნა", what: "რა გჭირდება?", whatPlaceholder: "მანიკიური, სალონის სახელი…", where: "სად?", wherePlaceholder: "ქალაქი ან უბანი", search: "მოძებნე",
-    verified: "გადამოწმებული ადგილები", verifiedIn: (label: string) => `${label} — გადამოწმებული ადგილები`,
-    listingsLede: "კატალოგში ჩანს მხოლოდ ის ადგილი, რომლის პროფილიც ჩვენ გადავამოწმეთ და რომელიც ონლაინ ჯავშანს იღებს.", wholeCatalog: "მთელი კატალოგი",
-    loading: "იტვირთება", placesFailedBefore: "ადგილების ჩატვირთვა ვერ მოხერხდა. განაახლეთ გვერდი ან ", openCatalog: "გახსენით კატალოგი",
-    vip: "VIP", recommended: "რეკომენდებული", paidNote: "ფასიანი განთავსება", fresh: `სიახლე ${BRAND.nameKa}-ზე`, freshNote: (days: number) => `ბოლო ${days} დღეში დამატებული`, allPlaces: "ყველა ადგილი", nowInCatalog: "ახლა კატალოგში",
+    searchSection: "ძებნა", chooseField: "სფეროს არჩევა", all: "ყველა",
+    heroTitle: "იპოვე და ჩაეწერე ონლაინ", heroLede: "სალონები, ესთეტიკის ცენტრები და სტომატოლოგიური კლინიკები მთელ საქართველოში.",
+    searchForm: "ადგილის ძებნა", what: "რა გჭირდება?", whatSr: " — სერვისი ან ადგილის სახელი", where: "სად?", whereSr: " — ქალაქი ან უბანი", wherePlaceholder: "ქალაქი ან უბანი", search: "მოძებნე",
+    bannerLabel: "გამორჩეული ადგილები", slideLabel: (index: number, total: number) => `${index} / ${total}`, prev: "წინა", next: "შემდეგი",
+    categoriesTitle: "კატეგორიები",
+    verticalsTitle: "აირჩიე სფერო", allCategories: "ყველა კატეგორია",
+    chipConfirmed: "ჯავშანი დადასტურდა", chipCategories: (count: number) => `${count} კატეგორია`, chipFields: (count: number) => `${count} სფერო`,
+    vip: "VIP ადგილები", recommended: "რეკომენდებული", paidNote: "ფასიანი განთავსება", fresh: "ახალი კატალოგში", allPlaces: "ყველა ადგილი", viewAll: "ყველას ნახვა",
+    loading: "იტვირთება", placesFailed: "ადგილების ჩატვირთვა ვერ მოხერხდა.", retry: "სცადე თავიდან",
     emptyDental: "სტომატოლოგიური კლინიკები მალე დაემატება.", emptyVertical: (label: string) => `${label} — პირველი ადგილები მალე გამოჩნდება.`, emptyDefault: "პირველი გადამოწმებული ადგილები მალე გამოჩნდება.",
-    categoriesTitle: "რას ეძებ?", categoriesLoading: "იტვირთება…", categoriesDentalSoon: "კლინიკები და სერვისები მალე დაემატება", categoriesSoon: "კატეგორიები მალე დაემატება",
     howTitle: "ჩაწერა სამ ნაბიჯში, ზარის გარეშე.", howLede: "თავისუფალ დროს სისტემა სპეციალისტის რეალური განრიგიდან ითვლის და ჯავშნის მომენტში ხელახლა ამოწმებს — ერთი და იგივე დრო ორ ადამიანს ვერ მიეცემა.",
     steps: [
       { title: "აირჩიე სერვისი", text: "ნახე ფასი და ხანგრძლივობა. შეგიძლია რამდენიმე სერვისი ერთად აირჩიო." },
@@ -31,10 +38,7 @@ export const ui = {
       { title: "დაადასტურე", text: "მიუთითე სახელი და ტელეფონი. ჯავშნის შეცვლა ან გაუქმება შეგიძლია პირადი ბმულით." },
     ],
     citiesTitle: "მთელი საქართველო.", citiesLede: "აირჩიე ქალაქი ან გახსენი რუკა და ნახე, რა არის შენთან ახლოს.", openMap: "რუკის გახსნა",
-    vacanciesTitle: "ვაკანსიები", vacanciesLede: "სამუშაო ადგილები ოსტატებისთვის, კოსმეტოლოგებისთვის და ექიმებისთვის. აქ ჩანს VIP განცხადებები (ფასიანი განთავსება).", allVacancies: "ყველა ვაკანსია",
-    vacanciesFailedBefore: "ვაკანსიების ჩატვირთვა ვერ მოხერხდა. ", openVacancies: "გახსენით ვაკანსიების გვერდი", vacanciesEmptyTitle: "VIP ვაკანსია ამჟამად არ არის.", vacanciesEmptyText: "ყველა ღია ვაკანსია ნახე სრულ სიაში.",
-    productsTitle: "პროდუქტები", productsLede: "სალონების და კლინიკების პროდუქტები ერთ ვიტრინაში. შეძენა ხდება უშუალოდ ბიზნესში.", allProducts: "ყველა პროდუქტი",
-    productsFailedBefore: "პროდუქტების ჩატვირთვა ვერ მოხერხდა. ", openProducts: "გახსენით პროდუქტების გვერდი", productsEmptyTitle: "პროდუქტები ჯერ არ არის დამატებული.", productsEmptyText: "როცა დამტკიცებული ბიზნესი პროდუქტებს დაამატებს, აქ გამოჩნდება.", productsPage: "პროდუქტების გვერდი",
+    vacanciesTitle: "ვაკანსიები", productsTitle: "პროდუქტები",
     businessTitle: "ბიზნესის მფლობელი ხარ?", businessLede: "მართვის პროგრამა სალონებისთვის, ესთეტიკის ცენტრებისთვის და სტომატოლოგიური კლინიკებისთვის — თითოეულს თავის სფეროზე მორგებული პანელით. დაამატე შენი ადგილი კატალოგში და მიიღე ჯავშნები ონლაინ.", management: "მართვის პროგრამა", register: "რეგისტრაცია",
     features: [
       { title: "ონლაინ ჯავშნები", text: "კლიენტი თავად ირჩევს სერვისს, სპეციალისტს და თავისუფალ დროს — ზარების გარეშე." },
@@ -46,15 +50,16 @@ export const ui = {
   en: {
     metaTitle: `${BRAND.name} — online booking at salons, aesthetics centres and dentists`,
     metaDescription: "Find a verified salon, aesthetics centre or dental clinic across Georgia and book online — service, specialist and free time in one place.",
-    searchSection: "Search", chooseField: "Choose a field", all: "All", soon: "soon", date: "Date",
-    heroTitle: "Book online — at a salon, an aesthetics centre and soon at a dentist too.", heroLede: "Only verified places across Georgia. The times you see are truly free.",
-    searchForm: "Search for a place", what: "What do you need?", whatPlaceholder: "Manicure, salon name…", where: "Where?", wherePlaceholder: "City or area", search: "Search",
-    verified: "Verified places", verifiedIn: (label: string) => `${label} — verified places`,
-    listingsLede: "The catalog shows only places whose profile we have verified and which accept online bookings.", wholeCatalog: "Full catalog",
-    loading: "Loading", placesFailedBefore: "Places could not be loaded. Refresh the page or ", openCatalog: "open the catalog",
-    vip: "VIP", recommended: "Recommended", paidNote: "Paid placement", fresh: `New on ${BRAND.name}`, freshNote: (days: number) => `Added in the last ${days} days`, allPlaces: "All places", nowInCatalog: "Now in the catalog",
+    searchSection: "Search", chooseField: "Choose a field", all: "All",
+    heroTitle: "Find and book online", heroLede: "Salons, aesthetics centres and dental clinics across Georgia.",
+    searchForm: "Search for a place", what: "What do you need?", whatSr: " — service or place name", where: "Where?", whereSr: " — city or area", wherePlaceholder: "City or area", search: "Search",
+    bannerLabel: "Featured places", slideLabel: (index: number, total: number) => `${index} / ${total}`, prev: "Previous", next: "Next",
+    categoriesTitle: "Categories",
+    verticalsTitle: "Choose a field", allCategories: "All categories",
+    chipConfirmed: "Booking confirmed", chipCategories: (count: number) => `${count} ${count === 1 ? "category" : "categories"}`, chipFields: (count: number) => `${count} ${count === 1 ? "field" : "fields"}`,
+    vip: "VIP places", recommended: "Recommended", paidNote: "Paid placement", fresh: "New in the catalog", allPlaces: "All places", viewAll: "View all",
+    loading: "Loading", placesFailed: "Places could not be loaded.", retry: "Try again",
     emptyDental: "Dental clinics will be added soon.", emptyVertical: (label: string) => `${label} — the first places will appear soon.`, emptyDefault: "The first verified places will appear soon.",
-    categoriesTitle: "What are you looking for?", categoriesLoading: "Loading…", categoriesDentalSoon: "Clinics and services will be added soon", categoriesSoon: "Categories will be added soon",
     howTitle: "Book in three steps, no phone call.", howLede: "Free time is calculated from the specialist's real schedule and checked again at the moment of booking — the same time can never be given to two people.",
     steps: [
       { title: "Choose a service", text: "See the price and duration. You can pick several services together." },
@@ -62,10 +67,7 @@ export const ui = {
       { title: "Confirm", text: "Enter your name and phone. You can change or cancel the booking with your private link." },
     ],
     citiesTitle: "All of Georgia.", citiesLede: "Choose a city or open the map to see what is near you.", openMap: "Open map",
-    vacanciesTitle: "Vacancies", vacanciesLede: "Jobs for stylists, cosmetologists and doctors. VIP listings (paid placement) are shown here.", allVacancies: "All vacancies",
-    vacanciesFailedBefore: "Vacancies could not be loaded. ", openVacancies: "Open the vacancies page", vacanciesEmptyTitle: "There are no VIP vacancies right now.", vacanciesEmptyText: "See all open vacancies in the full list.",
-    productsTitle: "Products", productsLede: "Products from salons and clinics in one showcase. You buy directly at the business.", allProducts: "All products",
-    productsFailedBefore: "Products could not be loaded. ", openProducts: "Open the products page", productsEmptyTitle: "No products have been added yet.", productsEmptyText: "When an approved business adds products, they will appear here.", productsPage: "Products page",
+    vacanciesTitle: "Vacancies", productsTitle: "Products",
     businessTitle: "Do you own a business?", businessLede: "Management software for salons, aesthetics centres and dental clinics — each with a dashboard tailored to its field. Add your place to the catalog and receive bookings online.", management: "Management software", register: "Register",
     features: [
       { title: "Online bookings", text: "Clients choose the service, specialist and free time themselves — no phone calls." },
@@ -77,15 +79,16 @@ export const ui = {
   ru: {
     metaTitle: `${BRAND.name} — онлайн-запись в салон, центр эстетики и к стоматологу`,
     metaDescription: "Найдите проверенный салон, центр эстетики или стоматологическую клинику по всей Грузии и запишитесь онлайн — услуга, специалист и свободное время в одном месте.",
-    searchSection: "Поиск", chooseField: "Выбор сферы", all: "Все", soon: "скоро", date: "Дата",
-    heroTitle: "Записывайтесь онлайн — в салон, центр эстетики и скоро к стоматологу.", heroLede: "Только проверенные места по всей Грузии. Время, которое вы видите, действительно свободно.",
-    searchForm: "Поиск места", what: "Что вам нужно?", whatPlaceholder: "Маникюр, название салона…", where: "Где?", wherePlaceholder: "Город или район", search: "Найти",
-    verified: "Проверенные места", verifiedIn: (label: string) => `${label} — проверенные места`,
-    listingsLede: "В каталоге показаны только места, профиль которых мы проверили и которые принимают онлайн-записи.", wholeCatalog: "Весь каталог",
-    loading: "Загрузка", placesFailedBefore: "Не удалось загрузить места. Обновите страницу или ", openCatalog: "откройте каталог",
-    vip: "VIP", recommended: "Рекомендуем", paidNote: "Платное размещение", fresh: `Новое на ${BRAND.name}`, freshNote: (days: number) => `Добавлено за последние ${days} дней`, allPlaces: "Все места", nowInCatalog: "Сейчас в каталоге",
+    searchSection: "Поиск", chooseField: "Выбор сферы", all: "Все",
+    heroTitle: "Найдите и запишитесь онлайн", heroLede: "Салоны, центры эстетики и стоматологические клиники по всей Грузии.",
+    searchForm: "Поиск места", what: "Что вам нужно?", whatSr: " — услуга или название места", where: "Где?", whereSr: " — город или район", wherePlaceholder: "Город или район", search: "Найти",
+    bannerLabel: "Избранные места", slideLabel: (index: number, total: number) => `${index} / ${total}`, prev: "Назад", next: "Вперёд",
+    categoriesTitle: "Категории",
+    verticalsTitle: "Выберите сферу", allCategories: "Все категории",
+    chipConfirmed: "Запись подтверждена", chipCategories: (count: number) => `${count} ${plural(count, "категория", "категории", "категорий")}`, chipFields: (count: number) => `${count} ${plural(count, "сфера", "сферы", "сфер")}`,
+    vip: "VIP-места", recommended: "Рекомендуем", paidNote: "Платное размещение", fresh: "Новое в каталоге", allPlaces: "Все места", viewAll: "Смотреть все",
+    loading: "Загрузка", placesFailed: "Не удалось загрузить места.", retry: "Повторить",
     emptyDental: "Стоматологические клиники скоро появятся.", emptyVertical: (label: string) => `${label} — первые места скоро появятся.`, emptyDefault: "Первые проверенные места скоро появятся.",
-    categoriesTitle: "Что вы ищете?", categoriesLoading: "Загрузка…", categoriesDentalSoon: "Клиники и услуги скоро появятся", categoriesSoon: "Категории скоро появятся",
     howTitle: "Запись в три шага, без звонков.", howLede: "Свободное время рассчитывается по реальному расписанию специалиста и проверяется ещё раз в момент записи — одно и то же время не достанется двум людям.",
     steps: [
       { title: "Выберите услугу", text: "Посмотрите цену и длительность. Можно выбрать сразу несколько услуг." },
@@ -93,10 +96,7 @@ export const ui = {
       { title: "Подтвердите", text: "Укажите имя и телефон. Изменить или отменить запись можно по личной ссылке." },
     ],
     citiesTitle: "Вся Грузия.", citiesLede: "Выберите город или откройте карту и посмотрите, что есть рядом.", openMap: "Открыть карту",
-    vacanciesTitle: "Вакансии", vacanciesLede: "Работа для мастеров, косметологов и врачей. Здесь показаны VIP-объявления (платное размещение).", allVacancies: "Все вакансии",
-    vacanciesFailedBefore: "Не удалось загрузить вакансии. ", openVacancies: "Открыть страницу вакансий", vacanciesEmptyTitle: "Сейчас нет VIP-вакансий.", vacanciesEmptyText: "Все открытые вакансии смотрите в полном списке.",
-    productsTitle: "Товары", productsLede: "Товары салонов и клиник на одной витрине. Покупка происходит прямо в бизнесе.", allProducts: "Все товары",
-    productsFailedBefore: "Не удалось загрузить товары. ", openProducts: "Открыть страницу товаров", productsEmptyTitle: "Товары пока не добавлены.", productsEmptyText: "Когда одобренный бизнес добавит товары, они появятся здесь.", productsPage: "Страница товаров",
+    vacanciesTitle: "Вакансии", productsTitle: "Товары",
     businessTitle: "Вы владелец бизнеса?", businessLede: "Программа управления для салонов, центров эстетики и стоматологических клиник — у каждого панель под свою сферу. Добавьте своё место в каталог и принимайте записи онлайн.", management: "Программа управления", register: "Регистрация",
     features: [
       { title: "Онлайн-записи", text: "Клиент сам выбирает услугу, специалиста и свободное время — без звонков." },
@@ -119,7 +119,83 @@ const CITIES = [
   { value: "ფოთი", en: "Poti", ru: "Поти" },
 ];
 
-function SearchCard({ vertical, onVertical }: { vertical: Vertical | null; onVertical: (next: Vertical | null) => void }) {
+const MAX_SLIDES = 6;
+const reducedMotion = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/** Decorative brand photo from /brand. When the file is missing or broken it renders nothing and the parent's tinted fallback shows. */
+function BrandImg({ name, width, height, eager = false, onFail }: { name: string; width: number; height: number; eager?: boolean; onFail?: () => void }) {
+  const [broken, setBroken] = useState(false);
+  if (broken) return null;
+  const fail = () => { setBroken(true); onFail?.(); };
+  return <img
+    ref={el => { if (el?.complete && !el.naturalWidth) fail(); }}
+    src={`/brand/${name}.webp`} alt="" width={width} height={height}
+    loading={eager ? "eager" : "lazy"} fetchPriority={eager ? "high" : undefined} decoding="async" onError={fail}
+  />;
+}
+
+/** Distance between slide starts, measured from the DOM so it follows the 1-up / 2-up CSS. */
+function slideStep(track: HTMLElement) {
+  const first = track.children[0] as HTMLElement | undefined;
+  const second = track.children[1] as HTMLElement | undefined;
+  return first && second ? second.offsetLeft - first.offsetLeft : 0;
+}
+
+/** Paid VIP placements that have a real cover photo. Scroll-snap, never autoplays; prev/next are real buttons. */
+function Banner({ items }: { items: Listing[] }) {
+  const { locale } = usePublicLocale();
+  const text = ui[locale];
+  const disclosure = ticketsUi[locale].adSr;
+  const track = useRef<HTMLUListElement>(null);
+  const [pos, setPos] = useState({ index: 0, max: 0 });
+  const measure = useCallback(() => {
+    const el = track.current;
+    if (!el) return;
+    const step = slideStep(el);
+    const max = step ? Math.max(0, Math.round((el.scrollWidth - el.clientWidth) / step)) : 0;
+    const index = step ? Math.min(max, Math.round(el.scrollLeft / step)) : 0;
+    setPos(current => (current.index === index && current.max === max ? current : { index, max }));
+  }, []);
+  useEffect(() => {
+    measure();
+    const el = track.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [measure, items.length]);
+  const go = (direction: 1 | -1) => {
+    const el = track.current;
+    if (el) el.scrollBy({ left: direction * slideStep(el), behavior: reducedMotion() ? "auto" : "smooth" });
+  };
+
+  return <section className="hb" aria-roledescription="carousel" aria-label={text.bannerLabel}>
+    <div className="cw-container">
+      <div className="hb-stage">
+        <ul ref={track} className="hb-track" data-count={items.length} onScroll={measure}>
+          {items.map((item, index) => <li key={item.publicSlug} className="hb-slide" data-current={index === pos.index} role="group" aria-roledescription="slide" aria-label={text.slideLabel(index + 1, items.length)}>
+            <Link href={`/salon/${item.publicSlug}`} className="hb-link">
+              <img src={item.coverImageUrl!} alt={item.coverImageAltKa ?? ""} loading={index < 2 ? "eager" : "lazy"} />
+              <span className="hb-chip">VIP<span className="sr-only">{disclosure}</span></span>
+              <span className="hb-text">
+                <span className="hb-name">{item.name}</span>
+                <span className="hb-meta">{[item.areaLabelKa, ...item.categories.slice(0, 2).map(category => category.nameKa)].filter(Boolean).join(" · ")}</span>
+              </span>
+            </Link>
+          </li>)}
+        </ul>
+        {pos.max > 0 ? <>
+          <button type="button" className="hb-nav hb-nav--prev" aria-label={text.prev} aria-disabled={pos.index === 0} onClick={() => pos.index > 0 && go(-1)}><ChevronLeft className="size-6" aria-hidden="true" /></button>
+          <button type="button" className="hb-nav hb-nav--next" aria-label={text.next} aria-disabled={pos.index >= pos.max} onClick={() => pos.index < pos.max && go(1)}><ChevronRight className="size-6" aria-hidden="true" /></button>
+        </> : null}
+      </div>
+      {pos.max > 0 ? <div className="hb-dots" aria-hidden="true">{Array.from({ length: pos.max + 1 }, (_, index) => <span key={index} className="hb-dot" data-active={index === pos.index} />)}</div> : null}
+    </div>
+  </section>;
+}
+
+/** Hero: brand photo with the search on it. The two chips are decoration (a mock confirmation and real catalog counts), hidden from assistive tech. */
+function Hero({ categoryCount }: { categoryCount: number }) {
   const { locale } = usePublicLocale();
   const text = ui[locale];
   const [, setLocation] = useLocation();
@@ -129,254 +205,293 @@ function SearchCard({ vertical, onVertical }: { vertical: Vertical | null; onVer
     event.preventDefault();
     setLocation(marketplaceDiscoveryHref("/salons", undefined, what, where));
   };
-  // Sheet order: the chosen copy sits right behind the original, the others further back.
-  const depth = (id: Vertical) => {
-    if (vertical === id) return 1;
-    const rest = VERTICALS.filter(item => item.id !== vertical).map(item => item.id);
-    return (vertical ? 2 : 1) + rest.indexOf(id);
-  };
-  const band = vertical ? verticalStyle(vertical).bg : "var(--cw-ink)";
-  const now = new Date();
-  const today = `${String(now.getDate()).padStart(2, "0")}.${String(now.getMonth() + 1).padStart(2, "0")}.${now.getFullYear()}`;
 
-  return <div className="cw-stack">
-    <div className="cw-tabs" role="group" aria-label={text.chooseField}>
-      <button type="button" className="cw-tab cw-tab-all" aria-pressed={vertical === null} onClick={() => onVertical(null)}>{text.all}</button>
-      {VERTICALS.map(item => <button key={item.id} type="button" className="cw-tab" style={cssVars({ "--tab-bg": item.bg, "--tab-ink": item.ink })} aria-pressed={vertical === item.id} onClick={() => onVertical(vertical === item.id ? null : item.id)}>
-        {verticalLabel(item.id, locale)}{item.id === "dental" ? <span className="cw-tab-soon">{text.soon}</span> : null}
-      </button>)}
-    </div>
-    {VERTICALS.map(item => {
-      const chosen = vertical === item.id;
-      // The chosen copy is pulled out from under the original; the rest stay stacked behind it.
-      const transform = chosen
-        ? "translate(calc(var(--cw-off) * 3), calc(var(--cw-off) * -1.6)) rotate(1.4deg)"
-        : `translate(calc(var(--cw-off) * ${depth(item.id)}), calc(var(--cw-off) * ${depth(item.id)}))`;
-      return <div key={item.id} aria-hidden="true" className="cw-sheet" data-chosen={chosen} style={{ background: item.bg, transform, zIndex: 4 - depth(item.id) }} />;
-    })}
-    <div className="cw-card">
-      <div className="cw-card-band" style={cssVars({ "--band": band })} />
-      <div className="cw-card-inner" style={cssVars(vertical ? { "--tint": verticalStyle(vertical).bg, "--tint-amount": "16%" } : {})}>
-        <div className="cw-card-head">
-          <span>{text.date} <span className="cw-num ml-1 text-[var(--cw-ink)]">{today}</span></span>
-          <span className="cw-num text-xs">{BRAND.domain}</span>
-        </div>
-        <div className="mt-6 grid gap-8 lg:grid-cols-[1.15fr_1fr] lg:items-center">
-          <div>
-            <h1 className="cw-display text-[clamp(1.95rem,5.6vw,4.4rem)]">{text.heroTitle}</h1>
-            <p className="cw-lede mt-4">{text.heroLede}</p>
+  return <section className="cw-container hh" aria-label={text.searchSection}>
+    <div className="hh-stage">
+      <HeroPhoto className="hh-media"><BrandImg name="hero" width={1600} height={900} eager /></HeroPhoto>
+      <div className="hh-copy">
+        <HeroIn><h1 className="cw-display">{text.heroTitle}</h1></HeroIn>
+        <HeroIn delay={0.08}><p className="cw-lede">{text.heroLede}</p></HeroIn>
+      </div>
+      <HeroIn delay={0.16} className="hh-formwrap">
+        <form onSubmit={submit} className="hm-bar hh-form" role="search" aria-label={text.searchForm}>
+          <label className="hm-bar-field">
+            <span className="sr-only">{text.what}{text.whatSr}</span>
+            <Search className="size-5 shrink-0" aria-hidden="true" />
+            <input value={what} onChange={event => setWhat(event.target.value)} placeholder={text.what} maxLength={120} autoComplete="off" enterKeyHint="search" />
+          </label>
+          <label className="hm-bar-field">
+            <span className="sr-only">{text.where}{text.whereSr}</span>
+            <MapPin className="size-5 shrink-0" aria-hidden="true" />
+            <input value={where} onChange={event => setWhere(event.target.value)} placeholder={text.wherePlaceholder} maxLength={120} list="hm-cities" autoComplete="off" enterKeyHint="search" />
+          </label>
+          <datalist id="hm-cities">{CITIES.map(city => <option key={city.value} value={city.value} />)}</datalist>
+          <button type="submit" className="hm-bar-btn">{text.search}</button>
+        </form>
+      </HeroIn>
+      <div className="hh-chips" aria-hidden="true">
+        <Float className="hh-chip-pos">
+          <div className="hh-chip">
+            <span className="hh-chip-icon" data-tone="ok"><CalendarCheck className="size-5" /></span>
+            <span><span className="hh-chip-title">{text.chipConfirmed}</span><span className="hh-chip-sub">14:30</span></span>
           </div>
-          <form onSubmit={submit} className="grid gap-3" role="search" aria-label={text.searchForm}>
-            <label className="cw-field">
-              <span className="cw-caption">{text.what}</span>
-              <input value={what} onChange={event => setWhat(event.target.value)} placeholder={text.whatPlaceholder} autoComplete="off" enterKeyHint="search" />
-            </label>
-            <label className="cw-field">
-              <span className="cw-caption">{text.where}</span>
-              <input value={where} onChange={event => setWhere(event.target.value)} placeholder={text.wherePlaceholder} list="cw-cities" autoComplete="off" enterKeyHint="search" />
-            </label>
-            <datalist id="cw-cities">{CITIES.map(city => <option key={city.value} value={city.value} />)}</datalist>
-            <button type="submit" className="cw-btn cw-btn-stamp mt-1 w-full"><Search className="size-5" aria-hidden="true" />{text.search}</button>
-          </form>
-        </div>
+        </Float>
+        {categoryCount > 0 ? <Float className="hh-chip-pos hh-chip-pos--2" delay={0.9} period={4.2}>
+          <div className="hh-chip">
+            <span className="hh-chip-icon"><Sparkles className="size-5" /></span>
+            <span><span className="hh-chip-title">{text.chipCategories(categoryCount)} · {text.chipFields(VERTICALS.length)}</span></span>
+          </div>
+        </Float> : null}
       </div>
     </div>
-  </div>;
+  </section>;
 }
 
-function Listings({ vertical }: { vertical: Vertical | null }) {
+function Zone({ labelledBy, label, tone, children }: { labelledBy?: string; label?: string; tone?: "band"; children: ReactNode }) {
+  return <section className="hm-zone" data-tone={tone} aria-labelledby={labelledBy} aria-label={label}>
+    <div className="cw-container">{children}</div>
+  </section>;
+}
+
+function Head({ id, title, note, href }: { id: string; title: string; note?: string; href: string }) {
+  const text = ui[usePublicLocale().locale];
+  return <RevealGroup className="hm-head">
+    <RevealItem>
+      <h2 id={id} className="cw-h2">{title}</h2>
+      {note ? <p className="hm-note">{note}</p> : null}
+    </RevealItem>
+    <RevealItem><Link href={href} className="hm-all">{text.viewAll} <ArrowRight className="size-4" aria-hidden="true" /></Link></RevealItem>
+  </RevealGroup>;
+}
+
+const VERTICAL_ART: Record<Vertical, { photo: string; Icon: LucideIcon }> = {
+  beauty: { photo: "cat-hair", Icon: Scissors },
+  aesthetics: { photo: "cat-aesthetics", Icon: Sparkles },
+  dental: { photo: "cat-dental", Icon: Smile },
+};
+
+/** Three large field cards. Same filter behaviour as the old chips: a pressed card filters, pressing again clears. */
+function Verticals({ vertical, onVertical, categories }: { vertical: Vertical | null; onVertical: (next: Vertical | null) => void; categories: Category[] }) {
   const { locale } = usePublicLocale();
   const text = ui[locale];
-  const directory = trpc.marketplace.directory.useQuery({ limit: 24, offset: 0 });
-  const items = ((directory.data?.items ?? []) as Listing[]).filter(item => listingMatchesVertical(item, vertical));
+  return <Zone labelledBy="hm-fields-title">
+    <div className="hm-head">
+      <h2 id="hm-fields-title" className="cw-h2">{text.verticalsTitle}</h2>
+      <button type="button" className="hm-vchip" aria-pressed={vertical === null} onClick={() => onVertical(null)}>{text.all}</button>
+    </div>
+    <RevealGroup className="hv-grid">
+      {VERTICALS.map(item => {
+        const { photo, Icon } = VERTICAL_ART[item.id];
+        const blurb = categories.filter(category => verticalForCategory(category.slug) === item.id).slice(0, 3).map(category => category.nameKa).join(" · ");
+        return <RevealItem key={item.id} className="hv-item">
+          <button type="button" className="hv-card" aria-pressed={vertical === item.id} style={cssVars({ "--vc-bg": item.bg, "--vc-ink": item.ink })} onClick={() => onVertical(vertical === item.id ? null : item.id)}>
+            <Icon className="hv-fallback" aria-hidden="true" />
+            <BrandImg name={photo} width={800} height={600} />
+            <span className="hv-text">
+              <span className="hv-title">{verticalLabel(item.id, locale)}</span>
+              {blurb ? <span className="hv-blurb">{blurb}</span> : null}
+            </span>
+            <span className="hv-check" aria-hidden="true"><Check className="size-4" /></span>
+          </button>
+        </RevealItem>;
+      })}
+    </RevealGroup>
+  </Zone>;
+}
+
+// The eight photo tiles. A tile with `slug` is that category; one with `vertical` links to the first category of that field.
+const PHOTO_GROUPS: ReadonlyArray<{ key: string; photo: string; slug?: string; vertical?: Vertical }> = [
+  { key: "hair", photo: "cat-hair", slug: "hair" },
+  { key: "nails", photo: "cat-nails", slug: "nails" },
+  { key: "makeup", photo: "cat-makeup", slug: "makeup" },
+  { key: "brows", photo: "cat-brows", slug: "brows-lashes" },
+  { key: "massage", photo: "cat-massage", slug: "massage-spa" },
+  { key: "barber", photo: "cat-barber", slug: "barber" },
+  { key: "aesthetics", photo: "cat-aesthetics", vertical: "aesthetics" },
+  { key: "dental", photo: "cat-dental", vertical: "dental" },
+];
+
+function Categories({ vertical, categories }: { vertical: Vertical | null; categories: Category[] }) {
+  const { locale } = usePublicLocale();
+  const text = ui[locale];
+  const shown = useMemo(() => categories.filter(category => !vertical || verticalForCategory(category.slug) === vertical), [categories, vertical]);
+  const tiles = useMemo(() => PHOTO_GROUPS.flatMap(group => {
+    const category = group.slug ? categories.find(item => item.slug === group.slug) : categories.find(item => verticalForCategory(item.slug) === group.vertical);
+    const field = group.vertical ?? verticalForCategory(group.slug!);
+    if (!category || (vertical && field !== vertical)) return [];
+    return [{ key: group.key, photo: group.photo, slug: category.slug, name: group.vertical ? verticalLabel(group.vertical, locale) : category.nameKa, Icon: categoryIcon(category.iconKey) }];
+  }), [categories, vertical, locale]);
+  if (!shown.length) return null;
+  return <Zone labelledBy="hm-categories-title">
+    <RevealGroup className="hm-head"><RevealItem><h2 id="hm-categories-title" className="cw-h2">{text.categoriesTitle}</h2></RevealItem></RevealGroup>
+    {tiles.length ? <RevealGroup as="ul" className="hp-grid">
+      {tiles.map(tile => <RevealItem as="li" key={tile.key}>
+        <Link href={marketplaceDiscoveryHref("/salons", tile.slug)} className="hp-tile">
+          <tile.Icon className="hp-fallback" aria-hidden="true" />
+          <BrandImg name={tile.photo} width={800} height={600} />
+          <span className="hp-name">{tile.name}</span>
+        </Link>
+      </RevealItem>)}
+    </RevealGroup> : null}
+    <h3 className="hq-title">{text.allCategories}</h3>
+    <ul className="hq">
+      {shown.map(category => {
+        const Icon = categoryIcon(category.iconKey);
+        return <li key={category.id}>
+          <Link href={marketplaceDiscoveryHref("/salons", category.slug)} className="hq-chip"><Icon className="size-[18px]" aria-hidden="true" />{category.nameKa}</Link>
+        </li>;
+      })}
+    </ul>
+  </Zone>;
+}
+
+function Strip({ id, title, note, items, rail = true }: { id: string; title: string; note?: string; items: Listing[]; rail?: boolean }) {
+  if (!items.length) return null;
+  return <Zone labelledBy={id}>
+    <Head id={id} title={title} note={note} href="/salons" />
+    <SalonGrid items={items} rail={rail} reveal />
+  </Zone>;
+}
+
+function Listings({ items, loading, failed, onRetry, vertical }: { items: Listing[]; loading: boolean; failed: boolean; onRetry: () => void; vertical: Vertical | null }) {
+  const { locale } = usePublicLocale();
+  const text = ui[locale];
+  const verticalName = vertical ? verticalLabel(vertical, locale) : null;
+  if (loading) return <Zone label={text.allPlaces}><SalonLoading label={text.loading} /></Zone>;
+  if (failed) return <Zone label={text.allPlaces}>
+    <div className="cw-notice cw-notice-error" role="alert">
+      <p>{text.placesFailed}</p>
+      <button type="button" className="cw-btn cw-btn-line mt-3 min-h-11" onClick={onRetry}>{text.retry}</button>
+    </div>
+  </Zone>;
+  if (!items.length) return <Zone label={text.allPlaces}>
+    <EmptyCatalog message={vertical === "dental" ? text.emptyDental : verticalName ? text.emptyVertical(verticalName) : text.emptyDefault} />
+  </Zone>;
+  // Fewer than four places: one plain grid, no strips of one card.
+  if (items.length < 4) return <Strip id="hm-all-title" title={text.allPlaces} items={items} rail={false} />;
   const vip = items.filter(item => item.promotion?.tier === "VIP");
   const recommended = items.filter(item => item.promotion?.tier === "RECOMMENDED");
   const fresh = newestListings(items.filter(item => !item.promotion));
   const rest = items.filter(item => !item.promotion && !fresh.includes(item));
-  const verticalName = vertical ? verticalLabel(vertical, locale) : null;
-
-  return <section className="cw-section" aria-labelledby="cw-listings-title">
-    <div className="cw-container">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h2 id="cw-listings-title" className="cw-h2">{verticalName ? text.verifiedIn(verticalName) : text.verified}</h2>
-          <p className="cw-lede mt-2">{text.listingsLede}</p>
-        </div>
-        <Link href="/salons" className="cw-btn cw-btn-line min-h-11 text-[var(--cw-ink)]">{text.wholeCatalog} <ArrowRight className="size-4" aria-hidden="true" /></Link>
-      </div>
-      <div className="mt-10">
-        {directory.isLoading ? <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" aria-busy="true" aria-label={text.loading}>{[0, 1, 2].map(key => <div key={key} className="h-[8.5rem] animate-pulse rounded-[4px] border-[1.5px] border-[var(--cw-rule)] bg-white" />)}</div>
-          : directory.isError ? <p role="alert" className="text-[var(--cw-ink-soft)]">{text.placesFailedBefore}<Link href="/salons" className="font-bold text-[var(--cw-stamp)] underline">{text.openCatalog}</Link>.</p>
-          : items.length ? <>
-            <TicketShelf title={text.vip} note={text.paidNote} items={vip} startAt={1} />
-            <TicketShelf title={text.recommended} note={text.paidNote} items={recommended} startAt={vip.length + 1} />
-            <TicketShelf title={text.fresh} note={text.freshNote(NEW_LISTING_DAYS)} items={fresh} startAt={vip.length + recommended.length + 1} />
-            <TicketShelf title={vip.length || recommended.length || fresh.length ? text.allPlaces : text.nowInCatalog} items={rest} startAt={vip.length + recommended.length + fresh.length + 1} />
-          </>
-          : <EmptyTickets message={vertical === "dental" ? text.emptyDental : verticalName ? text.emptyVertical(verticalName) : text.emptyDefault} vertical={vertical} />}
-      </div>
-    </div>
-  </section>;
-}
-
-function CategoryLedger({ vertical }: { vertical: Vertical | null }) {
-  const { locale } = usePublicLocale();
-  const text = ui[locale];
-  const categories = trpc.marketplace.categories.useQuery();
-  const byVertical = useMemo(() => {
-    const grouped: Record<Vertical, Category[]> = { beauty: [], aesthetics: [], dental: [] };
-    for (const category of (categories.data ?? []) as Category[]) grouped[verticalForCategory(category.slug)].push(category);
-    return grouped;
-  }, [categories.data]);
-  const shown = vertical ? VERTICALS.filter(item => item.id === vertical) : VERTICALS;
-
-  return <section className="cw-section cw-rule-top" aria-labelledby="cw-categories-title">
-    <div className="cw-container">
-      <h2 id="cw-categories-title" className="cw-h2">{text.categoriesTitle}</h2>
-      <div className={`mt-8 grid gap-5 ${shown.length > 1 ? "lg:grid-cols-3" : "max-w-xl"}`}>
-        {shown.map(item => <div key={item.id} className="cw-ledger" style={cssVars({ "--ledger-bg": item.bg, "--ledger-ink": item.ink })}>
-          <div className="cw-ledger-head"><span className="text-lg font-extrabold [font-stretch:85%]">{verticalLabel(item.id, locale)}</span><span className="cw-num text-xs">{byVertical[item.id].length || "—"}</span></div>
-          {byVertical[item.id].length ? byVertical[item.id].map(category => <Link key={category.id} href={marketplaceDiscoveryHref("/salons", category.slug)} className="cw-ledger-row">
-            <span className="flex-1">{category.nameKa}</span>
-            <ArrowRight className="size-4 text-[var(--cw-ink-soft)]" aria-hidden="true" />
-          </Link>) : <p className="cw-ledger-row font-normal text-[var(--cw-ink-soft)]">{categories.isLoading ? text.categoriesLoading : item.id === "dental" ? text.categoriesDentalSoon : text.categoriesSoon}</p>}
-        </div>)}
-      </div>
-    </div>
-  </section>;
+  return <>
+    <Strip id="hm-vip-title" title={text.vip} note={text.paidNote} items={vip} />
+    <Strip id="hm-rec-title" title={text.recommended} note={text.paidNote} items={recommended} />
+    <Strip id="hm-new-title" title={text.fresh} items={fresh} />
+    <Strip id="hm-all-title" title={text.allPlaces} items={rest} />
+  </>;
 }
 
 function HowItWorks() {
   const text = ui[usePublicLocale().locale];
-  return <section className="cw-section cw-rule-top" aria-labelledby="cw-how-title">
-    <div className="cw-container grid gap-10 lg:grid-cols-[0.8fr_1.2fr]">
-      <div>
-        <h2 id="cw-how-title" className="cw-h2">{text.howTitle}</h2>
-        <p className="cw-lede mt-4">{text.howLede}</p>
-      </div>
-      <ol className="cw-ledger">
-        {text.steps.map((step, index) => <li key={step.title} className="cw-ledger-row items-start gap-4 py-5">
-          <span className="cw-num grid size-9 shrink-0 place-items-center rounded-[3px] border-[1.5px] border-[var(--cw-ink)] text-sm font-semibold">{index + 1}</span>
-          <span><span className="block text-lg font-extrabold [font-stretch:85%]">{step.title}</span><span className="mt-1 block font-normal leading-6 text-[var(--cw-ink-soft)]">{step.text}</span></span>
-        </li>)}
-      </ol>
-    </div>
-  </section>;
+  return <Zone labelledBy="hm-how-title">
+    <RevealGroup>
+      <RevealItem><h2 id="hm-how-title" className="cw-h2">{text.howTitle}</h2></RevealItem>
+      <RevealItem><p className="cw-lede mt-2">{text.howLede}</p></RevealItem>
+    </RevealGroup>
+    <RevealGroup as="ul" className="hm-steps">
+      {text.steps.map((step, index) => <RevealItem as="li" key={step.title} className="hm-step">
+        <span className="hm-step-n">{index + 1}</span>
+        <span><span className="hm-step-title">{step.title}</span><span className="hm-step-text">{step.text}</span></span>
+      </RevealItem>)}
+    </RevealGroup>
+  </Zone>;
 }
 
 function Cities() {
   const { locale } = usePublicLocale();
   const text = ui[locale];
-  return <section className="cw-section cw-rule-top" aria-labelledby="cw-cities-title">
-    <div className="cw-container grid gap-8 lg:grid-cols-[1fr_auto] lg:items-end">
-      <div>
-        <h2 id="cw-cities-title" className="cw-h2">{text.citiesTitle}</h2>
-        <p className="cw-lede mt-3">{text.citiesLede}</p>
-        <ul className="mt-6 flex flex-wrap gap-2">{CITIES.map(city => <li key={city.value}><Link href={marketplaceDiscoveryHref("/salons", undefined, undefined, city.value)} className="cw-btn cw-btn-line min-h-10 px-4 text-sm font-bold text-[var(--cw-ink)]">{locale === "ka" ? city.value : city[locale]}</Link></li>)}</ul>
-      </div>
-      <Link href="/salons/map" className="cw-btn cw-btn-stamp"><MapPin className="size-5" aria-hidden="true" />{text.openMap}</Link>
+  return <Zone labelledBy="hm-cities-title">
+    <RevealGroup>
+      <RevealItem><h2 id="hm-cities-title" className="cw-h2">{text.citiesTitle}</h2></RevealItem>
+      <RevealItem><p className="cw-lede mt-2">{text.citiesLede}</p></RevealItem>
+    </RevealGroup>
+    <div className="hm-cities">
+      <ul>{CITIES.map(city => <li key={city.value}><Link href={marketplaceDiscoveryHref("/salons", undefined, undefined, city.value)} className="hm-city">{locale === "ka" ? city.value : city[locale]}</Link></li>)}</ul>
+      <Link href="/salons/map" className="hm-map-link"><MapPin className="size-5" aria-hidden="true" />{text.openMap}</Link>
     </div>
-  </section>;
+  </Zone>;
 }
 
-function StripHead({ id, title, lede, href, cta }: { id: string; title: string; lede: string; href: string; cta: string }) {
-  return <div className="flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <h2 id={id} className="cw-h2">{title}</h2>
-      <p className="cw-lede mt-2">{lede}</p>
-    </div>
-    <Link href={href} className="cw-btn cw-btn-line min-h-11 text-[var(--cw-ink)]">{cta} <ArrowRight className="size-4" aria-hidden="true" /></Link>
-  </div>;
-}
-
+// Strips render only when the API returned items: no loading frames, no empty boxes.
 function VacancyStrip({ vertical }: { vertical: Vertical | null }) {
   const text = ui[usePublicLocale().locale];
-  const vip = trpc.vacancies.publicVipList.useQuery({ vertical: vertical ?? undefined, limit: 6 });
+  const vip = trpc.vacancies.publicVipList.useQuery({ vertical: vertical ?? undefined, limit: 3 });
   const items = vip.data ?? [];
-  return <section className="cw-section cw-rule-top" aria-labelledby="cw-vacancies-title">
-    <div className="cw-container">
-      <StripHead id="cw-vacancies-title" title={text.vacanciesTitle} lede={text.vacanciesLede} href="/vacancies" cta={text.allVacancies} />
-      <div className="mt-10">
-        {vip.isLoading ? <LoadingGrid />
-          : vip.isError ? <p role="alert" className="text-[var(--cw-ink-soft)]">{text.vacanciesFailedBefore}<Link href="/vacancies" className="font-bold text-[var(--cw-stamp)] underline">{text.openVacancies}</Link>.</p>
-          : items.length ? <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{items.map((item, index) => <VacancyTicket key={item.id} item={item} number={index + 1} />)}</div>
-          : <CommerceEmpty title={text.vacanciesEmptyTitle} text={text.vacanciesEmptyText}>
-            <Link href="/vacancies" className="cw-btn cw-btn-stamp">{text.allVacancies}</Link>
-          </CommerceEmpty>}
-      </div>
-    </div>
-  </section>;
+  if (!items.length) return null;
+  return <Zone labelledBy="hm-vacancies-title">
+    <Head id="hm-vacancies-title" title={text.vacanciesTitle} href="/vacancies" />
+    <ul className="cwx-grid hm-snap">{items.map((item, index) => <li key={item.id}><VacancyTicket item={item} number={index + 1} /></li>)}</ul>
+  </Zone>;
 }
 
 function ProductStrip({ vertical }: { vertical: Vertical | null }) {
   const text = ui[usePublicLocale().locale];
-  const products = trpc.products.publicList.useQuery({ vertical: vertical ?? undefined, limit: 8, offset: 0 });
+  const products = trpc.products.publicList.useQuery({ vertical: vertical ?? undefined, limit: 4, offset: 0 });
   const items = products.data?.items ?? [];
-  return <section className="cw-section cw-rule-top" aria-labelledby="cw-products-title">
-    <div className="cw-container">
-      <StripHead id="cw-products-title" title={text.productsTitle} lede={text.productsLede} href="/products" cta={text.allProducts} />
-      <div className="mt-10">
-        {products.isLoading ? <LoadingGrid ticket={false} />
-          : products.isError ? <p role="alert" className="text-[var(--cw-ink-soft)]">{text.productsFailedBefore}<Link href="/products" className="font-bold text-[var(--cw-stamp)] underline">{text.openProducts}</Link>.</p>
-          : items.length ? <ProductGrid items={items} />
-          : <CommerceEmpty title={text.productsEmptyTitle} text={text.productsEmptyText}>
-            <Link href="/products" className="cw-btn cw-btn-stamp">{text.productsPage}</Link>
-          </CommerceEmpty>}
-      </div>
-    </div>
-  </section>;
+  if (!items.length) return null;
+  return <Zone labelledBy="hm-products-title">
+    <Head id="hm-products-title" title={text.productsTitle} href="/products" />
+    <ul className="cwx-grid hm-snap">{items.map(item => <li key={item.id}><ProductCard item={item} /></li>)}</ul>
+  </Zone>;
 }
 
 const BUSINESS_ICONS = [CalendarCheck, UsersRound, Wallet, Globe];
 
 function BusinessBand() {
-  const { locale } = usePublicLocale();
-  const text = ui[locale];
-  return <section className="cw-desk" aria-labelledby="cw-business-title">
-    <div className="cw-container py-16 lg:py-20">
-      <div className="grid gap-8 lg:grid-cols-[1.3fr_1fr] lg:items-end">
-        <div>
-          <h2 id="cw-business-title" className="cw-h2 text-white">{text.businessTitle}</h2>
-          <p className="mt-4 max-w-xl leading-7 text-[var(--cw-on-desk-soft)]">{text.businessLede}</p>
-          <ul className="mt-5 flex flex-wrap gap-2">{VERTICALS.map(item => <li key={item.id} className="rounded-[3px] px-3 py-1 text-sm font-extrabold" style={{ background: item.bg, color: item.ink }}>{verticalLabel(item.id, locale)}{item.id === "dental" ? ` · ${text.soon}` : ""}</li>)}</ul>
+  const text = ui[usePublicLocale().locale];
+  const [hasPhoto, setHasPhoto] = useState(true);
+  return <Zone labelledBy="hm-business-title" tone="band">
+    <div className="hm-band" data-photo={hasPhoto}>
+      {hasPhoto ? <div className="hm-band-media"><BrandImg name="business" width={1600} height={900} onFail={() => setHasPhoto(false)} /></div> : null}
+      <div className="hm-band-body">
+        <h2 id="hm-business-title" className="cw-h2">{text.businessTitle}</h2>
+        <p className="hm-band-lede">{text.businessLede}</p>
+        <div className="hm-band-actions">
+          <Link href="/partner" className="hm-band-btn hm-band-btn--fill">{text.management} <ArrowRight className="size-4" aria-hidden="true" /></Link>
+          <Link href="/register" className="hm-band-btn hm-band-btn--line">{text.register}</Link>
         </div>
-        <div className="flex flex-wrap gap-3 lg:justify-end">
-          <Link href="/partner" className="cw-btn cw-btn-paper">{text.management} <ArrowRight className="size-4" aria-hidden="true" /></Link>
-          <Link href="/register" className="cw-btn cw-btn-line text-white">{text.register}</Link>
-        </div>
+        <ul className="hm-features">
+          {text.features.map((item, index) => {
+            const Icon = BUSINESS_ICONS[index]!;
+            return <li key={item.title}>
+              <Icon className="size-6" aria-hidden="true" />
+              <p className="hm-feature-title">{item.title}</p>
+              <p className="hm-feature-text">{item.text}</p>
+            </li>;
+          })}
+        </ul>
       </div>
-      <ul className="mt-12 grid gap-px overflow-hidden rounded-[4px] border border-[var(--cw-desk-soft)] bg-[var(--cw-desk-soft)] sm:grid-cols-2 lg:grid-cols-4">
-        {text.features.map((item, index) => {
-          const Icon = BUSINESS_ICONS[index]!;
-          return <li key={item.title} className="bg-[var(--cw-desk)] p-5">
-            <Icon className="size-5 text-[var(--cw-aesthetics)]" aria-hidden="true" />
-            <p className="mt-3 font-extrabold text-white [font-stretch:85%]">{item.title}</p>
-            <p className="mt-1 text-sm leading-6 text-[var(--cw-on-desk-soft)]">{item.text}</p>
-          </li>;
-        })}
-      </ul>
     </div>
-  </section>;
+  </Zone>;
 }
 
 export default function Home() {
   const text = ui[usePublicLocale().locale];
   usePublicMeta({ title: text.metaTitle, description: text.metaDescription, canonicalPath: "/" });
   const [vertical, setVertical] = useState<Vertical | null>(null);
+  const directory = trpc.marketplace.directory.useQuery({ limit: 24, offset: 0 });
+  const categories = (trpc.marketplace.categories.useQuery().data ?? []) as Category[];
+  const all = (directory.data?.items ?? []) as Listing[];
+  const slides = all.filter(item => item.promotion?.tier === "VIP" && item.coverImageUrl).slice(0, MAX_SLIDES);
+  const items = all.filter(item => listingMatchesVertical(item, vertical));
 
   return <div className="cw min-h-screen">
     <CatalogHeader />
-    <main id="main-content">
-      <section className="cw-desk cw-section-hero pb-14 pt-6 sm:pb-20 sm:pt-10" aria-label={text.searchSection}>
-        <div className="cw-container"><SearchCard vertical={vertical} onVertical={setVertical} /></div>
-      </section>
-      <Listings vertical={vertical} />
-      <CategoryLedger vertical={vertical} />
-      <HowItWorks />
-      <Cities />
-      <VacancyStrip vertical={vertical} />
-      <ProductStrip vertical={vertical} />
-      <BusinessBand />
+    <main id="main-content" className="hm">
+      <div className="hm-top">
+        <Hero categoryCount={categories.length} />
+        {slides.length ? <Banner items={slides} /> : null}
+      </div>
+      <div className="hm-zones">
+        <Verticals vertical={vertical} onVertical={setVertical} categories={categories} />
+        <Categories vertical={vertical} categories={categories} />
+        <Listings items={items} loading={directory.isLoading} failed={directory.isError} onRetry={() => directory.refetch()} vertical={vertical} />
+        <HowItWorks />
+        <Cities />
+        <VacancyStrip vertical={vertical} />
+        <ProductStrip vertical={vertical} />
+        <BusinessBand />
+      </div>
     </main>
     <CatalogFooter />
   </div>;

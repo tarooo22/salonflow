@@ -10,8 +10,8 @@ const revenueConfig = {
 } satisfies ChartConfig;
 
 const commissionConfig = {
-  amountTetri: { label: "დარიცხული", color: "var(--sf-violet)" },
-  paidTetri: { label: "გადახდილი", color: "var(--sf-jade)" },
+  amountTetri: { label: "დარიცხული", color: "var(--sf-accent)" },
+  paidTetri: { label: "გადახდილი", color: "var(--sf-success)" },
 } satisfies ChartConfig;
 
 const compactGel = (value: number) => { const gel = value / 100; return gel >= 1000 ? `${Number((gel / 1000).toFixed(1))} ათ ₾` : `${Math.round(gel)} ₾`; };
@@ -34,7 +34,7 @@ export function RevenueTrendChart({ data }: { data: RevenuePoint[] }) {
           <CartesianGrid vertical={false} strokeDasharray="3 3" />
           <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} minTickGap={24} tickFormatter={formatChartDate} />
           <YAxis width={58} tickLine={false} axisLine={false} tickMargin={8} tickFormatter={compactGel} />
-          <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="line" labelFormatter={label => formatChartDate(String(label))} formatter={(value) => <span className="font-mono font-semibold">{formatGelTetri(Number(value))}</span>} />} />
+          <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="line" labelFormatter={label => formatChartDate(String(label))} formatter={(value) => <span className="font-semibold">{formatGelTetri(Number(value))}</span>} />} />
           <Area type="monotone" dataKey="revenueTetri" stroke="var(--color-revenueTetri)" strokeWidth={2.5} fill="url(#revenue-fill)" />
         </AreaChart>
       </ChartContainer>
@@ -53,7 +53,7 @@ export function CommissionDistributionChart({ data }: { data: CommissionSpeciali
           <CartesianGrid horizontal={false} strokeDasharray="3 3" />
           <XAxis type="number" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={compactGel} />
           <YAxis dataKey="label" type="category" width={102} tickLine={false} axisLine={false} tickMargin={8} />
-          <ChartTooltip cursor={{ fill: "color-mix(in srgb, var(--sf-surface-hover) 70%, transparent)" }} content={<ChartTooltipContent labelKey="label" formatter={(value) => <span className="font-mono font-semibold">{formatGelTetri(Number(value))}</span>} />} />
+          <ChartTooltip cursor={{ fill: "color-mix(in srgb, var(--sf-surface-hover) 70%, transparent)" }} content={<ChartTooltipContent labelKey="label" formatter={(value) => <span className="font-semibold">{formatGelTetri(Number(value))}</span>} />} />
           <ChartLegend content={<ChartLegendContent />} />
           <Bar dataKey="amountTetri" fill="var(--color-amountTetri)" radius={[0, 5, 5, 0]} />
           <Bar dataKey="paidTetri" fill="var(--color-paidTetri)" radius={[0, 5, 5, 0]} />

@@ -1,6 +1,6 @@
 import DashboardLayout from "@/components/DashboardLayout";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Check, CheckCheck, ChevronLeft, ChevronRight, Clock3, MapPin, Play, Plus, UserCheck, UserX, X, type LucideIcon } from "lucide-react";
+import { CalendarCheck, Check, ChevronLeft, ChevronRight, Clock, MapPin, Plus, UserCheck, X, type LucideIcon } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { DragEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { dateKeyInTimeZone, formatTimeInTimeZone, zonedDateTimeToUtc } from "@shared/timezones";
@@ -15,9 +15,11 @@ import { DATE_NAMES } from "@/components/public/BookingPrimitives";
 import { useIsMobile } from "@/hooks/useMobile";
 
 const statusLabels: Record<string, string> = { PENDING: "დასადასტურებელი", CONFIRMED: "დადასტურებული", CHECKED_IN: "მიღებულია", IN_SERVICE: "მომსახურებაშია", COMPLETED: "დასრულებული", CANCELLED: "გაუქმებული", NO_SHOW: "არ გამოცხადდა" };
-const statusIcons: Record<string, LucideIcon> = { PENDING: Clock3, CONFIRMED: Check, CHECKED_IN: UserCheck, IN_SERVICE: Play, COMPLETED: CheckCheck, CANCELLED: X, NO_SHOW: UserX };
+const statusIcons: Record<string, LucideIcon> = { PENDING: Clock, CONFIRMED: CalendarCheck, CHECKED_IN: UserCheck, IN_SERVICE: UserCheck, COMPLETED: Check, CANCELLED: X, NO_SHOW: X };
 const FIRST_HOUR = 8;
 const LAST_HOUR = 21;
+// No working-hours feed reaches the calendar yet, so an empty day opens at this hour. shortcut: constant, read the location opening hours once an endpoint exposes them.
+const WORK_START_HOUR = 9;
 const hours = Array.from({ length: LAST_HOUR - FIRST_HOUR }, (_, index) => FIRST_HOUR + index);
 const names = DATE_NAMES.ka;
 
@@ -129,23 +131,33 @@ export default function Calendar() {
   const nowMinute = minuteOfDay(now, timezone);
   const boardRef = useRef<HTMLDivElement>(null);
   const rangeKey = `${view}:${dayKey(days[0])}`;
-  // Open the board near the current time on today's date, at the first hour otherwise.
-  useEffect(() => { if (!showBoard || !boardRef.current) return; boardRef.current.scrollTop = isToday ? Math.max(0, (nowMinute - 60 - FIRST_HOUR * 60) * pixelsPerMinute) : 0; }, [showBoard, rangeKey, pixelsPerMinute]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Open the board 1h before now when today is inside working hours; otherwise at the working-hours start (or the earliest booking, if earlier).
+  useEffect(() => {
+    if (!showBoard || !boardRef.current) return;
+    const earliest = calendarAppointments.reduce((min, appointment) => Math.min(min, minuteOfDay(new Date(appointment.startsAt), timezone)), Infinity);
+    const target = isToday && nowMinute >= WORK_START_HOUR * 60 && nowMinute < LAST_HOUR * 60 ? nowMinute - 60 : Math.min(WORK_START_HOUR * 60 - 15, earliest - 30);
+    boardRef.current.scrollTop = Math.max(0, (target - FIRST_HOUR * 60) * pixelsPerMinute);
+  }, [showBoard, rangeKey, pixelsPerMinute]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const dateControls = <div className="cwk-datebar">
-    <button type="button" className="cwk-datebtn" onClick={() => move(-1)} aria-label="წინა პერიოდი"><ChevronLeft className="size-4" aria-hidden="true" /></button>
-    <span className="cwk-datestamp" aria-live="polite">{view === "week" ? <RangeStamp first={days[0]} last={days[6]} /> : <DayStamp day={days[0]} short withYear={days[0].getUTCFullYear() !== now.getUTCFullYear()} />}</span>
-    <button type="button" className="cwk-datebtn" onClick={() => move(1)} aria-label="შემდეგი პერიოდი"><ChevronRight className="size-4" aria-hidden="true" /></button>
+  const dateControls = <div className="flex min-w-0 items-center gap-1 max-md:order-2 max-md:w-full">
+    <div className="flex min-w-0 flex-1 items-center gap-1 md:flex-none">
+      <button type="button" className="cwk-datebtn" onClick={() => move(-1)} aria-label="წინა პერიოდი"><ChevronLeft className="size-4" aria-hidden="true" /></button>
+      <span className="cwk-datestamp" aria-live="polite">{view === "week" ? <RangeStamp first={days[0]} last={days[6]} /> : <DayStamp day={days[0]} short withYear={days[0].getUTCFullYear() !== now.getUTCFullYear()} />}</span>
+      <button type="button" className="cwk-datebtn" onClick={() => move(1)} aria-label="შემდეგი პერიოდი"><ChevronRight className="size-4" aria-hidden="true" /></button>
+    </div>
     <button type="button" className="cwk-datebtn" onClick={() => setCursorKey(null)}>დღეს</button>
   </div>;
+  const emptyRange = showBoard && !calendarAppointments.length;
 
   return <DashboardLayout><div className="sf-workspace-page mx-auto w-full max-w-[96rem] space-y-4">
     <WorkspacePageHeader title="კალენდარი" className="cwk-head--split" actions={organization ? <>
       {dateControls}
-      <div className="cwk-seg" role="group" aria-label="ხედი"><button type="button" aria-pressed={view === "day"} onClick={() => switchView("day")}>დღე</button><button type="button" aria-pressed={view === "week"} onClick={() => switchView("week")}>კვირა</button></div>
-      {(locations.data?.length ?? 0) > 1 ? <Select value={activeLocationId || locations.data![0]?.id} onValueChange={setActiveLocationId}><SelectTrigger aria-label="ფილიალი" className="cwk-loc h-9 w-44 bg-card max-md:h-11 max-md:w-auto"><MapPin className="mr-1 size-4 shrink-0 text-[var(--cwk-ink-soft)]" aria-hidden="true" /><SelectValue placeholder="ფილიალი" /></SelectTrigger><SelectContent>{locations.data!.map(location => <SelectItem key={location.id} value={location.id}>{location.name}</SelectItem>)}</SelectContent></Select> : null}
-      {canManageCalendar ? <Select value={staffFilter} onValueChange={setStaffFilter}><SelectTrigger aria-label="სპეციალისტი" className="cwk-off h-9 w-auto min-w-44 bg-card"><SelectValue placeholder="ყველა სპეციალისტი" /></SelectTrigger><SelectContent><SelectItem value="ALL">ყველა სპეციალისტი</SelectItem>{staff.data?.map(item => <SelectItem key={item.profile.id} value={item.profile.id}>{item.profile.publicDisplayName}</SelectItem>)}</SelectContent></Select> : null}
-      <span className="cwk-views"><SavedViewMenu organizationId={organization.id} route="/app/calendar" filterPayload={{ view, locationId: selectedLocation?.id, ...(staffFilter !== "ALL" ? { staffFilter } : {}) }} onApply={applySavedView} /></span>
+      <div className="flex items-center gap-2 max-md:order-3 max-md:w-full">
+        <div className="cwk-seg" role="group" aria-label="ხედი"><button type="button" aria-pressed={view === "day"} onClick={() => switchView("day")}>დღე</button><button type="button" aria-pressed={view === "week"} onClick={() => switchView("week")}>კვირა</button></div>
+        {(locations.data?.length ?? 0) > 1 ? <Select value={activeLocationId || locations.data![0]?.id} onValueChange={setActiveLocationId}><SelectTrigger aria-label="ფილიალი" className="cwk-loc h-9 w-44 bg-card max-md:h-11 max-md:w-auto"><MapPin className="mr-1 size-4 shrink-0 text-[var(--cwk-ink-soft)]" aria-hidden="true" /><SelectValue placeholder="ფილიალი" /></SelectTrigger><SelectContent>{locations.data!.map(location => <SelectItem key={location.id} value={location.id}>{location.name}</SelectItem>)}</SelectContent></Select> : null}
+        {canManageCalendar ? <Select value={staffFilter} onValueChange={setStaffFilter}><SelectTrigger aria-label="სპეციალისტი" className="cwk-off h-9 w-auto min-w-44 bg-card"><SelectValue placeholder="ყველა სპეციალისტი" /></SelectTrigger><SelectContent><SelectItem value="ALL">ყველა სპეციალისტი</SelectItem>{staff.data?.map(item => <SelectItem key={item.profile.id} value={item.profile.id}>{item.profile.publicDisplayName}</SelectItem>)}</SelectContent></Select> : null}
+        <span className="cwk-views max-md:ml-auto"><SavedViewMenu organizationId={organization.id} route="/app/calendar" filterPayload={{ view, locationId: selectedLocation?.id, ...(staffFilter !== "ALL" ? { staffFilter } : {}) }} onApply={applySavedView} /></span>
+      </div>
       {canManageCalendar && selectedLocation ? <button type="button" className="cwk-stampbtn ml-auto" aria-expanded={walkInOpen} onClick={() => setWalkInOpen(open => !open)}><Plus className="size-4" aria-hidden="true" />ჯავშანი</button> : null}
     </> : null} />
     {organizations.isLoading ? <WorkspaceState kind="loading" title="სამუშაო სივრცე იტვირთება…" /> : null}
@@ -159,7 +171,15 @@ export default function Calendar() {
       {!loading && !failed && selectedLocation && !columns.length ? <WorkspaceState kind="empty" title="ფილიალზე სპეციალისტი არ არის" description="დაამატეთ სპეციალისტი გუნდის გვერდზე." /> : null}
       {showBoard ? <>
         <div className="cwk-strip" role="group" aria-label={view === "week" ? "დღე" : "სპეციალისტი"}>{columns.map(column => <button key={column.key} type="button" aria-pressed={column.key === activeKey} onClick={() => setMobileKey(column.key)}>{column.dot ? <span className="cwk-dot" style={{ backgroundColor: column.dot }} aria-hidden="true" /> : null}{view === "week" ? <>{names.weekdayShort[weekdayIndex(column.day)]} <Num>{column.day.getUTCDate()}</Num></> : column.label}</button>)}</div>
-        <Board innerRef={boardRef} columns={columns} activeKey={activeKey} timezone={timezone} pixelsPerMinute={pixelsPerMinute} weekView={view === "week"} todayKey={todayKey} nowMinute={nowMinute} canManageCalendar={canManageCalendar} busy={busy} onAdvance={advance} onMove={moveAppointment} />
+        <div className="relative">
+          <Board innerRef={boardRef} columns={columns} activeKey={activeKey} timezone={timezone} pixelsPerMinute={pixelsPerMinute} weekView={view === "week"} todayKey={todayKey} nowMinute={nowMinute} canManageCalendar={canManageCalendar} busy={busy} onAdvance={advance} onMove={moveAppointment} />
+          {emptyRange ? <div className="pointer-events-none absolute inset-0 z-20 grid place-items-center p-2">
+            <div className="pointer-events-auto flex max-w-full flex-wrap items-center justify-center gap-x-3 gap-y-2 rounded-[1.25rem] border border-[var(--cwk-rule)] bg-card px-3 py-2 text-sm font-semibold text-[var(--cwk-ink)] shadow-sm" role="status">
+              <span>{view === "week" ? "ამ კვირაში ჯავშანი არ არის." : "ამ დღეს ჯავშანი არ არის."}</span>
+              {canManageCalendar ? <button type="button" className="cwk-stampbtn" onClick={() => setWalkInOpen(true)}><Plus className="size-4" aria-hidden="true" />ჯავშანი</button> : null}
+            </div>
+          </div> : null}
+        </div>
       </> : null}
     </> : null}
   </div></DashboardLayout>;
@@ -233,7 +253,7 @@ function Ticket({ ticket, timezone, pixelsPerMinute, showStaff, canManageCalenda
   const service = appointment.services.map(item => item.serviceNameSnapshot).join(", ") || "სერვისი";
   const time = `${formatTimeInTimeZone(new Date(appointment.startsAt), timezone)}–${formatTimeInTimeZone(new Date(appointment.endsAt), timezone)}`;
   const draggable = canManageCalendar && (appointment.status === "PENDING" || appointment.status === "CONFIRMED");
-  const StatusIcon = statusIcons[appointment.status] ?? Clock3;
+  const StatusIcon = statusIcons[appointment.status] ?? Clock;
   const state = statusLabels[appointment.status] ?? appointment.status;
   const [pressed, setPressed] = useState(false);
   const lastStatus = useRef(appointment.status);
@@ -250,13 +270,13 @@ function Ticket({ ticket, timezone, pixelsPerMinute, showStaff, canManageCalenda
     style={{ top, height, left: `calc(${(lane / lanes) * 100}% + 2px)`, width: `calc(${100 / lanes}% - 4px)` }}
     aria-label={`${time} ${clientName}, ${service}, ${state}`}
   >
-    <span className="cwk-stub" data-pressed={pressed} aria-hidden="true"><StatusIcon /></span>
+    <span className="cwk-stub" data-pressed={pressed} aria-hidden="true" />
     <div className="cwk-tbody" data-line={short}>
       {short ? <>
-        <span className="cwk-tname">{clientName}</span>
+        <span className="cwk-tname"><StatusIcon className="cwk-ticon mr-1 inline align-[-1px]" aria-hidden="true" />{clientName}</span>
         <span className="cwk-ttime cwk-num">{formatTimeInTimeZone(new Date(appointment.startsAt), timezone)}</span>
       </> : <>
-        <span className="cwk-tname">{showStaff ? <span className="cwk-dot mr-1.5 inline-block" style={{ backgroundColor: appointment.staff.color }} aria-hidden="true" /> : null}{clientName}</span>
+        <span className="cwk-tname"><StatusIcon className="cwk-ticon mr-1 inline align-[-1px]" aria-hidden="true" />{showStaff ? <span className="cwk-dot mr-1.5 inline-block" style={{ backgroundColor: appointment.staff.color }} aria-hidden="true" /> : null}{clientName}</span>
         {height >= 60 ? <span className="cwk-tsvc">{service}</span> : null}
         <span className="cwk-ttime cwk-num">{time}</span>
         {height >= 76 ? <span className="cwk-tstate">{state}</span> : null}

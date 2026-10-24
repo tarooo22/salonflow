@@ -68,7 +68,7 @@ const SECTIONS: Array<{ id: string; title: string; body: React.ReactNode }> = [
     id: "rights",
     title: "შენი უფლებები",
     body: <>
-      <p>გაქვს უფლება მოითხოვო შენს შესახებ შენახული მონაცემების ნახვა, გასწორება ან წაშლა, და ნებისმიერ დროს გააუქმო ანალიტიკაზე თანხმობა. მოთხოვნისთვის მოგვწერე <Link href="/contact" className="font-bold text-[var(--cw-stamp)] underline">კონტაქტის გვერდიდან</Link>.</p>
+      <p>გაქვს უფლება მოითხოვო შენს შესახებ შენახული მონაცემების ნახვა, გასწორება ან წაშლა, და ნებისმიერ დროს გააუქმო ანალიტიკაზე თანხმობა. მოთხოვნისთვის მოგვწერე <Link href="/contact" className="mkt-link">კონტაქტის გვერდიდან</Link>.</p>
       <p>თუ ფიქრობ, რომ შენი მონაცემები არასწორად მუშავდება, შეგიძლია მიმართო პერსონალურ მონაცემთა დაცვის სამსახურს.</p>
     </>,
   },
@@ -77,13 +77,13 @@ const SECTIONS: Array<{ id: string; title: string; body: React.ReactNode }> = [
 function AnalyticsChoice() {
   const { choice, setChoice } = usePublicAnalyticsConsent();
   const status = choice === "accepted" ? "ანალიტიკა ჩართულია" : choice === "declined" ? "ანალიტიკა გამორთულია" : "არჩევანი ჯერ არ გაგიკეთებია";
-  return <div className="cw-ledger mt-4">
-    <div className="cw-ledger-head" style={{ ["--ledger-bg" as string]: "var(--cw-aesthetics)", ["--ledger-ink" as string]: "var(--cw-aesthetics-ink)" }}>
+  return <div className="mkt-card mt-4">
+    <div className="mkt-choice-head">
       <span className="font-extrabold">შენი არჩევანი</span><span className="text-sm">{status}</span>
     </div>
-    <div className="flex flex-wrap gap-3 p-4">
-      <button type="button" className="cw-btn cw-btn-stamp min-h-11" aria-pressed={choice === "accepted"} onClick={() => setChoice("accepted")}>ანალიტიკის ჩართვა</button>
-      <button type="button" className="cw-btn cw-btn-line min-h-11" aria-pressed={choice === "declined"} onClick={() => setChoice("declined")}>უარის თქმა</button>
+    <div className="mkt-choice-actions">
+      <button type="button" className="mkt-btn mkt-btn-primary min-h-11" aria-pressed={choice === "accepted"} onClick={() => setChoice("accepted")}>ანალიტიკის ჩართვა</button>
+      <button type="button" className="mkt-btn mkt-btn-secondary min-h-11" aria-pressed={choice === "declined"} onClick={() => setChoice("declined")}>უარის თქმა</button>
     </div>
   </div>;
 }
@@ -92,26 +92,26 @@ export default function Privacy() {
   usePublicMeta({ title: `კონფიდენციალურობის პოლიტიკა | ${BRAND.name}`, description: `როგორ აგროვებს, იყენებს და იცავს ${BRAND.name} შენს მონაცემებს ჯავშნისას და ბიზნესის ანგარიშში.`, canonicalPath: "/privacy" });
   return <div className="cw min-h-screen">
     <CatalogHeader />
-    <main id="main-content" className="cw-section">
-      <div className="cw-container grid gap-10 lg:grid-cols-[16rem_1fr]">
+    <main id="main-content" className="mkt-section">
+      <div className="mkt-container grid gap-10 lg:grid-cols-[16rem_1fr]">
         <nav aria-label="სარჩევი" className="lg:sticky lg:top-6 lg:self-start">
-          <p className="cw-caption">სარჩევი</p>
-          <ol className="mt-3 grid gap-1 text-sm">
+          <p className="mkt-caption">სარჩევი</p>
+          <ol className="mkt-toc">
             {[...SECTIONS, { id: "analytics", title: "ანალიტიკის არჩევანი" }].map((section, index) => <li key={section.id}>
-              <a href={`#${section.id}`} className="flex gap-2 rounded-[3px] px-2 py-1.5 hover:bg-white"><span className="cw-num text-xs text-[var(--cw-ink-soft)]">{index + 1}</span>{section.title}</a>
+              <a href={`#${section.id}`}><span className="tabular-nums text-xs mkt-muted">{index + 1}</span>{section.title}</a>
             </li>)}
           </ol>
         </nav>
         <article className="max-w-[68ch]">
-          <h1 className="cw-display text-[clamp(2rem,4.5vw,3.4rem)]">კონფიდენციალურობის პოლიტიკა</h1>
-          <p className="mt-3 text-sm text-[var(--cw-ink-soft)]">ბოლო განახლება: <span className="cw-num">{UPDATED}</span></p>
-          <div className="cw-legal mt-10">
-            {SECTIONS.map((section, index) => <section key={section.id} id={section.id} className="scroll-mt-6 border-t-[1.5px] border-[var(--cw-ink)] py-7">
-              <h2 className="flex items-baseline gap-3 text-xl font-extrabold [font-stretch:85%]"><span className="cw-num text-sm text-[var(--cw-ink-soft)]">{index + 1}</span>{section.title}</h2>
-              <div className="mt-3 grid gap-3 leading-7 text-[var(--cw-ink)] [&_li]:ml-5 [&_li]:list-disc [&_ul]:grid [&_ul]:gap-2">{section.body}</div>
+          <h1 className="mkt-h1">კონფიდენციალურობის პოლიტიკა</h1>
+          <p className="mt-3 text-sm mkt-muted">ბოლო განახლება: <span className="tabular-nums">{UPDATED}</span></p>
+          <div className="mt-10">
+            {SECTIONS.map((section, index) => <section key={section.id} id={section.id} className="mkt-legal-section">
+              <h2><span className="mkt-legal-num">{index + 1}</span>{section.title}</h2>
+              <div className="mkt-legal-body">{section.body}</div>
             </section>)}
-            <section id="analytics" className="scroll-mt-6 border-t-[1.5px] border-[var(--cw-ink)] py-7">
-              <h2 className="flex items-baseline gap-3 text-xl font-extrabold [font-stretch:85%]"><span className="cw-num text-sm text-[var(--cw-ink-soft)]">{SECTIONS.length + 1}</span>ანალიტიკის არჩევანი</h2>
+            <section id="analytics" className="mkt-legal-section">
+              <h2><span className="mkt-legal-num">{SECTIONS.length + 1}</span>ანალიტიკის არჩევანი</h2>
               <p className="mt-3 leading-7">ანალიტიკა ნაგულისხმევად გამორთულია და ირთვება მხოლოდ შენი თანხმობით. არჩევანი ნებისმიერ დროს შეგიძლია შეცვალო.</p>
               <AnalyticsChoice />
             </section>

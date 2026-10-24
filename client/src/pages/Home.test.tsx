@@ -23,14 +23,22 @@ describe("catalog home", () => {
     expect(source).toContain("სტომატოლოგიური კლინიკები მალე დაემატება.");
   });
 
-  it("shows real VIP vacancies and products with honest empty states and links to the full pages", () => {
+  it("shows real VIP vacancies and products only when they exist, with links to the full pages", () => {
     expect(source).toContain("trpc.vacancies.publicVipList.useQuery");
     expect(source).toContain("trpc.products.publicList.useQuery");
     expect(source).toContain('href="/vacancies"');
     expect(source).toContain('href="/products"');
-    expect(source).toContain("VIP ვაკანსია ამჟამად არ არის.");
-    expect(source).toContain("პროდუქტები ჯერ არ არის დამატებული.");
+    expect(source).toContain("if (!items.length) return null;");
+    expect(source).not.toContain("CommerceEmpty");
     expect(source).not.toContain("ComingSoon");
+  });
+
+  it("builds the banner carousel only from VIP listings with a cover, never autoplaying, with real prev/next buttons", () => {
+    expect(source).toContain('item.promotion?.tier === "VIP" && item.coverImageUrl');
+    expect(source).toContain("slice(0, MAX_SLIDES)");
+    expect(source).toContain('prev: "წინა"');
+    expect(source).toContain('next: "შემდეგი"');
+    expect(source).not.toContain("setInterval");
   });
 
   it("uses the shared brand constant instead of a hard-coded name", () => {

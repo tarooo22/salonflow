@@ -1,743 +1,390 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-23T19:11:17.254Z",
+  "generatedAt": "2026-10-23T23:46:54.393Z",
   "title": "Design System: Chawera",
   "extensions": {
-    "scope": "One world, two modes. Catalog mode: public catalog (cw-, catalog.css). Operate mode: business panel /app/* (cwk-, client/src/components/workspace/panel.css via WorkspacePrimitives.tsx and DashboardLayout.tsx). :root in client/src/index.css is retoned: core sf- names and shadcn variables are aliases of this palette, not a second system. Not part of the system: --sf-salon-* remnants and the unreviewed .dark theme.",
+    "scope": "One product, two modes. Public site (catalog.css, discovery.css, profile.css, booking.css, commerce.css) and business panel /app/* (workspace/panel.css). Core tokens: --sf-* in client/src/index.css (:root and .dark); shadcn variables and the .cw / --cwk-* variables are aliases of them. Replaces the earlier Appointment Card world.",
     "colorMeta": {
-      "paper": {
+      "bg": {
         "role": "neutral",
-        "displayName": "Form Paper",
-        "canonical": "oklch(99.3% 0.003 106.4)",
-        "tonalRamp": [
-          "#0b0b09",
-          "#242422",
-          "#40403d",
-          "#5e5e5b",
-          "#80807e",
-          "#a5a5a2",
-          "#cbcbc8",
-          "#efefec"
-        ]
+        "displayName": "Blush Ground",
+        "canonical": "#faf7f7"
       },
-      "sheet-white": {
+      "surface": {
         "role": "neutral",
-        "displayName": "Sheet White",
-        "canonical": "oklch(100.0% 0.000 89.9)",
-        "tonalRamp": [
-          "#0c0b09",
-          "#252422",
-          "#40403d",
-          "#5e5d5b",
-          "#81807d",
-          "#a5a4a2",
-          "#cbcac8",
-          "#efeeeb"
-        ]
+        "displayName": "Surface",
+        "canonical": "#ffffff"
       },
-      "ink": {
+      "surface-2": {
         "role": "neutral",
-        "displayName": "Form Ink",
-        "canonical": "oklch(29.5% 0.103 278.1)",
-        "tonalRamp": [
-          "#07012e",
-          "#1b1954",
-          "#353774",
-          "#515696",
-          "#7279bd",
-          "#959ee4",
-          "#bec6ff",
-          "#eaedfe"
-        ]
+        "displayName": "Sunken Surface",
+        "canonical": "#f5eff1"
       },
-      "ink-soft": {
+      "text": {
         "role": "neutral",
-        "displayName": "Faded Ink",
-        "canonical": "oklch(44.0% 0.094 281.1)",
-        "tonalRamp": [
-          "#09012e",
-          "#1e1a4f",
-          "#383870",
-          "#555691",
-          "#7679b7",
-          "#9a9edf",
-          "#c1c5fe",
-          "#ebedfe"
-        ]
+        "displayName": "Plum Ink",
+        "canonical": "#2b2027"
       },
-      "rule": {
+      "muted": {
         "role": "neutral",
-        "displayName": "Pale Rule",
-        "canonical": "oklch(86.7% 0.034 282.0)",
-        "tonalRamp": [
-          "#090919",
-          "#212234",
-          "#3d3e52",
-          "#5a5c71",
-          "#7c7e95",
-          "#a1a2ba",
-          "#c6c8e1",
-          "#ecedfe"
-        ]
+        "displayName": "Muted Text",
+        "canonical": "#6b5e66"
       },
-      "rule-strong": {
+      "border": {
         "role": "neutral",
-        "displayName": "Strong Rule",
-        "canonical": "oklch(72.9% 0.067 280.7)",
-        "tonalRamp": [
-          "#080526",
-          "#1f1f43",
-          "#393b62",
-          "#575983",
-          "#797ca8",
-          "#9ca0ce",
-          "#c2c6f6",
-          "#ebedff"
-        ]
+        "displayName": "Divider",
+        "canonical": "#eadfe3"
       },
-      "desk": {
+      "border-strong": {
         "role": "neutral",
-        "displayName": "Indigo Desk",
-        "canonical": "oklch(25.3% 0.082 279.8)",
-        "tonalRamp": [
-          "#08022c",
-          "#1e1d4a",
-          "#383a6a",
-          "#54588b",
-          "#767bb0",
-          "#9a9fd7",
-          "#c0c6fb",
-          "#ebedff"
-        ]
+        "displayName": "Control Edge",
+        "canonical": "#9c8e95"
       },
-      "desk-soft": {
-        "role": "neutral",
-        "displayName": "Desk Shadow",
-        "canonical": "oklch(31.5% 0.095 280.3)",
-        "tonalRamp": [
-          "#09012e",
-          "#1e1a50",
-          "#373870",
-          "#545692",
-          "#7579b8",
-          "#999edf",
-          "#c0c5ff",
-          "#ebedfe"
-        ]
-      },
-      "on-desk": {
-        "role": "neutral",
-        "displayName": "Desk Light",
-        "canonical": "oklch(95.1% 0.018 279.1)",
-        "tonalRamp": [
-          "#090a13",
-          "#22232d",
-          "#3d3f49",
-          "#5b5d68",
-          "#7e7f8b",
-          "#a2a4b0",
-          "#c8cad6",
-          "#eceefb"
-        ]
-      },
-      "on-desk-soft": {
-        "role": "neutral",
-        "displayName": "Desk Dim",
-        "canonical": "oklch(80.7% 0.059 281.8)",
-        "tonalRamp": [
-          "#090623",
-          "#202040",
-          "#3b3c5e",
-          "#585a7f",
-          "#7a7ca3",
-          "#9ea1c9",
-          "#c4c7f1",
-          "#ebedff"
-        ]
-      },
-      "stamp": {
+      "accent": {
         "role": "primary",
-        "displayName": "Rubber-Stamp Violet",
-        "canonical": "oklch(45.7% 0.211 288.4)",
-        "tonalRamp": [
-          "#0d002b",
-          "#270661",
-          "#4501a5",
-          "#6038ca",
-          "#8060f4",
-          "#a293fd",
-          "#c8c2ff",
-          "#edecfe"
-        ]
+        "displayName": "Coral Rose",
+        "canonical": "#cf3f55"
       },
-      "stamp-hover": {
+      "accent-hover": {
         "role": "primary",
-        "displayName": "Pressed Stamp",
-        "canonical": "oklch(40.1% 0.195 287.6)",
-        "tonalRamp": [
-          "#0c002c",
-          "#260662",
-          "#43149e",
-          "#5e3ec2",
-          "#7e65ec",
-          "#a093fe",
-          "#c7c3fb",
-          "#edecfe"
-        ]
+        "displayName": "Coral Rose Pressed",
+        "canonical": "#b5304a"
       },
-      "beauty": {
-        "role": "secondary",
-        "displayName": "Carbon Pink",
-        "canonical": "oklch(87.9% 0.058 356.4)",
-        "tonalRamp": [
-          "#1c010c",
-          "#391725",
-          "#583240",
-          "#78505e",
-          "#9d7281",
-          "#c396a5",
-          "#ebbbcb",
-          "#ffe7ef"
-        ]
+      "accent-ink": {
+        "role": "primary",
+        "displayName": "Coral Rose Ink",
+        "canonical": "#b5304a"
       },
-      "beauty-ink": {
-        "role": "secondary",
-        "displayName": "Beauty Ink",
-        "canonical": "oklch(41.7% 0.148 359.2)",
-        "tonalRamp": [
-          "#1d000a",
-          "#460523",
-          "#77033e",
-          "#9b2f5b",
-          "#c4547e",
-          "#ed79a2",
-          "#fcb2c9",
-          "#fee8ee"
-        ]
+      "accent-soft": {
+        "role": "primary",
+        "displayName": "Rose Wash",
+        "canonical": "#fce8eb"
       },
-      "aesthetics": {
-        "role": "secondary",
-        "displayName": "Carbon Canary",
-        "canonical": "oklch(90.6% 0.126 98.1)",
-        "tonalRamp": [
-          "#0f0b00",
-          "#2b2403",
-          "#4b4000",
-          "#6c5d03",
-          "#93801a",
-          "#baa53b",
-          "#e0cb64",
-          "#fef0a9"
-        ]
-      },
-      "aesthetics-ink": {
-        "role": "secondary",
-        "displayName": "Aesthetics Ink",
-        "canonical": "oklch(41.5% 0.085 87.6)",
-        "tonalRamp": [
-          "#110a00",
-          "#2e2201",
-          "#503d06",
-          "#725a1b",
-          "#967d41",
-          "#bba265",
-          "#e2c88a",
-          "#feedc4"
-        ]
-      },
-      "dental": {
-        "role": "secondary",
-        "displayName": "Carbon Sky",
-        "canonical": "oklch(89.0% 0.047 238.5)",
-        "tonalRamp": [
-          "#000d18",
-          "#0a2738",
-          "#274356",
-          "#446275",
-          "#66859a",
-          "#8aa9bf",
-          "#afd0e6",
-          "#dff2ff"
-        ]
-      },
-      "dental-ink": {
-        "role": "secondary",
-        "displayName": "Dental Ink",
-        "canonical": "oklch(40.2% 0.106 250.4)",
-        "tonalRamp": [
-          "#000c1c",
-          "#032544",
-          "#0a4171",
-          "#286097",
-          "#4c84bd",
-          "#70a9e5",
-          "#a5cffb",
-          "#e3f0fe"
-        ]
-      },
-      "rule-wash": {
+      "band": {
         "role": "neutral",
-        "displayName": "Ruled Wash",
-        "canonical": "oklch(93.6% 0.017 281)",
-        "tonalRamp": [
-          "#0a0a17",
-          "#232333",
-          "#3e3f50",
-          "#5b5d6f",
-          "#7d7f93",
-          "#a1a3b8",
-          "#c7c9df",
-          "#eceefb"
-        ]
+        "displayName": "Plum Band",
+        "canonical": "#2b1a25"
       },
-      "surface-hover": {
+      "on-band": {
         "role": "neutral",
-        "displayName": "Hover Wash",
-        "canonical": "oklch(95.6% 0.011 281)",
-        "tonalRamp": [
-          "#0b0b14",
-          "#24242f",
-          "#3f404b",
-          "#5c5e6a",
-          "#7f808d",
-          "#a3a5b2",
-          "#c9cad8",
-          "#eff0f8"
-        ]
+        "displayName": "On Band",
+        "canonical": "#ffffff"
+      },
+      "on-band-muted": {
+        "role": "neutral",
+        "displayName": "On Band Muted",
+        "canonical": "#d9c9d1"
+      },
+      "success": {
+        "role": "semantic",
+        "displayName": "Success",
+        "canonical": "#1f7a4d"
+      },
+      "success-soft": {
+        "role": "semantic",
+        "displayName": "Success Wash",
+        "canonical": "#e3f3ea"
+      },
+      "warning": {
+        "role": "semantic",
+        "displayName": "Warning",
+        "canonical": "#8a5300"
+      },
+      "warning-soft": {
+        "role": "semantic",
+        "displayName": "Warning Wash",
+        "canonical": "#fcf0d9"
       },
       "danger": {
-        "role": "neutral",
-        "displayName": "Error Red",
-        "canonical": "oklch(50.4% 0.185 25.6)",
-        "tonalRamp": [
-          "#2a0003",
-          "#560a0e",
-          "#86151b",
-          "#b4232a",
-          "#d9534f",
-          "#f08680",
-          "#fbb8b2",
-          "#feeae7"
-        ]
+        "role": "semantic",
+        "displayName": "Danger",
+        "canonical": "#b42318"
+      },
+      "danger-soft": {
+        "role": "semantic",
+        "displayName": "Danger Wash",
+        "canonical": "#fde8e6"
+      },
+      "info": {
+        "role": "semantic",
+        "displayName": "Info",
+        "canonical": "#1e5fa8"
+      },
+      "info-soft": {
+        "role": "semantic",
+        "displayName": "Info Wash",
+        "canonical": "#e5effa"
+      },
+      "v-salon": {
+        "role": "secondary",
+        "displayName": "Salon Tint",
+        "canonical": "#fbe3e6"
+      },
+      "v-salon-ink": {
+        "role": "secondary",
+        "displayName": "Salon Ink",
+        "canonical": "#9a2a3f"
+      },
+      "v-aesthetics": {
+        "role": "secondary",
+        "displayName": "Aesthetics Tint",
+        "canonical": "#fbebc4"
+      },
+      "v-aesthetics-ink": {
+        "role": "secondary",
+        "displayName": "Aesthetics Ink",
+        "canonical": "#6e4a00"
+      },
+      "v-dental": {
+        "role": "secondary",
+        "displayName": "Dental Tint",
+        "canonical": "#dcebfa"
+      },
+      "v-dental-ink": {
+        "role": "secondary",
+        "displayName": "Dental Ink",
+        "canonical": "#154c85"
       }
     },
     "typographyMeta": {
       "display": {
-        "displayName": "Display",
-        "purpose": "Hero headline on the appointment card and the wordmark (1.7rem). Width 75%."
+        "displayName": "Display H1",
+        "purpose": "Page headline and wordmark. 800, normal width."
       },
-      "headline": {
-        "displayName": "Headline",
-        "purpose": "Section headings. Width 80%."
+      "h2": {
+        "displayName": "Section heading",
+        "purpose": "Section heads; 750."
       },
-      "title": {
-        "displayName": "Title",
-        "purpose": "Ticket names, ledger heads, shelf and step titles; buttons and tabs share 800 at 85% width."
+      "h3": {
+        "displayName": "Card title",
+        "purpose": "Card and sheet titles; 700."
       },
       "body": {
         "displayName": "Body",
-        "purpose": "Ledes (1.05rem / 1.6, max 34rem, Faded Ink) and descriptions."
+        "purpose": "Public body copy, 16px minimum."
+      },
+      "body-sm": {
+        "displayName": "Body small",
+        "purpose": "Panel body, secondary text."
       },
       "label": {
         "displayName": "Label",
-        "purpose": "Printed captions inside field boxes and footer column heads. Floor size for any text."
+        "purpose": "Field labels and nav; 600, sentence case."
       },
-      "numeral": {
-        "displayName": "Numeral",
-        "purpose": "Martian Mono tabular: dates, ticket №, counts, domain, year."
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Marks, meta, tab labels; 12px floor for Georgian."
       },
       "panel-title": {
-        "displayName": "Panel Title",
-        "purpose": "The one page title in the panel head row; 1.5rem on phones. Width 80%."
-      },
-      "panel-sheet-title": {
-        "displayName": "Sheet Title",
-        "purpose": "Panel section sheet heads. Width 85%."
-      },
-      "panel-control": {
-        "displayName": "Panel Control",
-        "purpose": "Segmented switch, date buttons, specialist strip, panel stamp button (0.85-0.9rem, 800, 85%)."
-      },
-      "panel-body": {
-        "displayName": "Panel Body",
-        "purpose": "Head-row description (one line, hidden under 640px), rail links, empty states."
-      },
-      "panel-meta": {
-        "displayName": "Panel Meta",
-        "purpose": "Metric helper, status/count marks, ticket action and service line, rail captions, phone tabs (0.72-0.75rem). Floor for Georgian text."
-      },
-      "ticket-name": {
-        "displayName": "Ticket Name",
-        "purpose": "Client name on a board ticket."
-      },
-      "metric-numeral": {
-        "displayName": "Metric Numeral",
-        "purpose": "Mono value in a metric tile."
+        "displayName": "Panel title",
+        "purpose": "Page title in the head row; 24px (22 phone), 800."
       }
     },
     "shadows": [
       {
-        "name": "card-on-desk",
-        "value": "drop-shadow(0 18px 30px rgba(8, 7, 32, 0.45))",
-        "purpose": "Filter on the appointment card so the shadow follows the perforated edge."
+        "name": "sm",
+        "value": "0 1px 2px rgb(43 32 39 / .06)",
+        "purpose": "Cards at rest."
       },
       {
-        "name": "chosen-sheet",
-        "value": "0 10px 24px -14px rgba(0, 0, 0, 0.6)",
-        "purpose": "Carbon copy pulled forward."
+        "name": "md",
+        "value": "0 1px 2px rgb(43 32 39 / .05), 0 6px 16px -6px rgb(43 32 39 / .12)",
+        "purpose": "Hover, tab bar, sticky summary."
       },
       {
-        "name": "raised-tab",
-        "value": "0 -6px 14px -10px rgba(0, 0, 0, 0.5)",
-        "purpose": "Pressed vertical tab."
-      },
-      {
-        "name": "stamp-press",
-        "value": "0 6px 14px -8px rgba(58, 28, 134, 0.75)",
-        "purpose": "Stamp button at rest; 0 2px 6px -4px when active."
-      },
-      {
-        "name": "ticket-lift",
-        "value": "0 14px 24px -18px rgba(35, 35, 94, 0.6)",
-        "purpose": "Ticket hover with 3px rise."
-      },
-      {
-        "name": "field-focus",
-        "value": "0 0 0 3px color-mix(in srgb, #5a2fc2 35%, transparent)",
-        "purpose": "Focus-within ring on boxed fields."
-      },
-      {
-        "name": "pinned-ticket",
-        "value": "0 1px 2px rgba(35, 35, 94, 0.08)",
-        "purpose": "Board tickets at rest: pinned to the board. The only resting shadow besides the card on the desk."
-      },
-      {
-        "name": "rail-active-ring",
-        "value": "inset 0 0 0 1px #3d3b86",
-        "purpose": "Active rail nav link edge."
+        "name": "lg",
+        "value": "0 24px 48px -20px rgb(43 32 39 / .28)",
+        "purpose": "Dialogs and sheets. Dark mode uses rgb(0 0 0 / .5)."
       }
     ],
     "motion": [
       {
-        "name": "ease-cw",
-        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
-        "purpose": "The single easing for every transition."
+        "name": "ease",
+        "value": "cubic-bezier(.2, 0, 0, 1)",
+        "purpose": "All transitions; exit uses cubic-bezier(.4, 0, 1, 1)."
       },
       {
-        "name": "duration-state",
-        "value": "160ms",
-        "purpose": "Buttons, nav links, field focus, ledger rows."
+        "name": "press",
+        "value": "120ms",
+        "purpose": "Button press, small state changes."
       },
       {
-        "name": "duration-ticket",
+        "name": "hover",
+        "value": "180ms",
+        "purpose": "Hover and colour changes."
+      },
+      {
+        "name": "sheet",
         "value": "260ms",
-        "purpose": "Ticket lift."
+        "purpose": "Sheets, drawers, dialogs."
       },
       {
-        "name": "duration-tab",
-        "value": "320ms",
-        "purpose": "Tab rise."
-      },
-      {
-        "name": "duration-band",
-        "value": "420ms",
-        "purpose": "Card colour band recolour."
-      },
-      {
-        "name": "duration-shuffle",
-        "value": "560ms",
-        "purpose": "Carbon sheet slide and card tint."
-      },
-      {
-        "name": "reduced-motion",
-        "value": "transition: none",
-        "purpose": "Sheets, tabs, tickets, band and buttons stop animating under prefers-reduced-motion."
-      },
-      {
-        "name": "duration-stub",
-        "value": "200ms",
-        "purpose": "Ticket stub recolour on status change."
-      },
-      {
-        "name": "stamp-press",
-        "value": "@keyframes cwk-stamp 220ms: 0% translateY(-3px) scale(1.3) with 0 4px 6px -2px rgba(35,35,94,.45); 55% translateY(1px) scale(.94); 100% none",
-        "purpose": "Plays on the ticket stub when a booking changes status."
-      },
-      {
-        "name": "panel-reduced-motion",
-        "value": "transition: none; animation: none",
-        "purpose": "Ticket, stub, panel stamp button, rail buttons/links and nav lose transitions and the stamp press does not play; the global rule collapses all other transitions and the page enter animation to 0.01ms."
+        "name": "carousel",
+        "value": "400ms",
+        "purpose": "Banner carousel; never autoplays. All motion off under prefers-reduced-motion."
       }
     ],
     "breakpoints": [
       {
         "name": "sm",
         "value": "640px",
-        "purpose": "Below: tabs become a 4-column grid, stack offset 5px, stub 3.5rem. Above: ticket cover image. Panel: head-row description hidden below; main padding 1.25rem above."
-      },
-      {
-        "name": "md",
-        "value": "768px",
-        "purpose": "Two-column tickets, footer columns; below 767px extra blank tickets hide. Panel: below, the board shows one column with a specialist strip, controls grow to 2.75rem, bottom tab bar replaces the rail."
+        "purpose": "Listing grid 2 columns; panel description visible."
       },
       {
         "name": "lg",
         "value": "1024px",
-        "purpose": "Card splits headline/form, desktop nav, three ledgers. Panel: board max-height viewport minus 13rem above, 14rem below."
+        "purpose": "Header with nav replaces the phone tab bar; 3-column grid."
       },
       {
         "name": "xl",
         "value": "1280px",
-        "purpose": "Three-column tickets."
+        "purpose": "4-column grid."
       }
     ],
     "focus": {
-      "value": "outline: 3px solid #5a2fc2; outline-offset: 2px",
-      "onDesk": "outline-color: #fff"
+      "value": "outline: 2px solid var(--accent); outline-offset: 2px",
+      "onBand": "outline-color: #fff"
     },
     "statusStub": {
       "PENDING": {
-        "stub": "#f6e17a",
-        "ink": "#23235e",
+        "ink": "#8a5300",
+        "fill": "#fcf0d9",
         "icon": "clock",
-        "mark": "warning: #f6e17a / #5f4800, violet outline"
+        "mark": "warning-soft / warning, Clock"
       },
       "CONFIRMED": {
-        "stub": "#bfe0f7",
-        "ink": "#0d4a7f",
-        "icon": "check",
-        "mark": "info: #bfe0f7 / #0d4a7f, #94c8ec outline"
+        "ink": "#1e5fa8",
+        "fill": "#e5effa",
+        "icon": "calendar-check",
+        "mark": "info-soft / info, CalendarCheck"
       },
       "CHECKED_IN": {
-        "stub": "#5a2fc2",
-        "ink": "#ffffff",
+        "ink": "#b5304a",
+        "fill": "#fce8eb",
         "icon": "user-check",
-        "mark": "violet: stamp fill"
-      },
-      "IN_SERVICE": {
-        "stub": "#5a2fc2",
-        "ink": "#ffffff",
-        "icon": "play",
-        "mark": "violet: stamp fill"
+        "mark": "accent-soft / accent-ink, UserCheck"
       },
       "COMPLETED": {
-        "stub": "#cfd1ea",
-        "ink": "#23235e",
-        "icon": "check-check",
-        "mark": "success: #cfd1ea / #23235e, #9fa3d1 outline"
+        "ink": "#1f7a4d",
+        "fill": "#e3f3ea",
+        "icon": "check",
+        "mark": "success-soft / success, Check"
       },
       "CANCELLED": {
-        "stub": "repeating-linear-gradient(45deg, #cfd1ea 0 3px, transparent 3px 6px)",
-        "ink": "#4a4b85",
+        "ink": "#6b5e66",
+        "fill": "#f5eff1",
         "icon": "x",
-        "extra": "dashed ticket border, name struck in Faded Ink",
-        "mark": "danger: #e7e8f5 / #4a4b85, struck"
-      },
-      "NO_SHOW": {
-        "stub": "repeating-linear-gradient(45deg, #cfd1ea 0 3px, transparent 3px 6px)",
-        "ink": "#4a4b85",
-        "icon": "user-x",
-        "extra": "dashed ticket border, name struck in Faded Ink",
-        "mark": "danger: #e7e8f5 / #4a4b85, struck"
+        "mark": "surface-2 / muted, X, struck"
       }
     },
     "knownLimits": [
       "Week view with all specialists is dense.",
       "Drag-to-reschedule is pointer-only.",
-      "The .dark theme exists but was not visually reviewed and does not follow this system."
+      "Catalog and panel stylesheets still hold --cw-* / --cwk-* aliases until their work packages land."
     ]
   },
   "components": [
     {
-      "name": "Stamp Button",
+      "name": "Primary Button",
       "kind": "button",
-      "refersTo": "button-stamp",
-      "description": "The one primary action per region: search, open map.",
-      "html": "<button class=\"ds-btn-stamp\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"11\" cy=\"11\" r=\"8\"/><path d=\"m21 21-4.3-4.3\"/></svg>მოძებნე</button>",
-      "css": ".ds-btn-stamp{--cw-paper:#fdfdfb;--cw-ink:#23235e;--cw-ink-soft:#4a4b85;--cw-rule:#cfd1ea;--cw-rule-strong:#9fa3d1;--cw-desk:#1c1b48;--cw-desk-soft:#2a2960;--cw-on-desk:#eceefb;--cw-on-desk-soft:#b9bce6;--cw-stamp:#5a2fc2;--cw-stamp-hover:#4a22a8;--cw-beauty:#f8c8d8;--cw-beauty-ink:#86194a;--cw-aesthetics:#f6e17a;--cw-aesthetics-ink:#5f4800;--cw-dental:#bfe0f7;--cw-dental-ink:#0d4a7f;--cw-ease:cubic-bezier(0.16,1,0.3,1);font-family:\"Noto Sans Georgian\",Sora,system-ui,sans-serif;display:inline-flex;align-items:center;justify-content:center;gap:.5rem;min-height:3rem;padding:0 1.4rem;border-radius:4px;font-weight:800;font-stretch:85%;font-size:1rem;letter-spacing:.01em;cursor:pointer;transition:background-color 160ms var(--cw-ease),transform 160ms var(--cw-ease),box-shadow 160ms var(--cw-ease);}.ds-btn-stamp:focus-visible{outline:3px solid var(--cw-stamp);outline-offset:2px;}.ds-btn-stamp{background:var(--cw-stamp);color:#fff;border:0;box-shadow:0 6px 14px -8px rgba(58,28,134,.75);}.ds-btn-stamp:hover{background:var(--cw-stamp-hover);}.ds-btn-stamp:active{transform:translateY(1px);box-shadow:0 2px 6px -4px rgba(58,28,134,.75);}"
+      "refersTo": "button-primary",
+      "description": "The one primary action per region.",
+      "html": "<button class=\"ds ds-btn\">მოძებნე</button>",
+      "css": ":root{--bg:#faf7f7;--surface:#ffffff;--surface-2:#f5eff1;--text:#2b2027;--muted:#6b5e66;--border:#eadfe3;--border-strong:#9c8e95;--accent:#cf3f55;--accent-hover:#b5304a;--accent-ink:#b5304a;--accent-soft:#fce8eb;--band:#2b1a25;--on-band:#ffffff;--on-band-muted:#d9c9d1;--success:#1f7a4d;--success-soft:#e3f3ea;--warning:#8a5300;--warning-soft:#fcf0d9;--danger:#b42318;--danger-soft:#fde8e6;--info:#1e5fa8;--info-soft:#e5effa;--v-salon:#fbe3e6;--v-salon-ink:#9a2a3f;--v-aesthetics:#fbebc4;--v-aesthetics-ink:#6e4a00;--v-dental:#dcebfa;--v-dental-ink:#154c85;--r:8px}.ds{font-family:\"Noto Sans Georgian\",\"Noto Sans\",system-ui,sans-serif;font-size:16px;color:var(--text)}.ds-btn{min-height:40px;padding:0 18px;border:1px solid transparent;border-radius:var(--r);background:var(--accent);color:#fff;font-weight:600;font-size:14px;cursor:pointer}.ds-btn:hover{background:var(--accent-hover)}.ds-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}"
     },
     {
-      "name": "Line Button",
+      "name": "Secondary Button",
       "kind": "button",
-      "refersTo": "button-line",
-      "description": "Secondary action and city chip: 1.5px currentColor outline.",
-      "html": "<a href=\"#\" class=\"ds-btn-line\">მთელი კატალოგი <svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12h14\"/><path d=\"m12 5 7 7-7 7\"/></svg></a>",
-      "css": ".ds-btn-line{--cw-paper:#fdfdfb;--cw-ink:#23235e;--cw-ink-soft:#4a4b85;--cw-rule:#cfd1ea;--cw-rule-strong:#9fa3d1;--cw-desk:#1c1b48;--cw-desk-soft:#2a2960;--cw-on-desk:#eceefb;--cw-on-desk-soft:#b9bce6;--cw-stamp:#5a2fc2;--cw-stamp-hover:#4a22a8;--cw-beauty:#f8c8d8;--cw-beauty-ink:#86194a;--cw-aesthetics:#f6e17a;--cw-aesthetics-ink:#5f4800;--cw-dental:#bfe0f7;--cw-dental-ink:#0d4a7f;--cw-ease:cubic-bezier(0.16,1,0.3,1);font-family:\"Noto Sans Georgian\",Sora,system-ui,sans-serif;display:inline-flex;align-items:center;justify-content:center;gap:.5rem;min-height:3rem;padding:0 1.4rem;border-radius:4px;font-weight:800;font-stretch:85%;font-size:1rem;letter-spacing:.01em;cursor:pointer;transition:background-color 160ms var(--cw-ease),transform 160ms var(--cw-ease),box-shadow 160ms var(--cw-ease);}.ds-btn-line:focus-visible{outline:3px solid var(--cw-stamp);outline-offset:2px;}.ds-btn-line{min-height:2.75rem;background:transparent;color:var(--cw-ink);border:1.5px solid currentColor;text-decoration:none;}.ds-btn-line:hover{background:color-mix(in srgb,currentColor 10%,transparent);}"
+      "refersTo": "button-secondary",
+      "description": "Secondary action next to a primary.",
+      "html": "<button class=\"ds ds-btn2\">გაუქმება</button>",
+      "css": ":root{--bg:#faf7f7;--surface:#ffffff;--surface-2:#f5eff1;--text:#2b2027;--muted:#6b5e66;--border:#eadfe3;--border-strong:#9c8e95;--accent:#cf3f55;--accent-hover:#b5304a;--accent-ink:#b5304a;--accent-soft:#fce8eb;--band:#2b1a25;--on-band:#ffffff;--on-band-muted:#d9c9d1;--success:#1f7a4d;--success-soft:#e3f3ea;--warning:#8a5300;--warning-soft:#fcf0d9;--danger:#b42318;--danger-soft:#fde8e6;--info:#1e5fa8;--info-soft:#e5effa;--v-salon:#fbe3e6;--v-salon-ink:#9a2a3f;--v-aesthetics:#fbebc4;--v-aesthetics-ink:#6e4a00;--v-dental:#dcebfa;--v-dental-ink:#154c85;--r:8px}.ds{font-family:\"Noto Sans Georgian\",\"Noto Sans\",system-ui,sans-serif;font-size:16px;color:var(--text)}.ds-btn2{min-height:40px;padding:0 18px;border:1px solid var(--border-strong);border-radius:var(--r);background:var(--surface);color:var(--text);font-weight:600;font-size:14px;cursor:pointer}.ds-btn2:hover{background:var(--surface-2)}"
     },
     {
-      "name": "Paper Button on Desk",
-      "kind": "button",
-      "refersTo": "button-paper",
-      "description": "Paper-coloured button placed on an indigo desk band.",
-      "html": "<div class=\"ds-desk\"><a href=\"#\" class=\"ds-btn-paper\">გაიგე მეტი <svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12h14\"/><path d=\"m12 5 7 7-7 7\"/></svg></a></div>",
-      "css": ".ds-btn-paper{--cw-paper:#fdfdfb;--cw-ink:#23235e;--cw-ink-soft:#4a4b85;--cw-rule:#cfd1ea;--cw-rule-strong:#9fa3d1;--cw-desk:#1c1b48;--cw-desk-soft:#2a2960;--cw-on-desk:#eceefb;--cw-on-desk-soft:#b9bce6;--cw-stamp:#5a2fc2;--cw-stamp-hover:#4a22a8;--cw-beauty:#f8c8d8;--cw-beauty-ink:#86194a;--cw-aesthetics:#f6e17a;--cw-aesthetics-ink:#5f4800;--cw-dental:#bfe0f7;--cw-dental-ink:#0d4a7f;--cw-ease:cubic-bezier(0.16,1,0.3,1);font-family:\"Noto Sans Georgian\",Sora,system-ui,sans-serif;display:inline-flex;align-items:center;justify-content:center;gap:.5rem;min-height:3rem;padding:0 1.4rem;border-radius:4px;font-weight:800;font-stretch:85%;font-size:1rem;letter-spacing:.01em;cursor:pointer;transition:background-color 160ms var(--cw-ease),transform 160ms var(--cw-ease),box-shadow 160ms var(--cw-ease);}.ds-btn-paper:focus-visible{outline:3px solid var(--cw-stamp);outline-offset:2px;}.ds-desk{--cw-paper:#fdfdfb;--cw-ink:#23235e;--cw-ink-soft:#4a4b85;--cw-rule:#cfd1ea;--cw-rule-strong:#9fa3d1;--cw-desk:#1c1b48;--cw-desk-soft:#2a2960;--cw-on-desk:#eceefb;--cw-on-desk-soft:#b9bce6;--cw-stamp:#5a2fc2;--cw-stamp-hover:#4a22a8;--cw-beauty:#f8c8d8;--cw-beauty-ink:#86194a;--cw-aesthetics:#f6e17a;--cw-aesthetics-ink:#5f4800;--cw-dental:#bfe0f7;--cw-dental-ink:#0d4a7f;--cw-ease:cubic-bezier(0.16,1,0.3,1);background:var(--cw-desk);padding:1.5rem;}.ds-btn-paper{background:var(--cw-paper);color:var(--cw-ink);border:0;text-decoration:none;}.ds-btn-paper:hover{background:#fff;}.ds-desk .ds-btn-paper:focus-visible{outline-color:#fff;}"
-    },
-    {
-      "name": "Boxed Field",
+      "name": "Field",
       "kind": "input",
-      "refersTo": "field",
-      "description": "Form field: printed caption inside an ink-ruled box.",
-      "html": "<label class=\"ds-field\"><span class=\"ds-caption\">სად?</span><input placeholder=\"ქალაქი ან უბანი\" /></label>",
-      "css": ".ds-field{--cw-paper:#fdfdfb;--cw-ink:#23235e;--cw-ink-soft:#4a4b85;--cw-rule:#cfd1ea;--cw-rule-strong:#9fa3d1;--cw-desk:#1c1b48;--cw-desk-soft:#2a2960;--cw-on-desk:#eceefb;--cw-on-desk-soft:#b9bce6;--cw-stamp:#5a2fc2;--cw-stamp-hover:#4a22a8;--cw-beauty:#f8c8d8;--cw-beauty-ink:#86194a;--cw-aesthetics:#f6e17a;--cw-aesthetics-ink:#5f4800;--cw-dental:#bfe0f7;--cw-dental-ink:#0d4a7f;--cw-ease:cubic-bezier(0.16,1,0.3,1);font-family:\"Noto Sans Georgian\",Sora,system-ui,sans-serif;display:block;max-width:22rem;border:1.5px solid var(--cw-ink);border-radius:3px;background:#fff;padding:.4rem .75rem .55rem;transition:box-shadow 160ms var(--cw-ease);}.ds-field:focus-within{box-shadow:0 0 0 3px color-mix(in srgb,var(--cw-stamp) 35%,transparent);}.ds-caption{font-size:.72rem;font-weight:700;letter-spacing:.06em;color:var(--cw-ink-soft);}.ds-field input{display:block;width:100%;border:0;outline:0;background:transparent;font:inherit;font-size:1.05rem;font-weight:600;color:var(--cw-ink);padding:.15rem 0 0;}.ds-field input::placeholder{color:#6c6e9f;font-weight:500;}"
+      "refersTo": "input",
+      "description": "Labelled text field.",
+      "html": "<label class=\"ds ds-field\"><span>სახელი</span><input value=\"ნინო\"></label>",
+      "css": ":root{--bg:#faf7f7;--surface:#ffffff;--surface-2:#f5eff1;--text:#2b2027;--muted:#6b5e66;--border:#eadfe3;--border-strong:#9c8e95;--accent:#cf3f55;--accent-hover:#b5304a;--accent-ink:#b5304a;--accent-soft:#fce8eb;--band:#2b1a25;--on-band:#ffffff;--on-band-muted:#d9c9d1;--success:#1f7a4d;--success-soft:#e3f3ea;--warning:#8a5300;--warning-soft:#fcf0d9;--danger:#b42318;--danger-soft:#fde8e6;--info:#1e5fa8;--info-soft:#e5effa;--v-salon:#fbe3e6;--v-salon-ink:#9a2a3f;--v-aesthetics:#fbebc4;--v-aesthetics-ink:#6e4a00;--v-dental:#dcebfa;--v-dental-ink:#154c85;--r:8px}.ds{font-family:\"Noto Sans Georgian\",\"Noto Sans\",system-ui,sans-serif;font-size:16px;color:var(--text)}.ds-field{display:grid;gap:6px;font-size:14px;font-weight:600}.ds-field input{min-height:40px;padding:0 12px;border:1px solid var(--border-strong);border-radius:var(--r);background:var(--surface);color:var(--text);font:inherit;font-weight:400}.ds-field input:focus{outline:2px solid var(--accent);outline-offset:0}"
     },
     {
-      "name": "Desk Navigation",
-      "kind": "nav",
-      "refersTo": "navlink",
-      "description": "Header nav on the desk; unavailable items stay visible and inert with a bordered tag.",
-      "html": "<nav class=\"ds-nav\"><span class=\"ds-mark\">ჩაწერა</span><a href=\"#\" class=\"ds-navlink\">კატალოგი</a><a href=\"#\" class=\"ds-navlink\">რუკა</a><span class=\"ds-navlink ds-off\">პროდუქტები<span class=\"ds-soon\">მალე</span></span></nav>",
-      "css": ".ds-nav{--cw-paper:#fdfdfb;--cw-ink:#23235e;--cw-ink-soft:#4a4b85;--cw-rule:#cfd1ea;--cw-rule-strong:#9fa3d1;--cw-desk:#1c1b48;--cw-desk-soft:#2a2960;--cw-on-desk:#eceefb;--cw-on-desk-soft:#b9bce6;--cw-stamp:#5a2fc2;--cw-stamp-hover:#4a22a8;--cw-beauty:#f8c8d8;--cw-beauty-ink:#86194a;--cw-aesthetics:#f6e17a;--cw-aesthetics-ink:#5f4800;--cw-dental:#bfe0f7;--cw-dental-ink:#0d4a7f;--cw-ease:cubic-bezier(0.16,1,0.3,1);font-family:\"Noto Sans Georgian\",Sora,system-ui,sans-serif;display:flex;align-items:center;gap:.25rem;background:var(--cw-desk);padding:.75rem 1rem;}.ds-mark{font-stretch:75%;font-weight:850;font-size:1.7rem;line-height:1;color:var(--cw-on-desk);margin-right:1rem;}.ds-navlink{color:var(--cw-on-desk);font-size:.9rem;font-weight:600;padding:.5rem .65rem;border-radius:4px;text-decoration:none;transition:background-color 160ms var(--cw-ease);}.ds-navlink:hover{background:var(--cw-desk-soft);}.ds-navlink:focus-visible{outline:3px solid #fff;outline-offset:2px;}.ds-off{opacity:.7;cursor:default;}.ds-off:hover{background:none;}.ds-soon{font-size:.72rem;font-weight:800;border:1.5px solid currentColor;border-radius:3px;padding:0 .3rem;margin-left:.35rem;}"
-    },
-    {
-      "name": "Vertical Chips",
+      "name": "Selected Chip",
       "kind": "chip",
-      "refersTo": "vertical-tab",
-      "description": "Carbon-copy pairs as static labels: tint plus own ink.",
-      "html": "<ul class=\"ds-chips\"><li style=\"background:#f8c8d8;color:#86194a\">სილამაზე</li><li style=\"background:#f6e17a;color:#5f4800\">ესთეტიკა</li><li style=\"background:#bfe0f7;color:#0d4a7f\">სტომატოლოგია</li></ul>",
-      "css": ".ds-chips{font-family:\"Noto Sans Georgian\",Sora,system-ui,sans-serif;display:flex;flex-wrap:wrap;gap:.5rem;list-style:none;margin:0;padding:0;}.ds-chips li{border-radius:3px;padding:.25rem .75rem;font-size:.875rem;font-weight:800;}"
+      "refersTo": "chip-selected",
+      "description": "Vertical or category filter; selected state.",
+      "html": "<span class=\"ds ds-chip\">სილამაზე</span>",
+      "css": ":root{--bg:#faf7f7;--surface:#ffffff;--surface-2:#f5eff1;--text:#2b2027;--muted:#6b5e66;--border:#eadfe3;--border-strong:#9c8e95;--accent:#cf3f55;--accent-hover:#b5304a;--accent-ink:#b5304a;--accent-soft:#fce8eb;--band:#2b1a25;--on-band:#ffffff;--on-band-muted:#d9c9d1;--success:#1f7a4d;--success-soft:#e3f3ea;--warning:#8a5300;--warning-soft:#fcf0d9;--danger:#b42318;--danger-soft:#fde8e6;--info:#1e5fa8;--info-soft:#e5effa;--v-salon:#fbe3e6;--v-salon-ink:#9a2a3f;--v-aesthetics:#fbebc4;--v-aesthetics-ink:#6e4a00;--v-dental:#dcebfa;--v-dental-ink:#154c85;--r:8px}.ds{font-family:\"Noto Sans Georgian\",\"Noto Sans\",system-ui,sans-serif;font-size:16px;color:var(--text)}.ds-chip{display:inline-flex;align-items:center;min-height:40px;padding:0 16px;border-radius:999px;background:var(--accent-soft);color:var(--accent-ink);font-weight:600;font-size:14px}"
     },
     {
-      "name": "Carbon Copy Tabs",
-      "kind": "custom",
-      "refersTo": "vertical-tab",
-      "description": "Signature: vertical tabs hanging above the card; the pressed tab rises.",
-      "html": "<div class=\"ds-tabs\"><button class=\"ds-tab\" style=\"--tab-bg:#fdfdfb;--tab-ink:#23235e\">ყველა</button><button class=\"ds-tab\" style=\"--tab-bg:#f8c8d8;--tab-ink:#86194a\">სილამაზე</button><button class=\"ds-tab\" aria-pressed=\"true\" style=\"--tab-bg:#f6e17a;--tab-ink:#5f4800\">ესთეტიკა</button><button class=\"ds-tab\" style=\"--tab-bg:#bfe0f7;--tab-ink:#0d4a7f\">სტომატოლოგია</button></div>",
-      "css": ".ds-tabs{--cw-paper:#fdfdfb;--cw-ink:#23235e;--cw-ink-soft:#4a4b85;--cw-rule:#cfd1ea;--cw-rule-strong:#9fa3d1;--cw-desk:#1c1b48;--cw-desk-soft:#2a2960;--cw-on-desk:#eceefb;--cw-on-desk-soft:#b9bce6;--cw-stamp:#5a2fc2;--cw-stamp-hover:#4a22a8;--cw-beauty:#f8c8d8;--cw-beauty-ink:#86194a;--cw-aesthetics:#f6e17a;--cw-aesthetics-ink:#5f4800;--cw-dental:#bfe0f7;--cw-dental-ink:#0d4a7f;--cw-ease:cubic-bezier(0.16,1,0.3,1);font-family:\"Noto Sans Georgian\",Sora,system-ui,sans-serif;display:flex;gap:.35rem;align-items:flex-end;background:var(--cw-desk);padding:1rem 1rem 0;border-bottom:10px solid var(--cw-aesthetics);}.ds-tab{font:inherit;border:0;cursor:pointer;padding:.55rem .9rem .85rem;border-radius:6px 6px 0 0;font-size:.85rem;font-weight:800;font-stretch:85%;color:var(--tab-ink);background:var(--tab-bg);transform:translateY(6px);transition:transform 320ms var(--cw-ease),box-shadow 320ms var(--cw-ease);}.ds-tab:hover{transform:translateY(2px);}.ds-tab[aria-pressed=\"true\"]{transform:translateY(-2px);box-shadow:0 -6px 14px -10px rgba(0,0,0,.5);}.ds-tab:focus-visible{outline:3px solid var(--cw-stamp);outline-offset:2px;}"
-    },
-    {
-      "name": "Ticket",
+      "name": "Card",
       "kind": "card",
-      "refersTo": "ticket",
-      "description": "Signature: a numbered tear-off ticket for one approved business.",
-      "html": "<a href=\"#\" class=\"ds-ticket\"><div class=\"ds-stub\"><span class=\"ds-num\">№ 001</span><span class=\"ds-vl\">სილამაზე</span></div><div class=\"ds-body\"><div class=\"ds-top\"><h3>სალონის სახელი</h3><span class=\"ds-stamp\">VIP</span></div><p class=\"ds-meta\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0\"/><circle cx=\"12\" cy=\"10\" r=\"3\"/></svg>ვაკე</p><p class=\"ds-meta\">მანიკიური · თმის შეჭრა</p><span class=\"ds-go\">ჩაწერა <svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12h14\"/><path d=\"m12 5 7 7-7 7\"/></svg></span></div></a>",
-      "css": ".ds-ticket{--cw-paper:#fdfdfb;--cw-ink:#23235e;--cw-ink-soft:#4a4b85;--cw-rule:#cfd1ea;--cw-rule-strong:#9fa3d1;--cw-desk:#1c1b48;--cw-desk-soft:#2a2960;--cw-on-desk:#eceefb;--cw-on-desk-soft:#b9bce6;--cw-stamp:#5a2fc2;--cw-stamp-hover:#4a22a8;--cw-beauty:#f8c8d8;--cw-beauty-ink:#86194a;--cw-aesthetics:#f6e17a;--cw-aesthetics-ink:#5f4800;--cw-dental:#bfe0f7;--cw-dental-ink:#0d4a7f;--cw-ease:cubic-bezier(0.16,1,0.3,1);font-family:\"Noto Sans Georgian\",Sora,system-ui,sans-serif;--stub:4.75rem;display:grid;grid-template-columns:var(--stub) 1fr;min-height:8.5rem;max-width:24rem;background:#fff;color:var(--cw-ink);text-decoration:none;border:1.5px solid var(--cw-rule);border-radius:4px;transition:transform 260ms var(--cw-ease),box-shadow 260ms var(--cw-ease),border-color 260ms var(--cw-ease);-webkit-mask:radial-gradient(circle 9px at var(--stub) 0,#0000 97%,#000) top/100% 51% no-repeat,radial-gradient(circle 9px at var(--stub) 100%,#0000 97%,#000) bottom/100% 51% no-repeat;mask:radial-gradient(circle 9px at var(--stub) 0,#0000 97%,#000) top/100% 51% no-repeat,radial-gradient(circle 9px at var(--stub) 100%,#0000 97%,#000) bottom/100% 51% no-repeat;}.ds-ticket:hover{transform:translateY(-3px);border-color:var(--cw-rule-strong);box-shadow:0 14px 24px -18px rgba(35,35,94,.6);}.ds-ticket:focus-visible{outline:3px solid var(--cw-stamp);outline-offset:2px;}.ds-stub{display:flex;flex-direction:column;justify-content:space-between;align-items:center;padding:.75rem .4rem;background:var(--cw-beauty);color:var(--cw-beauty-ink);border-right:2px dashed color-mix(in srgb,var(--cw-ink) 30%,transparent);}.ds-num,.ds-vl{writing-mode:vertical-rl;transform:rotate(180deg);}.ds-num{font-family:\"Martian Mono\",ui-monospace,monospace;font-variant-numeric:tabular-nums;font-size:.75rem;font-weight:600;}.ds-vl{font-size:.72rem;font-weight:800;}.ds-body{padding:1rem;}.ds-top{display:flex;justify-content:space-between;gap:.5rem;align-items:flex-start;}.ds-top h3{margin:0;font-size:1.125rem;font-weight:800;font-stretch:85%;}.ds-meta{display:flex;align-items:center;gap:.25rem;margin:.35rem 0 0;font-size:.875rem;color:var(--cw-ink-soft);}.ds-go{display:inline-flex;align-items:center;gap:.25rem;margin-top:.75rem;font-size:.875rem;font-weight:800;color:var(--cw-stamp);}.ds-go svg{transition:transform 200ms;}.ds-ticket:hover .ds-go svg{transform:translateX(4px);}.ds-stamp{color:var(--cw-stamp);border:2px solid currentColor;border-radius:4px;padding:.05rem .45rem;font-weight:900;font-stretch:75%;font-size:.8rem;letter-spacing:.06em;transform:rotate(-5deg);mix-blend-mode:multiply;}"
+      "refersTo": "card",
+      "description": "Surface card: border plus sm shadow, 16px radius on the public site.",
+      "html": "<div class=\"ds ds-card\"><strong>სალონი ნინო</strong><span>ვაკე, თბილისი</span></div>",
+      "css": ":root{--bg:#faf7f7;--surface:#ffffff;--surface-2:#f5eff1;--text:#2b2027;--muted:#6b5e66;--border:#eadfe3;--border-strong:#9c8e95;--accent:#cf3f55;--accent-hover:#b5304a;--accent-ink:#b5304a;--accent-soft:#fce8eb;--band:#2b1a25;--on-band:#ffffff;--on-band-muted:#d9c9d1;--success:#1f7a4d;--success-soft:#e3f3ea;--warning:#8a5300;--warning-soft:#fcf0d9;--danger:#b42318;--danger-soft:#fde8e6;--info:#1e5fa8;--info-soft:#e5effa;--v-salon:#fbe3e6;--v-salon-ink:#9a2a3f;--v-aesthetics:#fbebc4;--v-aesthetics-ink:#6e4a00;--v-dental:#dcebfa;--v-dental-ink:#154c85;--r:8px}.ds{font-family:\"Noto Sans Georgian\",\"Noto Sans\",system-ui,sans-serif;font-size:16px;color:var(--text)}.ds-card{display:grid;gap:4px;padding:16px;border:1px solid var(--border);border-radius:16px;background:var(--surface);box-shadow:0 1px 2px rgb(43 32 39/.06)}.ds-card span{font-size:14px;color:var(--muted)}"
     },
     {
-      "name": "Category Ledger",
-      "kind": "card",
-      "refersTo": "ledger",
-      "description": "Ink-ruled ledger with a carbon-tint head, mono count and linked rows.",
-      "html": "<div class=\"ds-ledger\"><div class=\"ds-lhead\"><span>ესთეტიკა</span><span class=\"ds-cnt\">2</span></div><a href=\"#\" class=\"ds-row\"><span>კოსმეტოლოგია</span><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12h14\"/><path d=\"m12 5 7 7-7 7\"/></svg></a><a href=\"#\" class=\"ds-row\"><span>ლაზერული ეპილაცია</span><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12h14\"/><path d=\"m12 5 7 7-7 7\"/></svg></a></div>",
-      "css": ".ds-ledger{--cw-paper:#fdfdfb;--cw-ink:#23235e;--cw-ink-soft:#4a4b85;--cw-rule:#cfd1ea;--cw-rule-strong:#9fa3d1;--cw-desk:#1c1b48;--cw-desk-soft:#2a2960;--cw-on-desk:#eceefb;--cw-on-desk-soft:#b9bce6;--cw-stamp:#5a2fc2;--cw-stamp-hover:#4a22a8;--cw-beauty:#f8c8d8;--cw-beauty-ink:#86194a;--cw-aesthetics:#f6e17a;--cw-aesthetics-ink:#5f4800;--cw-dental:#bfe0f7;--cw-dental-ink:#0d4a7f;--cw-ease:cubic-bezier(0.16,1,0.3,1);font-family:\"Noto Sans Georgian\",Sora,system-ui,sans-serif;--ledger-bg:var(--cw-aesthetics);--ledger-ink:var(--cw-aesthetics-ink);max-width:22rem;border:1.5px solid var(--cw-ink);border-radius:4px;background:#fff;color:var(--cw-ink);overflow:hidden;}.ds-lhead{display:flex;justify-content:space-between;align-items:baseline;padding:.8rem 1rem;background:var(--ledger-bg);color:var(--ledger-ink);border-bottom:1.5px solid var(--cw-ink);font-size:1.125rem;font-weight:800;font-stretch:85%;}.ds-cnt{font-family:\"Martian Mono\",ui-monospace,monospace;font-size:.75rem;font-variant-numeric:tabular-nums;}.ds-row{display:flex;align-items:center;gap:.75rem;padding:.8rem 1rem;border-top:1px solid var(--cw-rule);font-weight:600;color:inherit;text-decoration:none;transition:background-color 160ms var(--cw-ease);}.ds-row span{flex:1;}.ds-row svg{color:var(--cw-ink-soft);}.ds-lhead+.ds-row{border-top:0;}.ds-row:hover{background:color-mix(in srgb,var(--ledger-bg) 45%,#fff);}.ds-row:focus-visible{outline:3px solid var(--cw-stamp);outline-offset:-3px;}"
-    },
-    {
-      "name": "Desk Rail",
-      "kind": "nav",
-      "refersTo": "rail",
-      "description": "Panel navigation on the indigo desk: wordmark, org with vertical chip, grouped links.",
-      "html": "<nav class=\"ds-rail\"><div class=\"ds-rail-mark\"><span class=\"ds-rail-ka\">ჩაწერა</span><span class=\"ds-rail-dom\">chawera.ge</span></div><div class=\"ds-rail-org\"><span>სალონი ია</span><span class=\"ds-rail-chip\">სილამაზე</span></div><p class=\"ds-rail-cap\">სამუშაო</p><a href=\"#\" class=\"ds-rail-link\" data-active=\"true\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"3\" y=\"4\" width=\"18\" height=\"18\" rx=\"2\"/><path d=\"M16 2v4M8 2v4M3 10h18\"/></svg>კალენდარი</a><a href=\"#\" class=\"ds-rail-link\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"9\" cy=\"7\" r=\"4\"/><path d=\"M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2\"/></svg>კლიენტები</a></nav>",
-      "css": ".ds-rail{--ink:#23235e;--ink-soft:#4a4b85;--rule:#cfd1ea;--rule-strong:#9fa3d1;--stamp:#5a2fc2;--desk:#1c1b48;--desk-soft:#2a2960;--on-desk:#eceefb;--on-desk-soft:#b9bce6;--ease:cubic-bezier(0.16,1,0.3,1);font-family:\"Noto Sans Georgian\",Sora,system-ui,sans-serif;width:15rem;background:var(--desk);padding:.75rem .5rem;display:flex;flex-direction:column;gap:.15rem;}.ds-rail-mark{display:flex;align-items:baseline;gap:.5rem;color:var(--on-desk);padding:0 .6rem .7rem;border-bottom:1px solid var(--desk-soft);}.ds-rail-ka{font-size:1.5rem;font-stretch:75%;font-weight:850;line-height:1;}.ds-rail-dom{font-family:\"Martian Mono\",ui-monospace,monospace;font-variant-numeric:tabular-nums;font-weight:600;font-weight:400;font-size:.72rem;color:var(--on-desk-soft);}.ds-rail-org{display:flex;justify-content:space-between;align-items:center;gap:.5rem;padding:.7rem .6rem .75rem;font-size:.8rem;font-weight:700;color:var(--on-desk);}.ds-rail-chip{border-radius:3px;padding:.1rem .4rem;font-size:.72rem;font-weight:800;font-stretch:85%;background:#f8c8d8;color:#86194a;}.ds-rail-cap{margin:0;padding:.25rem .6rem .4rem;font-size:.72rem;font-weight:700;letter-spacing:.06em;color:var(--on-desk-soft);}.ds-rail-link{display:flex;align-items:center;gap:.6rem;min-height:2.25rem;padding:0 .65rem;border-radius:4px;font-size:.9rem;font-weight:600;color:var(--on-desk);text-decoration:none;transition:background-color 160ms var(--ease);}.ds-rail-link svg{color:var(--on-desk-soft);}.ds-rail-link:hover{background:var(--desk-soft);color:#fff;}.ds-rail-link[data-active=\"true\"]{background:var(--desk-soft);color:#fff;font-weight:800;font-stretch:90%;box-shadow:inset 0 0 0 1px #3d3b86;}.ds-rail-link[data-active=\"true\"] svg,.ds-rail-link:hover svg{color:#fff;}.ds-rail-link:focus-visible{outline:3px solid var(--on-desk-soft);outline-offset:1px;}@media (prefers-reduced-motion:reduce){.ds-rail-link{transition:none;}}"
-    },
-    {
-      "name": "Panel Head Row",
-      "kind": "custom",
-      "refersTo": "panel-stamp-button",
-      "description": "The one head row: condensed title, mono date bar, day/week switch, stamp action, 1.5px ink rule.",
-      "html": "<header class=\"ds-head\"><h1 class=\"ds-head-title\">კალენდარი</h1><div class=\"ds-head-actions\"><span class=\"ds-datebar\"><button class=\"ds-datebtn\" aria-label=\"წინა\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m15 18-6-6 6-6\"/></svg></button><span class=\"ds-datestamp\">ხუთ <span class=\"ds-num\">23.10</span></span><button class=\"ds-datebtn\" aria-label=\"შემდეგი\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m9 18 6-6-6-6\"/></svg></button><button class=\"ds-datebtn\">დღეს</button></span><span class=\"ds-seg\"><button aria-pressed=\"true\">დღე</button><button aria-pressed=\"false\">კვირა</button></span><button class=\"ds-pstamp\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 5v14M5 12h14\"/></svg>ჯავშანი</button></div></header>",
-      "css": ".ds-head{--ink:#23235e;--ink-soft:#4a4b85;--rule:#cfd1ea;--rule-strong:#9fa3d1;--stamp:#5a2fc2;--desk:#1c1b48;--desk-soft:#2a2960;--on-desk:#eceefb;--on-desk-soft:#b9bce6;--ease:cubic-bezier(0.16,1,0.3,1);font-family:\"Noto Sans Georgian\",Sora,system-ui,sans-serif;display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:.6rem 1rem;padding:1rem 1rem .7rem;background:#fdfdfb;border-bottom:1.5px solid var(--ink);color:var(--ink);}.ds-head-title{margin:0;font-size:clamp(1.5rem,1.1rem + 1.2vw,2rem);font-stretch:80%;font-weight:800;line-height:1.1;letter-spacing:-.01em;}.ds-head-actions{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;}.ds-datebar{display:inline-flex;align-items:center;gap:.25rem;}.ds-datebtn{display:inline-grid;place-items:center;min-width:2.25rem;min-height:2.25rem;padding:0 .6rem;border:1px solid var(--rule-strong);border-radius:4px;background:#fff;color:var(--ink);font:inherit;font-size:.85rem;font-weight:800;font-stretch:85%;cursor:pointer;}.ds-datebtn:hover{background:#eff0f8;}.ds-datebtn:focus-visible,.ds-pstamp:focus-visible{outline:3px solid var(--stamp);outline-offset:2px;}.ds-datestamp{padding:0 .25rem;font-size:.95rem;font-weight:700;}.ds-num{font-family:\"Martian Mono\",ui-monospace,monospace;font-variant-numeric:tabular-nums;font-weight:600;font-size:.9rem;}.ds-seg{display:inline-flex;border:1.5px solid var(--ink);border-radius:4px;overflow:hidden;background:#fff;}.ds-seg button{min-height:2.25rem;min-width:3rem;padding:0 .7rem;border:0;background:transparent;font:inherit;font-size:.85rem;font-weight:800;font-stretch:85%;color:var(--ink);cursor:pointer;}.ds-seg button+button{border-left:1.5px solid var(--ink);}.ds-seg button[aria-pressed=\"true\"]{background:var(--ink);color:#fff;}.ds-seg button:focus-visible{outline:3px solid var(--stamp);outline-offset:-3px;}.ds-pstamp{display:inline-flex;align-items:center;gap:.4rem;min-height:2.25rem;padding:0 .85rem;border:0;border-radius:4px;background:var(--stamp);color:#fff;font:inherit;font-weight:800;font-stretch:85%;font-size:.9rem;cursor:pointer;box-shadow:0 6px 14px -8px rgba(58,28,134,.75);transition:background-color 160ms var(--ease),transform 160ms var(--ease);}.ds-pstamp:hover{background:#4a22a8;}.ds-pstamp:active{transform:translateY(1px);box-shadow:0 2px 6px -4px rgba(58,28,134,.75);}@media (prefers-reduced-motion:reduce){.ds-pstamp{transition:none;}}"
-    },
-    {
-      "name": "Panel Status and Count Marks",
+      "name": "Status Mark",
       "kind": "chip",
       "refersTo": "status-mark",
-      "description": "Status vocabulary (Status Stub Rule) plus the ink-outline mono count mark.",
-      "html": "<div class=\"ds-marks\"><span class=\"ds-mk\" data-tone=\"warning\">მოლოდინში</span><span class=\"ds-mk\" data-tone=\"info\">დადასტურებული</span><span class=\"ds-mk\" data-tone=\"violet\">მიმდინარე</span><span class=\"ds-mk\" data-tone=\"success\">დასრულებული</span><span class=\"ds-mk\" data-tone=\"danger\">გაუქმებული</span><span class=\"ds-mk\" data-tone=\"count\">12</span></div>",
-      "css": ".ds-marks{--ink:#23235e;--ink-soft:#4a4b85;--rule:#cfd1ea;--rule-strong:#9fa3d1;--stamp:#5a2fc2;--desk:#1c1b48;--desk-soft:#2a2960;--on-desk:#eceefb;--on-desk-soft:#b9bce6;--ease:cubic-bezier(0.16,1,0.3,1);font-family:\"Noto Sans Georgian\",Sora,system-ui,sans-serif;display:flex;flex-wrap:wrap;gap:.5rem;}.ds-mk{display:inline-flex;align-items:center;min-height:1.5rem;white-space:nowrap;line-height:1.2;border:1px solid var(--mk-line,var(--rule));border-radius:3px;padding:.05rem .45rem;font-size:.75rem;font-weight:700;background:var(--mk-bg,transparent);color:var(--mk-ink,var(--ink-soft));}.ds-mk[data-tone=\"success\"]{--mk-bg:#cfd1ea;--mk-ink:#23235e;--mk-line:#9fa3d1;}.ds-mk[data-tone=\"warning\"]{--mk-bg:#f6e17a;--mk-ink:#5f4800;--mk-line:var(--stamp);}.ds-mk[data-tone=\"danger\"]{--mk-bg:#e7e8f5;--mk-ink:#4a4b85;--mk-line:#cfd1ea;text-decoration:line-through;}.ds-mk[data-tone=\"info\"]{--mk-bg:#bfe0f7;--mk-ink:#0d4a7f;--mk-line:#94c8ec;}.ds-mk[data-tone=\"violet\"]{--mk-bg:var(--stamp);--mk-ink:#fff;--mk-line:var(--stamp);}.ds-mk[data-tone=\"count\"]{--mk-ink:var(--ink);--mk-line:var(--ink);font-family:\"Martian Mono\",ui-monospace,monospace;font-variant-numeric:tabular-nums;font-weight:600;}"
+      "description": "Pill with icon and word. Shown: confirmed.",
+      "html": "<span class=\"ds ds-mark\">დადასტურებული</span>",
+      "css": ":root{--bg:#faf7f7;--surface:#ffffff;--surface-2:#f5eff1;--text:#2b2027;--muted:#6b5e66;--border:#eadfe3;--border-strong:#9c8e95;--accent:#cf3f55;--accent-hover:#b5304a;--accent-ink:#b5304a;--accent-soft:#fce8eb;--band:#2b1a25;--on-band:#ffffff;--on-band-muted:#d9c9d1;--success:#1f7a4d;--success-soft:#e3f3ea;--warning:#8a5300;--warning-soft:#fcf0d9;--danger:#b42318;--danger-soft:#fde8e6;--info:#1e5fa8;--info-soft:#e5effa;--v-salon:#fbe3e6;--v-salon-ink:#9a2a3f;--v-aesthetics:#fbebc4;--v-aesthetics-ink:#6e4a00;--v-dental:#dcebfa;--v-dental-ink:#154c85;--r:8px}.ds{font-family:\"Noto Sans Georgian\",\"Noto Sans\",system-ui,sans-serif;font-size:16px;color:var(--text)}.ds-mark{display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:999px;background:var(--info-soft);color:var(--info);font-size:12px;font-weight:600}"
     },
     {
-      "name": "Panel Sheet and Metric",
-      "kind": "card",
-      "refersTo": "panel-sheet",
-      "description": "Sheet-white section with a 1.5px ink head rule; untinted metric tile with mono value.",
-      "html": "<section class=\"ds-sheet\"><div class=\"ds-sheet-head\"><h2>დღის მიმოხილვა</h2></div><div class=\"ds-sheet-body\"><div class=\"ds-metric\"><p class=\"ds-metric-label\">ჯავშნები</p><p class=\"ds-metric-value\">18</p><p class=\"ds-metric-help\">3 მოლოდინში</p></div><div class=\"ds-metric\"><p class=\"ds-metric-label\">შემოსავალი</p><p class=\"ds-metric-value\">1 240 ₾</p></div></div></section>",
-      "css": ".ds-sheet{--ink:#23235e;--ink-soft:#4a4b85;--rule:#cfd1ea;--rule-strong:#9fa3d1;--stamp:#5a2fc2;--desk:#1c1b48;--desk-soft:#2a2960;--on-desk:#eceefb;--on-desk-soft:#b9bce6;--ease:cubic-bezier(0.16,1,0.3,1);font-family:\"Noto Sans Georgian\",Sora,system-ui,sans-serif;max-width:28rem;border:1px solid var(--rule);border-radius:4px;background:#fff;color:var(--ink);}.ds-sheet-head{padding:.65rem 1rem .55rem;border-bottom:1.5px solid var(--ink);}.ds-sheet-head h2{margin:0;font-size:1.05rem;font-stretch:85%;font-weight:800;line-height:1.3;}.ds-sheet-body{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;padding:1rem;}.ds-metric{padding:.75rem 1rem;border:1px solid var(--rule);border-radius:4px;background:#fff;}.ds-metric p{margin:0;}.ds-metric-label{font-size:.72rem;font-weight:700;letter-spacing:.04em;color:var(--ink-soft);}.ds-metric .ds-metric-value{margin-top:.35rem;font-family:\"Martian Mono\",ui-monospace,monospace;font-variant-numeric:tabular-nums;font-weight:600;font-size:1.35rem;line-height:1.2;}.ds-metric .ds-metric-help{margin-top:.35rem;font-size:.75rem;line-height:1.4;color:var(--ink-soft);}"
-    },
-    {
-      "name": "Board Ticket",
-      "kind": "custom",
-      "refersTo": "board-ticket",
-      "description": "Signature: a booking on the timetable board, stub coloured by status, notched and perforated, with the in-place action.",
-      "html": "<div class=\"ds-board\"><div class=\"ds-bt\" data-status=\"PENDING\" style=\"top:8px;height:84px\"><span class=\"ds-stub\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"M12 6v6l4 2\"/></svg></span><div class=\"ds-tb\"><span class=\"ds-tn\">ნინო ბ.</span><span class=\"ds-ts\">მანიკიური</span><span class=\"ds-tt\">10:00–11:00</span><span class=\"ds-tst\">მოლოდინში</span></div><button class=\"ds-tact\">დადასტურება</button></div><div class=\"ds-bt\" data-status=\"IN_SERVICE\" style=\"top:100px;height:60px\"><span class=\"ds-stub\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><polygon points=\"6 3 20 12 6 21 6 3\"/></svg></span><div class=\"ds-tb\"><span class=\"ds-tn\">მარიამ კ.</span><span class=\"ds-ts\">თმის შეჭრა</span><span class=\"ds-tt\">11:00–11:45</span></div><button class=\"ds-tact\">დასრულება</button></div><div class=\"ds-bt\" data-status=\"CANCELLED\" style=\"top:168px;height:44px\"><span class=\"ds-stub\"></span><div class=\"ds-tb\"><span class=\"ds-tn\">ანა ლ.</span><span class=\"ds-tt\">12:00–12:30</span></div></div></div>",
-      "css": ".ds-board{--ink:#23235e;--ink-soft:#4a4b85;--rule:#cfd1ea;--rule-strong:#9fa3d1;--stamp:#5a2fc2;--desk:#1c1b48;--desk-soft:#2a2960;--on-desk:#eceefb;--on-desk-soft:#b9bce6;--ease:cubic-bezier(0.16,1,0.3,1);font-family:\"Noto Sans Georgian\",Sora,system-ui,sans-serif;position:relative;width:20rem;height:13.5rem;border:1px solid var(--rule);border-radius:4px;background-color:#fff;background-image:linear-gradient(to bottom,var(--rule) 1px,transparent 1px);background-size:100% 64px;}.ds-bt{position:absolute;left:6px;right:6px;display:flex;overflow:hidden;border:1px solid var(--rule);border-radius:4px;background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(35,35,94,.08);transition:box-shadow 160ms var(--ease);-webkit-mask:radial-gradient(circle 4px at 1.15rem 0,#0000 97%,#000) top/100% 51% no-repeat,radial-gradient(circle 4px at 1.15rem 100%,#0000 97%,#000) bottom/100% 51% no-repeat;mask:radial-gradient(circle 4px at 1.15rem 0,#0000 97%,#000) top/100% 51% no-repeat,radial-gradient(circle 4px at 1.15rem 100%,#0000 97%,#000) bottom/100% 51% no-repeat;}.ds-bt:hover{border-color:var(--rule-strong);background:color-mix(in srgb,#fff 94%,var(--stamp));}.ds-bt:focus-within{outline:2px solid var(--stamp);outline-offset:-2px;}.ds-stub{display:flex;width:1.15rem;flex-shrink:0;justify-content:center;padding-top:.3rem;border-right:1.5px dashed var(--rule-strong);background:var(--st-bg);color:var(--st-ink);}.ds-stub svg{width:.7rem;height:.7rem;}.ds-bt[data-status=\"PENDING\"]{--st-bg:#f6e17a;--st-ink:#23235e;}.ds-bt[data-status=\"CONFIRMED\"]{--st-bg:#bfe0f7;--st-ink:#0d4a7f;}.ds-bt[data-status=\"IN_SERVICE\"]{--st-bg:#5a2fc2;--st-ink:#fff;}.ds-bt[data-status=\"COMPLETED\"]{--st-bg:#cfd1ea;--st-ink:#23235e;}.ds-bt[data-status=\"CANCELLED\"]{--st-bg:repeating-linear-gradient(45deg,#cfd1ea 0 3px,transparent 3px 6px);--st-ink:#4a4b85;border-style:dashed;}.ds-bt[data-status=\"CANCELLED\"] .ds-tn{text-decoration:line-through;color:var(--ink-soft);}.ds-tb{display:flex;flex:1;min-width:0;flex-direction:column;gap:.05rem;padding:.25rem .5rem;}.ds-tn{font-size:.82rem;font-stretch:85%;font-weight:800;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}.ds-ts{font-size:.74rem;line-height:1.3;color:var(--ink-soft);}.ds-tt{font-family:\"Martian Mono\",ui-monospace,monospace;font-variant-numeric:tabular-nums;font-weight:600;font-size:.72rem;color:var(--ink-soft);}.ds-tst{font-size:.72rem;font-weight:700;letter-spacing:.04em;color:var(--ink-soft);}.ds-tact{align-self:center;margin:0 .35rem 0 auto;min-height:1.75rem;padding:0 .6rem;border:0;border-radius:3px;background:var(--stamp);color:#fff;font:inherit;font-size:.75rem;font-weight:800;font-stretch:85%;cursor:pointer;}.ds-tact:hover{background:#4a22a8;}.ds-tact:focus-visible{outline:3px solid var(--stamp);outline-offset:2px;}@media (prefers-reduced-motion:reduce){.ds-bt{transition:none;}}"
+      "name": "Panel Rail",
+      "kind": "nav",
+      "refersTo": "rail",
+      "description": "Dark plum navigation rail of the business panel.",
+      "html": "<nav class=\"ds ds-rail\"><b>ჩაწერა</b><a>დღეს</a><a class=\"on\">კალენდარი</a><a>კლიენტები</a></nav>",
+      "css": ":root{--bg:#faf7f7;--surface:#ffffff;--surface-2:#f5eff1;--text:#2b2027;--muted:#6b5e66;--border:#eadfe3;--border-strong:#9c8e95;--accent:#cf3f55;--accent-hover:#b5304a;--accent-ink:#b5304a;--accent-soft:#fce8eb;--band:#2b1a25;--on-band:#ffffff;--on-band-muted:#d9c9d1;--success:#1f7a4d;--success-soft:#e3f3ea;--warning:#8a5300;--warning-soft:#fcf0d9;--danger:#b42318;--danger-soft:#fde8e6;--info:#1e5fa8;--info-soft:#e5effa;--v-salon:#fbe3e6;--v-salon-ink:#9a2a3f;--v-aesthetics:#fbebc4;--v-aesthetics-ink:#6e4a00;--v-dental:#dcebfa;--v-dental-ink:#154c85;--r:8px}.ds{font-family:\"Noto Sans Georgian\",\"Noto Sans\",system-ui,sans-serif;font-size:16px;color:var(--text)}.ds-rail{display:grid;gap:4px;width:220px;padding:16px 12px;border-radius:12px;background:var(--band);color:var(--on-band)}.ds-rail b{font-size:20px;font-weight:800;padding:0 8px 8px}.ds-rail a{display:block;padding:10px 12px;border-radius:8px;font-size:14px;font-weight:600;color:var(--on-band-muted)}.ds-rail a.on{background:#3a2833;color:#fff;font-weight:700}"
     }
   ],
   "narrative": {
-    "northStar": "The Appointment Card",
-    "overview": "The public catalog is a printed form lying on an indigo desk. White form paper is ruled in a single indigo form ink; questions are boxed fields with small printed captions; the three verticals are carbon copies of the same form in pink (beauty), canary (aesthetics) and sky blue (dental); the one action ink is a violet rubber stamp. Businesses appear as numbered tear-off tickets with die-cut notches and a dashed perforation between stub and body. Every device is something a real appointment card, carbon triplicate or ticket roll actually has.\n\nDensity is that of a form: hairline rules (1.5px ink, 1px pale rule) carry structure, not cards floating on whitespace. Desk bands (header, hero, business band, footer) frame the paper; paper set on the desk keeps paper colours. Headlines are condensed, very heavy Georgian set at narrow width; every number (dates, ticket №, counts, domain) is typewriter mono with tabular digits. Motion is physical and short: sheets slide, tabs lift, tickets rise a few pixels, all on one out-expo curve, and all of it switches off under reduced motion.\n\nThe business panel (Operate mode, /app/*) is the back office of the same card. Navigation sits on the indigo desk as a rail; work happens on form paper in sheet-white sheets ruled with a 1.5px ink head rule. The calendar is a timetable board on which every booking is a small torn-off ticket whose stub is coloured by status. Operate mode is denser than the catalog: a smaller type ramp, 2.25rem controls on desktop, one compact head row per page, and no explanatory paragraphs.\n\nThe world explicitly rejects the category default it replaces: a soft pink gradient banner carousel over rows of rounded photo cards, and in the panel a pastel SaaS dashboard with gradient hero headers, coloured metric cards and pill buttons. No glass and no decorative colour gradients.",
+    "northStar": "Calm Marketplace",
+    "overview": "A consumer-friendly Georgian booking marketplace: soft blush ground, white rounded cards, one warm coral-rose accent, real business photos in front. One type family at normal width, hierarchy by weight, no capitals. The business panel is the same product: same tokens and accent, a dark plum rail matching the public business band, denser ramp and 40px controls. It replaces the earlier Appointment Card world (indigo desk, violet stamp, perforated tickets, mono numerals).",
     "keyCharacteristics": [
-      "One indigo ink for all text and rules; one violet stamp for actions, statuses and promotion marks.",
-      "Vertical colour is carbon-copy colour: it owns a whole region (tab, sheet, stub, ledger head), never a stray accent. In the panel, canary and sky also carry booking status on ticket stubs and status marks, under the named Status Stub exception.",
-      "Square-ish corners (2-6px), hairline rules, perforations and die-cut notches as the edge language.",
-      "Condensed heavy Georgian display; mono tabular numerals for anything counted, timed or dated.",
-      "Soft, ink-tinted drop shadows only where paper sits on the desk or lifts on interaction.",
-      "Panel: desk rail, one head row, sheets, ticket board."
+      "Blush neutral ground with white cards, 1px border plus sm shadow.",
+      "One accent (coral rose); accent-ink for text, accent for fills.",
+      "Real cover photos; tinted initial tiles when there is no photo; empty sections are not rendered.",
+      "Noto Sans Georgian at normal width; tabular-nums for numbers; no uppercase.",
+      "Radii 8 controls, 12 panel cards, 16 public cards, 20 hero, pill marks.",
+      "Dark plum band for the business section and the panel rail."
     ],
     "rules": [
       {
-        "name": "The One Ink Rule",
-        "body": "Text and structural rules are Form Ink (or Faded Ink for secondary). No second text colour exists on paper; on a carbon tint, use that vertical's own ink.",
+        "name": "One Accent Rule",
+        "body": "Coral rose is the only brand hue; verticals and semantics never compete with it on one control.",
         "section": "colors"
       },
       {
-        "name": "The Carbon Copy Rule",
-        "body": "A vertical colour fills a whole region tied to that vertical (tab, sheet, ticket stub, ledger head, tint of the chosen card at 16%, the org's vertical chip on the rail). It is never used as a generic accent, button colour, or decoration detached from a vertical. The one sanctioned exception is the Status Stub Rule below.",
+        "name": "Ink Rule",
+        "body": "Never set plain accent as text over the ground; use accent-ink (5.65:1).",
         "section": "colors"
       },
       {
-        "name": "The Status Stub Rule",
-        "body": "In Operate mode, booking status is printed on the ticket stub and on status marks with a fixed vocabulary: pending = Carbon Canary stub with Form Ink glyph; confirmed = Carbon Sky with Dental Ink; checked-in and in-service = Rubber-Stamp Violet with white; completed = Pale Rule with Form Ink; cancelled and no-show = a 45deg hatch of Pale Rule (3px on, 3px off), dashed ticket border and the client name struck through in Faded Ink. Status marks follow the same map (warning = canary with a violet outline, info = sky, success = pale rule, danger = ruled wash struck through, violet = stamp fill). Every stub also carries a line icon and, where height allows, the status word, so status never rides on colour alone. Carbon Pink is never a status colour. Outside the stub and the mark, canary and sky mean their vertical only.",
+        "name": "Pair Rule",
+        "body": "Every tint pairs with its ink; status is icon plus word plus colour.",
         "section": "colors"
       },
       {
-        "name": "The Stamp Rule",
-        "body": "Violet means \"act\" or \"officially marked\". Primary actions, links to book, focus, promotion/status stamps, the now-line, and the in-service stub; nothing else.",
-        "section": "colors"
-      },
-      {
-        "name": "The Stamped Numeral Rule",
-        "body": "Every date, time, count, price, ticket number and the domain is set in Martian Mono with tabular digits. Prose never is.",
+        "name": "No Capitals Rule",
+        "body": "text-transform: uppercase is banned; letter-spacing is 0.",
         "section": "typography"
-      },
-      {
-        "name": "The Condensed Voice Rule",
-        "body": "Emphasis comes from width and weight (75-90% width, 800-850), not from a second display family or colour.",
-        "section": "typography"
-      },
-      {
-        "name": "The Text Floor Rule",
-        "body": "Georgian text never goes below 0.72rem; mono numerals may go to 0.7rem. Density comes from fewer words, not smaller ones.",
-        "section": "typography"
-      },
-      {
-        "name": "The Paper Only Lifts Rule",
-        "body": "Surfaces are flat at rest except the card on the desk and the pinned board ticket's 1px contact shadow. Every other shadow is a response to state: chosen, pressed, hovered. Panel sheets, metrics and toolbars carry no shadow.",
-        "section": "elevation"
       }
     ],
     "dos": [
-      "Do set all text and structural rules in Form Ink on paper, and each vertical's own ink on its tint.",
-      "Do give every vertical its full carbon-copy pair and use it for whole regions (tab, sheet, stub, ledger head).",
-      "Do reserve Rubber-Stamp Violet for actions, focus, and stamp marks.",
-      "Do set dates, counts, ticket numbers and the domain in Martian Mono with tabular digits.",
-      "Do use perforations, die-cut notches, dashed tear lines and ruled lines as the edge vocabulary.",
-      "Do keep corners between 2px and 6px and borders at 1.5px ink or 1px pale rule.",
-      "Do show unbuilt features honestly as dashed outlines with a \"მალე\" stamp, not as hidden or fake content.",
-      "Do run all motion on cubic-bezier(0.16, 1, 0.3, 1) and disable it under prefers-reduced-motion.",
-      "Do open every /app page with the one head row (condensed title, actions right, 1.5px ink rule), and put navigation on the desk rail.",
-      "Do print booking status on stubs and marks with the Status Stub vocabulary, always with an icon or word beside the colour.",
-      "Do show every count in the panel as a count mark: Form Ink outline, mono digits.",
-      "Do keep panel controls at 2.25rem on desktop and 2.75rem under 768px."
+      "Use real business imagery and design a fallback for each photo slot.",
+      "Keep public body copy at 16px or larger.",
+      "Use accent-ink for accent-coloured text and links.",
+      "Hide sections that have no content."
     ],
     "donts": [
-      "Don't use pill-shaped buttons, chips or badges.",
-      "Don't use glass, backdrop blur, or decorative colour gradients (mask and ruling gradients that cut perforations, draw lines or hatch a cancelled stub are fine).",
-      "Don't use hard offset shadows; shadows are soft and ink-tinted.",
-      "Don't use a vertical colour as a generic accent or a second action colour; canary and sky carry status only on stubs and status marks, and pink never does.",
-      "Don't set Georgian text below 0.72rem, or numerals below 0.7rem.",
-      "Don't add a second display family; emphasis is width and weight of Noto Sans Georgian.",
-      "Don't put an eyebrow, kicker or second header band above a panel title, or colour metric tiles by tone.",
-      "Don't use `rounded-xl`, `rounded-2xl` or `rounded-full` in the panel; they fall off the 2-6px ramp.",
-      "Don't read the `--sf-salon-*` tokens or add new `sf-` names; core `sf-` names are aliases of this palette, and new work uses `cw-` / `cwk-` tokens."
+      "No uppercase, Martian Mono, serif display or condensed widths.",
+      "No gradients, glows, glass blur, perforations, notches or rotated stamps.",
+      "No filled destructive buttons; no colour-only state.",
+      "No stock photos, fake salons or invented reviews."
     ]
   }
 }

@@ -3,6 +3,7 @@ import { trpc } from "@/lib/trpc";
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useLocation } from "wouter";
 import { usePublicLocale } from "./PublicLocaleContext";
+import { hasTabBar } from "@/components/catalog/CatalogChrome";
 import "@/components/catalog/catalog.css";
 
 const STORAGE_KEY = "salonflow-public-conversion-consent-v1";
@@ -71,14 +72,15 @@ export function AnalyticsConsentPreferencesButton({ className = "" }: { classNam
 }
 
 export const consentUi = {
-  ka: { label: "ანალიტიკის თანხმობა", title: "ანონიმური სტატისტიკა?", body: "ვინახავთ მხოლოდ გვერდს და დროს — არა სახელს, ტელეფონს ან ჯავშნის დეტალებს.", more: "დეტალურად", accept: "თანხმობა", decline: "უარი" },
-  en: { label: "Analytics consent", title: "Anonymous statistics?", body: "We store only the page and the time — never your name, phone or booking details.", more: "Details", accept: "Allow", decline: "Decline" },
-  ru: { label: "Согласие на аналитику", title: "Анонимная статистика?", body: "Мы сохраняем только страницу и время — без имени, телефона и деталей записи.", more: "Подробнее", accept: "Разрешить", decline: "Отказаться" },
+  ka: { label: "ანალიტიკის თანხმობა", body: "ვაგროვებთ ანონიმურ სტატისტიკას: მხოლოდ გვერდებს და დროს.", more: "დეტალურად", accept: "თანხმობა", decline: "უარი" },
+  en: { label: "Analytics consent", body: "We collect anonymous statistics: only pages and time.", more: "Details", accept: "Allow", decline: "Decline" },
+  ru: { label: "Согласие на аналитику", body: "Мы собираем анонимную статистику: только страницы и время.", more: "Подробнее", accept: "Разрешить", decline: "Отказаться" },
 };
 
 function AnalyticsConsentSurface() {
   const { choice, setChoice } = usePublicAnalyticsConsent();
   const text = consentUi[usePublicLocale().locale];
+  const [path] = useLocation();
   if (choice !== null) return null;
-  return <section className="cw fixed inset-x-3 bottom-3 z-50 mx-auto max-w-2xl rounded-[4px] border-[1.5px] border-[var(--cw-ink)] p-3 shadow-[0_14px_30px_-16px_rgba(8,7,32,0.6)] sm:flex sm:items-center sm:gap-4 md:bottom-5" aria-label={text.label}><p className="text-sm leading-6 text-[var(--cw-ink)]"><strong>{text.title}</strong> {text.body} <a href="/privacy#analytics" className="font-bold text-[var(--cw-stamp)] underline">{text.more}</a></p><div className="mt-2 flex shrink-0 gap-2 sm:mt-0"><button type="button" className="cw-btn cw-btn-stamp min-h-10 px-4 text-sm" onClick={() => setChoice("accepted")}>{text.accept}</button><button type="button" className="cw-btn cw-btn-line min-h-10 px-4 text-sm" onClick={() => setChoice("declined")}>{text.decline}</button></div></section>;
+  return <section className="cw cw-consent" data-tabbar={hasTabBar(path)} aria-label={text.label}><p>{text.body} <a href="/privacy#analytics">{text.more}</a></p><div className="cw-consent-actions"><button type="button" className="cw-consent-accept" onClick={() => setChoice("accepted")}>{text.accept}</button><button type="button" className="cw-consent-decline" onClick={() => setChoice("declined")}>{text.decline}</button></div></section>;
 }

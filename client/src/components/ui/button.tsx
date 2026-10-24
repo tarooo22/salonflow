@@ -5,31 +5,31 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "sf-interactive inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[var(--sf-radius-control)] text-sm font-semibold tracking-[-0.01em] transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
+  "sf-interactive inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[var(--sf-radius-control)] border border-transparent text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-100 disabled:border-border disabled:bg-secondary disabled:text-muted-foreground [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background aria-invalid:ring-destructive/20 aria-invalid:border-destructive",
   {
     variants: {
       variant: {
-        default: "text-white [background-image:var(--sf-gradient-brand)] bg-[length:140%_140%] bg-[position:0%_50%] shadow-[var(--sf-glow-brand)] hover:-translate-y-0.5 hover:bg-[position:100%_50%] hover:shadow-[0_22px_46px_-12px_color-mix(in_srgb,var(--sf-accent-strong)_60%,transparent)]",
+        default: "bg-primary text-primary-foreground hover:bg-[var(--sf-accent-hover)] disabled:border-border",
         destructive:
-          "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
+          "border-destructive bg-transparent text-destructive hover:bg-[var(--sf-danger-soft)] focus-visible:ring-destructive disabled:border-border disabled:bg-transparent",
         outline:
-          "border bg-transparent shadow-xs hover:bg-accent dark:bg-transparent dark:border-input dark:hover:bg-input/70",
+          "border-input bg-card text-foreground hover:bg-accent",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+          "border-input bg-card text-secondary-foreground hover:bg-accent",
         ghost:
-          "hover:bg-accent dark:hover:bg-accent/50",
-        link: "text-primary underline-offset-4 hover:underline",
-        public: "!text-white [background-image:var(--sf-gradient-brand)] bg-[length:150%_150%] bg-[position:0%_50%] shadow-[var(--sf-glow-brand)] hover:-translate-y-0.5 hover:bg-[position:100%_50%] hover:shadow-[0_24px_50px_-12px_color-mix(in_srgb,var(--sf-fuchsia)_55%,transparent)]",
-        publicSecondary: "border border-[var(--sf-line)] bg-[var(--sf-surface-elevated)] text-[var(--sf-ink)] shadow-[var(--sf-shadow-sm)] hover:-translate-y-0.5 hover:border-[color-mix(in_srgb,var(--sf-terracotta)_65%,var(--sf-line))] hover:bg-[var(--sf-surface-hover)]",
-        publicQuiet: "text-[var(--sf-ink)] hover:bg-[var(--sf-surface-hover)]",
+          "hover:bg-accent disabled:border-transparent disabled:bg-transparent",
+        link: "text-[var(--sf-accent-ink)] underline-offset-4 hover:underline disabled:border-transparent disabled:bg-transparent",
+        public: "bg-primary text-primary-foreground hover:bg-[var(--sf-accent-hover)] disabled:border-border",
+        publicSecondary: "border-input bg-card text-foreground hover:bg-accent",
+        publicQuiet: "text-foreground hover:bg-accent disabled:border-transparent disabled:bg-transparent",
       },
       size: {
-        default: "h-9 px-4 py-2 has-[>svg]:px-3",
-        sm: "h-8 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5",
-        lg: "h-11 rounded-xl px-6 has-[>svg]:px-4",
-        icon: "size-9",
-        "icon-sm": "size-8",
-        "icon-lg": "size-10",
+        default: "h-11 px-4 py-2 md:h-10 has-[>svg]:px-3",
+        sm: "h-10 gap-1.5 px-3 md:h-9 has-[>svg]:px-2.5",
+        lg: "h-12 px-6 has-[>svg]:px-4",
+        icon: "size-11 md:size-10",
+        "icon-sm": "size-10 md:size-9",
+        "icon-lg": "size-12",
       },
     },
     defaultVariants: {

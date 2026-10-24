@@ -118,7 +118,7 @@ export default function DashboardLayout({
         } as CSSProperties
       }
     >
-      <DashboardLayoutContent setSidebarWidth={setSidebarWidth}>
+      <DashboardLayoutContent sidebarWidth={sidebarWidth} setSidebarWidth={setSidebarWidth}>
         {children}
       </DashboardLayoutContent>
     </SidebarProvider>
@@ -127,11 +127,13 @@ export default function DashboardLayout({
 
 type DashboardLayoutContentProps = {
   children: React.ReactNode;
+  sidebarWidth: number;
   setSidebarWidth: (width: number) => void;
 };
 
 function DashboardLayoutContent({
   children,
+  sidebarWidth,
   setSidebarWidth,
 }: DashboardLayoutContentProps) {
   const { user, logout } = useAuth();
@@ -205,7 +207,7 @@ function DashboardLayoutContent({
     const isActive = location === item.path;
     return (
       <SidebarMenuItem key={item.path}>
-        <SidebarMenuButton isActive={isActive} onClick={() => setLocation(item.path)} tooltip={label} className="cwk-nav min-h-11 md:min-h-9">
+        <SidebarMenuButton isActive={isActive} onClick={() => setLocation(item.path)} tooltip={label} className="cwk-nav min-h-11 md:min-h-10">
           <item.icon className="h-4 w-4" />
           <span>{label}</span>
         </SidebarMenuButton>
@@ -225,7 +227,7 @@ function DashboardLayoutContent({
               </button>
               {!isCollapsed ? (
                 <>
-                  <span className="cwk-wordmark min-w-0 flex-1"><span className="cwk-wordmark-ka">{BRAND.nameKa}</span><span className="cwk-wordmark-domain cwk-num">{BRAND.domain}</span></span>
+                  <span className="cwk-wordmark min-w-0 flex-1"><span className="cwk-wordmark-ka">{BRAND.nameKa}</span></span>
                   <button type="button" onClick={() => setCommandOpen(true)} className="cwk-rail-btn" aria-label="სწრაფი ძიება"><Search className="size-4" aria-hidden="true" /></button>
                 </>
               ) : null}
@@ -238,7 +240,7 @@ function DashboardLayoutContent({
             ) : null}
           </SidebarHeader>
 
-          <SidebarContent className="gap-0 px-2 py-4">
+          <SidebarContent className="gap-0 px-2 pb-5 pt-4">
             {[{ label: "დღის მართვა", items: dailyItems }, { label: "კლიენტები და გაყიდვა", items: salesItems }].filter(group => group.items.length).map((group, groupIndex) => <div key={group.label} className={groupIndex ? "mt-5" : ""}>
               {groupCaption(group.label)}
               <SidebarMenu className="gap-0.5">
@@ -288,10 +290,23 @@ function DashboardLayoutContent({
           </SidebarFooter>
         </Sidebar>
         <div
-          className={`absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-primary/20 transition-colors ${isCollapsed ? "hidden" : ""}`}
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="გვერდითი მენიუს სიგანე"
+          aria-valuemin={MIN_WIDTH}
+          aria-valuemax={MAX_WIDTH}
+          aria-valuenow={Math.round(sidebarWidth)}
+          tabIndex={isCollapsed ? -1 : 0}
+          className={`cwk-resize absolute top-0 right-0 w-1 h-full cursor-col-resize ${isCollapsed ? "hidden" : ""}`}
           onMouseDown={() => {
             if (isCollapsed) return;
             setIsResizing(true);
+          }}
+          onKeyDown={event => {
+            const step = event.key === "ArrowLeft" ? -16 : event.key === "ArrowRight" ? 16 : 0;
+            if (!step) return;
+            event.preventDefault();
+            setSidebarWidth(Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, sidebarWidth + step)));
           }}
           style={{ zIndex: 50 }}
         />
@@ -303,7 +318,7 @@ function DashboardLayoutContent({
             <div className="flex min-w-0 items-center gap-2">
               <SidebarTrigger className="cwk-topbtn" />
               <div className="flex min-w-0 flex-col">
-                <span className="cwk-wordmark" style={{ color: "var(--cwk-ink)" }}><span className="cwk-wordmark-ka">{BRAND.nameKa}</span></span>
+                <span className="cwk-wordmark"><span className="cwk-wordmark-ka">{BRAND.nameKa}</span></span>
               </div>
             </div>
             <div className="flex items-center gap-2"><button type="button" onClick={() => setCommandOpen(true)} className="cwk-topbtn" aria-label="სწრაფი ძიება"><Search className="size-4" /></button><button type="button" onClick={() => setHelpOpen(true)} className="cwk-topbtn" aria-label="სამუშაო სივრცის დახმარება"><CircleHelp className="size-4" /></button></div>
@@ -311,8 +326,8 @@ function DashboardLayoutContent({
         )}
         <main className="cwk-main sf-motion-enter flex-1 p-3 pb-24 sm:p-5 sm:pb-5 xl:p-6">{children}</main>
         {isMobile ? <nav aria-label="სწრაფი ნავიგაცია" className="cwk-tabbar fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 gap-1 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2">
-          {mobileQuickItems.map(item => { const isActive = location === item.path; return <button key={item.path} type="button" onClick={() => setLocation(item.path)} aria-current={isActive ? "page" : undefined} className="cwk-tab"><item.icon className="size-4" aria-hidden="true" /><span className="mt-0.5 max-w-20 truncate">{item.path === "/app/staff" && role === "STAFF" ? "პროფილი" : item.label}</span></button>; })}
-          <button type="button" onClick={toggleSidebar} className="cwk-tab"><MoreHorizontal className="size-4" aria-hidden="true" /><span className="mt-0.5">მეტი</span></button>
+          {mobileQuickItems.map(item => { const isActive = location === item.path; return <button key={item.path} type="button" onClick={() => setLocation(item.path)} aria-current={isActive ? "page" : undefined} className="cwk-tab"><item.icon className="size-[22px]" aria-hidden="true" /><span className="mt-0.5 max-w-20 truncate">{item.path === "/app/staff" && role === "STAFF" ? "პროფილი" : item.label}</span></button>; })}
+          <button type="button" onClick={toggleSidebar} className="cwk-tab"><MoreHorizontal className="size-[22px]" aria-hidden="true" /><span className="mt-0.5">მეტი</span></button>
         </nav> : null}
       </SidebarInset>
       {/* Mounted only while open: the tour must never pop up on its own. */}

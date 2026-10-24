@@ -1,87 +1,143 @@
+import { useAuth } from "@/_core/hooks/useAuth";
 import { PublicLanguageSelector } from "@/components/public/PublicPrimitives";
 import { usePublicLocale } from "@/contexts/PublicLocaleContext";
 import { BRAND } from "@shared/brand";
-import { LogIn, Menu, X } from "lucide-react";
+import { CalendarCheck, Heart, Home, LayoutDashboard, LogIn, Map, Menu, Search, X, type LucideIcon } from "lucide-react";
 import React, { useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import "./catalog.css";
 
 export const ui = {
-  ka: { home: "მთავარი", tagline: "ონლაინ ჩაწერა სალონებში, ესთეტიკის ცენტრებსა და სტომატოლოგიურ კლინიკებში — მთელ საქართველოში.", forClients: "კლიენტისთვის", faq: "ხშირი კითხვები", forBusiness: "ბიზნესისთვის", becomePartner: "გახდი პარტნიორი", pricing: "ტარიფები", contact: "კონტაქტი", privacy: "კონფიდენციალურობა" },
-  en: { home: "Home", tagline: "Online booking at salons, aesthetics centres and dental clinics across Georgia.", forClients: "For clients", faq: "FAQ", forBusiness: "For business", becomePartner: "Become a partner", pricing: "Pricing", contact: "Contact", privacy: "Privacy" },
-  ru: { home: "Главная", tagline: "Онлайн-запись в салоны, центры эстетики и стоматологические клиники по всей Грузии.", forClients: "Клиентам", faq: "Частые вопросы", forBusiness: "Бизнесу", becomePartner: "Стать партнёром", pricing: "Тарифы", contact: "Контакты", privacy: "Конфиденциальность" },
+  ka: { home: "მთავარი", search: "ძიება", saved: "ჩემი", bookings: "ჯავშნები", panel: "პანელი", tagline: "ონლაინ ჩაწერა სალონებში, ესთეტიკის ცენტრებსა და სტომატოლოგიურ კლინიკებში — მთელ საქართველოში.", forClients: "კლიენტისთვის", faq: "ხშირი კითხვები", forBusiness: "ბიზნესისთვის", becomePartner: "გახდი პარტნიორი", pricing: "ტარიფები", contact: "კონტაქტი", privacy: "კონფიდენციალურობა" },
+  en: { home: "Home", search: "Search", saved: "Saved", bookings: "Bookings", panel: "Dashboard", tagline: "Online booking at salons, aesthetics centres and dental clinics across Georgia.", forClients: "For clients", faq: "FAQ", forBusiness: "For business", becomePartner: "Become a partner", pricing: "Pricing", contact: "Contact", privacy: "Privacy" },
+  ru: { home: "Главная", search: "Поиск", saved: "Избранное", bookings: "Записи", panel: "Панель", tagline: "Онлайн-запись в салоны, центры эстетики и стоматологические клиники по всей Грузии.", forClients: "Клиентам", faq: "Частые вопросы", forBusiness: "Бизнесу", becomePartner: "Стать партнёром", pricing: "Тарифы", contact: "Контакты", privacy: "Конфиденциальность" },
 } as const;
 
-const navigation: Array<{ href: string; label: "catalog" | "map" | "products" | "vacancies" | "forBusiness" }> = [
+type NavLabel = "home" | "catalog" | "map" | "products" | "vacancies";
+const navigation: Array<{ href: string; label: NavLabel }> = [
+  { href: "/", label: "home" },
   { href: "/salons", label: "catalog" },
   { href: "/salons/map", label: "map" },
+  { href: "/products", label: "products" },
+  { href: "/vacancies", label: "vacancies" },
+];
+// Phone and tablet: the tab bar carries home/search/map, so the menu only holds the rest.
+const menuExtras: Array<{ href: string; label: "products" | "vacancies" | "forBusiness" }> = [
   { href: "/products", label: "products" },
   { href: "/vacancies", label: "vacancies" },
   { href: "/partner", label: "forBusiness" },
 ];
 
-export function CatalogWordmark() {
-  return <span className="inline-flex items-baseline gap-2">
-    <span className="cw-display text-[1.7rem] leading-none">{BRAND.nameKa}</span>
-    <span className="cw-num hidden text-[0.7rem] text-[var(--cw-on-desk-soft)] sm:inline">{BRAND.domain}</span>
-  </span>;
+// The chrome also renders in places without a tRPC provider (static markup tests); there the visitor counts as signed out.
+// The provider is either always present or always absent for a mounted tree, so the hook order never changes.
+function useSignedIn() {
+  try { return useAuth().isAuthenticated; } catch { return false; }
 }
 
-function NavItem({ item, onNavigate }: { item: (typeof navigation)[number]; onNavigate?: () => void }) {
-  const { t } = usePublicLocale();
-  return <Link href={item.href} className="cw-navlink" onClick={onNavigate}>{t(item.label)}</Link>;
+function isActive(href: string, path: string) {
+  if (href === "/") return path === "/";
+  if (href === "/salons") return path === "/salons" || path.startsWith("/salon/");
+  return path === href || path.startsWith(`${href}/`);
+}
+
+/** The bottom tab bar is for browsing; it steps aside on the profile, booking and booking-management pages. */
+export function hasTabBar(path: string) {
+  return !(path.startsWith("/salon/") || path.startsWith("/book/") || path.startsWith("/manage-booking/"));
+}
+
+export function CatalogWordmark() {
+  return <span className="cw-wordmark">{BRAND.nameKa}</span>;
+}
+
+function NavItem({ href, label, onNavigate }: { href: string; label: NavLabel | "forBusiness"; onNavigate?: () => void }) {
+  const { t, locale } = usePublicLocale();
+  const [path] = useLocation();
+  return <Link href={href} className="cw-nav-link" aria-current={isActive(href, path) ? "page" : undefined} onClick={onNavigate}>{label === "home" ? ui[locale].home : t(label)}</Link>;
 }
 
 export function CatalogHeader({ withSkipLink = true }: { withSkipLink?: boolean }) {
   const [open, setOpen] = useState(false);
   const { locale, t } = usePublicLocale();
-  return <header className="cw-desk relative z-20">
+  const isAuthenticated = useSignedIn();
+  const text = ui[locale];
+  return <header className="cw-header">
     {withSkipLink ? <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-3 focus:z-50 focus:rounded focus:bg-white focus:px-4 focus:py-2 focus:text-[var(--cw-ink)]">{t("skip")}</a> : null}
-    <div className="cw-container flex min-h-16 items-center justify-between gap-4 py-3">
-      <Link href="/" aria-label={`${BRAND.nameKa} — ${ui[locale].home}`}><CatalogWordmark /></Link>
-      <nav aria-label={t("mainNav")} className="hidden items-center gap-1 lg:flex">{navigation.map(item => <NavItem key={item.href} item={item} />)}</nav>
-      <div className="flex items-center gap-2">
-        <span className="hidden sm:block"><PublicLanguageSelector /></span>
-        <Link href="/login" className="cw-btn cw-btn-paper min-h-10 px-3 text-sm sm:px-4"><LogIn className="size-4" aria-hidden="true" /><span className="max-sm:sr-only">{t("signIn")}</span></Link>
-        <button type="button" className="cw-navlink lg:hidden" aria-expanded={open} aria-controls="cw-mobile-nav" aria-label={open ? t("closeMenu") : t("openMenu")} onClick={() => setOpen(value => !value)}>
+    <div className="cw-container cw-header-bar">
+      <Link href="/" aria-label={`${BRAND.nameKa} — ${text.home}`}><CatalogWordmark /></Link>
+      <nav aria-label={t("mainNav")} className="cw-nav">{navigation.map(item => <NavItem key={item.href} {...item} />)}</nav>
+      <div className="cw-header-actions">
+        <Link href="/partner" className="cw-pill cw-pill-outline cw-desktop-only">{t("forBusiness")}</Link>
+        <PublicLanguageSelector />
+        <Link href={isAuthenticated ? "/app/today" : "/login"} className="cw-pill cw-pill-ink cw-desktop-only">{isAuthenticated ? text.panel : t("signIn")}</Link>
+        <button type="button" className="cw-menu-button" aria-expanded={open} aria-controls="cw-mobile-nav" aria-label={open ? t("closeMenu") : t("openMenu")} onClick={() => setOpen(value => !value)}>
           {open ? <X className="size-5" aria-hidden="true" /> : <Menu className="size-5" aria-hidden="true" />}
         </button>
       </div>
     </div>
-    {open ? <nav id="cw-mobile-nav" aria-label={t("mobileNav")} className="cw-container grid gap-1 border-t border-[var(--cw-desk-soft)] pb-4 pt-2 lg:hidden">{navigation.map(item => <NavItem key={item.href} item={item} onNavigate={() => setOpen(false)} />)}</nav> : null}
+    {open ? <nav id="cw-mobile-nav" aria-label={t("mobileNav")} className="cw-container cw-mobile-nav">{menuExtras.map(item => <NavItem key={item.href} {...item} onNavigate={() => setOpen(false)} />)}</nav> : null}
   </header>;
+}
+
+function MobileTabBar() {
+  const { locale, t } = usePublicLocale();
+  const isAuthenticated = useSignedIn();
+  const [path] = useLocation();
+  const text = ui[locale];
+  if (!hasTabBar(path)) return null;
+  const tabs: Array<{ href: string; label: string; Icon: LucideIcon; active: boolean }> = [
+    { href: "/", label: text.home, Icon: Home, active: path === "/" },
+    { href: "/salons", label: text.search, Icon: Search, active: path === "/salons" },
+    { href: "/salons/map", label: t("map"), Icon: Map, active: path === "/salons/map" },
+    { href: "/saved", label: text.saved, Icon: Heart, active: path === "/saved" },
+    { href: "/my-bookings", label: text.bookings, Icon: CalendarCheck, active: path === "/my-bookings" },
+    isAuthenticated
+      ? { href: "/app/today", label: text.panel, Icon: LayoutDashboard, active: false }
+      : { href: "/login", label: t("signIn"), Icon: LogIn, active: path === "/login" },
+  ];
+  return <nav className="cw-tabbar" aria-label={t("mobileNav")}>
+    <ul>{tabs.map(({ href, label, Icon, active }) => <li key={href}>
+      <Link href={href} className="cw-tab-cell" aria-current={active ? "page" : undefined}><Icon className="size-[22px]" aria-hidden="true" /><span>{label}</span></Link>
+    </li>)}</ul>
+  </nav>;
 }
 
 export function CatalogFooter() {
   const { t, locale } = usePublicLocale();
+  const [path] = useLocation();
   const text = ui[locale];
   const year = new Date().getFullYear();
-  return <footer className="cw-desk">
-    <div className="cw-container grid gap-10 py-14 md:grid-cols-[1.4fr_1fr_1fr]">
+  return <footer className="cw-footer" data-tabbar={hasTabBar(path)}>
+    <div className="cw-container cw-footer-grid">
       <div>
-        <CatalogWordmark />
-        <p className="mt-4 max-w-sm text-sm leading-6 text-[var(--cw-on-desk-soft)]">{text.tagline}</p>
+        <Link href="/" aria-label={`${BRAND.nameKa} — ${text.home}`}><CatalogWordmark /></Link>
+        <p className="mt-4 max-w-sm text-sm leading-6 text-[var(--sf-muted)]">{text.tagline}</p>
       </div>
       <div>
-        <p className="cw-caption">{text.forClients}</p>
-        <ul className="mt-3 grid gap-2 text-sm">
-          <li><Link href="/salons" className="hover:underline">{t("catalog")}</Link></li>
-          <li><Link href="/salons/map" className="hover:underline">{t("map")}</Link></li>
-          <li><Link href="/products" className="hover:underline">{t("products")}</Link></li>
-          <li><Link href="/vacancies" className="hover:underline">{t("vacancies")}</Link></li>
-          <li><Link href="/faq" className="hover:underline">{text.faq}</Link></li>
+        <p className="cw-footer-head">{text.forClients}</p>
+        <ul className="cw-footer-list">
+          <li><Link href="/salons">{t("catalog")}</Link></li>
+          <li><Link href="/salons/map">{t("map")}</Link></li>
+          <li><Link href="/products">{t("products")}</Link></li>
+          <li><Link href="/vacancies">{t("vacancies")}</Link></li>
         </ul>
       </div>
       <div>
-        <p className="cw-caption">{text.forBusiness}</p>
-        <ul className="mt-3 grid gap-2 text-sm">
-          <li><Link href="/partner" className="hover:underline">{text.becomePartner}</Link></li>
-          <li><Link href="/pricing" className="hover:underline">{text.pricing}</Link></li>
-          <li><Link href="/contact" className="hover:underline">{text.contact}</Link></li>
-          <li><Link href="/privacy" className="hover:underline">{text.privacy}</Link></li>
+        <p className="cw-footer-head">{text.forBusiness}</p>
+        <ul className="cw-footer-list">
+          <li><Link href="/partner">{text.becomePartner}</Link></li>
+          <li><Link href="/pricing">{text.pricing}</Link></li>
+        </ul>
+      </div>
+      <div>
+        <p className="cw-footer-head">{t("information")}</p>
+        <ul className="cw-footer-list">
+          <li><Link href="/faq">{text.faq}</Link></li>
+          <li><Link href="/contact">{text.contact}</Link></li>
+          <li><Link href="/privacy">{text.privacy}</Link></li>
         </ul>
       </div>
     </div>
-    <div className="cw-container border-t border-[var(--cw-desk-soft)] py-5 text-xs text-[var(--cw-on-desk-soft)]"><span className="cw-num">© {year}</span> {BRAND.name}</div>
+    <div className="cw-footer-bottom"><div className="cw-container"><span className="cw-num">© {year}</span> {BRAND.name}</div></div>
+    <MobileTabBar />
   </footer>;
 }

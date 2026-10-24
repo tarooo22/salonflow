@@ -1,14 +1,15 @@
 import { CatalogFooter, CatalogHeader } from "@/components/catalog/CatalogChrome";
-import { BookingBar, BookingBusinessStrip, BookingChoiceCard, BookingDateStrip, BookingNotice, BookingRail, BookingSlotGroup, BookingStepHeader, DATE_NAMES, addDaysKey, formatDateKeyLong, schemaWeekdayOf } from "@/components/public/BookingPrimitives";
+import { BookingBar, BookingBusinessStrip, BookingChoiceCard, BookingChoiceStrip, BookingDateStrip, BookingNotice, BookingRail, BookingSlotGroup, BookingStepHeader, DATE_NAMES, addDaysKey, formatDateKeyLong, schemaWeekdayOf, type BookingChoice } from "@/components/public/BookingPrimitives";
 import { usePublicMeta } from "@/components/public/PublicMeta";
 import { type PublicLocale, usePublicLocale } from "@/contexts/PublicLocaleContext";
 import { downloadBookingCalendar } from "@/lib/bookingCalendar";
+import { addDeviceBooking } from "@/lib/deviceSaved";
 import { formatDateTimeForLocale, formatGelTetri } from "@/lib/presentation";
 import { trpc } from "@/lib/trpc";
 import { BRAND } from "@shared/brand";
 import { MAX_SELECTED_SERVICES } from "@shared/validation";
 import { dateKeyInTimeZone } from "@shared/timezones";
-import { CalendarClock, CalendarPlus, ChevronLeft, Mail, Phone, RefreshCw, X } from "lucide-react";
+import { CalendarClock, CalendarPlus, Check, ChevronLeft, CircleAlert, Mail, Phone, RefreshCw, Users, X } from "lucide-react";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useRoute, useSearch } from "wouter";
 import "@/components/catalog/booking.css";
@@ -43,20 +44,21 @@ export const flowUi = {
       phone: { title: "მიუთითეთ მობილურის ნომერი", description: "მობილურის ნომერი საჭიროა სალონთან თქვენი მოთხოვნის დასაკავშირებლად." },
       terms: { title: "დაადასტურეთ ჯავშნის პირობები", description: "გაგრძელებამდე საჭიროა მონაცემების დამუშავებაზე თანხმობა." },
       submit: { title: "ჯავშნის მოთხოვნა ვერ გაიგზავნა", description: "მონაცემები არ დაგვიკარგავს. შეამოწმეთ კავშირი და სცადეთ ხელახლა." },
+      network: { title: "კავშირი გაწყდა. სცადე თავიდან.", description: "შენი მონაცემები არ დაგვიკარგავს." },
     },
-    retry: "კიდევ ერთხელ ცდა", autoPicked: (name: string) => `${name} (ავტომატურად შეირჩა)`, anyStaff: "ნებისმიერი თავისუფალი სპეციალისტი",
+    retry: "თავიდან ცდა", autoPicked: (name: string) => `${name} (ავტომატურად შეირჩა)`, anyStaff: "ნებისმიერი თავისუფალი სპეციალისტი",
     back: "უკან", profile: "პროფილი", catalog: "კატალოგი", onlineBooking: "ონლაინ ჩაწერა", closeBooking: "ჩაწერის დახურვა", progress: "ჯავშნის პროგრესი", hoursAndContact: "სამუშაო საათები და კონტაქტი",
     summary: (count: number, minutes: number) => `${count} სერვისი · ${minutes} წთ`, noService: "სერვისი არ არის არჩეული", next: "შემდეგი", sending: "იგზავნება…", book: "დაჯავშნა",
     staffHours: "ხელმისაწვდომი სპეციალისტების საათები", noHours: "სამუშაო საათები ჯერ არ არის მითითებული. დროის არჩევისას ხელმისაწვდომობა მაინც ავტომატურად შემოწმდება.", dayFallback: "დღე",
     noServicesTitle: "ონლაინ სერვისი ჯერ არ არის", noServicesText: "ამ ფილიალში ონლაინ ჩასაწერი სერვისები ჯერ არ არის. დაუკავშირდით სალონს.", choose: (name: string) => `${name} არჩევა`, minutes: "წთ",
     noStaffTitle: "სპეციალისტი ვერ მოიძებნა", noStaffText: "არჩეული სერვისების ერთობლიობისთვის ამ ფილიალში აქტიური ონლაინ სპეციალისტი ჯერ არ არის. აირჩიეთ სხვა სერვისი ან დაუკავშირდით სალონს.", changeServices: "სერვისების შეცვლა", specialist: "სპეციალისტი",
     anyStaffLabel: "ნებისმიერი თავისუფალი სპეციალისტის არჩევა", anyStaffMeta: "სისტემა დროის არჩევისას მოძებნის მხოლოდ არჩეული სერვისებისთვის რეალურად თავისუფალ სპეციალისტს.",
-    duration: "ხანგრძლივობა: ", closedDay: "ამ დღეს სალონი დახურულია. აირჩიეთ სხვა თარიღი.", slotsLoading: "თავისუფალი დრო იტვირთება…", slotsFailed: "თავისუფალი დროის ჩატვირთვა ვერ მოხერხდა. სცადეთ ხელახლა.",
+    duration: "ხანგრძლივობა: ", closedDay: "ამ დღეს დაკეტილია.", slotsLoading: "თავისუფალი დრო იტვირთება…", slotsFailed: "თავისუფალი დროის ჩატვირთვა ვერ მოხერხდა. სცადეთ ხელახლა.",
     morning: "დილა", afternoon: "შუადღე", evening: "საღამო",
-    noSlotsTitle: "ამ დღისთვის თავისუფალი დრო აღარ არის.", noSlotsText: "შეგიძლიათ აირჩიოთ სხვა დღე ან დატოვოთ waitlist მოთხოვნა. ეს არ არის დადასტურებული ჯავშანი და ავტომატური შეტყობინება ჯერ არ იგზავნება.", waitlist: "Waitlist მოთხოვნა",
-    checking: "ხელმისაწვდომობა მოწმდება…", available: "ეს დრო ხელმისაწვდომია — შეგიძლიათ გააგრძელოთ.", taken: "ეს დრო ახლახან დაიკავეს. აირჩიეთ სხვა თავისუფალი დრო.",
+    noSlotsTitle: "ამ დღეს თავისუფალი დრო აღარ არის.", noSlotsText: "შეგიძლიათ აირჩიოთ სხვა დღე ან დატოვოთ waitlist მოთხოვნა. ეს არ არის დადასტურებული ჯავშანი და ავტომატური შეტყობინება ჯერ არ იგზავნება.", waitlist: "Waitlist მოთხოვნა", nextDay: "შემდეგი დღე", choicesLabel: "თქვენი არჩევანი",
+    checking: "ხელმისაწვდომობა მოწმდება…", available: "ეს დრო ხელმისაწვდომია — შეგიძლიათ გააგრძელოთ.", taken: "ეს დრო ახლახან დაიკავეს. აირჩიე სხვა დრო.",
     change: "შეცვლა", changeAria: (label: string) => `${label} — შეცვლა`, summaryCaption: "ჯავშნის შეჯამება", business: "ბიზნესი", dateTime: "თარიღი და დრო", duration2: "ხანგრძლივობა", services: "სერვისები", total: "ჯამი",
-    firstName: "სახელი *", lastName: "გვარი", optional: "(არასავალდებულო)", phone: "მობილურის ნომერი *", phonePlaceholder: "მაგ. 555 12 34 56", phoneHelp: "ფორმატი: 5XX XX XX XX ან +995 5XX XX XX XX. ნომერი გამოყენებული იქნება მხოლოდ ამ მოთხოვნისთვის.",
+    firstName: "სახელი *", lastName: "გვარი", optional: "(არასავალდებულო)", phone: "მობილურის ნომერი *", phonePlaceholder: "მაგ. 555 12 34 56", phoneHelp: "ფორმატი: 5XX XX XX XX. ნომერი გამოყენებული იქნება მხოლოდ ამ მოთხოვნისთვის.",
     email: "ელფოსტა", note: "კომენტარი სალონისთვის", consent: "ვეთანხმები, რომ სალონმა ჩემი მონაცემები გამოიყენოს მხოლოდ ამ ჯავშნის მოთხოვნის დამუშავებისა და დადასტურებისთვის. *",
     stamp: "ჩაწერილია", detailsCaption: "ჯავშნის დეტალები",
   },
@@ -78,6 +80,7 @@ export const flowUi = {
       phone: { title: "Enter your mobile number", description: "A mobile number is needed so the salon can contact you about your request." },
       terms: { title: "Accept the booking terms", description: "Consent to data processing is required before you continue." },
       submit: { title: "The booking request could not be sent", description: "We have not lost your data. Check your connection and try again." },
+      network: { title: "Connection lost. Please try again.", description: "We have not lost your data." },
     },
     retry: "Try again", autoPicked: (name: string) => `${name} (assigned automatically)`, anyStaff: "Any available specialist",
     back: "Back", profile: "Profile", catalog: "Catalog", onlineBooking: "Online booking", closeBooking: "Close booking", progress: "Booking progress", hoursAndContact: "Working hours and contact",
@@ -88,10 +91,10 @@ export const flowUi = {
     anyStaffLabel: "Select any available specialist", anyStaffMeta: "When you choose a time, the system finds a specialist who is truly free for all selected services.",
     duration: "Duration: ", closedDay: "The salon is closed on this day. Choose another date.", slotsLoading: "Loading free times…", slotsFailed: "Free times could not be loaded. Please try again.",
     morning: "Morning", afternoon: "Afternoon", evening: "Evening",
-    noSlotsTitle: "There is no free time left on this day.", noSlotsText: "You can choose another day or leave a waitlist request. This is not a confirmed booking, and no automatic notification is sent yet.", waitlist: "Waitlist request",
+    noSlotsTitle: "There is no free time left on this day.", noSlotsText: "You can choose another day or leave a waitlist request. This is not a confirmed booking, and no automatic notification is sent yet.", waitlist: "Waitlist request", nextDay: "Next day", choicesLabel: "Your choices",
     checking: "Checking availability…", available: "This time is available — you can continue.", taken: "This time was just taken. Choose another free time.",
     change: "Change", changeAria: (label: string) => `${label} — change`, summaryCaption: "Booking summary", business: "Business", dateTime: "Date and time", duration2: "Duration", services: "Services", total: "Total",
-    firstName: "First name *", lastName: "Last name", optional: "(optional)", phone: "Mobile number *", phonePlaceholder: "e.g. 555 12 34 56", phoneHelp: "Format: 5XX XX XX XX or +995 5XX XX XX XX. The number is used only for this request.",
+    firstName: "First name *", lastName: "Last name", optional: "(optional)", phone: "Mobile number *", phonePlaceholder: "e.g. 555 12 34 56", phoneHelp: "Format: 5XX XX XX XX. The number is used only for this request.",
     email: "Email", note: "Note for the salon", consent: "I agree that the salon may use my data only to process and confirm this booking request. *",
     stamp: "Recorded", detailsCaption: "Booking details",
   },
@@ -113,6 +116,7 @@ export const flowUi = {
       phone: { title: "Укажите номер мобильного телефона", description: "Номер нужен, чтобы салон мог связаться с вами по вашему запросу." },
       terms: { title: "Подтвердите условия записи", description: "Перед продолжением необходимо согласие на обработку данных." },
       submit: { title: "Не удалось отправить запрос на запись", description: "Ваши данные не потеряны. Проверьте подключение и попробуйте снова." },
+      network: { title: "Соединение потеряно. Попробуйте ещё раз.", description: "Ваши данные не потеряны." },
     },
     retry: "Попробовать ещё раз", autoPicked: (name: string) => `${name} (выбран автоматически)`, anyStaff: "Любой свободный специалист",
     back: "Назад", profile: "Профиль", catalog: "Каталог", onlineBooking: "Онлайн-запись", closeBooking: "Закрыть запись", progress: "Ход записи", hoursAndContact: "Часы работы и контакты",
@@ -123,10 +127,10 @@ export const flowUi = {
     anyStaffLabel: "Выбрать любого свободного специалиста", anyStaffMeta: "При выборе времени система найдёт специалиста, который действительно свободен для всех выбранных услуг.",
     duration: "Длительность: ", closedDay: "В этот день салон закрыт. Выберите другую дату.", slotsLoading: "Загрузка свободного времени…", slotsFailed: "Не удалось загрузить свободное время. Попробуйте снова.",
     morning: "Утро", afternoon: "День", evening: "Вечер",
-    noSlotsTitle: "На этот день свободного времени больше нет.", noSlotsText: "Можно выбрать другой день или оставить запрос в листе ожидания. Это не подтверждённая запись, и автоматическое уведомление пока не отправляется.", waitlist: "Запрос в лист ожидания",
+    noSlotsTitle: "На этот день свободного времени больше нет.", noSlotsText: "Можно выбрать другой день или оставить запрос в листе ожидания. Это не подтверждённая запись, и автоматическое уведомление пока не отправляется.", waitlist: "Запрос в лист ожидания", nextDay: "Следующий день", choicesLabel: "Ваш выбор",
     checking: "Проверка доступности…", available: "Это время доступно — можно продолжать.", taken: "Это время только что заняли. Выберите другое свободное время.",
     change: "Изменить", changeAria: (label: string) => `${label} — изменить`, summaryCaption: "Сводка записи", business: "Бизнес", dateTime: "Дата и время", duration2: "Длительность", services: "Услуги", total: "Итого",
-    firstName: "Имя *", lastName: "Фамилия", optional: "(необязательно)", phone: "Номер мобильного телефона *", phonePlaceholder: "напр. 555 12 34 56", phoneHelp: "Формат: 5XX XX XX XX или +995 5XX XX XX XX. Номер используется только для этого запроса.",
+    firstName: "Имя *", lastName: "Фамилия", optional: "(необязательно)", phone: "Номер мобильного телефона *", phonePlaceholder: "напр. 555 12 34 56", phoneHelp: "Формат: 5XX XX XX XX. Номер используется только для этого запроса.",
     email: "Эл. почта", note: "Комментарий для салона", consent: "Я согласен(на), что салон использует мои данные только для обработки и подтверждения этого запроса на запись. *",
     stamp: "Записано", detailsCaption: "Детали записи",
   },
@@ -158,6 +162,17 @@ export function getBookingValidationIssue(input: { step: number; serviceId?: str
   if (input.step === 3 && !input.termsAccepted) return { kind: "contact", ...issues.terms };
   return null;
 }
+
+// The commit endpoints throw plain errors without a code, so a taken slot is told apart by the server's own message
+// (Georgian for the multi-service route, English for the single-service route). shortcut: message match, replace with a stable error code on the server.
+// Server messages from server/routers/public.ts that mean "pick another time"; booking-window misses too.
+const SLOT_TAKEN_MESSAGES = ["ეს დრო ახლახან დაიკავეს", "The selected time is no longer available", "ჩაწერის დაშვებულ დიაპაზონში არ არის", "falls outside the booking window"];
+export function isSlotTakenError(error: { message?: string }) {
+  const message = error.message ?? "";
+  return SLOT_TAKEN_MESSAGES.some(part => message.includes(part));
+}
+// A tRPC error that never reached the server (offline, dropped connection) carries no `data`; server-side failures always do.
+export function isNetworkError(error: { data?: unknown }) { return !error.data; }
 
 // `?services=<id1>,<id2>` (ids from public.bookingCatalog) preselects services. Unknown ids are ignored later,
 // once the catalog is known; here we only split and de-duplicate.
@@ -195,6 +210,7 @@ export default function BookingFlow() {
   const [idempotencyKey] = useState(() => crypto.randomUUID());
   const [confirmation, setConfirmation] = useState<{ token: string; assignedStaffName?: string; endsAt: Date }>();
   const [interactionError, setInteractionError] = useState<BookingValidationIssue | null>(null);
+  const [slotTaken, setSlotTaken] = useState(false);
   const errorRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const focusTitle = useRef(false);
@@ -218,20 +234,25 @@ export default function BookingFlow() {
   const singleAvailability = trpc.public.checkAvailability.useQuery(availabilityInput, { enabled: Boolean(serviceId && staffProfileId && startsAt && step >= 2 && !isMultiService) });
   const multiAvailability = trpc.public.checkMultiAvailability.useQuery(multiAvailabilityInput, { enabled: Boolean(isMultiService && staffProfileId && startsAt && step >= 2) });
   const availability = isMultiService ? multiAvailability : singleAvailability;
-  const commitBooking = trpc.public.commitBooking.useMutation({
-    onSuccess: result => {
-      setInteractionError(null);
-      setConfirmation({ token: result.confirmationToken, assignedStaffName: result.assignedStaffName, endsAt: result.endsAt });
-    },
-    onError: () => setInteractionError({ kind: "submit", ...text.issues.submit }),
-  });
-  const commitMultiBooking = trpc.public.commitMultiBooking.useMutation({
-    onSuccess: result => {
-      setInteractionError(null);
-      setConfirmation({ token: result.confirmationToken, assignedStaffName: result.assignedStaffName, endsAt: result.endsAt });
-    },
-    onError: () => setInteractionError({ kind: "submit", ...text.issues.submit }),
-  });
+  // Device-local "my bookings" entry: salon, service names and start time only, never the manage token or link.
+  const rememberOnDevice = () => {
+    if (!catalog.data || !startsAt) return;
+    addDeviceBooking({ slug, salonName: catalog.data.location.name, services: selectedServices.map(service => service.nameKa), startsAt: startsAt.toISOString() });
+  };
+  const onCommitSuccess = (result: { confirmationToken: string; assignedStaffName?: string; endsAt: Date }) => {
+    setInteractionError(null);
+    setSlotTaken(false);
+    setConfirmation({ token: result.confirmationToken, assignedStaffName: result.assignedStaffName, endsAt: result.endsAt });
+    rememberOnDevice();
+  };
+  // A taken slot sends the visitor back to the time step with an alert next to the slots (no title focus: the alert takes it).
+  const onCommitError = (error: { message: string; data?: unknown }) => {
+    // Refetch the availability check too, so its cached "available" can't wave the lost slot through again.
+    if (isSlotTakenError(error)) { setInteractionError(null); setSlotTaken(true); setStep(2); void (isMultiService ? multiAvailability : singleAvailability).refetch(); return; }
+    setInteractionError({ kind: "submit", ...(isNetworkError(error) ? text.issues.network : text.issues.submit) });
+  };
+  const commitBooking = trpc.public.commitBooking.useMutation({ onSuccess: onCommitSuccess, onError: onCommitError });
+  const commitMultiBooking = trpc.public.commitMultiBooking.useMutation({ onSuccess: onCommitSuccess, onError: onCommitError });
   const submitting = commitBooking.isPending || commitMultiBooking.isPending;
   const selectedServices = catalog.data?.catalog.filter(item => serviceIds.includes(item.service.id)).map(item => item.service) ?? [];
   const totalMinutes = selectedServices.reduce((sum, service) => sum + service.defaultDurationMinutes, 0);
@@ -253,12 +274,12 @@ export default function BookingFlow() {
     titleRef.current?.focus();
   }, [step]);
 
-  const goToStep = (target: number) => { focusTitle.current = true; setInteractionError(null); setStep(target); };
+  const goToStep = (target: number) => { focusTitle.current = true; setInteractionError(null); setSlotTaken(false); setStep(target); };
   const clearIssue = (kind?: BookingIssueKind) => setInteractionError(current => !kind || current?.kind === kind ? null : current);
   const selectService = (value: string) => { setServiceIds(current => current.includes(value) ? current.filter(item => item !== value) : [...current, value]); setStaffProfileId(undefined); setDateTime(""); clearIssue("service"); };
   const selectStaff = (value: string) => { setStaffProfileId(value); setDateTime(""); clearIssue("staff"); };
-  const selectDateTime = (value: string) => { setDateTime(value); clearIssue("time"); };
-  const currentValidation = () => getBookingValidationIssue({ step, serviceId, staffProfileId, startsAt, available: availability.data?.available, firstName, phone, termsAccepted, locale });
+  const selectDateTime = (value: string) => { setDateTime(value); setSlotTaken(false); clearIssue("time"); };
+  const currentValidation = () => getBookingValidationIssue({ step, serviceId, staffProfileId, startsAt, available: slotTaken ? false : availability.data?.available, firstName, phone, termsAccepted, locale });
   const submitBooking = () => {
     if (!serviceId || !staffProfileId || !startsAt) return;
     const sharedPayload = { slug, staffProfileId, startsAt, firstName, lastName: lastName || undefined, phone, email: email || undefined, customerNote: customerNote || undefined, bookingTermsConsent: true as const, idempotencyKey };
@@ -280,7 +301,7 @@ export default function BookingFlow() {
   if (catalog.data && confirmation && selectedServices.length && startsAt) {
     return <div className="cw min-h-screen">
       <CatalogHeader />
-      <main id="main-content" tabIndex={-1} className="cw-book">
+      <main id="main-content" tabIndex={-1} className="cwb-page">
         <BookingConfirmation confirmationToken={confirmation.token} assignedStaffName={confirmation.assignedStaffName} serviceName={selectedServices.map(service => service.nameKa).join(" + ")} services={selectedServices.map(service => ({ name: service.nameKa, priceTetri: service.priceTetri }))} totalTetri={totalTetri} startsAt={startsAt} endsAt={confirmation.endsAt} locationName={catalog.data.location.name} locationAddress={catalog.data.location.address} timeZone={catalog.data.location.timezone} />
       </main>
       <CatalogFooter />
@@ -289,38 +310,44 @@ export default function BookingFlow() {
 
   const blockedIssue = catalog.data && available ? currentValidation() : null;
   const barBlocked = Boolean(blockedIssue) || submitting;
+  const timeZone = catalog.data?.location.timezone;
+  const choices: BookingChoice[] = [];
+  if (step >= 1 && selectedServices.length) choices.push({ id: "services", text: selectedServices.map(service => service.nameKa).join(" + "), onChange: () => goToStep(0), changeLabel: text.change, changeAria: text.changeAria(text.services) });
+  if (step >= 2 && staffLabel) choices.push({ id: "staff", text: staffLabel, onChange: () => goToStep(1), changeLabel: text.change, changeAria: text.changeAria(text.specialist) });
+  if (step >= 3 && startsAt) choices.push({ id: "time", text: formatDateTimeForLocale(startsAt, locale, timeZone), onChange: () => goToStep(2), changeLabel: text.change, changeAria: text.changeAria(text.dateTime) });
+  if (step >= 1 && selectedServices.length) choices.push({ id: "price", text: formatGel(totalTetri) });
 
   return <div className="cw min-h-screen">
     <CatalogHeader />
-    <main id="main-content" tabIndex={-1} className="cw-book">
-      <div className="cw-form">
-        <div className="cw-form-band" aria-hidden="true" />
-        <div className="cw-form-head">
-          {step > 0 && catalog.data && available ? <button type="button" className="cw-btn cw-btn-line" onClick={() => goToStep(step - 1)}><ChevronLeft className="size-4" aria-hidden="true" />{text.back}</button>
-            : <Link href={profileHref} className="cw-btn cw-btn-line"><ChevronLeft className="size-4" aria-hidden="true" />{catalog.data ? text.profile : text.catalog}</Link>}
-          <div className="cw-form-head-title"><span className="cw-caption">{text.onlineBooking}</span>{catalog.data && available ? <span className="cw-num text-xs font-semibold">{step + 1} / 4</span> : null}</div>
-          <Link href={profileHref} className="cw-btn cw-btn-line" aria-label={text.closeBooking}><X className="size-4" aria-hidden="true" /></Link>
+    <main id="main-content" tabIndex={-1} className="cwb-page">
+      <div className="cwb-card">
+        <div className="cwb-head">
+          {step > 0 && catalog.data && available ? <button type="button" className="cwb-btn" onClick={() => goToStep(step - 1)}><ChevronLeft className="size-4" aria-hidden="true" />{text.back}</button>
+            : <Link href={profileHref} className="cwb-btn"><ChevronLeft className="size-4" aria-hidden="true" />{catalog.data ? text.profile : text.catalog}</Link>}
+          <span className="cwb-head-title">{text.onlineBooking}</span>
+          <Link href={profileHref} className="cwb-btn" aria-label={text.closeBooking}><X className="size-4" aria-hidden="true" /></Link>
         </div>
 
-        {catalog.isLoading ? <div className="cw-step"><p role="status" className="cw-empty">{ui.loading}</p></div> : null}
-        {catalog.isError ? <div className="cw-step"><BookingNotice tone="error" title={ui.unavailable} /></div> : null}
-        {catalog.data === null ? <div className="cw-step"><div className="cw-empty"><strong>{ui.inactive}</strong>{ui.inactiveLead}</div><div className="cw-actions mt-4"><Link href="/salons" className="cw-btn cw-btn-stamp">{ui.returnToList}</Link></div></div> : null}
-        {catalog.data && !available ? <div className="cw-step">
-          <div className="cw-empty"><strong>{ui.trialPaused}</strong>{ui.trialPausedLead}</div>
-          <div className="cw-actions mt-4"><Link href={`/salon/${slug}`} className="cw-btn cw-btn-stamp">{ui.viewSalon}</Link></div>
+        {catalog.isLoading ? <div className="cwb-step"><p role="status" className="cwb-empty">{ui.loading}</p></div> : null}
+        {catalog.isError ? <div className="cwb-step"><BookingNotice tone="error" title={ui.unavailable}><button type="button" className="cwb-btn cwb-btn-danger cwb-btn-sm" onClick={() => void catalog.refetch()}><RefreshCw className="size-4" aria-hidden="true" />{text.retry}</button></BookingNotice></div> : null}
+        {catalog.data === null ? <div className="cwb-step"><div className="cwb-empty"><strong>{ui.inactive}</strong>{ui.inactiveLead}</div><div className="cwb-actions mt-4"><Link href="/salons" className="cwb-btn cwb-btn-primary">{ui.returnToList}</Link></div></div> : null}
+        {catalog.data && !available ? <div className="cwb-step">
+          <div className="cwb-empty"><strong>{ui.trialPaused}</strong>{ui.trialPausedLead}</div>
+          <div className="cwb-actions mt-4"><Link href={`/salon/${slug}`} className="cwb-btn cwb-btn-primary">{ui.viewSalon}</Link></div>
         </div> : null}
 
         {catalog.data && available ? <>
-          <BookingRail steps={[...text.steps]} current={step} onGo={goToStep} label={text.progress} />
+          <BookingRail steps={[...text.steps]} current={step} label={text.progress} />
           <BookingBusinessStrip name={catalog.data.location.name} address={catalog.data.location.address} />
-          <details className="cw-biz-more"><summary>{text.hoursAndContact}</summary><LocationContext location={catalog.data.location} /></details>
-          {interactionError ? <div className="cw-form-pad"><BookingErrorNotice issue={interactionError} errorRef={errorRef} onRetry={interactionError.kind === "submit" ? submitBooking : undefined} /></div> : null}
-          <div className="cw-step" key={step}>
-            <BookingStepHeader step={step + 1} title={text.stepCopy[step]!.title} description={text.stepCopy[step]!.lede} headingRef={titleRef} />
+          <details className="cwb-more"><summary>{text.hoursAndContact}</summary><LocationContext location={catalog.data.location} /></details>
+          <BookingChoiceStrip choices={choices} label={text.choicesLabel} />
+          {interactionError ? <div className="cwb-pad"><BookingErrorNotice issue={interactionError} errorRef={errorRef} onRetry={interactionError.kind === "submit" ? submitBooking : undefined} /></div> : null}
+          <div className="cwb-step" key={step}>
+            <BookingStepHeader title={text.stepCopy[step]!.title} description={text.stepCopy[step]!.lede} headingRef={titleRef} />
             <div className="mt-4">
               {step === 0 ? <ServiceStep catalog={catalog.data.catalog} selectedIds={serviceIds} onSelect={selectService} /> : null}
               {step === 1 ? <StaffStep team={eligibleTeam} selectedId={staffProfileId} onSelect={selectStaff} onEditServices={() => goToStep(0)} /> : null}
-              {step === 2 ? <TimeStep slug={slug} serviceId={serviceId} serviceIds={serviceIds} multiService={isMultiService} staffProfileId={staffProfileId} workingHours={catalog.data.location.workingHours} timezone={catalog.data.location.timezone} dateTime={dateTime} durationMinutes={totalMinutes} onChange={selectDateTime} availability={availability} /> : null}
+              {step === 2 ? <TimeStep slug={slug} serviceId={serviceId} serviceIds={serviceIds} multiService={isMultiService} staffProfileId={staffProfileId} workingHours={catalog.data.location.workingHours} timezone={catalog.data.location.timezone} dateTime={dateTime} durationMinutes={totalMinutes} onChange={selectDateTime} availability={availability} slotTaken={slotTaken} /> : null}
               {step === 3 ? <ConfirmStep location={catalog.data.location} services={selectedServices} staffLabel={staffLabel} startsAt={startsAt} totalMinutes={totalMinutes} totalTetri={totalTetri} onEdit={goToStep} contactError={interactionError?.kind === "contact"} firstName={firstName} lastName={lastName} phone={phone} email={email} customerNote={customerNote} termsAccepted={termsAccepted} onFirstName={value => { setFirstName(value); clearIssue("contact"); }} onLastName={setLastName} onPhone={value => { setPhone(value); clearIssue("contact"); }} onEmail={setEmail} onNote={setCustomerNote} onTerms={value => { setTermsAccepted(value); clearIssue("contact"); }} /> : null}
             </div>
           </div>
@@ -343,14 +370,14 @@ export default function BookingFlow() {
 export function LocationContext({ location }: { location: BookingLocation }) {
   const { locale } = usePublicLocale();
   const text = flowUi[locale];
-  return <div className="cw-biz-more-body">
+  return <div className="cwb-more-body">
     {location.publicDescription ? <p>{location.publicDescription}</p> : null}
     {location.workingHours.length ? <div>
-      <p className="cw-caption flex items-center gap-2"><CalendarClock className="size-4" aria-hidden="true" />{text.staffHours}</p>
-      <ul className="mt-2 grid gap-1">{location.workingHours.map(rule => <li key={rule.weekday}>{weekdayName(rule.weekday, locale)} · <span className="cw-num text-[0.8rem]">{rule.startLocalTime}–{rule.endLocalTime}</span></li>)}</ul>
-    </div> : <p className="cw-empty text-sm">{text.noHours}</p>}
-    {location.phone ? <a href={`tel:${location.phone}`} className="inline-flex min-h-11 items-center gap-2 font-bold text-[var(--cw-ink)] underline underline-offset-4"><Phone className="size-4" aria-hidden="true" /><span className="cw-num text-[0.85rem]">{location.phone}</span></a> : null}
-    {location.email ? <a href={`mailto:${location.email}`} className="inline-flex min-h-11 items-center gap-2 font-bold text-[var(--cw-ink)] underline underline-offset-4"><Mail className="size-4" aria-hidden="true" />{location.email}</a> : null}
+      <p className="cwb-caption flex items-center gap-2"><CalendarClock className="size-4" aria-hidden="true" />{text.staffHours}</p>
+      <ul>{location.workingHours.map(rule => <li key={rule.weekday}>{weekdayName(rule.weekday, locale)} · <span className="cw-num">{rule.startLocalTime}–{rule.endLocalTime}</span></li>)}</ul>
+    </div> : <p className="cwb-empty">{text.noHours}</p>}
+    {location.phone ? <a href={`tel:${location.phone}`}><Phone className="size-4" aria-hidden="true" /><span className="cw-num">{location.phone}</span></a> : null}
+    {location.email ? <a href={`mailto:${location.email}`}><Mail className="size-4" aria-hidden="true" />{location.email}</a> : null}
   </div>;
 }
 
@@ -363,38 +390,40 @@ function ServiceStep({ catalog, selectedIds, onSelect }: { catalog: Array<{ serv
     for (const { service, category } of catalog) map.set(category.nameKa, [...(map.get(category.nameKa) ?? []), service]);
     return Array.from(map, ([name, items]) => ({ name, items }));
   }, [catalog]);
-  if (!groups.length) return <div className="cw-empty"><strong>{text.noServicesTitle}</strong>{text.noServicesText}</div>;
+  if (!groups.length) return <div className="cwb-empty"><strong>{text.noServicesTitle}</strong>{text.noServicesText}</div>;
   return <div className="grid gap-4">{groups.map((group, index) => {
     const picked = group.items.filter(service => selectedIds.includes(service.id)).length;
-    return <div key={group.name} className="cw-ledger" role="group" aria-labelledby={`booking-group-${index}`}>
-      <div className="cw-ledger-head"><h2 id={`booking-group-${index}`}>{group.name}</h2><span className="cw-num text-xs font-semibold">{picked ? `${picked} / ${group.items.length}` : group.items.length}</span></div>
+    return <div key={group.name} className="cwb-group" role="group" aria-labelledby={`booking-group-${index}`}>
+      <div className="cwb-group-head"><h2 id={`booking-group-${index}`}>{group.name}</h2><span className="cwb-group-count cw-num">{picked ? `${picked} / ${group.items.length}` : group.items.length}</span></div>
       {group.items.map(service => <BookingChoiceCard key={service.id} conversionEvent="BOOKING_SERVICE_SELECTED" label={text.choose(service.nameKa)} selected={selectedIds.includes(service.id)} onSelect={() => onSelect(service.id)}>
-        <span className="cw-choice-row"><span className="cw-choice-name">{service.nameKa}</span><span className="cw-choice-price">{formatGel(service.priceTetri)}</span></span>
-        <span className="cw-choice-meta block"><span className="cw-num">{service.defaultDurationMinutes} {text.minutes}</span></span>
+        <span className="cwb-row-line"><span className="cwb-row-title">{service.nameKa}</span><span className="cwb-price">{formatGel(service.priceTetri)}</span></span>
+        <span className="cwb-row-meta block"><span className="cw-num">{service.defaultDurationMinutes} {text.minutes}</span></span>
       </BookingChoiceCard>)}
     </div>;
   })}</div>;
 }
 
+const initialOf = (name: string) => name.trim().charAt(0).toLocaleUpperCase() || "·";
+
 export function StaffStep({ team, selectedId, onSelect, onEditServices }: { team: BookingTeamMember[]; selectedId?: string; onSelect: (id: string) => void; onEditServices?: () => void }) {
   const text = flowUi[usePublicLocale().locale];
-  if (!team.length) return <div className="cw-empty"><strong>{text.noStaffTitle}</strong>{text.noStaffText}{onEditServices ? <div className="mt-3"><button type="button" className="cw-btn cw-btn-line" onClick={onEditServices}>{text.changeServices}</button></div> : null}</div>;
-  return <div className="cw-choice-list" role="radiogroup" aria-label={text.specialist}>
-    <BookingChoiceCard kind="radio" name="booking-specialist" conversionEvent="BOOKING_ANY_AVAILABLE_SELECTED" label={text.anyStaffLabel} selected={selectedId === ANY_AVAILABLE} onSelect={() => onSelect(ANY_AVAILABLE)}>
-      <span className="cw-choice-name block">{text.anyStaff}</span>
-      <span className="cw-choice-meta block">{text.anyStaffMeta}</span>
+  if (!team.length) return <div className="cwb-empty"><strong>{text.noStaffTitle}</strong>{text.noStaffText}{onEditServices ? <div className="mt-3"><button type="button" className="cwb-btn cwb-btn-line cwb-btn-sm" onClick={onEditServices}>{text.changeServices}</button></div> : null}</div>;
+  return <div className="cwb-list" role="radiogroup" aria-label={text.specialist}>
+    <BookingChoiceCard kind="radio" name="booking-specialist" conversionEvent="BOOKING_ANY_AVAILABLE_SELECTED" label={text.anyStaffLabel} selected={selectedId === ANY_AVAILABLE} onSelect={() => onSelect(ANY_AVAILABLE)} leading={<span className="cwb-avatar" aria-hidden="true"><Users className="size-5" /></span>}>
+      <span className="cwb-row-title block">{text.anyStaff}</span>
+      <span className="cwb-row-meta block">{text.anyStaffMeta}</span>
     </BookingChoiceCard>
-    {team.map(member => <BookingChoiceCard key={member.id} kind="radio" name="booking-specialist" conversionEvent="BOOKING_SPECIALIST_SELECTED" label={text.choose(member.name)} selected={member.id === selectedId} onSelect={() => onSelect(member.id)}>
-      <span className="cw-choice-name block">{member.name}</span>
-      {member.specialty ? <span className="cw-choice-meta block">{member.specialty}</span> : null}
-      {member.bio ? <span className="cw-choice-meta block">{member.bio}</span> : null}
+    {team.map(member => <BookingChoiceCard key={member.id} kind="radio" name="booking-specialist" conversionEvent="BOOKING_SPECIALIST_SELECTED" label={text.choose(member.name)} selected={member.id === selectedId} onSelect={() => onSelect(member.id)} leading={<span className="cwb-avatar" aria-hidden="true">{initialOf(member.name)}</span>}>
+      <span className="cwb-row-title block">{member.name}</span>
+      {member.specialty ? <span className="cwb-row-meta block">{member.specialty}</span> : null}
+      {member.bio ? <span className="cwb-row-meta block">{member.bio}</span> : null}
     </BookingChoiceCard>)}
   </div>;
 }
 
 const DAYS_AHEAD = 14;
 
-function TimeStep({ slug, serviceId, serviceIds, multiService, staffProfileId, workingHours, timezone, dateTime, durationMinutes, onChange, availability }: { slug: string; serviceId?: string; serviceIds: string[]; multiService: boolean; staffProfileId?: string; workingHours: Array<{ weekday: number }>; timezone: string; dateTime: string; durationMinutes: number; onChange: (value: string) => void; availability: { isLoading: boolean; isError: boolean; data?: { available: boolean; reason?: string } } }) {
+function TimeStep({ slug, serviceId, serviceIds, multiService, staffProfileId, workingHours, timezone, dateTime, durationMinutes, onChange, availability, slotTaken }: { slug: string; serviceId?: string; serviceIds: string[]; multiService: boolean; staffProfileId?: string; workingHours: Array<{ weekday: number }>; timezone: string; dateTime: string; durationMinutes: number; onChange: (value: string) => void; availability: { isLoading: boolean; isError: boolean; data?: { available: boolean; reason?: string } }; slotTaken: boolean }) {
   const { locale } = usePublicLocale();
   const text = flowUi[locale];
   const openWeekdays = useMemo(() => new Set(workingHours.map(hour => hour.weekday)), [workingHours]);
@@ -421,56 +450,100 @@ function TimeStep({ slug, serviceId, serviceIds, multiService, staffProfileId, w
     საღამო: slots.filter(slot => Number(slot.label.split(":")[0]) >= 17),
   }), [slots]);
 
+  // A commit that lost the slot lands here: refresh the slots with the existing query and move focus to the alert.
+  const takenRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!slotTaken) return;
+    if (dayIsOpen) void slotsQuery.refetch({ cancelRefetch: false });
+    const frame = requestAnimationFrame(() => takenRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slotTaken]);
+
   const pickDate = (day: string) => { setSelectedDate(day); if (dateTime) onChange(""); };
+  const nextOpenDay = days.find(day => day.key > selectedDate && !day.closed);
+  const unavailable = slotTaken || Boolean(dateTime && (availability.isError || availability.data?.available === false));
 
   return <div className="grid gap-4">
     <BookingDateStrip days={days} selected={selectedDate} todayKey={today} onSelect={pickDate} />
-    <p className="cw-duration"><span>{formatDateKeyLong(selectedDate, locale)}</span><span>{text.duration}<strong>{durationMinutes} {text.minutes}</strong></span></p>
-    <div aria-live="polite" className="min-h-24">
-      {!dayIsOpen ? <p className="cw-empty text-sm">{text.closedDay}</p>
-        : slotsQuery.isLoading ? <p role="status" className="text-sm text-[var(--cw-ink-soft)]">{text.slotsLoading}</p>
-        : slotsQuery.isError ? <BookingNotice tone="error" role="alert" title={text.slotsFailed} />
+    <p className="cwb-when"><span>{formatDateKeyLong(selectedDate, locale)}</span><span>{text.duration}<strong className="cw-num">{durationMinutes} {text.minutes}</strong></span></p>
+    <div aria-live="polite" className="grid min-h-24 gap-4">
+      {unavailable ? <BookingNotice tone="error" role="alert" noticeRef={takenRef} title={text.taken} /> : null}
+      {!dayIsOpen ? <p className="cwb-empty">{text.closedDay}</p>
+        : slotsQuery.isLoading ? <p role="status" className="cwb-muted">{text.slotsLoading}</p>
+        : slotsQuery.isError ? <BookingNotice tone="error" role="alert" title={text.slotsFailed}><button type="button" className="cwb-btn cwb-btn-danger cwb-btn-sm" onClick={() => void slotsQuery.refetch()}><RefreshCw className="size-4" aria-hidden="true" />{text.retry}</button></BookingNotice>
         : slots.length ? <div>
-          <BookingSlotGroup conversionEvent="BOOKING_TIME_SELECTED" title={text.morning} slots={slotsByPeriod.დილა} selectedStartsAt={dateTime} onSelect={onChange} />
-          <BookingSlotGroup conversionEvent="BOOKING_TIME_SELECTED" title={text.afternoon} slots={slotsByPeriod.შუადღე} selectedStartsAt={dateTime} onSelect={onChange} />
-          <BookingSlotGroup conversionEvent="BOOKING_TIME_SELECTED" title={text.evening} slots={slotsByPeriod.საღამო} selectedStartsAt={dateTime} onSelect={onChange} />
+          <BookingSlotGroup conversionEvent="BOOKING_TIME_SELECTED" title={text.morning} slots={slotsByPeriod.დილა} selectedStartsAt={slotTaken ? "" : dateTime} onSelect={onChange} />
+          <BookingSlotGroup conversionEvent="BOOKING_TIME_SELECTED" title={text.afternoon} slots={slotsByPeriod.შუადღე} selectedStartsAt={slotTaken ? "" : dateTime} onSelect={onChange} />
+          <BookingSlotGroup conversionEvent="BOOKING_TIME_SELECTED" title={text.evening} slots={slotsByPeriod.საღამო} selectedStartsAt={slotTaken ? "" : dateTime} onSelect={onChange} />
         </div>
-        : <div className="cw-empty text-sm"><strong>{text.noSlotsTitle}</strong>{text.noSlotsText}<div className="mt-2"><Link href={`/waitlist/${slug}?serviceId=${encodeURIComponent(serviceId ?? "")}&staffProfileId=${encodeURIComponent(staffProfileId ?? "")}&date=${encodeURIComponent(selectedDate)}`} data-conversion-event="BOOKING_WAITLIST_HANDOFF" className="cw-link">{text.waitlist}</Link></div></div>}
+        : <div className="cwb-empty"><strong>{text.noSlotsTitle}</strong>{text.noSlotsText}
+          <div className="cwb-actions mt-3">
+            {nextOpenDay ? <button type="button" className="cwb-btn cwb-btn-line cwb-btn-sm" onClick={() => pickDate(nextOpenDay.key)}>{text.nextDay}</button> : null}
+            <Link href={`/waitlist/${slug}?serviceId=${encodeURIComponent(serviceId ?? "")}&staffProfileId=${encodeURIComponent(staffProfileId ?? "")}&date=${encodeURIComponent(selectedDate)}`} data-conversion-event="BOOKING_WAITLIST_HANDOFF" className="cwb-link">{text.waitlist}</Link>
+          </div></div>}
     </div>
-    {dateTime && availability.isLoading ? <p role="status" className="text-sm text-[var(--cw-ink-soft)]">{text.checking}</p> : null}
-    {dateTime && availability.data?.available ? <BookingNotice tone="ok" role="status">{text.available}</BookingNotice> : null}
-    {dateTime && (availability.isError || availability.data?.available === false) ? <BookingNotice tone="error" role="alert">{text.taken}</BookingNotice> : null}
+    {dateTime && !unavailable && availability.isLoading ? <p role="status" className="cwb-muted">{text.checking}</p> : null}
+    {dateTime && !unavailable && availability.data?.available ? <BookingNotice tone="ok" role="status">{text.available}</BookingNotice> : null}
   </div>;
+}
+
+function FieldError({ id, children }: { id: string; children: React.ReactNode }) {
+  return <p id={id} className="cwb-error"><CircleAlert className="size-4" aria-hidden="true" />{children}</p>;
 }
 
 function ConfirmStep({ location, services, staffLabel, startsAt, totalMinutes, totalTetri, onEdit, contactError, firstName, lastName, phone, email, customerNote, termsAccepted, onFirstName, onLastName, onPhone, onEmail, onNote, onTerms }: { location: BookingLocation; services: BookingService[]; staffLabel?: string; startsAt: Date | null; totalMinutes: number; totalTetri: number; onEdit: (step: number) => void; contactError: boolean; firstName: string; lastName: string; phone: string; email: string; customerNote: string; termsAccepted: boolean; onFirstName: (value: string) => void; onLastName: (value: string) => void; onPhone: (value: string) => void; onEmail: (value: string) => void; onNote: (value: string) => void; onTerms: (value: boolean) => void }) {
   const { locale } = usePublicLocale();
   const text = flowUi[locale];
-  const edit = (label: string, target: number) => <button type="button" className="cw-link" aria-label={text.changeAria(label)} onClick={() => onEdit(target)}>{text.change}</button>;
+  const edit = (label: string, target: number) => <button type="button" className="cwb-link" aria-label={text.changeAria(label)} onClick={() => onEdit(target)}>{text.change}</button>;
+  const nameInvalid = contactError && !firstName.trim();
+  const phoneInvalid = contactError && !phone.trim();
+  const termsInvalid = contactError && !termsAccepted;
   return <div className="grid gap-5">
-    <div className="cw-ledger"><table className="cw-review"><caption className="sr-only">{text.summaryCaption}</caption><tbody>
-      <tr><th scope="row">{text.business}</th><td colSpan={2}>{location.name}{location.address ? <span className="block text-sm font-normal text-[var(--cw-ink-soft)]">{location.address}</span> : null}</td></tr>
-      <tr><th scope="row">{text.dateTime}</th><td className="cw-num text-[0.9rem]">{startsAt ? formatDateTimeForLocale(startsAt, locale, location.timezone) : "—"}</td><td className="cw-review-edit">{edit(text.dateTime, 2)}</td></tr>
-      <tr><th scope="row">{text.specialist}</th><td>{staffLabel ?? "—"}</td><td className="cw-review-edit">{edit(text.specialist, 1)}</td></tr>
-      <tr><th scope="row">{text.duration2}</th><td colSpan={2} className="cw-num text-[0.9rem]">{totalMinutes} {text.minutes}</td></tr>
-      <tr><th scope="row">{text.services}</th><td><ul className="cw-review-services">{services.map(service => <li key={service.id}><span>{service.nameKa}</span><span className="cw-choice-price">{formatGel(service.priceTetri)}</span></li>)}</ul></td><td className="cw-review-edit">{edit(text.services, 0)}</td></tr>
-      <tr className="cw-review-total"><th scope="row">{text.total}</th><td colSpan={2} className="cw-num">{formatGel(totalTetri)}</td></tr>
+    <div className="cwb-review-wrap"><table className="cwb-review"><caption className="sr-only">{text.summaryCaption}</caption><tbody>
+      <tr><th scope="row">{text.business}</th><td colSpan={2}>{location.name}{location.address ? <span className="block text-sm font-normal text-muted-foreground">{location.address}</span> : null}</td></tr>
+      <tr><th scope="row">{text.dateTime}</th><td className="cw-num">{startsAt ? formatDateTimeForLocale(startsAt, locale, location.timezone) : "—"}</td><td className="cwb-review-edit">{edit(text.dateTime, 2)}</td></tr>
+      <tr><th scope="row">{text.specialist}</th><td>{staffLabel ?? "—"}</td><td className="cwb-review-edit">{edit(text.specialist, 1)}</td></tr>
+      <tr><th scope="row">{text.duration2}</th><td colSpan={2} className="cw-num">{totalMinutes} {text.minutes}</td></tr>
+      <tr><th scope="row">{text.services}</th><td><ul className="cwb-review-services">{services.map(service => <li key={service.id}><span>{service.nameKa}</span><span className="cwb-price">{formatGel(service.priceTetri)}</span></li>)}</ul></td><td className="cwb-review-edit">{edit(text.services, 0)}</td></tr>
+      <tr className="cwb-review-total"><th scope="row">{text.total}</th><td colSpan={2} className="cw-num">{formatGel(totalTetri)}</td></tr>
     </tbody></table></div>
-    <div className="cw-fields">
-      <div className="cw-fields cw-fields-two">
-        <label className="cw-field" data-invalid={contactError && !firstName.trim()}><span className="cw-caption">{text.firstName}</span><input id="booking-first-name" value={firstName} onChange={event => onFirstName(event.target.value)} autoComplete="given-name" aria-required="true" aria-invalid={contactError && !firstName.trim()} /></label>
-        <label className="cw-field"><span className="cw-caption">{text.lastName} <span className="cw-field-optional">{text.optional}</span></span><input id="booking-last-name" value={lastName} onChange={event => onLastName(event.target.value)} autoComplete="family-name" /></label>
+    <div className="cwb-fields">
+      <div className="cwb-fields cwb-two">
+        <div className="cwb-field">
+          <label className="cwb-label" htmlFor="booking-first-name">{text.firstName}</label>
+          <input id="booking-first-name" className="cwb-input" value={firstName} onChange={event => onFirstName(event.target.value)} autoComplete="name" aria-required="true" aria-invalid={nameInvalid} aria-describedby={nameInvalid ? "booking-first-name-error" : undefined} />
+          {nameInvalid ? <FieldError id="booking-first-name-error">{text.issues.firstName.title}</FieldError> : null}
+        </div>
+        <div className="cwb-field">
+          <label className="cwb-label" htmlFor="booking-last-name">{text.lastName} <span className="cwb-opt">{text.optional}</span></label>
+          <input id="booking-last-name" className="cwb-input" value={lastName} onChange={event => onLastName(event.target.value)} autoComplete="family-name" />
+        </div>
       </div>
-      <div>
-        <label className="cw-field" data-invalid={contactError && !phone.trim()}><span className="cw-caption">{text.phone}</span><input id="booking-phone" type="tel" value={phone} onChange={event => onPhone(event.target.value)} autoComplete="tel" inputMode="tel" placeholder={text.phonePlaceholder} aria-required="true" aria-invalid={contactError && !phone.trim()} aria-describedby="booking-phone-help" /></label>
-        <p id="booking-phone-help" className="cw-help">{text.phoneHelp}</p>
+      <div className="cwb-field">
+        <label className="cwb-label" htmlFor="booking-phone">{text.phone}</label>
+        <div className="cwb-affix" data-invalid={phoneInvalid}>
+          <span className="cwb-affix-prefix" aria-hidden="true">+995</span>
+          <input id="booking-phone" className="cwb-input" type="tel" value={phone} onChange={event => onPhone(event.target.value)} autoComplete="tel" inputMode="tel" placeholder={text.phonePlaceholder} aria-required="true" aria-invalid={phoneInvalid} aria-describedby={phoneInvalid ? "booking-phone-help booking-phone-error" : "booking-phone-help"} />
+        </div>
+        <p id="booking-phone-help" className="cwb-hint">{text.phoneHelp}</p>
+        {phoneInvalid ? <FieldError id="booking-phone-error">{text.issues.phone.title}</FieldError> : null}
       </div>
-      <label className="cw-field"><span className="cw-caption">{text.email} <span className="cw-field-optional">{text.optional}</span></span><input id="booking-email" type="email" value={email} onChange={event => onEmail(event.target.value)} autoComplete="email" /></label>
-      <label className="cw-field"><span className="cw-caption">{text.note} <span className="cw-field-optional">{text.optional}</span></span><textarea id="booking-note" value={customerNote} onChange={event => onNote(event.target.value)} /></label>
-      <label className="cw-consent" data-invalid={contactError && !termsAccepted}>
-        <input type="checkbox" className="cw-check" checked={termsAccepted} onChange={event => onTerms(event.target.checked)} aria-required="true" aria-invalid={contactError && !termsAccepted} />
-        <span>{text.consent}</span>
-      </label>
+      <div className="cwb-field">
+        <label className="cwb-label" htmlFor="booking-email">{text.email} <span className="cwb-opt">{text.optional}</span></label>
+        <input id="booking-email" className="cwb-input" type="email" value={email} onChange={event => onEmail(event.target.value)} autoComplete="email" />
+      </div>
+      <div className="cwb-field">
+        <label className="cwb-label" htmlFor="booking-note">{text.note} <span className="cwb-opt">{text.optional}</span></label>
+        <textarea id="booking-note" className="cwb-input" value={customerNote} onChange={event => onNote(event.target.value)} />
+      </div>
+      <div className="cwb-field">
+        <label className="cwb-agree" data-invalid={termsInvalid}>
+          <input type="checkbox" className="cwb-check" checked={termsAccepted} onChange={event => onTerms(event.target.checked)} aria-required="true" aria-invalid={termsInvalid} aria-describedby={termsInvalid ? "booking-terms-error" : undefined} />
+          <span>{text.consent}</span>
+        </label>
+        {termsInvalid ? <FieldError id="booking-terms-error">{text.issues.terms.title}</FieldError> : null}
+      </div>
     </div>
   </div>;
 }
@@ -483,35 +556,31 @@ export function BookingConfirmation({ confirmationToken, assignedStaffName, serv
   useEffect(() => { titleRef.current?.focus(); }, []);
   const calendarDescription = locale === "en" ? `${BRAND.name} booking. Status: awaiting salon confirmation.${assignedStaffName ? ` Specialist: ${assignedStaffName}.` : ""}` : locale === "ru" ? `Запись ${BRAND.name}. Статус: ожидает подтверждения салоном.${assignedStaffName ? ` Специалист: ${assignedStaffName}.` : ""}` : `${BRAND.name} ჯავშანი. სტატუსი: სალონის დადასტურებას ელოდება.${assignedStaffName ? ` სპეციალისტი: ${assignedStaffName}.` : ""}`;
   const saveToCalendar = () => downloadBookingCalendar({ startsAt, endsAt, title: `${serviceName} — ${locationName}`, location: locationAddress ?? locationName, description: calendarDescription });
-  const stubDate = new Intl.DateTimeFormat({ ka: "ka-GE", en: "en-GB", ru: "ru-RU" }[locale], { day: "2-digit", month: "2-digit", ...(timeZone ? { timeZone } : {}) }).format(startsAt);
-  return <div className="cw-done cw-confirm">
-    <div className="cw-ticket cw-ticket-done">
-      <div className="cw-ticket-stub" aria-hidden="true">
-        <span className="cw-num">{stubDate}</span>
-        <span className="text-[0.72rem] font-extrabold [writing-mode:vertical-rl] rotate-180">{BRAND.nameKa}</span>
+  return <div className="cwb-card">
+    <div className="cwb-done">
+      <div className="flex items-start gap-3">
+        <span className="cwb-done-mark" aria-hidden="true"><Check className="size-6" /></span>
+        <div className="min-w-0">
+          <h1 ref={titleRef} tabIndex={-1}>{ui.received}</h1>
+          <p className="cwb-step-lede">{ui.receivedLead}</p>
+          <p className="mt-3"><span className="cwb-pill" data-tone="ok"><Check className="size-3.5" aria-hidden="true" />{text.stamp}</span></p>
+        </div>
       </div>
-      <div className="cw-ticket-done-body">
-        <span className="cw-stamp-mark cw-stamp-big">{text.stamp}</span>
-        <div>
-          <h1 ref={titleRef} tabIndex={-1} className="outline-none">{ui.received}</h1>
-          <p className="cw-step-lede">{ui.receivedLead}</p>
-        </div>
-        <table className="cw-review cw-review-flat"><caption className="sr-only">{text.detailsCaption}</caption><tbody>
-          <tr><th scope="row">{text.business}</th><td>{locationName}{locationAddress ? <span className="block text-sm font-normal text-[var(--cw-ink-soft)]">{locationAddress}</span> : null}</td></tr>
-          <tr><th scope="row">{text.dateTime}</th><td className="cw-num text-[0.9rem]">{formatDateTimeForLocale(startsAt, locale, timeZone)}</td></tr>
-          {assignedStaffName ? <tr><th scope="row">{text.specialist}</th><td><span className="sr-only">{ui.assigned} </span>{assignedStaffName}</td></tr> : null}
-          <tr><th scope="row">{text.services}</th><td>{services?.length ? <ul className="cw-review-services">{services.map(service => <li key={service.name}><span>{service.name}</span><span className="cw-choice-price">{formatGel(service.priceTetri)}</span></li>)}</ul> : serviceName}</td></tr>
-          {totalTetri !== undefined ? <tr className="cw-review-total"><th scope="row">{text.total}</th><td className="cw-num">{formatGel(totalTetri)}</td></tr> : null}
-        </tbody></table>
-        <div>
-          <p className="cw-caption">{ui.code}</p>
-          <code aria-label={ui.code} className="cw-code mt-1">{confirmationToken}</code>
-        </div>
-        <div className="cw-actions">
-          <Link href={`/manage-booking/${confirmationToken}`} className="cw-btn cw-btn-stamp">{ui.manage}</Link>
-          <button type="button" className="cw-btn cw-btn-line" onClick={saveToCalendar}><CalendarPlus className="size-4" aria-hidden="true" />{ui.calendar}</button>
-          <Link href="/salons" className="cw-btn cw-btn-line">{ui.returnToList}</Link>
-        </div>
+      <div className="cwb-review-wrap"><table className="cwb-review cwb-review-flat"><caption className="sr-only">{text.detailsCaption}</caption><tbody>
+        <tr><th scope="row">{text.business}</th><td>{locationName}{locationAddress ? <span className="block text-sm font-normal text-muted-foreground">{locationAddress}</span> : null}</td></tr>
+        <tr><th scope="row">{text.dateTime}</th><td className="cw-num">{formatDateTimeForLocale(startsAt, locale, timeZone)}</td></tr>
+        {assignedStaffName ? <tr><th scope="row">{text.specialist}</th><td><span className="sr-only">{ui.assigned} </span>{assignedStaffName}</td></tr> : null}
+        <tr><th scope="row">{text.services}</th><td>{services?.length ? <ul className="cwb-review-services">{services.map(service => <li key={service.name}><span>{service.name}</span><span className="cwb-price">{formatGel(service.priceTetri)}</span></li>)}</ul> : serviceName}</td></tr>
+        {totalTetri !== undefined ? <tr className="cwb-review-total"><th scope="row">{text.total}</th><td className="cw-num">{formatGel(totalTetri)}</td></tr> : null}
+      </tbody></table></div>
+      <div>
+        <p className="cwb-caption">{ui.code}</p>
+        <code aria-label={ui.code} className="cwb-code">{confirmationToken}</code>
+      </div>
+      <div className="cwb-actions">
+        <Link href={`/manage-booking/${confirmationToken}`} className="cwb-btn cwb-btn-primary">{ui.manage}</Link>
+        <button type="button" className="cwb-btn cwb-btn-line" onClick={saveToCalendar}><CalendarPlus className="size-4" aria-hidden="true" />{ui.calendar}</button>
+        <Link href="/salons" className="cwb-btn cwb-btn-line">{ui.returnToList}</Link>
       </div>
     </div>
   </div>;
@@ -521,6 +590,6 @@ function BookingErrorNotice({ issue, errorRef, onRetry }: { issue: BookingValida
   const text = flowUi[usePublicLocale().locale];
   return <BookingNotice tone="error" role="alert" noticeRef={errorRef} title={issue.title}>
     <p>{issue.description}</p>
-    {onRetry ? <button type="button" className="cw-btn cw-btn-danger mt-3 min-h-11 text-sm" onClick={onRetry}><RefreshCw className="size-4" aria-hidden="true" />{text.retry}</button> : null}
+    {onRetry ? <button type="button" className="cwb-btn cwb-btn-danger cwb-btn-sm" onClick={onRetry}><RefreshCw className="size-4" aria-hidden="true" />{text.retry}</button> : null}
   </BookingNotice>;
 }

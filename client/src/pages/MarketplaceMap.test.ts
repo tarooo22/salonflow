@@ -17,12 +17,12 @@ describe("Marketplace map marker positioning", () => {
 describe("Marketplace map page shell", () => {
   const source = readFileSync(new URL("./MarketplaceMap.tsx", import.meta.url), "utf8");
 
-  it("uses the catalog world, shared tickets and Chawera meta, keeping URL-synced filters and the Google Maps link", () => {
+  it("uses the catalog world, shared salon cards and Chawera meta, keeping URL-synced filters and the Google Maps link", () => {
     expect(source).toContain('<div className="cw min-h-screen">');
     expect(source).toContain('<main id="main-content">');
     expect(source).toContain("BRAND.name");
     expect(source).not.toContain("SalonFlow");
-    expect(source).toContain("<Ticket ");
+    expect(source).toContain("<SalonCard ");
     expect(source).toContain('marketplaceDiscoveryHref("/salons/map", nextCategory, searchDraft, area)');
     expect(source).toContain("https://www.google.com/maps/search/?api=1&query=");
   });

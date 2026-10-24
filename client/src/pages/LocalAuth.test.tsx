@@ -6,9 +6,9 @@ const source = readFileSync(new URL("./LocalAuth.tsx", import.meta.url), "utf8")
 describe("local auth card on the catalog desk", () => {
   it("retains local credential boundaries while using the cw presentation", () => {
     expect(source).toContain("ადგილობრივი ელფოსტა და პაროლი");
-    expect(source).toContain("cw-card");
-    expect(source).toContain("cw-field");
-    expect(source).toContain("cw-btn-stamp");
+    expect(source).toContain("mkt-auth-card");
+    expect(source).toContain("mkt-field");
+    expect(source).toContain("mkt-btn-primary");
     expect(source).not.toContain("Manus OAuth");
     expect(source).not.toContain("sf-");
   });

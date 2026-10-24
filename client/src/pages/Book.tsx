@@ -1,6 +1,5 @@
 import { CatalogFooter, CatalogHeader } from "@/components/catalog/CatalogChrome";
 import "@/components/catalog/discovery.css";
-import { cssVars } from "@/components/catalog/Tickets";
 import { usePublicMeta } from "@/components/public/PublicMeta";
 import { publicWeekdayShort, type PublicLocale, usePublicLocale } from "@/contexts/PublicLocaleContext";
 import { trpc } from "@/lib/trpc";
@@ -32,7 +31,7 @@ export function DiscoveryResults({ locations, category, onCategoryChange, query 
     {!visibleLocations.length
       ? <div className="cw-notice mt-6 text-center" role="status">
         <Search className="mx-auto size-5" aria-hidden="true" />
-        <p className="mt-3 text-lg font-extrabold [font-stretch:85%]">{t("noResults")}</p>
+        <p className="mt-3 text-lg font-bold">{t("noResults")}</p>
         <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-[var(--cw-ink-soft)]">{t("noResultsLead")}</p>
         <button type="button" className="cw-btn cw-btn-line mt-4 min-h-11" onClick={() => onCategoryChange("ALL")}>{t("allLocations")}</button>
       </div>
@@ -40,7 +39,7 @@ export function DiscoveryResults({ locations, category, onCategoryChange, query 
         const hours = workingHoursSummary(location.workingHours, locale);
         return <article key={location.publicSlug} className="cw-loc">
           <div className="min-w-0">
-            <h2 className="text-xl font-extrabold [font-stretch:85%]">{location.name}</h2>
+            <h2 className="text-xl font-bold">{location.name}</h2>
             {location.address
               ? <p className="mt-2 flex items-start gap-2 text-sm leading-6 text-[var(--cw-ink-soft)]"><MapPin className="mt-1 size-4 shrink-0" aria-hidden="true" />{location.address}</p>
               : <p className="mt-2 text-sm leading-6 text-[var(--cw-ink-soft)]">{t("noAddress")}</p>}
@@ -74,40 +73,31 @@ export default function Book() {
   return <div className="cw min-h-screen">
     <CatalogHeader />
     <main id="main-content">
-      <section className="cw-desk pb-12 pt-8 sm:pb-16 sm:pt-12" aria-labelledby="book-title">
-        <div className="cw-container grid gap-8 lg:grid-cols-[1.25fr_0.75fr] lg:items-end">
-          <div>
-            <p className="cw-caption">{t("bookEyebrow")}</p>
-            <h1 id="book-title" className="cw-display mt-3 text-[clamp(1.95rem,4.6vw,3.4rem)]">{t("bookTitle")}</h1>
-            <p className="cw-lede mt-4">{t("bookLead")}</p>
-          </div>
-          <div className="cw-ledger text-[var(--cw-ink)]">
-            <div className="cw-ledger-head" style={cssVars({ "--ledger-bg": "var(--cw-paper)", "--ledger-ink": "var(--cw-ink)" })}>
-              <span className="flex items-center gap-2 font-extrabold [font-stretch:85%]"><CalendarDays className="size-4" aria-hidden="true" />{t("checkTitle")}</span>
-            </div>
-            <p className="px-4 py-3 text-sm leading-6 text-[var(--cw-ink-soft)]">{t("checkLead")}</p>
-          </div>
+      <section className="cw-container pg-intro" aria-labelledby="book-title">
+        <p className="cw-caption">{t("bookEyebrow")}</p>
+        <h1 id="book-title" className="mt-1">{t("bookTitle")}</h1>
+        <p className="cw-lede mt-3">{t("bookLead")}</p>
+        <div className="cw-info mt-5">
+          <CalendarDays className="mt-0.5 size-5 shrink-0 text-[var(--cw-stamp)]" aria-hidden="true" />
+          <p><span className="font-bold">{t("checkTitle")}</span> <span className="text-[var(--cw-ink-soft)]">{t("checkLead")}</span></p>
         </div>
       </section>
 
-      <section className="cw-section" aria-label={t("searchLabel")}>
-        <div className="cw-container">
-          <div className="max-w-xl">
-            <label className="cw-field" htmlFor="location-search">
-              <span className="cw-caption">{t("searchLabel")}</span>
-              <input id="location-search" type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder={t("searchPlaceholder")} autoComplete="off" enterKeyHint="search" />
-            </label>
-          </div>
+      <section className="cw-container pg-results" aria-label={t("searchLabel")}>
+        <label className="df-field df-field--solo" htmlFor="location-search">
+          <span className="sr-only">{t("searchLabel")}</span>
+          <Search className="size-5" aria-hidden="true" />
+          <input id="location-search" type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder={t("searchPlaceholder")} autoComplete="off" enterKeyHint="search" />
+        </label>
 
-          {locations.isLoading ? <div className="mt-6 grid gap-4" role="status" aria-live="polite">{[1, 2, 3].map(item => <div key={item} className="h-32 animate-pulse rounded-[4px] border-[1.5px] border-[var(--cw-rule)] bg-white" />)}<span className="sr-only">{t("loading")}</span></div> : null}
-          {locations.isError ? <div className="cw-notice cw-notice-error mt-6" role="alert"><p className="font-extrabold">{t("unavailableTitle")}</p><p className="mt-2 text-sm">{t("retry")}</p></div> : null}
-          {locations.data?.length === 0 ? <div className="cw-notice mt-6">
-            <CalendarDays className="size-6" aria-hidden="true" />
-            <h2 className="mt-3 text-xl font-extrabold [font-stretch:85%]">{t("emptyTitle")}</h2>
-            <p className="mt-2 max-w-xl text-sm leading-6 text-[var(--cw-ink-soft)]">{t("emptyLead")}</p>
-          </div> : null}
-          {activeLocations.length ? <DiscoveryResults locations={activeLocations} category={category} query={query} onCategoryChange={setCategory} /> : null}
-        </div>
+        {locations.isLoading ? <div className="mt-6 grid gap-4" role="status" aria-live="polite">{[1, 2, 3].map(item => <div key={item} className="h-32 animate-pulse rounded-[16px] border border-[var(--cw-rule)] bg-[var(--sf-surface)]" />)}<span className="sr-only">{t("loading")}</span></div> : null}
+        {locations.isError ? <div className="cw-notice cw-notice-error mt-6" role="alert"><p className="font-bold">{t("unavailableTitle")}</p><p className="mt-2 text-sm">{t("retry")}</p></div> : null}
+        {locations.data?.length === 0 ? <div className="cw-notice mt-6">
+          <CalendarDays className="size-6" aria-hidden="true" />
+          <h2 className="mt-3 text-xl font-bold">{t("emptyTitle")}</h2>
+          <p className="mt-2 max-w-xl text-sm leading-6 text-[var(--cw-ink-soft)]">{t("emptyLead")}</p>
+        </div> : null}
+        {activeLocations.length ? <DiscoveryResults locations={activeLocations} category={category} query={query} onCategoryChange={setCategory} /> : null}
       </section>
     </main>
     <CatalogFooter />

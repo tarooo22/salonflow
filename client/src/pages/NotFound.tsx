@@ -18,21 +18,18 @@ export default function NotFound() {
   usePublicMeta({ title: `${text.metaTitle} | ${BRAND.name}`, description: text.metaDescription, canonicalPath: "/404", robots: "noindex,nofollow" });
   return <div className="cw flex min-h-screen flex-col">
     <CatalogHeader />
-    <main id="main-content" tabIndex={-1} className="cw-container flex flex-1 items-center py-14 sm:py-20">
-      <section className="mx-auto w-full max-w-2xl" aria-labelledby="not-found-title">
-        <div className="cw-torn-wrap">
-          <div className="cw-torn">
-            <div className="cw-torn-stub"><span className="cw-num text-sm">№ 404</span><span className="cw-num text-xs">{BRAND.domain}</span></div>
-            <div className="p-6 sm:p-10">
-              <h1 id="not-found-title" className="cw-display text-[clamp(1.9rem,5vw,3.2rem)]">{text.title}</h1>
-              <p className="cw-lede mt-4">{text.lede}</p>
-              <div id="not-found-button-group" className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-                <Link href="/" className="cw-btn cw-btn-stamp"><Home className="size-5" aria-hidden="true" />{text.home}</Link>
-                <Link href="/salons" className="cw-btn cw-btn-line text-[var(--cw-ink)]">{text.catalog}</Link>
-                <button type="button" className="cw-btn cw-btn-line text-[var(--cw-ink)]" onClick={() => window.history.back()}><ArrowLeft className="size-5" aria-hidden="true" />{text.back}</button>
-              </div>
-            </div>
-          </div>
+    <main id="main-content" tabIndex={-1} className="mkt-container mkt-404">
+      <section className="mkt-card mkt-404-card" aria-labelledby="not-found-title">
+        <div className="mkt-404-top">
+          <span className="mkt-pill tabular-nums">№ 404</span>
+          <span className="mkt-caption">{BRAND.domain}</span>
+        </div>
+        <h1 id="not-found-title" className="mkt-h1 mkt-404-title">{text.title}</h1>
+        <p className="mkt-lede mkt-404-lede">{text.lede}</p>
+        <div id="not-found-button-group" className="mkt-404-actions">
+          <Link href="/" className="mkt-btn mkt-btn-primary"><Home className="size-5" aria-hidden="true" />{text.home}</Link>
+          <Link href="/salons" className="mkt-btn mkt-btn-secondary">{text.catalog}</Link>
+          <button type="button" className="mkt-btn mkt-btn-secondary" onClick={() => window.history.back()}><ArrowLeft className="size-5" aria-hidden="true" />{text.back}</button>
         </div>
       </section>
     </main>

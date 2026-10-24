@@ -1,6 +1,5 @@
 import { CatalogFooter, CatalogHeader } from "@/components/catalog/CatalogChrome";
-import "@/components/catalog/discovery.css";
-import { cssVars } from "@/components/catalog/Tickets";
+import "@/components/catalog/booking.css";
 import { GeorgianDatePicker, GeorgianTimePicker } from "@/components/public/GeorgianDateTimePicker";
 import { usePublicMeta } from "@/components/public/PublicMeta";
 import { usePublicLocale } from "@/contexts/PublicLocaleContext";
@@ -9,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { trpc } from "@/lib/trpc";
 import { BRAND } from "@shared/brand";
 import { dateKeyInTimeZone } from "@shared/timezones";
-import { CalendarHeart, CheckCircle2 } from "lucide-react";
+import { CalendarHeart, CheckCircle2, ChevronLeft, CircleAlert } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
 import { Link, useRoute } from "wouter";
 
@@ -80,100 +79,97 @@ export default function Waitlist() {
 
   return <div className="cw min-h-screen">
     <CatalogHeader />
-    <main id="main-content" tabIndex={-1}>
-      <section className="cw-desk pb-12 pt-6 sm:pb-16 sm:pt-8" aria-labelledby="waitlist-title">
-        <div className="cw-container max-w-3xl">
-          <Link href={`/book/${slug}`} className="cw-navlink -ml-2 inline-flex min-h-11 items-center">{text.back}</Link>
-          <p className="cw-caption mt-6">{text.eyebrow}</p>
-          <h1 id="waitlist-title" className="cw-display mt-3 text-[clamp(1.95rem,4.6vw,3.4rem)]">{text.title}</h1>
-          <p className="cw-lede mt-4">{text.lede}</p>
+    <main id="main-content" tabIndex={-1} className="cwb-page">
+      <div className="cwb-card">
+        <div className="cwb-head">
+          <Link href={`/book/${slug}`} className="cwb-btn"><ChevronLeft className="size-4" aria-hidden="true" />{text.back}</Link>
+          <span className="cwb-head-spacer" aria-hidden="true" />
         </div>
-      </section>
+        <section className="cwb-section pt-2" aria-labelledby="waitlist-title">
+          <h1 id="waitlist-title" className="cwb-step-title">{text.title}</h1>
+          <p className="cwb-step-lede">{text.lede}</p>
+        </section>
 
-      <section className="py-10 sm:py-14" aria-label={text.formAria}>
-        <div className="cw-container max-w-3xl">
-          {catalog.isLoading ? <div className="h-48 animate-pulse rounded-[4px] border-[1.5px] border-[var(--cw-rule)] bg-white p-8" role="status">{text.loading}</div> : null}
-          {catalog.isError || catalog.data === null ? <div className="cw-notice" role="alert">
-            <p className="font-extrabold">{text.unavailable}</p>
-            <p className="mt-2 text-sm text-[var(--cw-ink-soft)]">{text.goBack}</p>
-            <Link href={`/book/${slug}`} className="cw-btn cw-btn-line mt-4 min-h-11">{text.bookingPage}</Link>
-          </div> : null}
-
-          {catalog.data && submitted ? <div role="status" aria-live="polite" className="cw-ledger">
-            <div className="cw-ledger-head" style={cssVars({ "--ledger-bg": "var(--cw-paper)", "--ledger-ink": "var(--cw-ink)" })}>
-              <span className="flex items-center gap-2 text-lg font-extrabold [font-stretch:85%]"><CheckCircle2 className="size-5 text-[var(--cw-stamp)]" aria-hidden="true" />{text.received}</span>
-            </div>
-            <div className="p-6 sm:p-8">
-              <p className="max-w-lg leading-7 text-[var(--cw-ink-soft)]">{text.receivedText}</p>
-              <Link href={`/book/${slug}`} className="cw-btn cw-btn-stamp mt-5">{text.backToBooking}</Link>
+        <section className="cwb-section" aria-label={text.formAria}>
+          {catalog.isLoading ? <p className="cwb-empty" role="status">{text.loading}</p> : null}
+          {catalog.isError || catalog.data === null ? <div className="cwb-notice" data-tone="error" role="alert">
+            <CircleAlert className="size-5" aria-hidden="true" />
+            <div className="min-w-0">
+              <p className="cwb-notice-title">{text.unavailable}</p>
+              <p>{text.goBack}</p>
+              <Link href={`/book/${slug}`} className="cwb-btn cwb-btn-line cwb-btn-sm mt-3">{text.bookingPage}</Link>
             </div>
           </div> : null}
 
-          {catalog.data && !submitted ? <form data-conversion-event="BOOKING_WAITLIST_SUBMIT" className="cw-ledger" onSubmit={submit}>
-            <div className="cw-ledger-head" style={cssVars({ "--ledger-bg": "var(--cw-paper)", "--ledger-ink": "var(--cw-ink)" })}>
-              <span className="text-lg font-extrabold [font-stretch:85%]">{text.yourVisit}</span>
-              <span className="cw-num text-xs">{text.required}</span>
-            </div>
-            <div className="grid gap-6 p-4 sm:p-6">
-              <p className="text-sm leading-6 text-[var(--cw-ink-soft)]">{text.dateHint}</p>
+          {catalog.data && submitted ? <div role="status" aria-live="polite" className="grid gap-3">
+            <span className="cwb-done-mark" aria-hidden="true"><CheckCircle2 className="size-6" /></span>
+            <h2 className="cwb-section-title">{text.received}</h2>
+            <p className="cwb-step-lede">{text.receivedText}</p>
+            <div><Link href={`/book/${slug}`} className="cwb-btn cwb-btn-primary mt-2">{text.backToBooking}</Link></div>
+          </div> : null}
 
-              <fieldset className="grid gap-4">
-                <legend className="cw-form-step mb-3"><span className="cw-num grid size-9 place-items-center rounded-[3px] border-[1.5px] border-[var(--cw-ink)] text-sm font-semibold">1</span><span className="text-lg font-extrabold [font-stretch:85%]">{text.step1}</span></legend>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label={text.service} required>
-                    <Select value={serviceId} onValueChange={value => { setServiceId(value); setStaffProfileId("ANY"); }}>
-                      <SelectTrigger><SelectValue placeholder={text.chooseService} /></SelectTrigger>
-                      <SelectContent>{catalog.data.catalog.map(({ service }) => <SelectItem key={service.id} value={service.id}>{service.nameKa}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </Field>
-                  <Field label={text.specialist}>
-                    <Select value={staffProfileId} onValueChange={setStaffProfileId}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ANY">{text.anyStaff}</SelectItem>
-                        {eligibleTeam.map(member => <SelectItem key={member.id} value={member.id}>{member.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </Field>
-                  <Field label={text.wantedDate}>
-                    <GeorgianDatePicker value={requestedDate} onChange={value => { setRequestedDate(value); setPreferredStartLocalTime(""); }} />
-                  </Field>
-                  <Field label={text.wantedTime}>
-                    <GeorgianTimePicker dateKey={requestedDate} value={preferredStartLocalTime} onChange={setPreferredStartLocalTime} />
-                  </Field>
-                </div>
-                {selectedService ? <p className="flex items-center gap-2 rounded-[3px] border border-[var(--cw-rule)] bg-[var(--cw-paper)] p-3 text-sm text-[var(--cw-ink-soft)]"><CalendarHeart className="size-4 shrink-0" aria-hidden="true" />{text.selectedService}<span className="font-extrabold text-[var(--cw-ink)]">{selectedService.nameKa}</span></p> : null}
-              </fieldset>
+          {catalog.data && !submitted ? <form data-conversion-event="BOOKING_WAITLIST_SUBMIT" className="grid gap-6" onSubmit={submit}>
+            <p className="cwb-hint">{text.dateHint} <span className="cw-num">{text.required}</span></p>
 
-              <fieldset className="grid gap-4 border-t-[1.5px] border-[var(--cw-ink)] pt-6">
-                <legend className="cw-form-step mb-3"><span className="cw-num grid size-9 place-items-center rounded-[3px] border-[1.5px] border-[var(--cw-ink)] text-sm font-semibold">2</span><span className="text-lg font-extrabold [font-stretch:85%]">{text.step2}</span></legend>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Field label={text.firstName} required><input value={firstName} onChange={event => setFirstName(event.target.value)} autoComplete="given-name" required /></Field>
-                  <Field label={text.lastName}><input value={lastName} onChange={event => setLastName(event.target.value)} autoComplete="family-name" /></Field>
-                  <Field label={text.phone} required hint={text.phoneHint} hintId="waitlist-phone-help">
-                    <input value={phone} onChange={event => setPhone(event.target.value)} autoComplete="tel" inputMode="tel" type="tel" placeholder={text.phonePlaceholder} aria-describedby="waitlist-phone-help" required />
-                  </Field>
-                  <Field label={text.email}><input value={email} onChange={event => setEmail(event.target.value)} autoComplete="email" type="email" /></Field>
-                </div>
-                <Field label={text.note}><textarea value={note} onChange={event => setNote(event.target.value)} /></Field>
-                <label className="cw-check"><Checkbox checked={accepted} onCheckedChange={value => setAccepted(value === true)} /><span>{text.consent}</span></label>
-              </fieldset>
+            <fieldset className="cwb-fieldset">
+              <legend><span className="cwb-step-num cw-num" aria-hidden="true">1</span>{text.step1}</legend>
+              <div className="cwb-fields cwb-two">
+                <Field label={text.service} required>
+                  <Select value={serviceId} onValueChange={value => { setServiceId(value); setStaffProfileId("ANY"); }}>
+                    <SelectTrigger><SelectValue placeholder={text.chooseService} /></SelectTrigger>
+                    <SelectContent>{catalog.data.catalog.map(({ service }) => <SelectItem key={service.id} value={service.id}>{service.nameKa}</SelectItem>)}</SelectContent>
+                  </Select>
+                </Field>
+                <Field label={text.specialist}>
+                  <Select value={staffProfileId} onValueChange={setStaffProfileId}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ANY">{text.anyStaff}</SelectItem>
+                      {eligibleTeam.map(member => <SelectItem key={member.id} value={member.id}>{member.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </Field>
+                <Field label={text.wantedDate}>
+                  <GeorgianDatePicker value={requestedDate} onChange={value => { setRequestedDate(value); setPreferredStartLocalTime(""); }} />
+                </Field>
+                <Field label={text.wantedTime}>
+                  <GeorgianTimePicker dateKey={requestedDate} value={preferredStartLocalTime} onChange={setPreferredStartLocalTime} />
+                </Field>
+              </div>
+              {selectedService ? <p className="cwb-note"><CalendarHeart className="size-4 shrink-0" aria-hidden="true" />{text.selectedService}<strong>{selectedService.nameKa}</strong></p> : null}
+            </fieldset>
 
-              {error ? <p role="alert" className="cw-notice cw-notice-error text-sm">{error}</p> : null}
-              <button type="submit" className="cw-btn cw-btn-stamp w-full" disabled={join.isPending}>{join.isPending ? text.sending : text.send}</button>
-            </div>
+            <fieldset className="cwb-fieldset">
+              <legend><span className="cwb-step-num cw-num" aria-hidden="true">2</span>{text.step2}</legend>
+              <div className="cwb-fields cwb-two">
+                <Field label={text.firstName} required><input className="cwb-input" value={firstName} onChange={event => setFirstName(event.target.value)} autoComplete="given-name" required /></Field>
+                <Field label={text.lastName}><input className="cwb-input" value={lastName} onChange={event => setLastName(event.target.value)} autoComplete="family-name" /></Field>
+                <Field label={text.phone} required hint={text.phoneHint} hintId="waitlist-phone-help">
+                  <div className="cwb-affix">
+                    <span className="cwb-affix-prefix" aria-hidden="true">+995</span>
+                    <input className="cwb-input" value={phone} onChange={event => setPhone(event.target.value)} autoComplete="tel" inputMode="tel" type="tel" placeholder={text.phonePlaceholder} aria-describedby="waitlist-phone-help" required />
+                  </div>
+                </Field>
+                <Field label={text.email}><input className="cwb-input" value={email} onChange={event => setEmail(event.target.value)} autoComplete="email" type="email" /></Field>
+              </div>
+              <Field label={text.note}><textarea className="cwb-input" value={note} onChange={event => setNote(event.target.value)} /></Field>
+              <label className="cwb-agree"><Checkbox checked={accepted} onCheckedChange={value => setAccepted(value === true)} /><span>{text.consent}</span></label>
+            </fieldset>
+
+            {error ? <div role="alert" className="cwb-notice" data-tone="error"><CircleAlert className="size-5" aria-hidden="true" /><p className="cwb-notice-title">{error}</p></div> : null}
+            <button type="submit" className="cwb-btn cwb-btn-primary w-full" disabled={join.isPending}>{join.isPending ? text.sending : text.send}</button>
           </form> : null}
-        </div>
-      </section>
+        </section>
+      </div>
     </main>
     <CatalogFooter />
   </div>;
 }
 
 function Field({ label, children, required, hint, hintId }: { label: string; children: React.ReactNode; required?: boolean; hint?: string; hintId?: string }) {
-  return <label className="cw-field">
-    <span className="cw-caption">{label}{required ? <span aria-hidden="true"> *</span> : null}</span>
+  return <label className="cwb-field">
+    <span className="cwb-label">{label}{required ? <span aria-hidden="true"> *</span> : null}</span>
     {children}
-    {hint ? <span id={hintId} className="cw-field-hint">{hint}</span> : null}
+    {hint ? <span id={hintId} className="cwb-hint">{hint}</span> : null}
   </label>;
 }

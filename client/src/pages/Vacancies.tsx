@@ -47,19 +47,19 @@ function VacancyResults({ filters, onClear }: { filters: Filters; onClear: () =>
   const filtered = Boolean(filters.vertical || filters.category || filters.area);
 
   if (list.isLoading) return <LoadingGrid />;
-  if (list.isError && !list.items.length) return <p role="alert" className="cw-notice cw-notice-error">{text.loadFailedBefore}<button type="button" className="cw-linkbtn" onClick={() => list.refetch()}>{text.refresh}</button>.</p>;
+  if (list.isError && !list.items.length) return <p role="alert" className="mkt-alert">{text.loadFailedBefore}<button type="button" className="mkt-linkbtn" onClick={() => list.refetch()}>{text.refresh}</button>.</p>;
   if (!list.items.length) {
     return filtered
       ? <CommerceEmpty title={text.filteredTitle} text={text.filteredText}>
-        <button type="button" className="cw-btn cw-btn-line min-h-11" onClick={onClear}>{text.clear}</button>
+        <button type="button" className="mkt-btn mkt-btn-secondary" onClick={onClear}>{text.clear}</button>
       </CommerceEmpty>
       : <CommerceEmpty title={text.emptyTitle} text={text.emptyText}>
-        <Link href="/partner" className="cw-btn cw-btn-stamp">{text.forBusiness}</Link>
+        <Link href="/partner" className="mkt-btn mkt-btn-primary">{text.forBusiness}</Link>
       </CommerceEmpty>;
   }
   return <>
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{list.items.map((item, index) => <VacancyTicket key={item.id} item={item} number={index + 1} />)}</div>
-    {list.isError ? <p role="alert" className="cw-notice cw-notice-error mt-6">{text.moreFailed}</p> : null}
+    <div className="cwx-grid">{list.items.map((item, index) => <VacancyTicket key={item.id} item={item} number={index + 1} />)}</div>
+    {list.isError ? <p role="alert" className="mkt-alert cwx-alert-gap">{text.moreFailed}</p> : null}
     <LoadMoreButton hasMore={list.hasMore || list.isError} loading={list.loadingMore} onClick={list.loadMore} />
   </>;
 }
@@ -80,11 +80,11 @@ export default function Vacancies() {
       <DiscoveryHero title={text.heroTitle} lede={text.heroLede}>
         <CommerceFilters idPrefix="vac" vertical={vertical} onVertical={next => { setVertical(next); setCategory(undefined); }} area={area} onArea={setArea} category={category} onCategory={setCategory} captionWhere={text.searchCaption} />
       </DiscoveryHero>
-      <section className="cw-section" aria-labelledby="vac-results-title">
-        <div className="cw-container">
-          <h2 id="vac-results-title" className="cw-h2">{text.openTitle}</h2>
-          <p className="cw-lede mt-2">{text.openLede}</p>
-          <div className="mt-10"><VacancyResults key={JSON.stringify(filters)} filters={filters} onClear={clear} /></div>
+      <section className="mkt-section" aria-labelledby="vac-results-title">
+        <div className="mkt-container">
+          <h2 id="vac-results-title" className="mkt-h2">{text.openTitle}</h2>
+          <p className="mkt-lede cwx-sub">{text.openLede}</p>
+          <div className="cwx-results"><VacancyResults key={JSON.stringify(filters)} filters={filters} onClear={clear} /></div>
         </div>
       </section>
     </main>

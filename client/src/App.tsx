@@ -7,6 +7,8 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import SalonProfile from "./pages/SalonProfile";
 
+const Saved = lazy(() => import("./pages/Saved"));
+const MyBookings = lazy(() => import("./pages/MyBookings"));
 const Book = lazy(() => import("./pages/Book"));
 const BookingFlow = lazy(() => import("./pages/BookingFlow"));
 const ManageBooking = lazy(() => import("./pages/ManageBooking"));
@@ -77,6 +79,8 @@ function Router() {
       <Route path={"/salons/map"} component={MarketplaceMap} />
       <Route path={"/salons"} component={MarketplaceDirectory} />
       <Route path={"/salon/:slug"} component={SalonProfile} />
+      <Route path={"/saved"} component={Saved} />
+      <Route path={"/my-bookings"} component={MyBookings} />
       <Route path={"/vacancies"} component={Vacancies} />
       <Route path={"/vacancies/:id"} component={VacancyDetail} />
       <Route path={"/products"} component={Products} />

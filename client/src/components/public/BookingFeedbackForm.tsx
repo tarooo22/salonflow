@@ -23,24 +23,23 @@ export function BookingFeedbackForm({ token }: { token: string }) {
   });
 
   if (eligibility.isLoading) return null;
-  if (eligibility.data?.submitted) return <div role="status" className="cw-notice" data-tone="ok"><CheckCircle2 className="size-5" aria-hidden="true" /><p>{text.received}</p></div>;
+  if (eligibility.data?.submitted) return <div role="status" className="cwb-notice" data-tone="ok"><CheckCircle2 className="size-5" aria-hidden="true" /><p>{text.received}</p></div>;
   if (!eligibility.data?.eligible) return null;
 
   const canSubmit = rating >= 1 && comment.trim().length >= 4 && (!publicNameConsent || displayName.trim().length > 0);
   return <section aria-labelledby="feedback-form-title">
-    <span className="cw-caption cw-step-eyebrow">{text.eyebrow}</span>
-    <h2 id="feedback-form-title" className="cw-step-title !text-[1.3rem]">{text.title}</h2>
-    <p className="cw-step-lede">{text.lede}</p>
+    <h2 id="feedback-form-title" className="cwb-section-title">{text.title}</h2>
+    <p className="cwb-step-lede">{text.lede}</p>
     <div className="mt-4 grid gap-3">
       <div>
-        <p className="cw-caption">{text.rating}</p>
-        <div className="cw-star-group mt-2" role="radiogroup" aria-label={text.ratingGroup}>{[1, 2, 3, 4, 5].map(value => <button key={value} type="button" role="radio" aria-checked={rating === value} data-filled={value <= rating} aria-label={text.star(value)} onClick={() => setRating(value)} className="cw-star"><Star className="size-5 fill-current" aria-hidden="true" /></button>)}</div>
+        <p id="feedback-rating-label" className="cwb-label">{text.rating}</p>
+        <div className="cwb-stars mt-2" role="radiogroup" aria-label={text.ratingGroup}>{[1, 2, 3, 4, 5].map(value => <button key={value} type="button" role="radio" aria-checked={rating === value} data-filled={value <= rating} aria-label={text.star(value)} onClick={() => setRating(value)} className="cwb-star"><Star className="size-5 fill-current" aria-hidden="true" /></button>)}</div>
       </div>
-      <label className="cw-field"><span className="cw-caption">{text.comment}</span><textarea id="booking-feedback-comment" maxLength={1200} value={comment} onChange={event => setComment(event.target.value)} placeholder={text.commentPlaceholder} /></label>
-      <label className="cw-consent"><input type="checkbox" className="cw-check" checked={publicNameConsent} onChange={event => setPublicNameConsent(event.target.checked)} /><span>{text.showName}</span></label>
-      {publicNameConsent ? <label className="cw-field"><span className="cw-caption">{text.nameLabel}</span><input maxLength={100} value={displayName} onChange={event => setDisplayName(event.target.value)} placeholder={text.namePlaceholder} /></label> : null}
-      {submit.error ? <p role="alert" className="text-sm font-bold text-[var(--cw-danger,#9b1c2c)]">{submit.error.message}</p> : null}
-      <div><button type="button" className="cw-btn cw-btn-stamp" disabled={!canSubmit || submit.isPending} onClick={() => submit.mutate({ token, rating, comment, displayName: publicNameConsent ? displayName : undefined, publicNameConsent })}>{submit.isPending ? text.sending : text.send}</button></div>
+      <div className="cwb-field"><label className="cwb-label" htmlFor="booking-feedback-comment">{text.comment}</label><textarea id="booking-feedback-comment" className="cwb-input" maxLength={1200} value={comment} onChange={event => setComment(event.target.value)} placeholder={text.commentPlaceholder} /></div>
+      <label className="cwb-agree"><input type="checkbox" className="cwb-check" checked={publicNameConsent} onChange={event => setPublicNameConsent(event.target.checked)} /><span>{text.showName}</span></label>
+      {publicNameConsent ? <div className="cwb-field"><label className="cwb-label" htmlFor="booking-feedback-name">{text.nameLabel}</label><input id="booking-feedback-name" className="cwb-input" maxLength={100} value={displayName} onChange={event => setDisplayName(event.target.value)} placeholder={text.namePlaceholder} /></div> : null}
+      {submit.error ? <p role="alert" className="cwb-error">{submit.error.message}</p> : null}
+      <div><button type="button" className="cwb-btn cwb-btn-primary" disabled={!canSubmit || submit.isPending} onClick={() => submit.mutate({ token, rating, comment, displayName: publicNameConsent ? displayName : undefined, publicNameConsent })}>{submit.isPending ? text.sending : text.send}</button></div>
     </div>
   </section>;
 }

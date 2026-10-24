@@ -13,8 +13,8 @@ describe("Partner landing (management program page)", () => {
   });
 
   it("sends the primary call to action to registration and the secondary one to contact", () => {
-    expect(source).toContain('<Link href="/register" className="cw-btn cw-btn-stamp">');
-    expect(source).toContain('<Link href="/contact" className="cw-btn cw-btn-line');
+    expect(source).toContain('<Link href="/register" className="mkt-btn mkt-btn-primary">');
+    expect(source).toContain('<Link href="/contact" className="mkt-btn mkt-btn-secondary"');
   });
 
   it("covers all three verticals and marks dental as coming soon", () => {

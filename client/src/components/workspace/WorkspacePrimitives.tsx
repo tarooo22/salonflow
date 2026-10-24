@@ -1,7 +1,9 @@
 import { cn } from "@/lib/utils";
 import React from "react";
-import { AlertCircle, Inbox, LoaderCircle } from "lucide-react";
+import { AlertCircle, CalendarCheck, Check, Clock, Inbox, LoaderCircle, MoreHorizontal, UserCheck, X } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
+import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import "./panel.css";
 
 type WorkspacePageHeaderProps = {
@@ -9,24 +11,39 @@ type WorkspacePageHeaderProps = {
   eyebrow?: string;
   title: string;
   description?: string;
+  /** At most one primary and one secondary button. */
   actions?: ReactNode;
+  /** Everything else: DropdownMenuItem children, shown under a "მეტი მოქმედება" kebab after `actions`. */
+  moreActions?: ReactNode;
   className?: string;
 };
 
-/** One compact head row on the page ground: condensed title left, actions right, 1.5px ink rule under it. */
-export function WorkspacePageHeader({ title, description, actions, className }: WorkspacePageHeaderProps) {
+/** One compact head row on the page ground: title left, actions right, 1px rule under it. */
+export function WorkspacePageHeader({ title, description, actions, moreActions, className }: WorkspacePageHeaderProps) {
   return (
     <header className={cn("cwk-head", className)}>
       <div className="cwk-head-text">
         <h1 className="cwk-title cwk-display">{title}</h1>
         {description ? <p className="cwk-desc" title={description}>{description}</p> : null}
       </div>
-      {actions ? <div className="cwk-actions">{actions}</div> : null}
+      {actions || moreActions ? (
+        <div className="cwk-actions">
+          {actions}
+          {moreActions ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button type="button" variant="outline" size="icon" aria-label="მეტი მოქმედება"><MoreHorizontal className="size-4" aria-hidden="true" /></Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">{moreActions}</DropdownMenuContent>
+            </DropdownMenu>
+          ) : null}
+        </div>
+      ) : null}
     </header>
   );
 }
 
-/** Sheet-white count tile: caption, mono value. `tone` is kept for compatibility and no longer colours the tile. */
+/** Count tile: caption, tabular value. `tone` is kept for compatibility and no longer colours the tile. */
 export function WorkspaceMetric({ label, value, helper, icon: Icon }: {
   label: string;
   value: ReactNode;
@@ -58,17 +75,38 @@ export function WorkspaceSection({ title, description, action, children, classNa
 export function WorkspaceState({ kind, title, description, action }: { kind: "loading" | "error" | "empty"; title: string; description?: string; action?: ReactNode }) {
   const Icon = kind === "loading" ? LoaderCircle : kind === "error" ? AlertCircle : Inbox;
   return (
-    <div className="cwk-state" data-kind={kind} role={kind === "error" ? "alert" : undefined}>
-      <Icon className={cn("mb-1 size-5", kind === "loading" && "animate-spin motion-reduce:animate-none")} aria-hidden="true" />
-      <p className="text-sm font-bold">{title}</p>
-      {description ? <p className="max-w-xl text-sm leading-6 text-[var(--cwk-ink-soft)]">{description}</p> : null}
+    <div className="cwk-state" data-kind={kind} role={kind === "error" ? "alert" : kind === "loading" ? "status" : undefined} aria-live={kind === "loading" ? "polite" : undefined}>
+      <span className="cwk-state-icon"><Icon className={cn(kind === "loading" && "animate-spin motion-reduce:animate-none")} aria-hidden="true" /></span>
+      <p className="cwk-state-title">{title}</p>
+      {description ? <p className="cwk-state-desc">{description}</p> : null}
       {action ? <div className="mt-3">{action}</div> : null}
     </div>
   );
 }
 
-export function WorkspaceStatusPill({ children, tone = "neutral" }: { children: ReactNode; tone?: "neutral" | "success" | "warning" | "danger" | "info" | "violet" | "count" }) {
-  return <span className="cwk-mark" data-tone={tone}>{children}</span>;
+/** Appointment status marks: icon + word, never colour alone. */
+const STATUS_MARKS = {
+  PENDING: { tone: "warning", icon: Clock, label: "დასადასტურებელი" },
+  CONFIRMED: { tone: "info", icon: CalendarCheck, label: "დადასტურებული" },
+  CHECKED_IN: { tone: "violet", icon: UserCheck, label: "მიღებულია" },
+  IN_SERVICE: { tone: "violet", icon: UserCheck, label: "მომსახურებაშია" },
+  COMPLETED: { tone: "success", icon: Check, label: "დასრულებული" },
+  CANCELLED: { tone: "muted", icon: X, label: "გაუქმებული" },
+  NO_SHOW: { tone: "muted", icon: X, label: "არ გამოცხადდა" },
+} as const;
+export type WorkspaceStatus = keyof typeof STATUS_MARKS;
+
+type WorkspaceStatusPillProps = {
+  children?: ReactNode;
+  tone?: "neutral" | "success" | "warning" | "danger" | "info" | "violet" | "muted" | "count";
+  /** Appointment status: sets tone and icon, and the Georgian word unless `children` is given. */
+  status?: WorkspaceStatus;
+};
+
+export function WorkspaceStatusPill({ children, tone = "neutral", status }: WorkspaceStatusPillProps) {
+  const mark = status ? STATUS_MARKS[status] : undefined;
+  const Icon = mark?.icon;
+  return <span className="cwk-mark" data-tone={mark?.tone ?? tone}>{Icon ? <Icon aria-hidden="true" /> : null}{children ?? mark?.label}</span>;
 }
 
 export function WorkspaceFilterBar({ children, className }: { children: ReactNode; className?: string }) {

@@ -1,7 +1,8 @@
+import { readFileSync } from "node:fs";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { BookingConfirmation, formatGel, getBookingValidationIssue, getEligibleTeam, LocationContext, parseRequestedServiceIds, StaffStep } from "./BookingFlow";
+import { BookingConfirmation, formatGel, getBookingValidationIssue, getEligibleTeam, isNetworkError, isSlotTakenError, LocationContext, parseRequestedServiceIds, StaffStep } from "./BookingFlow";
 import { BookingChoiceCard, BookingSlotGroup } from "@/components/public/BookingPrimitives";
 
 vi.mock("wouter", () => ({ Link: ({ children, href }: { children: React.ReactNode; href: string }) => <a href={href}>{children}</a> }));
@@ -75,6 +76,25 @@ describe("public booking conversion helpers", () => {
     expect(timeIssue).toMatchObject({ kind: "time", title: "დაამატეთ სასურველი თარიღი და დრო" });
     expect(contactIssue).toMatchObject({ kind: "contact", title: "მიუთითეთ მობილურის ნომერი" });
     expect(contactIssue?.description).not.toContain("tRPC");
+  });
+
+  it("tells a taken slot from a lost connection using what the commit mutation actually returns", () => {
+    expect(isSlotTakenError({ message: "ეს დრო ახლახან დაიკავეს. აირჩიეთ სხვა თავისუფალი დრო." })).toBe(true);
+    expect(isSlotTakenError({ message: "The selected time is no longer available" })).toBe(true);
+    expect(isSlotTakenError({ message: "მიუთითეთ სწორი ქართული მობილურის ნომერი." })).toBe(false);
+    expect(isNetworkError({ data: undefined })).toBe(true);
+    expect(isNetworkError({ data: { code: "INTERNAL_SERVER_ERROR" } })).toBe(false);
+  });
+
+  it("offers the sticky choice strip, 4-column slot grid and a retry on network errors without uppercase or mono type", () => {
+    const flow = readFileSync(new URL("./BookingFlow.tsx", import.meta.url), "utf8");
+    const css = readFileSync(new URL("../components/catalog/booking.css", import.meta.url), "utf8");
+    expect(flow).toContain("<BookingChoiceStrip");
+    expect(flow).toContain("addDeviceBooking");
+    expect(flow).not.toMatch(/token.*addDeviceBooking|addDeviceBooking\(\{[^}]*(token|confirmation)/i);
+    expect(css).toContain("repeat(4, minmax(0, 1fr))");
+    expect(css).toContain("repeat(6, minmax(0, 1fr))");
+    expect(css).not.toMatch(/uppercase|Martian|--cw-mono/i);
   });
 
   it("reads comma-separated preselected service ids from ?services= and drops blanks and duplicates", () => {

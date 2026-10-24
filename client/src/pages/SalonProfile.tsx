@@ -11,7 +11,7 @@ import { BRAND } from "@shared/brand";
 import { MAX_SELECTED_SERVICES } from "@shared/validation";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "../../../server/routers";
-import { ArrowLeft, ArrowRight, ChevronDown, ExternalLink, Instagram, MapPin, Phone, Search, ShieldCheck, Star } from "lucide-react";
+import { ArrowLeft, ChevronDown, Clock, ExternalLink, Info, Instagram, MapPin, Phone, Search, ShieldCheck, Star } from "lucide-react";
 import { type KeyboardEvent, useEffect, useId, useMemo, useRef, useState } from "react";
 import { Link, useRoute } from "wouter";
 
@@ -23,54 +23,57 @@ const copy = {
     missing: "ბიზნესი ვერ მოიძებნა", missingLead: "ბმული შეიძლება შეიცვალა ან გვერდი აღარ არის ხელმისაწვდომი.", all: "მთელი კატალოგი",
     noDescription: "ბიზნესის აღწერა მალე დაემატება.", bookingPaused: "ონლაინ ჩაწერა ამ ბიზნესისთვის დროებით მიუწვდომელია. ინფორმაცია და საჯარო გვერდი შენარჩუნებულია; დეტალებისთვის დაუკავშირდით ბიზნესს.",
     website: "ვებგვერდი", verified: "დამტკიცებული პროფილი", ad: "რეკლამა", recommended: "რჩეული",
-    tabs: "პროფილის განყოფილებები", tabServices: "სერვისები", tabTeam: "გუნდი", tabHours: "სამუშაო საათები", productsTitle: "პროდუქტები", productsNote: "შეძენა ხდება უშუალოდ ბიზნესში; ონლაინ გადახდა არ არის.",
+    tabs: "პროფილის განყოფილებები", tabServices: "სერვისები", tabTeam: "გუნდი", tabHours: "სამუშაო საათები", tabProducts: "პროდუქტები", productsTitle: "პროდუქტები", productsNote: "შეძენა ხდება უშუალოდ ბიზნესში; ონლაინ გადახდა არ არის.",
     searchLabel: "მომსახურების ძებნა", searchPlaceholder: "სახელი ან კატეგორია", found: "ნაპოვნია", nothingFound: "ამ მოთხოვნით მომსახურება ვერ მოიძებნა.", minutes: "წთ", noServices: "საჯარო მომსახურებები ჯერ არ არის დამატებული.",
     toggleGroup: "კატეგორიის გახსნა ან დახურვა", limit: `ერთდროულად მაქსიმუმ ${MAX_SELECTED_SERVICES} მომსახურების არჩევა შეგიძლიათ.`, selectService: "მომსახურების არჩევა",
     team: "გუნდი", specialist: "სპეციალისტი", noTeam: "საჯარო გუნდის პროფილები ჯერ არ არის დამატებული.", experience: "წლის გამოცდილება",
     hours: "სამუშაო საათები", hoursNote: "გუნდის გრაფიკის მიხედვით. კონკრეტული დრო ჯავშნისას მოწმდება.", hoursLoading: "სამუშაო საათები იტვირთება…", hoursMissing: "სამუშაო საათები ჯერ არ არის გამოქვეყნებული.", closedDay: "დახურულია",
-    openUntil: "ღიაა · {t}-მდე", closed: "დაკეტილია", opensAt: "იხსნება: {d} {t}", today: "დღეს", tomorrow: "ხვალ",
-    summary: "თქვენი ჩანაწერი", address: "მისამართი", phone: "ტელეფონი", selected: "არჩეულია", total: "ჯამი", duration: "ხანგრძლივობა", pickHint: "აირჩიეთ მომსახურება", nothingSelected: "მომსახურება არ არის არჩეული. მომსახურებებს ჯავშნის გვერდზეც აირჩევთ.",
-    from: "{p}-დან", book: "დაჯავშნა", continue: "გაგრძელება", recheck: "დრო საბოლოოდ მოწმდება ჩაწერის დადასტურებისას.", call: "დარეკვა", unavailableNote: "ონლაინ ჩაწერა დროებით მიუწვდომელია.",
-    results: "დადასტურებული შედეგები", beforeAfter: "მანამდე / შემდეგ", consent: "აქ ჩანს მხოლოდ კლიენტის ცალკე თანხმობით საჯაროდ გამოქვეყნებული შედეგები.", before: "მანამდე", after: "შემდეგ",
-    diary: "დღიური", latest: "ახალი პუბლიკაციები", soonStamp: "მალე", soon: "ბიზნესის ვიზუალური ამბები მალე დაემატება.", approved: "ამ გვერდზე გამოჩნდება მხოლოდ მფლობელის ან მენეჯერის მიერ დამტკიცებული საჯარო მასალა.",
-    feedback: "შეფასებები", feedbackTitle: "დადასტურებული ვიზიტების უკუკავშირი", feedbackNote: "უკუკავშირს ტოვებს მხოლოდ დასრულებული ვიზიტის კლიენტი; გამოქვეყნებამდე იგი გადის მოდერაციას.", noFeedback: "დამტკიცებული შეფასებები ჯერ არ გამოჩენილა.",
-    days: ["ორშაბათი", "სამშაბათი", "ოთხშაბათი", "ხუთშაბათი", "პარასკევი", "შაბათი", "კვირა"], dateLocale: "ka-GE",
+    openUntil: "ღიაა, იკეტება {t}-ზე", closed: "დაკეტილია", opensAt: "იხსნება {d} {t}-ზე", today: "დღეს", tomorrow: "ხვალ",
+    summary: "თქვენი ჩანაწერი", selected: "არჩეულია", selectedCount: "არჩეულია: {n} სერვისი", total: "ჯამი", duration: "ხანგრძლივობა", nothingSelected: "მომსახურება არ არის არჩეული.",
+    from: "{p}-დან", book: "დაჯავშნა", pickTime: "დროის არჩევა", pickService: "აირჩიე სერვისი", recheck: "დრო საბოლოოდ მოწმდება ჩაწერის დადასტურებისას.", unavailableNote: "ონლაინ ჩაწერა დროებით მიუწვდომელია.",
+    beforeAfter: "მანამდე / შემდეგ", consent: "აქ ჩანს მხოლოდ კლიენტის ცალკე თანხმობით საჯაროდ გამოქვეყნებული შედეგები.", before: "მანამდე", after: "შემდეგ",
+    latest: "ახალი პუბლიკაციები",
+    feedbackTitle: "დადასტურებული ვიზიტების უკუკავშირი", feedbackNote: "უკუკავშირს ტოვებს მხოლოდ დასრულებული ვიზიტის კლიენტი; გამოქვეყნებამდე იგი გადის მოდერაციას.",
+    days: ["ორშაბათი", "სამშაბათი", "ოთხშაბათი", "ხუთშაბათი", "პარასკევი", "შაბათი", "კვირა"],
+    daysAt: ["ორშაბათს", "სამშაბათს", "ოთხშაბათს", "ხუთშაბათს", "პარასკევს", "შაბათს", "კვირას"], dateLocale: "ka-GE",
   },
   en: {
     crumb: "Catalog", loading: "Loading business page…", unavailable: "This business page is temporarily unavailable", retry: "Check your connection and try again later.", retryButton: "Try again",
     missing: "Business not found", missingLead: "The link may have changed or the page is no longer available.", all: "Whole catalog",
     noDescription: "A business description will be added soon.", bookingPaused: "Online booking is temporarily unavailable. The profile remains available; please contact the business for details.",
     website: "Website", verified: "Approved profile", ad: "Advertisement", recommended: "Recommended",
-    tabs: "Profile sections", tabServices: "Services", tabTeam: "Team", tabHours: "Opening hours", productsTitle: "Products", productsNote: "Purchased at the business itself; there is no online checkout.",
+    tabs: "Profile sections", tabServices: "Services", tabTeam: "Team", tabHours: "Opening hours", tabProducts: "Products", productsTitle: "Products", productsNote: "Purchased at the business itself; there is no online checkout.",
     searchLabel: "Search services", searchPlaceholder: "Name or category", found: "Found", nothingFound: "No service matches your search.", minutes: "min", noServices: "No public services have been added yet.",
     toggleGroup: "Expand or collapse category", limit: `You can select up to ${MAX_SELECTED_SERVICES} services at once.`, selectService: "Select service",
     team: "Team", specialist: "Specialist", noTeam: "No public team profiles have been added yet.", experience: "years of experience",
     hours: "Opening hours", hoursNote: "Based on the team's schedules. The exact time is checked when you book.", hoursLoading: "Loading opening hours…", hoursMissing: "Opening hours have not been published yet.", closedDay: "Closed",
-    openUntil: "Open · until {t}", closed: "Closed", opensAt: "Opens: {d} {t}", today: "today", tomorrow: "tomorrow",
-    summary: "Your booking", address: "Address", phone: "Phone", selected: "Selected", total: "Total", duration: "Duration", pickHint: "Choose services", nothingSelected: "No services selected. You can also choose services on the booking page.",
-    from: "From {p}", book: "Book now", continue: "Continue", recheck: "Availability is checked again when the booking is confirmed.", call: "Call", unavailableNote: "Online booking is temporarily unavailable.",
-    results: "Approved results", beforeAfter: "Before / after", consent: "Only results published with a client's separate consent are shown here.", before: "Before", after: "After",
-    diary: "Journal", latest: "Latest posts", soonStamp: "Soon", soon: "Visual stories from this business will be added soon.", approved: "Only public material approved by the owner or manager is shown on this page.",
-    feedback: "Feedback", feedbackTitle: "Feedback from verified visits", feedbackNote: "Only a client with a completed visit can submit feedback, and every submission is moderated before publication.", noFeedback: "No approved feedback has been published yet.",
-    days: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"], dateLocale: "en-US",
+    openUntil: "Open, closes at {t}", closed: "Closed", opensAt: "opens {d} at {t}", today: "today", tomorrow: "tomorrow",
+    summary: "Your booking", selected: "Selected", selectedCount: "Selected: {n}", total: "Total", duration: "Duration", nothingSelected: "No services selected.",
+    from: "From {p}", book: "Book now", pickTime: "Choose a time", pickService: "Choose a service", recheck: "Availability is checked again when the booking is confirmed.", unavailableNote: "Online booking is temporarily unavailable.",
+    beforeAfter: "Before / after", consent: "Only results published with a client's separate consent are shown here.", before: "Before", after: "After",
+    latest: "Latest posts",
+    feedbackTitle: "Feedback from verified visits", feedbackNote: "Only a client with a completed visit can submit feedback, and every submission is moderated before publication.",
+    days: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+    daysAt: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"], dateLocale: "en-US",
   },
   ru: {
     crumb: "Каталог", loading: "Загрузка страницы…", unavailable: "Страница временно недоступна", retry: "Проверьте подключение и попробуйте позже.", retryButton: "Повторить",
     missing: "Бизнес не найден", missingLead: "Ссылка могла измениться или страница больше не доступна.", all: "Весь каталог",
     noDescription: "Описание будет добавлено позже.", bookingPaused: "Онлайн-запись временно недоступна. Профиль остаётся доступным; свяжитесь с бизнесом для деталей.",
     website: "Сайт", verified: "Одобренный профиль", ad: "Реклама", recommended: "Рекомендуем",
-    tabs: "Разделы профиля", tabServices: "Услуги", tabTeam: "Команда", tabHours: "Часы работы", productsTitle: "Товары", productsNote: "Покупка — непосредственно в заведении; онлайн-оплаты нет.",
+    tabs: "Разделы профиля", tabServices: "Услуги", tabTeam: "Команда", tabHours: "Часы работы", tabProducts: "Товары", productsTitle: "Товары", productsNote: "Покупка — непосредственно в заведении; онлайн-оплаты нет.",
     searchLabel: "Поиск услуг", searchPlaceholder: "Название или категория", found: "Найдено", nothingFound: "По вашему запросу услуг не найдено.", minutes: "мин", noServices: "Публичные услуги ещё не добавлены.",
     toggleGroup: "Развернуть или свернуть категорию", limit: `Одновременно можно выбрать не более ${MAX_SELECTED_SERVICES} услуг.`, selectService: "Выбрать услугу",
     team: "Команда", specialist: "Специалист", noTeam: "Публичные профили команды ещё не добавлены.", experience: "лет опыта",
     hours: "Часы работы", hoursNote: "По графикам команды. Точное время проверяется при записи.", hoursLoading: "Загрузка часов работы…", hoursMissing: "Часы работы ещё не опубликованы.", closedDay: "Закрыто",
-    openUntil: "Открыто · до {t}", closed: "Закрыто", opensAt: "Откроется: {d} {t}", today: "сегодня", tomorrow: "завтра",
-    summary: "Ваша запись", address: "Адрес", phone: "Телефон", selected: "Выбрано", total: "Итого", duration: "Длительность", pickHint: "Выберите услуги", nothingSelected: "Услуги не выбраны. Их можно выбрать и на странице записи.",
-    from: "от {p}", book: "Записаться", continue: "Продолжить", recheck: "Время окончательно проверяется при подтверждении записи.", call: "Позвонить", unavailableNote: "Онлайн-запись временно недоступна.",
-    results: "Подтверждённые результаты", beforeAfter: "До / после", consent: "Здесь показаны только результаты, опубликованные с отдельного согласия клиента.", before: "До", after: "После",
-    diary: "Дневник", latest: "Новые публикации", soonStamp: "Скоро", soon: "Визуальные истории бизнеса будут добавлены позже.", approved: "На этой странице показываются только публичные материалы, одобренные владельцем или менеджером.",
-    feedback: "Отзывы", feedbackTitle: "Отзывы подтверждённых визитов", feedbackNote: "Отзыв может оставить только клиент после завершённого визита; каждая публикация проходит модерацию.", noFeedback: "Одобренных отзывов пока нет.",
-    days: ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"], dateLocale: "ru-RU",
+    openUntil: "Открыто, закрывается в {t}", closed: "Закрыто", opensAt: "откроется {d} в {t}", today: "сегодня", tomorrow: "завтра",
+    summary: "Ваша запись", selected: "Выбрано", selectedCount: "Выбрано: {n}", total: "Итого", duration: "Длительность", nothingSelected: "Услуги не выбраны.",
+    from: "от {p}", book: "Записаться", pickTime: "Выбрать время", pickService: "Выберите услугу", recheck: "Время окончательно проверяется при подтверждении записи.", unavailableNote: "Онлайн-запись временно недоступна.",
+    beforeAfter: "До / после", consent: "Здесь показаны только результаты, опубликованные с отдельного согласия клиента.", before: "До", after: "После",
+    latest: "Новые публикации",
+    feedbackTitle: "Отзывы подтверждённых визитов", feedbackNote: "Отзыв может оставить только клиент после завершённого визита; каждая публикация проходит модерацию.",
+    days: ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"],
+    daysAt: ["в понедельник", "во вторник", "в среду", "в четверг", "в пятницу", "в субботу", "в воскресенье"], dateLocale: "ru-RU",
   },
 } as const;
 
@@ -145,8 +148,8 @@ export default function SalonProfile() {
 
   let body: React.ReactNode;
   if (profile.isLoading) body = <StateBlock role="status" title={ui.loading} loading />;
-  else if (profile.isError) body = <StateBlock role="alert" title={ui.unavailable} lead={ui.retry} action={<button type="button" className="cw-btn cw-btn-line" onClick={() => void profile.refetch()}>{ui.retryButton}</button>} />;
-  else if (!profile.data) body = <StateBlock title={ui.missing} lead={ui.missingLead} action={<Link href="/salons" className="cw-btn cw-btn-stamp">{ui.all}<ArrowRight className="size-4" aria-hidden="true" /></Link>} />;
+  else if (profile.isError) body = <StateBlock role="alert" title={ui.unavailable} lead={ui.retry} action={<button type="button" className="cwp-btn cwp-btn-line" onClick={() => void profile.refetch()}>{ui.retryButton}</button>} />;
+  else if (!profile.data) body = <StateBlock title={ui.missing} lead={ui.missingLead} action={<Link href="/salons" className="cwp-btn cwp-btn-primary">{ui.all}</Link>} />;
   else body = <ProfileView data={profile.data} slug={slug} ui={ui} locale={locale} categories={marketplace.data?.categories ?? []} promotion={marketplace.data?.promotion ?? null} approved={Boolean(marketplace.data)} />;
 
   return <div className="cw min-h-screen">
@@ -157,19 +160,16 @@ export default function SalonProfile() {
 }
 
 function StateBlock({ title, lead, action, role, loading }: { title: string; lead?: string; action?: React.ReactNode; role?: "status" | "alert"; loading?: boolean }) {
-  return <section className="cw-desk">
-    <div className="cw-container py-16 sm:py-24">
-      <div className="cwp-sheet mx-auto max-w-xl" role={role} aria-busy={loading || undefined}>
-        <div className="cwp-band" />
-        <div className="cwp-sheet-inner">
-          <h1 className="cw-display text-3xl">{title}</h1>
-          {loading ? <div className="cw-ticket-blank mt-6 h-24" aria-hidden="true" /> : null}
-          {lead ? <p className="cw-lede mt-3">{lead}</p> : null}
-          {action ? <div className="mt-6">{action}</div> : null}
-        </div>
+  return <div className="cwp">
+    <div className="cw-container py-12 sm:py-20">
+      <div className="cwp-state mx-auto" role={role} aria-busy={loading || undefined}>
+        <h1 className="cwp-state-title">{title}</h1>
+        {loading ? <div className="cwp-skeleton" aria-hidden="true" /> : null}
+        {lead ? <p className="cwp-muted mt-2">{lead}</p> : null}
+        {action ? <div className="mt-5">{action}</div> : null}
       </div>
     </div>
-  </section>;
+  </div>;
 }
 
 type ProfileViewProps = {
@@ -181,6 +181,8 @@ type ProfileViewProps = {
   promotion: { tier: string; disclosure: string | null } | null;
   approved: boolean;
 };
+
+type TabKey = "services" | "team" | "hours" | "products";
 
 function ProfileView({ data, slug, ui, locale, categories, promotion, approved }: ProfileViewProps) {
   const { salon, services, team, feed, gallery, feedback } = data;
@@ -214,13 +216,15 @@ function ProfileView({ data, slug, ui, locale, categories, promotion, approved }
   const href = bookingHref(salon.publicSlug, chosen.map(service => service.id));
   const money = (tetri: number, from = false) => from ? fill(ui.from, { p: formatGelTetri(tetri) }) : formatGelTetri(tetri);
   const totalLabel = chosen.length ? money(total, anyFrom) : "";
+  // With nothing chosen the booking button waits for a service; a business without public services still links to the flow.
+  const needsService = services.length > 0 && chosen.length === 0;
 
   const mark = salon.name.trim().charAt(0).toLocaleUpperCase() || "•";
   const tabIds = useId();
-  const tabKeys = ["services", "team", "hours"] as const;
-  const [tab, setTab] = useState<(typeof tabKeys)[number]>("services");
+  const tabKeys: TabKey[] = products.length ? ["services", "team", "hours", "products"] : ["services", "team", "hours"];
+  const [tab, setTab] = useState<TabKey>("services");
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
-  const tabLabels = { services: ui.tabServices, team: ui.tabTeam, hours: ui.tabHours };
+  const tabLabels: Record<TabKey, string> = { services: ui.tabServices, team: ui.tabTeam, hours: ui.tabHours, products: ui.tabProducts };
   const onTabKey = (event: KeyboardEvent<HTMLButtonElement>) => {
     const index = tabKeys.indexOf(tab);
     const target = event.key === "ArrowRight" ? (index + 1) % tabKeys.length : event.key === "ArrowLeft" ? (index + tabKeys.length - 1) % tabKeys.length : event.key === "Home" ? 0 : event.key === "End" ? tabKeys.length - 1 : null;
@@ -234,54 +238,44 @@ function ProfileView({ data, slug, ui, locale, categories, promotion, approved }
   const statusText = status ? status.open
     ? fill(ui.openUntil, { t: status.closesAt })
     : status.next
-      ? `${ui.closed} · ${fill(ui.opensAt, { d: status.next.daysAhead === 0 ? ui.today : status.next.daysAhead === 1 ? ui.tomorrow : ui.days[status.next.weekday]!, t: status.next.time })}`
+      ? `${ui.closed}, ${fill(ui.opensAt, { d: status.next.daysAhead === 0 ? ui.today : status.next.daysAhead === 1 ? ui.tomorrow : ui.daysAt[status.next.weekday]!, t: status.next.time })}`
       : ui.closed
     : null;
 
-  const sheetVars = cssVars(tone ? { "--v-bg": tone.bg, "--v-ink": tone.ink, "--band": tone.bg } : {});
+  const sheetVars = cssVars(tone ? { "--v-bg": tone.bg, "--v-ink": tone.ink } : {});
   const hasAddress = Boolean(salon.address);
+  const selectedCount = fill(ui.selectedCount, { n: String(chosen.length) });
 
-  return <div className={`cwp ${bookable ? "cwp-bar-pad" : ""}`} style={sheetVars}>
-    <section className="cw-desk pb-10 pt-5 sm:pb-14" aria-labelledby="profile-title">
-      <div className="cw-container">
-        <Link href="/salons" className="cw-navlink -ml-2 inline-flex items-center gap-1.5"><ArrowLeft className="size-4" aria-hidden="true" />{ui.crumb}</Link>
-        <div className="cwp-sheet mt-3">
-          <div className="cwp-band" />
-          <div className="cwp-sheet-inner">
-            <div className="cwp-head">
-              <span className="font-bold">{tone ? categories.length ? Array.from(new Set(categories.map(category => verticalStyle(verticalForCategory(category.slug)).label))).join(" · ") : tone.label : ui.crumb}</span>
-              <span className="cw-num">{BRAND.domain}/salon/{salon.publicSlug}</span>
-            </div>
-            {salon.coverImageUrl ? <img src={salon.coverImageUrl} alt={salon.coverImageAltKa || ""} className="cwp-cover" /> : null}
-            <div className="mt-5 flex items-start gap-4">
-              <span className="cwp-mark" aria-hidden="true">{mark}</span>
-              <div className="min-w-0 flex-1">
-                <h1 id="profile-title" className="cw-display text-[clamp(1.75rem,5vw,3.25rem)]">{salon.name}</h1>
-                <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-                  {approved ? <span className="inline-flex items-center gap-1.5 font-bold"><ShieldCheck className="size-4" aria-hidden="true" />{ui.verified}</span> : null}
-                  {status && statusText ? <span className="cwp-status" data-open={status.open}><span className="cwp-status-dot" aria-hidden="true" />{statusText}</span> : null}
-                  {promotion ? <span className="inline-flex items-center gap-2"><span className="cw-stamp-mark">{promotion.tier === "VIP" ? "VIP" : promotion.tier === "RECOMMENDED" ? ui.recommended : ui.ad}</span>{promotion.disclosure ? <span className="text-xs text-[var(--cw-ink-soft)]">{promotion.disclosure}</span> : null}</span> : null}
-                </div>
-              </div>
-            </div>
-            <p className="cw-lede mt-4 max-w-2xl">{salon.publicDescription || ui.noDescription}</p>
-            {categories.length ? <ul className="mt-4 flex flex-wrap gap-2" aria-label={ui.tabServices}>{categories.map(category => {
-              const style = verticalStyle(verticalForCategory(category.slug));
-              return <li key={category.id}><span className="cwp-chip" style={cssVars({ "--chip-bg": style.bg, "--chip-ink": style.ink })}>{category.nameKa}</span></li>;
-            })}</ul> : null}
-            <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-3 text-[0.95rem] font-semibold">
-              {hasAddress ? <span className="inline-flex items-center gap-2"><MapPin className="size-4 shrink-0" aria-hidden="true" />{salon.address}</span> : null}
-              {salon.phone ? <a href={`tel:${salon.phone}`} className="cw-num inline-flex items-center gap-2 underline"><Phone className="size-4 shrink-0" aria-hidden="true" />{salon.phone}</a> : null}
-              {social.instagram ? <a href={social.instagram} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 underline"><Instagram className="size-4" aria-hidden="true" />Instagram<span className="sr-only"> ↗</span></a> : null}
-              {social.website ? <a href={social.website} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 underline"><ExternalLink className="size-4" aria-hidden="true" />{ui.website}<span className="sr-only"> ↗</span></a> : null}
-            </div>
-            {!bookable ? <p className="cwp-dashed mt-5 text-sm leading-6" role="status">{ui.bookingPaused}</p> : null}
-          </div>
-        </div>
+  return <div className="cwp" style={sheetVars}>
+    <div className="cwp-hero" data-cover={Boolean(salon.coverImageUrl)}>
+      {salon.coverImageUrl
+        ? <img src={salon.coverImageUrl} alt={salon.coverImageAltKa || ""} className="cwp-cover" />
+        : <div className="cwp-tint" aria-hidden="true"><span className="cwp-mark">{mark}</span></div>}
+      <Link href="/salons" className="cwp-back" aria-label={ui.crumb}><ArrowLeft className="size-5" aria-hidden="true" /></Link>
+    </div>
+
+    <section className="cw-container cwp-intro" aria-labelledby="profile-title">
+      <h1 id="profile-title" className="cwp-title">{salon.name}</h1>
+      <div className="cwp-badges">
+        {status && statusText ? <span className="cwp-status" data-open={status.open}><Clock className="size-4 shrink-0" aria-hidden="true" />{statusText}</span> : null}
+        {approved ? <span className="cwp-badge"><ShieldCheck className="size-4" aria-hidden="true" />{ui.verified}</span> : null}
+        {promotion ? <span className="inline-flex flex-wrap items-center gap-2"><span className="cwp-badge cwp-badge-accent">{promotion.tier === "VIP" ? "VIP" : promotion.tier === "RECOMMENDED" ? ui.recommended : ui.ad}</span>{promotion.disclosure ? <span className="cwp-muted text-sm">{promotion.disclosure}</span> : null}</span> : null}
       </div>
+      <p className="cwp-lede">{salon.publicDescription || ui.noDescription}</p>
+      {categories.length ? <ul className="cwp-chips" aria-label={ui.tabServices}>{categories.map(category => {
+        const style = verticalStyle(verticalForCategory(category.slug));
+        return <li key={category.id}><span className="cwp-chip" style={cssVars({ "--chip-bg": style.bg, "--chip-ink": style.ink })}>{category.nameKa}</span></li>;
+      })}</ul> : null}
+      <ul className="cwp-contact">
+        {hasAddress ? <li><MapPin className="size-4 shrink-0" aria-hidden="true" /><span>{salon.address}</span></li> : null}
+        {salon.phone ? <li><Phone className="size-4 shrink-0" aria-hidden="true" /><a href={`tel:${salon.phone}`} className="cw-num">{salon.phone}</a></li> : null}
+        {social.instagram ? <li><Instagram className="size-4 shrink-0" aria-hidden="true" /><a href={social.instagram} target="_blank" rel="noreferrer">Instagram<span className="sr-only"> ↗</span></a></li> : null}
+        {social.website ? <li><ExternalLink className="size-4 shrink-0" aria-hidden="true" /><a href={social.website} target="_blank" rel="noreferrer">{ui.website}<span className="sr-only"> ↗</span></a></li> : null}
+      </ul>
+      {!bookable ? <p className="cwp-notice" role="status"><Info className="size-5 shrink-0" aria-hidden="true" />{ui.bookingPaused}</p> : null}
     </section>
 
-    <div className="cw-container py-8 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-10 lg:py-12">
+    <div className="cw-container cwp-layout">
       <div className="min-w-0">
         <div role="tablist" aria-label={ui.tabs} className="cwp-tablist">
           {tabKeys.map(key => <button key={key} ref={element => { tabRefs.current[key] = element; }} type="button" role="tab" id={`${tabIds}-tab-${key}`} aria-selected={tab === key} aria-controls={`${tabIds}-panel-${key}`} tabIndex={tab === key ? 0 : -1} className="cwp-tab" onClick={() => setTab(key)} onKeyDown={onTabKey}>{tabLabels[key]}</button>)}
@@ -292,79 +286,67 @@ function ProfileView({ data, slug, ui, locale, categories, promotion, approved }
           {key === "services" ? <ServicesPanel services={services} selected={selected} onToggle={toggle} bookable={bookable} ui={ui} money={money} /> : null}
           {key === "team" ? <TeamPanel team={team} ui={ui} /> : null}
           {key === "hours" ? <HoursPanel ui={ui} bookable={bookable} loading={catalog.isLoading} failed={catalog.isError} hours={workingHours} timezone={timezone} now={now} /> : null}
+          {key === "products" ? (products.length ? <section aria-label={ui.productsTitle}>
+            <p className="cwp-muted mb-4 max-w-2xl text-sm">{ui.productsNote}</p>
+            <ProductGrid items={products} />
+          </section> : null) : null}
         </div>)}
 
-        {products.length ? <section className="cwp-block" aria-labelledby="products-title">
-          <div className="cwp-block-head"><h2 id="products-title" className="text-xl font-extrabold [font-stretch:85%]">{ui.productsTitle}</h2></div>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--cw-ink-soft)]">{ui.productsNote}</p>
-          <div className="mt-5"><ProductGrid items={products} /></div>
+        {feedback.length ? <section className="cwp-block" aria-labelledby="feedback-title">
+          <h2 id="feedback-title" className="cwp-h2">{ui.feedbackTitle}</h2>
+          <p className="cwp-muted mt-2 max-w-2xl text-sm">{ui.feedbackNote}</p>
+          <ul className="mt-4 grid gap-3 md:grid-cols-2">{feedback.map(item => <li key={item.id} className="cwp-card p-4">
+            <div className="flex items-center justify-between gap-3"><p className="font-bold">{item.authorName}</p><p className="cw-num inline-flex items-center gap-1 text-sm font-semibold"><Star className="size-4 fill-current" aria-hidden="true" /><span aria-label={`${item.rating} / 5`}>{item.rating}/5</span></p></div>
+            <p className="mt-3 text-sm leading-6">{item.comment}</p>
+            <p className="cw-num cwp-muted mt-3 text-xs">{new Intl.DateTimeFormat(ui.dateLocale, { day: "numeric", month: "long", year: "numeric" }).format(new Date(item.submittedAt))}</p>
+          </li>)}</ul>
         </section> : null}
 
-        <section className="cwp-block" aria-labelledby="feedback-title">
-          <div className="cwp-block-head"><h2 id="feedback-title" className="text-xl font-extrabold [font-stretch:85%]">{ui.feedbackTitle}</h2></div>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--cw-ink-soft)]">{ui.feedbackNote}</p>
-          {feedback.length
-            ? <ul className="mt-5 grid gap-4 md:grid-cols-2">{feedback.map(item => <li key={item.id} className="cw-ledger p-4">
-              <div className="flex items-center justify-between gap-3"><p className="font-extrabold">{item.authorName}</p><p className="cw-num inline-flex items-center gap-1 text-sm font-semibold"><Star className="size-4 fill-current" aria-hidden="true" /><span aria-label={`${item.rating} / 5`}>{item.rating}/5</span></p></div>
-              <p className="mt-3 text-sm leading-6">{item.comment}</p>
-              <p className="cw-num mt-3 text-xs text-[var(--cw-ink-soft)]">{new Intl.DateTimeFormat(ui.dateLocale, { day: "numeric", month: "long", year: "numeric" }).format(new Date(item.submittedAt))}</p>
-            </li>)}</ul>
-            : <p className="cwp-dashed mt-5 text-sm leading-6 text-[var(--cw-ink-soft)]">{ui.noFeedback}</p>}
-        </section>
-
         {gallery.length ? <section className="cwp-block" aria-labelledby="results-title">
-          <div className="cwp-block-head"><h2 id="results-title" className="text-xl font-extrabold [font-stretch:85%]">{ui.beforeAfter}</h2></div>
-          <p className="mt-3 text-sm text-[var(--cw-ink-soft)]">{ui.consent}</p>
-          <ul className="mt-5 grid gap-4 md:grid-cols-2">{gallery.map(item => <li key={item.id} className="cw-ledger overflow-hidden"><div className="grid grid-cols-2">
-            {item.before ? <figure><img src={item.before.mediaUrl} alt={item.before.altTextKa || ui.before} className="aspect-square w-full object-cover" loading="lazy" /><figcaption className="px-3 py-2 text-xs font-semibold">{ui.before}</figcaption></figure> : null}
-            {item.after ? <figure><img src={item.after.mediaUrl} alt={item.after.altTextKa || ui.after} className="aspect-square w-full object-cover" loading="lazy" /><figcaption className="px-3 py-2 text-xs font-semibold">{ui.after}</figcaption></figure> : null}
+          <h2 id="results-title" className="cwp-h2">{ui.beforeAfter}</h2>
+          <p className="cwp-muted mt-2 text-sm">{ui.consent}</p>
+          <ul className="mt-4 grid gap-3 md:grid-cols-2">{gallery.map(item => <li key={item.id} className="cwp-card overflow-hidden"><div className="grid grid-cols-2">
+            {item.before ? <figure><img src={item.before.mediaUrl} alt={item.before.altTextKa || ui.before} className="aspect-square w-full object-cover" loading="lazy" /><figcaption className="px-3 py-2 text-sm font-semibold">{ui.before}</figcaption></figure> : null}
+            {item.after ? <figure><img src={item.after.mediaUrl} alt={item.after.altTextKa || ui.after} className="aspect-square w-full object-cover" loading="lazy" /><figcaption className="px-3 py-2 text-sm font-semibold">{ui.after}</figcaption></figure> : null}
           </div></li>)}</ul>
         </section> : null}
 
         {feed.length ? <section className="cwp-block" aria-labelledby="feed-title">
-          <div className="cwp-block-head"><h2 id="feed-title" className="text-xl font-extrabold [font-stretch:85%]">{ui.latest}</h2></div>
-          <ul className="mt-5 columns-1 gap-4 sm:columns-2">{feed.map(post => <li key={post.id} className="cw-ledger mb-4 break-inside-avoid overflow-hidden">
+          <h2 id="feed-title" className="cwp-h2">{ui.latest}</h2>
+          <ul className="mt-4 columns-1 gap-3 sm:columns-2">{feed.map(post => <li key={post.id} className="cwp-card mb-3 break-inside-avoid overflow-hidden">
             <img src={post.mediaUrl} alt={post.altTextKa} className="w-full object-cover" loading="lazy" />
-            {post.titleKa || post.captionKa ? <div className="p-4">{post.titleKa ? <h3 className="font-extrabold">{post.titleKa}</h3> : null}{post.captionKa ? <p className="mt-2 text-sm leading-6 text-[var(--cw-ink-soft)]">{post.captionKa}</p> : null}</div> : null}
+            {post.titleKa || post.captionKa ? <div className="p-4">{post.titleKa ? <h3 className="font-bold">{post.titleKa}</h3> : null}{post.captionKa ? <p className="cwp-muted mt-2 text-sm leading-6">{post.captionKa}</p> : null}</div> : null}
           </li>)}</ul>
-        </section> : null}
-
-        {!feed.length && !gallery.length ? <section className="cwp-block cwp-dashed flex items-start gap-3" aria-label={ui.diary}>
-          <span className="cw-stamp-mark shrink-0">{ui.soonStamp}</span>
-          <div><p className="font-extrabold">{ui.soon}</p><p className="mt-1 text-sm text-[var(--cw-ink-soft)]">{ui.approved}</p></div>
         </section> : null}
       </div>
 
-      <aside aria-label={ui.summary} className="mt-10 hidden lg:mt-0 lg:block">
-        <div className="cwp-aside cw-ledger">
-          <div className="cw-ledger-head" style={cssVars({ "--ledger-bg": tone?.bg ?? "var(--cw-rule)", "--ledger-ink": tone?.ink ?? "var(--cw-ink)" })}>
-            <h2 className="font-extrabold [font-stretch:85%]">{ui.summary}</h2>
-            <span className="cw-num text-sm font-semibold" aria-live="polite">{chosen.length ? `${ui.selected}: ${chosen.length}` : ""}</span>
-          </div>
-          <div className="grid gap-3 p-4 text-sm">
-            {hasAddress ? <p className="flex items-start gap-2"><MapPin className="mt-0.5 size-4 shrink-0" aria-hidden="true" /><span><span className="sr-only">{ui.address}: </span>{salon.address}</span></p> : null}
-            {salon.phone ? <a href={`tel:${salon.phone}`} className="cw-num inline-flex items-center gap-2 font-semibold underline"><Phone className="size-4 shrink-0" aria-hidden="true" /><span className="sr-only">{ui.phone}: </span>{salon.phone}</a> : null}
-            {bookable ? <>
-              {chosen.length ? <ul className="grid gap-2 border-t border-[var(--cw-rule)] pt-3">{chosen.map(service => <li key={service.id} className="flex items-baseline justify-between gap-3"><span className="min-w-0">{service.nameKa}</span><span className="cw-num shrink-0 text-xs font-semibold">{money(service.priceTetri, service.isFromPrice)}</span></li>)}</ul>
-                : <p className="border-t border-[var(--cw-rule)] pt-3 leading-6 text-[var(--cw-ink-soft)]">{ui.nothingSelected}</p>}
-              {chosen.length ? <dl className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 border-t border-[var(--cw-rule)] pt-3" aria-live="polite" aria-atomic="true">
-                <dt className="text-[var(--cw-ink-soft)]">{ui.duration}</dt><dd className="cw-num text-right font-semibold">{minutes} {ui.minutes}</dd>
-                <dt className="font-extrabold">{ui.total}</dt><dd className="cw-num text-right text-base font-extrabold">{totalLabel}</dd>
-              </dl> : null}
-              <Link href={href} className="cw-btn cw-btn-stamp w-full">{chosen.length ? `${ui.continue} · ${totalLabel}` : ui.book}<ArrowRight className="size-4 shrink-0" aria-hidden="true" /></Link>
-              <p className="text-xs leading-5 text-[var(--cw-ink-soft)]">{ui.recheck}</p>
-            </> : <p className="border-t border-[var(--cw-rule)] pt-3 leading-6 text-[var(--cw-ink-soft)]">{ui.unavailableNote}</p>}
-          </div>
+      <aside aria-label={ui.summary} className="cwp-aside-wrap">
+        <div className="cwp-aside">
+          <h2 className="cwp-aside-title">{ui.summary}</h2>
+          {bookable ? <div className="grid gap-3">
+            {chosen.length ? <ul className="cwp-picked">{chosen.map(service => <li key={service.id}><span className="min-w-0">{service.nameKa}</span><span className="cwp-price">{money(service.priceTetri, service.isFromPrice)}</span></li>)}</ul>
+              : <p className="cwp-muted text-sm leading-6">{ui.nothingSelected}</p>}
+            {chosen.length ? <dl className="cwp-totals" aria-live="polite" aria-atomic="true">
+              <dt className="cwp-muted">{selectedCount}</dt><dd className="cw-num text-right">{minutes} {ui.minutes}</dd>
+              <dt className="font-bold">{ui.total}</dt><dd className="cwp-price text-right text-lg">{totalLabel}</dd>
+            </dl> : null}
+            {needsService
+              ? <button type="button" className="cwp-btn cwp-btn-primary w-full" disabled>{ui.pickService}</button>
+              : <Link href={href} className="cwp-btn cwp-btn-primary w-full">{services.length ? ui.pickTime : ui.book}</Link>}
+            <p className="cwp-muted text-sm leading-5">{ui.recheck}</p>
+          </div> : <p className="cwp-muted text-sm leading-6">{ui.unavailableNote}</p>}
         </div>
       </aside>
     </div>
 
     {bookable ? <div className="cwp-bar" role="region" aria-label={ui.summary}>
-      <div className="min-w-0 text-sm" aria-live="polite" aria-atomic="true">
-        {chosen.length ? <><p className="cw-num text-xs font-semibold text-[var(--cw-ink-soft)]">{ui.selected}: {chosen.length} · {minutes} {ui.minutes}</p><p className="cw-num truncate text-base font-extrabold">{totalLabel}</p></>
-          : <p className="font-semibold leading-5 text-[var(--cw-ink-soft)]">{ui.pickHint}</p>}
-      </div>
-      <Link href={href} className="cw-btn cw-btn-stamp shrink-0 px-4">{chosen.length ? ui.continue : ui.book}<ArrowRight className="size-4 shrink-0" aria-hidden="true" /></Link>
+      {chosen.length ? <div className="min-w-0" aria-live="polite" aria-atomic="true">
+        <p className="cwp-bar-count">{selectedCount}</p>
+        <p className="cwp-bar-total">{totalLabel}</p>
+      </div> : null}
+      {needsService
+        ? <button type="button" className="cwp-btn cwp-btn-primary cwp-bar-cta" disabled>{ui.pickService}</button>
+        : <Link href={href} className="cwp-btn cwp-btn-primary cwp-bar-cta">{services.length ? ui.pickTime : ui.book}</Link>}
     </div> : null}
   </div>;
 }
@@ -387,25 +369,24 @@ function ServicesPanel({ services, selected, onToggle, bookable, ui, money }: { 
   const atLimit = selected.size >= MAX_SELECTED_SERVICES;
   const toggleGroup = (name: string) => setCollapsed(current => { const next = new Set(current); if (next.has(name)) next.delete(name); else next.add(name); return next; });
 
-  if (!services.length) return <p className="cwp-dashed text-sm leading-6 text-[var(--cw-ink-soft)]">{ui.noServices}</p>;
+  if (!services.length) return <p className="cwp-empty">{ui.noServices}</p>;
 
   return <div>
-    <label className="cw-field" htmlFor={searchId}>
-      <span className="cw-caption">{ui.searchLabel}</span>
-      <span className="flex items-center gap-2"><Search className="size-4 shrink-0 text-[var(--cw-ink-soft)]" aria-hidden="true" /><input id={searchId} type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder={ui.searchPlaceholder} autoComplete="off" /></span>
-    </label>
-    <p className="cw-num mt-2 min-h-5 text-xs text-[var(--cw-ink-soft)]" role="status">{needle ? `${ui.found}: ${visible.length}` : ""}</p>
+    <div className="cwp-search">
+      <label className="cwp-label" htmlFor={searchId}>{ui.searchLabel}</label>
+      <span className="cwp-search-box"><Search className="size-5 shrink-0" aria-hidden="true" /><input id={searchId} type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder={ui.searchPlaceholder} autoComplete="off" /></span>
+    </div>
+    <p className="cw-num cwp-muted min-h-5 pt-2 text-sm" role="status">{needle ? `${ui.found}: ${visible.length}` : ""}</p>
     {bookable && atLimit ? <p className="mb-3 text-sm font-semibold" role="status">{ui.limit}</p> : null}
-    {!visible.length ? <p className="cwp-dashed text-sm leading-6 text-[var(--cw-ink-soft)]">{ui.nothingFound}</p> : null}
+    {!visible.length ? <p className="cwp-empty">{ui.nothingFound}</p> : null}
     {groups.map(([name, rows], groupIndex) => {
       const open = Boolean(needle) || !collapsed.has(name);
       const panelId = `${searchId}-group-${groupIndex}`;
-      const style = cssVars({ "--ledger-bg": "var(--v-bg)", "--ledger-ink": "var(--v-ink)" });
-      return <section key={name} className="cwp-group cw-ledger" style={style} aria-label={name}>
+      return <section key={name} className="cwp-group" aria-label={name}>
         <h3 className="m-0">
-          <button type="button" className="cw-ledger-head cwp-group-head" aria-expanded={open} aria-controls={panelId} onClick={() => toggleGroup(name)} title={ui.toggleGroup}>
+          <button type="button" className="cwp-group-head" aria-expanded={open} aria-controls={panelId} onClick={() => toggleGroup(name)} title={ui.toggleGroup}>
             <span className="min-w-0">{name}</span>
-            <span className="flex items-center gap-2"><span className="cw-num text-sm">{rows.length}</span><ChevronDown className="cwp-chevron size-5" aria-hidden="true" /></span>
+            <span className="flex items-center gap-2"><span className="cw-num cwp-muted text-sm">{rows.length}</span><ChevronDown className="cwp-chevron size-5" aria-hidden="true" /></span>
           </button>
         </h3>
         {open ? <div id={panelId}>{rows.map(service => {
@@ -413,9 +394,9 @@ function ServicesPanel({ services, selected, onToggle, bookable, ui, money }: { 
           const blocked = !isSelected && atLimit;
           const inner = <>
             <span className="min-w-0">
-              <span className="block font-semibold">{service.nameKa}</span>
-              {service.description ? <span className="mt-0.5 block text-sm leading-5 text-[var(--cw-ink-soft)]">{service.description}</span> : null}
-              <span className="cw-num mt-1 block text-xs font-semibold text-[var(--cw-ink-soft)]">{service.durationMinutes} {ui.minutes}</span>
+              <span className="cwp-svc-name">{service.nameKa}</span>
+              {service.description ? <span className="cwp-svc-meta">{service.description}</span> : null}
+              <span className="cw-num cwp-svc-meta">{service.durationMinutes} {ui.minutes}</span>
             </span>
             <span className="cwp-price">{money(service.priceTetri, service.isFromPrice)}</span>
           </>;
@@ -434,36 +415,36 @@ function ServicesPanel({ services, selected, onToggle, bookable, ui, money }: { 
 /* ---------- Team ---------- */
 
 function TeamPanel({ team, ui }: { team: ProfileData["team"]; ui: Copy }) {
-  if (!team.length) return <p className="cwp-dashed text-sm leading-6 text-[var(--cw-ink-soft)]">{ui.noTeam}</p>;
-  return <ul className="grid gap-4 sm:grid-cols-2">{team.map(member => <li key={member.id} className="cw-ledger p-4">
+  if (!team.length) return <p className="cwp-empty">{ui.noTeam}</p>;
+  return <ul className="grid gap-3 sm:grid-cols-2">{team.map(member => <li key={member.id} className="cwp-card p-4">
     <div className="flex items-center gap-4">
       {member.avatarUrl
-        ? <img src={member.avatarUrl} alt={member.avatarAltKa || ""} className="size-16 shrink-0 rounded-[4px] border-[1.5px] border-[var(--cw-ink)] object-cover" loading="lazy" />
-        : <span className="cwp-mark !size-16 !text-2xl" aria-hidden="true">{member.name.trim().charAt(0).toLocaleUpperCase() || "•"}</span>}
-      <div className="min-w-0"><h3 className="text-lg font-extrabold leading-6 [font-stretch:85%]">{member.name}</h3><p className="text-sm text-[var(--cw-ink-soft)]">{member.jobTitle || member.specialty || ui.specialist}</p></div>
+        ? <img src={member.avatarUrl} alt={member.avatarAltKa || ""} className="cwp-avatar" loading="lazy" />
+        : <span className="cwp-avatar" aria-hidden="true">{member.name.trim().charAt(0).toLocaleUpperCase() || "•"}</span>}
+      <div className="min-w-0"><h3 className="text-lg font-bold leading-6">{member.name}</h3><p className="cwp-muted text-sm">{member.jobTitle || member.specialty || ui.specialist}</p></div>
     </div>
     {member.bio ? <p className="mt-3 text-sm leading-6">{member.bio}</p> : null}
-    {member.experienceYears ? <p className="mt-3 text-xs font-bold"><span className="cw-num">{member.experienceYears}</span> {ui.experience}</p> : null}
+    {member.experienceYears ? <p className="mt-3 text-sm font-semibold"><span className="cw-num">{member.experienceYears}</span> {ui.experience}</p> : null}
   </li>)}</ul>;
 }
 
 /* ---------- Hours ---------- */
 
 function HoursPanel({ ui, bookable, loading, failed, hours, timezone, now }: { ui: Copy; bookable: boolean; loading: boolean; failed: boolean; hours: WorkingHour[]; timezone: string; now: Date }) {
-  if (bookable && loading) return <p className="cwp-dashed text-sm text-[var(--cw-ink-soft)]" role="status">{ui.hoursLoading}</p>;
-  if (!bookable || failed || !hours.length) return <p className="cwp-dashed text-sm leading-6 text-[var(--cw-ink-soft)]">{ui.hoursMissing}</p>;
+  if (bookable && loading) return <p className="cwp-empty" role="status">{ui.hoursLoading}</p>;
+  if (!bookable || failed || !hours.length) return <p className="cwp-empty">{ui.hoursMissing}</p>;
   const today = localWeekdayMinutes(now, timezone)?.weekday;
   return <div>
-    <div className="cw-ledger" style={cssVars({ "--ledger-bg": "var(--v-bg)", "--ledger-ink": "var(--v-ink)" })}>
-      <div className="cw-ledger-head"><h2 className="font-extrabold [font-stretch:85%]">{ui.hours}</h2></div>
+    <div className="cwp-card overflow-hidden">
+      <h2 className="cwp-hours-head">{ui.hours}</h2>
       <ul>{ui.days.map((day, weekday) => {
         const rule = hours.find(hour => hour.weekday === weekday);
         return <li key={day} className="cwp-hours-row" aria-current={today === weekday ? "date" : undefined}>
           <span>{day}</span>
-          <span className="cw-num text-sm">{rule ? `${hhmm(rule.startLocalTime)}–${hhmm(rule.endLocalTime)}` : ui.closedDay}</span>
+          <span className="cw-num">{rule ? `${hhmm(rule.startLocalTime)}–${hhmm(rule.endLocalTime)}` : ui.closedDay}</span>
         </li>;
       })}</ul>
     </div>
-    <p className="mt-3 text-sm text-[var(--cw-ink-soft)]">{ui.hoursNote}</p>
+    <p className="cwp-muted mt-3 text-sm">{ui.hoursNote}</p>
   </div>;
 }

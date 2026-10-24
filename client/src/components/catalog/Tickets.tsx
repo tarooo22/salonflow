@@ -1,8 +1,10 @@
 import { usePublicLocale } from "@/contexts/PublicLocaleContext";
+import { useSavedSalons } from "@/lib/deviceSaved";
 import { verticalLabel, verticalsForListing, verticalStyle, type Vertical } from "@/lib/verticals";
-import { ArrowRight, MapPin } from "lucide-react";
-import type { CSSProperties } from "react";
+import { Anchor, Baby, Brush, Droplet, Droplets, Eye, Flower2, Heart, MapPin, Ruler, ScanLine, Scissors, Smile, Sparkles, Stethoscope, Syringe, UserRound, Zap, type LucideIcon } from "lucide-react";
+import { type CSSProperties, useId, useState } from "react";
 import { Link } from "wouter";
+import { RevealGroup, RevealItem } from "./HomeMotion";
 
 export type CatalogCategory = { id: string; slug: string; nameKa: string; iconKey: string };
 export type CatalogListing = {
@@ -20,13 +22,23 @@ export type CatalogListing = {
 export const NEW_LISTING_DAYS = 30;
 
 export const ui = {
-  ka: { recommended: "რჩეული", ad: "რეკლამა", adSr: " — რეკლამა", fresh: "ახალი", book: "ჩაწერა", haveBusiness: "ბიზნესი გაქვს?", addPlace: "დაამატე შენი ადგილი" },
-  en: { recommended: "Recommended", ad: "Ad", adSr: " — advertisement", fresh: "New", book: "Book", haveBusiness: "Own a business?", addPlace: "Add your place" },
-  ru: { recommended: "Рекомендуем", ad: "Реклама", adSr: " — реклама", fresh: "Новое", book: "Записаться", haveBusiness: "У вас свой бизнес?", addPlace: "Добавьте своё место" },
+  ka: { recommended: "რეკომენდებული", ad: "ფასიანი განთავსება", adSr: " — ფასიანი განთავსება", fresh: "ახალი", haveBusiness: "ბიზნესი გაქვს?", addPlace: "დაამატე შენი ადგილი", save: "შენახვა", unsave: "შენახულიდან ამოშლა" },
+  en: { recommended: "Recommended", ad: "Paid placement", adSr: " — paid placement", fresh: "New", haveBusiness: "Own a business?", addPlace: "Add your place", save: "Save", unsave: "Remove from saved" },
+  ru: { recommended: "Рекомендуем", ad: "Платное размещение", adSr: " — платное размещение", fresh: "Новое", haveBusiness: "У вас свой бизнес?", addPlace: "Добавьте своё место", save: "Сохранить", unsave: "Убрать из сохранённых" },
 } as const;
 
 export function cssVars(vars: Record<string, string>) {
   return vars as CSSProperties;
+}
+
+// Static map: only the icons the categories use are bundled (marketplace_categories.iconKey).
+const CATEGORY_ICONS: Record<string, LucideIcon> = {
+  scissors: Scissors, sparkles: Sparkles, brush: Brush, eye: Eye, "flower-2": Flower2, "user-round": UserRound, zap: Zap, droplet: Droplet,
+  syringe: Syringe, "scan-line": ScanLine, smile: Smile, droplets: Droplets, anchor: Anchor, ruler: Ruler, stethoscope: Stethoscope, baby: Baby,
+};
+
+export function categoryIcon(iconKey: string | null | undefined): LucideIcon {
+  return CATEGORY_ICONS[(iconKey ?? "").trim().toLowerCase()] ?? Sparkles;
 }
 
 export function listingMatchesVertical(listing: Pick<CatalogListing, "categories">, vertical: Vertical | null) {
@@ -44,58 +56,61 @@ export function newestListings<T extends Pick<CatalogListing, "approvedAt">>(ite
   return items.filter(item => isNewListing(item, now)).sort((a, b) => new Date(b.approvedAt!).getTime() - new Date(a.approvedAt!).getTime());
 }
 
-export function Ticket({ item, number }: { item: CatalogListing; number: number }) {
+/** The shared listing card: cover (or tinted initial), save heart, disclosed placement chip, name, area, categories. */
+export function SalonCard({ item, eager = false }: { item: CatalogListing; eager?: boolean }) {
   const { locale } = usePublicLocale();
   const text = ui[locale];
+  const { isSaved, toggle } = useSavedSalons();
+  const nameId = useId();
+  const [broken, setBroken] = useState(false);
+  const saved = isSaved(item.publicSlug);
   const verticals = verticalsForListing(item.categories);
   const lead = verticalStyle(verticals[0] ?? "beauty");
   const promoted = item.promotion?.tier === "VIP" ? "VIP" : item.promotion?.tier === "RECOMMENDED" ? text.recommended : null;
   const fresh = !promoted && isNewListing(item);
-  return <Link href={`/salon/${item.publicSlug}`} className="cw-ticket group" style={cssVars({ "--stub-bg": lead.bg, "--stub-ink": lead.ink })}>
-    <div className="cw-ticket-stub" aria-hidden="true">
-      <span className="cw-num">№ {String(number).padStart(3, "0")}</span>
-      <span className="text-[0.72rem] font-extrabold [writing-mode:vertical-rl] rotate-180">{verticalLabel(verticals[0] ?? "beauty", locale)}</span>
-    </div>
-    <div className="flex min-w-0 gap-4 p-4">
-      <div className="min-w-0 flex-1">
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="truncate text-lg font-extrabold [font-stretch:85%]">{item.name}</h3>
-          {promoted ? <span className="cw-stamp-mark shrink-0" title={item.promotion?.disclosure ?? text.ad}>{promoted}<span className="sr-only">{text.adSr}</span></span>
-            : fresh ? <span className="cw-stamp-mark shrink-0">{text.fresh}</span> : null}
-        </div>
-        {item.areaLabelKa ? <p className="mt-1 flex items-center gap-1 text-sm text-[var(--cw-ink-soft)]"><MapPin className="size-3.5 shrink-0" aria-hidden="true" />{item.areaLabelKa}</p> : null}
-        {item.categories.length ? <p className="mt-2 line-clamp-1 text-sm text-[var(--cw-ink-soft)]">{item.categories.map(category => category.nameKa).join(" · ")}</p> : null}
-        <span className="mt-3 inline-flex items-center gap-1 text-sm font-extrabold text-[var(--cw-stamp)]">{text.book} <ArrowRight className="size-4 transition-transform duration-200 group-hover:translate-x-1" aria-hidden="true" /></span>
+  const Icon = categoryIcon(item.categories[0]?.iconKey);
+  const showCover = Boolean(item.coverImageUrl) && !broken;
+  return <article className="sc">
+    <Link href={`/salon/${item.publicSlug}`} className="sc-link">
+      <div className="sc-cover" style={cssVars({ "--sc-bg": lead.bg, "--sc-ink": lead.ink })}>
+        {showCover
+          ? <img src={item.coverImageUrl!} alt={item.coverImageAltKa ?? ""} loading={eager ? "eager" : "lazy"} onError={() => setBroken(true)} />
+          : <>
+            <span className="sc-initial" aria-hidden="true">{Array.from(item.name.trim())[0] ?? ""}</span>
+            <Icon className="sc-icon" aria-hidden="true" />
+          </>}
+        {promoted ? <span className="sc-chip" data-kind={item.promotion?.tier === "VIP" ? "vip" : "rec"} title={item.promotion?.disclosure ?? text.ad}>{promoted}<span className="sr-only">{text.adSr}</span></span>
+          : fresh ? <span className="sc-chip" data-kind="new">{text.fresh}</span> : null}
       </div>
-      {item.coverImageUrl ? <img src={item.coverImageUrl} alt={item.coverImageAltKa ?? ""} loading="lazy" className="hidden size-24 shrink-0 rounded-[3px] object-cover sm:block" /> : null}
-    </div>
-  </Link>;
+      <div className="sc-body">
+        <h3 id={nameId} className="sc-name">{item.name}</h3>
+        {item.areaLabelKa ? <p className="sc-area"><MapPin className="size-3.5 shrink-0" aria-hidden="true" />{item.areaLabelKa}</p> : null}
+        {item.categories.length ? <p className="sc-cats">{item.categories.map(category => category.nameKa).join(", ")}</p> : null}
+        <div className="sc-vchips">{verticals.map(id => <span key={id} className="sc-vchip" style={cssVars({ "--sc-bg": verticalStyle(id).bg, "--sc-ink": verticalStyle(id).ink })}>{verticalLabel(id, locale)}</span>)}</div>
+      </div>
+    </Link>
+    <button type="button" className="sc-heart" aria-pressed={saved} aria-label={saved ? text.unsave : text.save} aria-describedby={nameId} onClick={() => toggle(item.publicSlug)}>
+      <Heart className="size-5" fill={saved ? "currentColor" : "none"} aria-hidden="true" />
+    </button>
+  </article>;
 }
 
-// Unfilled tickets: the live state until the first businesses are approved.
-export function EmptyTickets({ message, vertical }: { message: string; vertical: Vertical | null }) {
+export function SalonGrid({ items, rail = false, reveal = false }: { items: CatalogListing[]; rail?: boolean; reveal?: boolean }) {
+  const className = `sc-grid ${rail ? "sc-grid--rail" : ""}`;
+  if (reveal) return <RevealGroup as="ul" className={className}>{items.map((item, index) => <RevealItem as="li" key={item.publicSlug}><SalonCard item={item} eager={index < 4} /></RevealItem>)}</RevealGroup>;
+  return <ul className={className}>{items.map((item, index) => <li key={item.publicSlug}><SalonCard item={item} eager={index < 4} /></li>)}</ul>;
+}
+
+/** Loading skeletons only; shown while the request is in flight, never as a stand-in for missing data. */
+export function SalonLoading({ label, count = 4 }: { label: string; count?: number }) {
+  return <ul className="sc-grid" aria-busy="true" aria-label={label}>{Array.from({ length: count }, (_, key) => <li key={key}><div className="sc sc-skel" /></li>)}</ul>;
+}
+
+/** Honest empty state: one line and a way to add a business, no invented rows. */
+export function EmptyCatalog({ message }: { message: string }) {
   const text = ui[usePublicLocale().locale];
-  const tone = verticalStyle(vertical ?? "beauty");
-  return <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-    {[1, 2, 3].map(number => <div key={number} className={`cw-ticket ${number > 1 ? "cw-ticket-extra" : ""}`} style={cssVars({ "--stub-bg": tone.bg, "--stub-ink": tone.ink })}>
-      <div className="cw-ticket-stub" aria-hidden="true"><span className="cw-num">№ {String(number).padStart(3, "0")}</span></div>
-      {number === 1
-        ? <div className="flex flex-col justify-between gap-3 p-4">
-          <p className="font-extrabold leading-6">{message}</p>
-          <p className="text-sm text-[var(--cw-ink-soft)]">{text.haveBusiness} <Link href="/partner" className="font-extrabold text-[var(--cw-stamp)] underline">{text.addPlace}</Link></p>
-        </div>
-        : <div className="cw-ticket-blank m-4" aria-hidden="true" />}
-    </div>)}
-  </div>;
-}
-
-export function TicketShelf({ title, note, items, startAt, action }: { title: string; note?: string; items: CatalogListing[]; startAt: number; action?: React.ReactNode }) {
-  if (!items.length) return null;
-  return <div className="mt-12 first:mt-0">
-    <div className="flex flex-wrap items-baseline justify-between gap-2 border-b-[1.5px] border-[var(--cw-ink)] pb-3">
-      <h3 className="text-xl font-extrabold [font-stretch:85%]">{title}</h3>
-      {note || action ? <div className="flex items-baseline gap-4 text-sm text-[var(--cw-ink-soft)]">{note ? <p>{note}</p> : null}{action}</div> : null}
-    </div>
-    <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">{items.map((item, index) => <Ticket key={item.publicSlug} item={item} number={startAt + index} />)}</div>
+  return <div className="sc-empty" role="status">
+    <p className="sc-empty-title">{message}</p>
+    <p className="sc-empty-note">{text.haveBusiness} <Link href="/partner">{text.addPlace}</Link></p>
   </div>;
 }

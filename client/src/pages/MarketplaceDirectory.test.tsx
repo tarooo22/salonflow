@@ -28,12 +28,12 @@ describe("Marketplace Directory discovery handoff", () => {
     expect(filters).toContain("aria-label={text.removeFilter}");
   });
 
-  it("lives in the catalog world: shared tickets in shelves, vertical tabs, Chawera meta", () => {
+  it("lives in the catalog world: shared salon cards in one grid, filter bar with vertical chips, Chawera meta", () => {
     expect(source).toContain('<div className="cw min-h-screen">');
     expect(source).toContain('<main id="main-content">');
     expect(source).toContain("BRAND.name");
     expect(source).not.toContain("SalonFlow");
-    for (const shelf of ["title={text.vip}", "title={text.recommended}", 'vip: "VIP"', 'recommended: "რეკომენდებული"', "newestListings", "TicketShelf"]) expect(source).toContain(shelf);
+    for (const part of ["newestListings", "<SalonGrid ", "EmptyCatalog", 'showMore: "მეტის ჩვენება"', 'noMatchTitle: "ამ ძიებით ადგილი ვერ მოიძებნა."', 'clear: "ფილტრების გასუფთავება"']) expect(source).toContain(part);
     expect(filters).toContain("verticalForCategory");
     expect(filters).toContain('role="search"');
   });

@@ -15,14 +15,14 @@ function getReturnTo() {
 function PasswordField({ value, onChange, autoComplete, minLength, error }: { value: string; onChange: (value: string) => void; autoComplete: string; minLength: number; error?: string }) {
   const [visible, setVisible] = useState(false);
   return <div>
-    <div className="cw-field">
-      <label htmlFor="auth-password" className="cw-caption block">პაროლი</label>
-      <div className="cw-field-row">
+    <div className="mkt-field">
+      <label htmlFor="auth-password">პაროლი</label>
+      <div className="mkt-field-row">
         <input id="auth-password" value={value} onChange={event => onChange(event.target.value)} autoComplete={autoComplete} minLength={minLength} type={visible ? "text" : "password"} aria-invalid={Boolean(error)} aria-describedby={minLength >= 10 ? "auth-password-hint" : undefined} required />
-        <button type="button" className="cw-field-btn" aria-label={visible ? "პაროლის დამალვა" : "პაროლის ჩვენება"} aria-pressed={visible} onClick={() => setVisible(current => !current)}>{visible ? <EyeOff className="size-5" aria-hidden="true" /> : <Eye className="size-5" aria-hidden="true" />}</button>
+        <button type="button" className="mkt-field-btn" aria-label={visible ? "პაროლის დამალვა" : "პაროლის ჩვენება"} aria-pressed={visible} onClick={() => setVisible(current => !current)}>{visible ? <EyeOff className="size-5" aria-hidden="true" /> : <Eye className="size-5" aria-hidden="true" />}</button>
       </div>
     </div>
-    {minLength >= 10 ? <p id="auth-password-hint" className="mt-1.5 text-sm text-[var(--cw-ink-soft)]">მინიმუმ 10 სიმბოლო.</p> : null}
+    {minLength >= 10 ? <p id="auth-password-hint" className="mkt-hint mkt-hint-top">მინიმუმ 10 სიმბოლო.</p> : null}
   </div>;
 }
 
@@ -73,52 +73,44 @@ export default function LocalAuth({ mode }: { mode: "login" | "register" | "clai
 
   return <div className="cw min-h-screen">
     <CatalogHeader />
-    <main id="main-content" tabIndex={-1} className="cw-desk pb-16 pt-6 sm:pb-24 sm:pt-12">
-      <div className="cw-container">
-        <div className="cw-auth-wrap mx-auto max-w-[30rem]">
-          <span className="cw-auth-sheet" aria-hidden="true" />
-          <span className="cw-auth-sheet" aria-hidden="true" />
-          <span className="cw-auth-sheet" aria-hidden="true" />
-          <div className="cw-card">
-            <div className="cw-card-band" />
-            <div className="cw-card-inner">
-              <div className="cw-card-head"><span className="cw-caption">{BRAND.name} · {modeLabel}</span><span className="cw-num text-xs">{BRAND.domain}</span></div>
-              <h1 className="cw-display mt-6 text-[clamp(1.6rem,4vw,2.2rem)]">{title}</h1>
-              <p className="mt-3 text-sm leading-6 text-[var(--cw-ink-soft)]">{description}</p>
-              <form className="mt-6 grid gap-3" onSubmit={submit} noValidate>
-                {isRegister ? <div className="cw-field">
-                  <label htmlFor="auth-name" className="cw-caption block">სახელი</label>
-                  <input id="auth-name" value={name} onChange={event => setName(event.target.value)} autoComplete="name" minLength={2} autoFocus required />
-                </div> : null}
-                {isClaim ? <div>
-                  <div className="cw-field">
-                    <label htmlFor="recovery-code" className="cw-caption block">აღდგენის კოდი</label>
-                    <input id="recovery-code" className="cw-num" value={recoveryCode} onChange={event => setRecoveryCode(event.target.value.toUpperCase())} placeholder="SF-1234-5678-9ABC" autoComplete="one-time-code" aria-describedby="recovery-code-hint" autoFocus required />
-                  </div>
-                  <p id="recovery-code-hint" className="mt-1.5 text-sm leading-5 text-[var(--cw-ink-soft)]">კოდი არ არის თქვენი პაროლი. თუ ის არ მიგიღიათ, მიმართეთ {BRAND.name}-ის მხარდაჭერას.</p>
-                </div> : null}
-                <div className="cw-field">
-                  <label htmlFor="auth-email" className="cw-caption block">ელფოსტა</label>
-                  <input id="auth-email" value={email} onChange={event => setEmail(event.target.value)} autoComplete="email" type="email" autoFocus={!isRegister && !isClaim} aria-invalid={Boolean(error)} required />
-                </div>
-                <PasswordField value={password} onChange={setPassword} autoComplete={isRegister ? "new-password" : "current-password"} minLength={isRegister || isClaim ? 10 : 1} error={error} />
-                {error ? <p role="alert" className="cw-alert">{error}</p> : null}
-                <button type="submit" className="cw-btn cw-btn-stamp mt-1 w-full" disabled={pending}>{pending ? "მიმდინარეობს…" : submitLabel}</button>
-              </form>
-              <div className="cw-perf-line mt-6" />
-              <div className="mt-5 grid gap-2 text-center text-sm">
-                <Link href={`${alternate}?returnTo=${encodeURIComponent(returnTo)}`} className="cw-link">{alternateLabel}</Link>
-                {!isClaim
-                  ? <Link href={`/claim-account?returnTo=${encodeURIComponent(returnTo)}`} className="text-[var(--cw-ink-soft)] underline">ძველი ანგარიშის პრობლემა გაქვთ?</Link>
-                  : <Link href={`/login?returnTo=${encodeURIComponent(returnTo)}`} className="text-[var(--cw-ink-soft)] underline">დაბრუნდით შესვლაზე</Link>}
+    <main id="main-content" tabIndex={-1} className="mkt-auth">
+      <div className="mkt-auth-inner">
+        <p className="mkt-wordmark">{BRAND.nameKa}</p>
+        <div className="mkt-auth-card">
+          <p className="mkt-caption">{BRAND.name} · {modeLabel}</p>
+          <h1 className="mkt-auth-title">{title}</h1>
+          <p className="mkt-hint mkt-auth-desc">{description}</p>
+          <form className="mkt-form" onSubmit={submit} noValidate>
+            {isRegister ? <div className="mkt-field">
+              <label htmlFor="auth-name">სახელი</label>
+              <input id="auth-name" value={name} onChange={event => setName(event.target.value)} autoComplete="name" minLength={2} autoFocus required />
+            </div> : null}
+            {isClaim ? <div>
+              <div className="mkt-field">
+                <label htmlFor="recovery-code">აღდგენის კოდი</label>
+                <input id="recovery-code" className="tabular-nums" value={recoveryCode} onChange={event => setRecoveryCode(event.target.value.toUpperCase())} placeholder="SF-1234-5678-9ABC" autoComplete="one-time-code" aria-describedby="recovery-code-hint" autoFocus required />
               </div>
-              <ul className="mt-5 grid gap-1.5 text-sm text-[var(--cw-ink-soft)]">
-                <AuthPromise text="ადგილობრივი ელფოსტა და პაროლი" />
-                <AuthPromise text="როლზე და ორგანიზაციაზე დაფუძნებული წვდომა" />
-                <AuthPromise text="ქართული-first სამუშაო სივრცე" />
-              </ul>
+              <p id="recovery-code-hint" className="mkt-hint mkt-hint-top">კოდი არ არის თქვენი პაროლი. თუ ის არ მიგიღიათ, მიმართეთ {BRAND.name}-ის მხარდაჭერას.</p>
+            </div> : null}
+            <div className="mkt-field">
+              <label htmlFor="auth-email">ელფოსტა</label>
+              <input id="auth-email" value={email} onChange={event => setEmail(event.target.value)} autoComplete="email" type="email" autoFocus={!isRegister && !isClaim} aria-invalid={Boolean(error)} required />
             </div>
+            <PasswordField value={password} onChange={setPassword} autoComplete={isRegister ? "new-password" : "current-password"} minLength={isRegister || isClaim ? 10 : 1} error={error} />
+            {error ? <p role="alert" className="mkt-alert">{error}</p> : null}
+            <button type="submit" className="mkt-btn mkt-btn-primary mkt-btn-block" disabled={pending}>{pending ? "მიმდინარეობს…" : submitLabel}</button>
+          </form>
+          <div className="mkt-divider mkt-links">
+            <Link href={`${alternate}?returnTo=${encodeURIComponent(returnTo)}`} className="mkt-link">{alternateLabel}</Link>
+            {!isClaim
+              ? <Link href={`/claim-account?returnTo=${encodeURIComponent(returnTo)}`} className="mkt-subtle-link">ძველი ანგარიშის პრობლემა გაქვთ?</Link>
+              : <Link href={`/login?returnTo=${encodeURIComponent(returnTo)}`} className="mkt-subtle-link">დაბრუნდით შესვლაზე</Link>}
           </div>
+          <ul className="mkt-list mkt-auth-promises">
+            <AuthPromise text="ადგილობრივი ელფოსტა და პაროლი" />
+            <AuthPromise text="როლზე და ორგანიზაციაზე დაფუძნებული წვდომა" />
+            <AuthPromise text="ქართული-first სამუშაო სივრცე" />
+          </ul>
         </div>
       </div>
     </main>
@@ -126,4 +118,4 @@ export default function LocalAuth({ mode }: { mode: "login" | "register" | "clai
   </div>;
 }
 
-function AuthPromise({ text }: { text: string }) { return <li className="flex items-center gap-2"><ShieldCheck className="size-4 shrink-0" aria-hidden="true" />{text}</li>; }
+function AuthPromise({ text }: { text: string }) { return <li><ShieldCheck className="size-4" aria-hidden="true" />{text}</li>; }

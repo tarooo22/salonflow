@@ -28,7 +28,8 @@ describe("SalonProfile booking handoff", () => {
     expect(bookingHref("gldani-beauty", ["a1", "b2"])).toBe("/book/gldani-beauty?services=a1,b2");
     expect(bookingHref("gldani-beauty", ["x_y-Z"])).toBe("/book/gldani-beauty?services=x_y-Z");
     expect(source).toContain("დაჯავშნა");
-    expect(source).toContain("გაგრძელება");
+    expect(source).toContain("დროის არჩევა");
+    expect(source).toContain("აირჩიე სერვისი");
   });
 
   it("only offers booking when the existing booking-enabled gate allows it, and says so otherwise", () => {
@@ -61,7 +62,6 @@ describe("SalonProfile truthfulness", () => {
   it("shows only approved public data and invents no ratings, counts or discounts", () => {
     expect(source).toContain("experienceYears");
     expect(source).toContain("კლიენტის ცალკე თანხმობით");
-    expect(source).toContain("მფლობელის ან მენეჯერის მიერ დამტკიცებული");
     expect(source).toContain("გამოქვეყნებამდე იგი გადის მოდერაციას");
     expect(source).toContain("{feedback.length");
     expect(source).not.toMatch(/discount|oldPrice|originalPrice/i);
@@ -73,6 +73,12 @@ describe("SalonProfile truthfulness", () => {
     expect(source).toContain("დამტკიცებული პროფილი");
     expect(source).toContain("verticalsForListing(categories)");
     expect(source).toContain('href="/salons"');
+  });
+
+  it("never renders an empty section: no dashed placeholder boxes and no uppercase", () => {
+    expect(source).not.toContain("cwp-dashed");
+    expect(source).not.toContain("soonStamp");
+    expect(styles).not.toMatch(/uppercase|Martian/i);
   });
 
   it("keeps the vertical colour scoped to regions via custom properties", () => {
@@ -123,7 +129,8 @@ describe("openStatus", () => {
 describe("SalonProfile products", () => {
   it("lists the location's products only when there are some", () => {
     expect(source).toContain("trpc.products.byLocation.useQuery");
-    expect(source).toContain("{products.length ? <section");
+    expect(source).toContain("products.length ? <section");
+    expect(source).toContain("tabProducts");
     expect(source).toContain("<ProductGrid items={products} />");
   });
 });
