@@ -1,7 +1,8 @@
 import type { Express } from "express";
 import { storageGetSignedUrl } from "../storage";
 
-const publicMediaKey = /^salons\/[^/]+\/(locations\/[^/]+\/cover(?:_[A-Za-z0-9]+)?|locations\/[^/]+\/feed\/[^/]+|staff\/[^/]+\/avatar(?:_[A-Za-z0-9]+)?)\.(?:jpg|png|webp)$/;
+// Only public catalogue media; client before/after photos stay private.
+export const publicMediaKey = /^salons\/[^/]+\/(locations\/[^/]+\/cover(?:_[A-Za-z0-9]+)?|locations\/[^/]+\/feed\/[^/]+|staff\/[^/]+\/avatar(?:_[A-Za-z0-9]+)?|products\/[^/]+\/[A-Za-z0-9_-]+)\.(?:jpg|png|webp)$/;
 
 export function registerStorageProxy(app: Express) {
   app.get("/manus-storage/*", async (req, res) => {
