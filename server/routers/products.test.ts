@@ -86,7 +86,7 @@ describe("products owner procedures are organization-scoped", () => {
   it("stores an uploaded photo under the organization's folder and keeps only the key", async () => {
     const { db, insertChain } = capture([[{ id: locationId }]]);
     mocked.db = db;
-    await productsRouter.createCaller({ user } as never).create({ ...createInput, imageDataUrl: "data:image/png;base64,AAAA", imageAltKa: "შამპუნის ბოთლი" });
+    await productsRouter.createCaller({ user } as never).create({ ...createInput, imageDataUrl: "data:image/png;base64,iVBORw0KGgo=", imageAltKa: "შამპუნის ბოთლი" });
     expect(mocked.storagePut.mock.calls[0][0]).toMatch(new RegExp(`^salons/${orgId}/products/`));
     expect(insertChain.calls.values[0]).toMatchObject({ organizationId: orgId, imageKey: "salons/x/products/y/img.png", imageAltKa: "შამპუნის ბოთლი" });
   });

@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, gt, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
 import { createHash, createHmac } from "node:crypto";
 import { nanoid } from "nanoid";
+import { TRPCError } from "@trpc/server";
 import { appointmentServices, appointments, appointmentStatusHistory, clientConsents, clientMediaItems, clientMediaSets, clients, customerFeedback, customerFeedbackEvents, locationFeedPosts, locations, organizationGovernance, organizations, scheduleExceptions, scheduleLocks, serviceCategories, services, staffLocations, staffProfiles, staffServices, waitlistEntries, workingHourRules } from "../../drizzle/schema";
 import { requireDb } from "../db";
 import { publicAvailabilityCheckSchema, publicAvailableSlotsSchema, publicBookingCancelSchema, publicBookingCommitSchema, publicBookingRescheduleSchema, publicBookingTokenSchema, publicRescheduleSlotsSchema, publicFeedbackSubmitSchema, publicFeedbackTokenSchema, publicMultiAvailabilityCheckSchema, publicMultiAvailableSlotsSchema, publicMultiBookingCommitSchema, publicWaitlistCreateSchema, slugSchema } from "../../shared/validation";
@@ -484,7 +485,7 @@ export const publicRouter = router({
     if (!await isOrganizationTrialPublicBookingActive(location.organizationId)) throw new Error("ონლაინ ჩაწერა ამ სალონისთვის დროებით მიუწვდომელია.");
     const minimumStart = new Date(Date.now() + location.minimumNoticeMinutes * 60_000);
     const maximumStart = new Date(Date.now() + location.maximumAdvanceDays * 86_400_000);
-    if (input.startsAt < minimumStart || input.startsAt > maximumStart) throw new Error("არჩეული დრო ჩაწერის დაშვებულ დიაპაზონში არ არის.");
+    if (input.startsAt < minimumStart || input.startsAt > maximumStart) throw new TRPCError({ code: "CONFLICT", message: "არჩეული დრო ჩაწერის დაშვებულ დიაპაზონში არ არის." });
     const candidates = await resolveMultiCandidates(db, location, input.serviceIds, input.staffProfileId);
     if (!candidates.length) throw new Error("არცერთი სპეციალისტი ვერ ასრულებს ყველა არჩეულ სერვისს.");
     const appointmentId = nanoid(21);
@@ -499,7 +500,7 @@ export const publicRouter = router({
         const existing = await tx.select().from(appointments).where(and(eq(appointments.organizationId, location.organizationId), eq(appointments.staffProfileId, candidate.id)));
         if (!existing.some(appointment => appointmentBlocksInterval(appointment.status) && intervalsOverlap(interval.protectedStart, interval.protectedEnd, new Date(appointment.startsAt.getTime() - appointment.bufferBeforeMinutes * 60_000), new Date(appointment.endsAt.getTime() + appointment.bufferAfterMinutes * 60_000)))) { assigned = candidate; endsAt = interval.endsAt; break; }
       }
-      if (!assigned || !endsAt) throw new Error("ეს დრო ახლახან დაიკავეს. აირჩიეთ სხვა თავისუფალი დრო.");
+      if (!assigned || !endsAt) throw new TRPCError({ code: "CONFLICT", message: "ეს დრო ახლახან დაიკავეს. აირჩიეთ სხვა თავისუფალი დრო." });
       const [matchedClient] = await tx.select({ id: clients.id }).from(clients).where(and(eq(clients.organizationId, location.organizationId), eq(clients.normalizedPhone, normalizedPhone), eq(clients.status, "ACTIVE"))).limit(1);
       const clientId = matchedClient?.id ?? nanoid(21);
       if (!matchedClient) await tx.insert(clients).values({ id: clientId, organizationId: location.organizationId, firstName: input.firstName, lastName: input.lastName, normalizedPhone, email: input.email, normalizedEmail, source: "PUBLIC_WEB" });
@@ -559,7 +560,7 @@ export const publicRouter = router({
     const now = new Date();
     const minimumStart = new Date(now.getTime() + location.minimumNoticeMinutes * 60_000);
     const maximumStart = new Date(now.getTime() + location.maximumAdvanceDays * 86_400_000);
-    if (input.startsAt < minimumStart || input.startsAt > maximumStart) throw new Error("The selected time falls outside the booking window");
+    if (input.startsAt < minimumStart || input.startsAt > maximumStart) throw new TRPCError({ code: "CONFLICT", message: "The selected time falls outside the booking window" });
 
     const appointmentId = nanoid(21);
     const confirmationToken = confirmationTokenForAppointment(appointmentId);
@@ -582,7 +583,7 @@ export const publicRouter = router({
         const conflict = concurrent.some(appointment => intervalsOverlap(protectedStart, protectedEnd, new Date(appointment.startsAt.getTime() - appointment.bufferBeforeMinutes * 60_000), new Date(appointment.endsAt.getTime() + appointment.bufferAfterMinutes * 60_000)));
         if (!conflict) { assigned = { id: candidate.id, name: candidate.name, durationMinutes, endsAt }; break; }
       }
-      if (!assigned) throw new Error("The selected time is no longer available");
+      if (!assigned) throw new TRPCError({ code: "CONFLICT", message: "The selected time is no longer available" });
 
       const [matchedClient] = await tx.select().from(clients).where(and(
         eq(clients.organizationId, location.organizationId),
@@ -708,16 +709,16 @@ export const publicRouter = router({
     if (!location || !canCustomerManage(appointment, location.cancellationCutoffMinutes)) throw new Error("ამ ჯავშნის გადატანის ვადა უკვე გასულია ან სტატუსი აღარ იძლევა ცვლილების უფლებას.");
     const minimumStart = new Date(Date.now() + location.minimumNoticeMinutes * 60_000);
     const maximumStart = new Date(Date.now() + location.maximumAdvanceDays * 86_400_000);
-    if (input.startsAt < minimumStart || input.startsAt > maximumStart) throw new Error("არჩეული დრო ჩაწერის დაშვებულ დიაპაზონში არ არის.");
+    if (input.startsAt < minimumStart || input.startsAt > maximumStart) throw new TRPCError({ code: "CONFLICT", message: "არჩეული დრო ჩაწერის დაშვებულ დიაპაზონში არ არის." });
     const durationMs = appointment.endsAt.getTime() - appointment.startsAt.getTime();
     const endsAt = new Date(input.startsAt.getTime() + durationMs);
     const protectedStart = new Date(input.startsAt.getTime() - appointment.bufferBeforeMinutes * 60_000);
     const protectedEnd = new Date(endsAt.getTime() + appointment.bufferAfterMinutes * 60_000);
     await db.transaction(async tx => {
       for (const dateKey of enumerateUtcDates(input.startsAt, endsAt)) await tx.insert(scheduleLocks).values({ id: `${appointment.staffProfileId}:${dateKey}`, staffProfileId: appointment.staffProfileId, localDate: new Date(`${dateKey}T00:00:00.000Z`) }).onDuplicateKeyUpdate({ set: { createdAt: new Date() } });
-      if (!await isStartOffered(tx, location, appointment.staffProfileId, input.startsAt, durationMs / 60_000, appointment.bufferBeforeMinutes, appointment.bufferAfterMinutes)) throw new Error("ეს დრო ახლახან დაიკავეს. აირჩიეთ სხვა თავისუფალი დრო.");
+      if (!await isStartOffered(tx, location, appointment.staffProfileId, input.startsAt, durationMs / 60_000, appointment.bufferBeforeMinutes, appointment.bufferAfterMinutes)) throw new TRPCError({ code: "CONFLICT", message: "ეს დრო ახლახან დაიკავეს. აირჩიეთ სხვა თავისუფალი დრო." });
       const existing = await tx.select().from(appointments).where(and(eq(appointments.organizationId, appointment.organizationId), eq(appointments.staffProfileId, appointment.staffProfileId)));
-      if (existing.some(item => item.id !== appointment.id && appointmentBlocksInterval(item.status) && intervalsOverlap(protectedStart, protectedEnd, new Date(item.startsAt.getTime() - item.bufferBeforeMinutes * 60_000), new Date(item.endsAt.getTime() + item.bufferAfterMinutes * 60_000)))) throw new Error("ეს დრო ახლახან დაიკავეს. აირჩიეთ სხვა თავისუფალი დრო.");
+      if (existing.some(item => item.id !== appointment.id && appointmentBlocksInterval(item.status) && intervalsOverlap(protectedStart, protectedEnd, new Date(item.startsAt.getTime() - item.bufferBeforeMinutes * 60_000), new Date(item.endsAt.getTime() + item.bufferAfterMinutes * 60_000)))) throw new TRPCError({ code: "CONFLICT", message: "ეს დრო ახლახან დაიკავეს. აირჩიეთ სხვა თავისუფალი დრო." });
       await tx.update(appointments).set({ startsAt: input.startsAt, endsAt }).where(eq(appointments.id, appointment.id));
       await tx.insert(appointmentStatusHistory).values({ id: nanoid(21), appointmentId: appointment.id, oldStatus: appointment.status, newStatus: appointment.status, reason: "CUSTOMER_RESCHEDULED", metadata: { source: "PUBLIC_TOKEN", event: "CUSTOMER_RESCHEDULED", previousStartsAt: appointment.startsAt.toISOString(), previousEndsAt: appointment.endsAt.toISOString(), startsAt: input.startsAt.toISOString(), endsAt: endsAt.toISOString() } });
     });

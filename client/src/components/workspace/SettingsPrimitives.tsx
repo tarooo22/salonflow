@@ -7,7 +7,7 @@ import React, { type ReactNode, useState } from "react";
 export type SettingsNavItem = { id: string; label: string; ownerOnly?: boolean };
 
 export function SettingsSectionNav({ items, activeId, onChange, isOwner }: { items: SettingsNavItem[]; activeId: string; onChange: (id: string) => void; isOwner: boolean }) {
-  return <nav className="border-b border-border" aria-label="პარამეტრების სექციები"><div className="-mb-px flex gap-1 overflow-x-auto">{items.filter(item => !item.ownerOnly || isOwner).map(item => <Button key={item.id} type="button" variant="ghost" className={`min-h-11 shrink-0 justify-start rounded-b-none border-b-2 ${activeId === item.id ? "border-foreground font-bold text-foreground" : "border-transparent text-muted-foreground"}`} aria-pressed={activeId === item.id} onClick={() => onChange(item.id)}>{item.label}</Button>)}</div></nav>;
+  return <nav aria-label="პარამეტრების სექციები"><div className="flex gap-1.5 overflow-x-auto py-1 [mask-image:linear-gradient(to_right,#000_85%,transparent)] md:[mask-image:none]">{items.filter(item => !item.ownerOnly || isOwner).map(item => <Button key={item.id} type="button" variant="ghost" className={`h-11 shrink-0 rounded-full px-4 text-sm font-semibold md:h-10 ${activeId === item.id ? "bg-[var(--sf-accent-soft)] text-[var(--sf-accent-ink)] hover:bg-[var(--sf-accent-soft)] hover:text-[var(--sf-accent-ink)]" : "text-muted-foreground hover:text-foreground"}`} aria-pressed={activeId === item.id} onClick={() => onChange(item.id)}>{item.label}</Button>)}</div></nav>;
 }
 
 export function SettingsSection({ id, title, description, children, action }: { id: string; title: string; description?: string; children: ReactNode; action?: ReactNode }) {

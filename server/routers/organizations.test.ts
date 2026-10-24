@@ -150,3 +150,17 @@ describe("organizations.setVertical", () => {
     await expect(organizationRouter.createCaller({ user } as never).setVertical({ organizationId: "organization_0001", vertical: "SPA" as never })).rejects.toThrow();
   });
 });
+
+describe("organizations.listLocationOpeningHours", () => {
+  it("is open to every workspace role and scopes the rows to the organization's own location", async () => {
+    const rows = [{ weekday: 0, opensAt: "10:00:00", closesAt: "20:00:00" }];
+    const where = vi.fn(() => ({ orderBy: async () => rows }));
+    mocked.db = { select: () => ({ from: () => ({ innerJoin: () => ({ where }) }) }) };
+
+    const result = await organizationRouter.createCaller({ user } as never).listLocationOpeningHours({ organizationId: "organization_0001", locationId: "location_00000001" });
+
+    expect(result).toEqual(rows);
+    expect(mocked.requireOrganizationRole).toHaveBeenCalledWith(user, "organization_0001", ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"]);
+    expect(where).toHaveBeenCalledOnce();
+  });
+});

@@ -21,10 +21,14 @@ async function inviteToken() {
   return { token, invite };
 }
 
-function inviteDb(selectRows: unknown[][], affectedRows = 1) {
+function inviteDb(selectRows: unknown[][], affectedRows = 1, txSelectRows: unknown[] = []) {
   let call = 0;
   const updateSet = vi.fn(() => ({ where: vi.fn(async () => [{ affectedRows }]) }));
-  const tx = { insert: vi.fn(() => ({ values: vi.fn(async () => undefined) })), update: vi.fn(() => ({ set: updateSet })) };
+  const tx = {
+    insert: vi.fn(() => ({ values: vi.fn(async () => undefined) })), update: vi.fn(() => ({ set: updateSet })),
+    delete: vi.fn(() => ({ where: vi.fn(async () => undefined) })),
+    select: vi.fn(() => ({ from: () => ({ where: () => ({ limit: async () => txSelectRows }) }) })),
+  };
   return {
     select: vi.fn(() => ({ from: () => ({ where: () => ({ limit: async () => selectRows[call++] ?? [] }) }) })),
     transaction: vi.fn(async (callback: (transaction: typeof tx) => unknown) => callback(tx)),
@@ -64,6 +68,20 @@ describe("invitations.accept", () => {
     expect(db.updateSet).toHaveBeenCalledWith(expect.objectContaining({ status: "ACCEPTED", acceptedByUserId: 51 }));
     expect(mocked.hashPassword).not.toHaveBeenCalled();
     expect(cookie).not.toHaveBeenCalled();
+  });
+
+  it("reactivates the removed member's membership and staff profile instead of inserting duplicates", async () => {
+    const { token, invite } = await inviteToken();
+    const former = { id: "membership_old_0001", status: "DISABLED" };
+    const db = inviteDb([[invite], [existingUser], [former]], 1, [{ id: "staff_profile_old_01" }]);
+    mocked.db = db;
+    const { ctx } = context(existingUser);
+
+    await expect(invitationsRouter.createCaller(ctx).accept({ token })).resolves.toEqual({ organizationId: "organization_2026_abcd", role: "STAFF" });
+    expect(db.tx.insert).not.toHaveBeenCalled();
+    expect(db.updateSet).toHaveBeenCalledWith(expect.objectContaining({ status: "ACTIVE", role: "STAFF", disabledAt: null }));
+    expect(db.updateSet).toHaveBeenCalledWith(expect.objectContaining({ status: "ACTIVE", onlineBookingVisible: true }));
+    expect(db.updateSet).toHaveBeenCalledWith(expect.objectContaining({ status: "ACCEPTED" }));
   });
 
   it("rolls back when the invite was already claimed by a concurrent accept", async () => {

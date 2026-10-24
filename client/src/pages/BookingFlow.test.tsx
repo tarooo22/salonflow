@@ -81,6 +81,8 @@ describe("public booking conversion helpers", () => {
   it("tells a taken slot from a lost connection using what the commit mutation actually returns", () => {
     expect(isSlotTakenError({ message: "ეს დრო ახლახან დაიკავეს. აირჩიეთ სხვა თავისუფალი დრო." })).toBe(true);
     expect(isSlotTakenError({ message: "The selected time is no longer available" })).toBe(true);
+    expect(isSlotTakenError({ message: "anything", data: { code: "CONFLICT" } })).toBe(true);
+    expect(isSlotTakenError({ message: "anything", data: { code: "BAD_REQUEST" } })).toBe(false);
     expect(isSlotTakenError({ message: "მიუთითეთ სწორი ქართული მობილურის ნომერი." })).toBe(false);
     expect(isNetworkError({ data: undefined })).toBe(true);
     expect(isNetworkError({ data: { code: "INTERNAL_SERVER_ERROR" } })).toBe(false);

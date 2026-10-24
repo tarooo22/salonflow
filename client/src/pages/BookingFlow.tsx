@@ -168,11 +168,10 @@ export function getBookingValidationIssue(input: { step: number; serviceId?: str
   return null;
 }
 
-// The commit endpoints throw plain errors without a code, so a taken slot is told apart by the server's own message
-// (Georgian for the multi-service route, English for the single-service route). shortcut: message match, replace with a stable error code on the server.
-// Server messages from server/routers/public.ts that mean "pick another time"; booking-window misses too.
+// The commit endpoints throw CONFLICT for a taken slot or a booking-window miss; the message match is a fallback.
 const SLOT_TAKEN_MESSAGES = ["ეს დრო ახლახან დაიკავეს", "The selected time is no longer available", "ჩაწერის დაშვებულ დიაპაზონში არ არის", "falls outside the booking window"];
-export function isSlotTakenError(error: { message?: string }) {
+export function isSlotTakenError(error: { message?: string; data?: unknown }) {
+  if ((error.data as { code?: string } | null | undefined)?.code === "CONFLICT") return true;
   const message = error.message ?? "";
   return SLOT_TAKEN_MESSAGES.some(part => message.includes(part));
 }

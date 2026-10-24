@@ -236,7 +236,7 @@ describe("public booking router safeguards", () => {
       [], [activeLocation], [activeService], [{ id: "staff_any_01", name: "ნინო", durationOverrideMinutes: null }],
     ], [[], [workingRule], exceptions, [], []]);
     mocked.db = db;
-    await expect(caller().commitBooking({ ...availabilityInput(), startsAt, staffProfileId: "ANY_AVAILABLE", firstName: "თამარი", phone: "+995 555 12 34 56", bookingTermsConsent: true, idempotencyKey: "booking_hours_guard_001" })).rejects.toThrow("The selected time is no longer available");
+    await expect(caller().commitBooking({ ...availabilityInput(), startsAt, staffProfileId: "ANY_AVAILABLE", firstName: "თამარი", phone: "+995 555 12 34 56", bookingTermsConsent: true, idempotencyKey: "booking_hours_guard_001" })).rejects.toMatchObject({ code: "CONFLICT", message: "The selected time is no longer available" });
     expect(db.values).not.toHaveBeenCalledWith(expect.objectContaining({ source: "PUBLIC_WEB" }));
   });
 

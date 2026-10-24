@@ -151,6 +151,7 @@ export const invitationsRouter = router({
     if (!normalizedEmail) throw new TRPCError({ code: "BAD_REQUEST", message: "ელფოსტა არასწორია." });
 
     const [existingUser] = await db.select().from(users).where(eq(users.normalizedEmail, normalizedEmail)).limit(1);
+    let formerMembershipId: string | undefined;
     // An existing account joins only when its owner is the signed-in caller; the invite link alone is not proof of identity.
     if (existingUser) {
       if (ctx.user?.id !== existingUser.id) {
@@ -161,6 +162,8 @@ export const invitationsRouter = router({
       if (existingMembership && existingMembership.status === "ACTIVE") {
         throw new TRPCError({ code: "CONFLICT", message: "ეს მომხმარებელი უკვე მიღებულია სამუშაო სივრცეში." });
       }
+      // A removed member keeps their row (unique per organization and user), so a re-invite reactivates it.
+      formerMembershipId = existingMembership?.id;
     } else if (!input.password) {
       throw new TRPCError({ code: "BAD_REQUEST", message: "პაროლი მინიმუმ 10 სიმბოლოს უნდა შეიცავდეს." });
     }
@@ -188,21 +191,33 @@ export const invitationsRouter = router({
         userId = inserted.id;
       }
 
-      const membershipId = nanoid(21);
-      await tx.insert(organizationMemberships).values({
-        id: membershipId, organizationId: payload.organizationId, userId, role: payload.role,
-        status: "ACTIVE", invitedByUserId: invite.invitedByUserId, invitedAt: invite.createdAt,
-        activatedAt: new Date(),
-      });
+      const membershipId = formerMembershipId ?? nanoid(21);
+      const membershipValues = {
+        role: payload.role, status: "ACTIVE" as const, invitedByUserId: invite.invitedByUserId, invitedAt: invite.createdAt,
+        activatedAt: new Date(), disabledAt: null, permissionOverrides: null,
+      };
+      if (formerMembershipId) {
+        await tx.update(organizationMemberships).set(membershipValues).where(eq(organizationMemberships.id, membershipId));
+      } else {
+        await tx.insert(organizationMemberships).values({ id: membershipId, organizationId: payload.organizationId, userId, ...membershipValues });
+      }
 
-      // Auto-create a staff profile so the new member appears immediately.
-      const staffProfileId = nanoid(21);
-      await tx.insert(staffProfiles).values({
-        id: staffProfileId, membershipId,
+      // Auto-create (or reactivate) a staff profile so the member appears immediately.
+      const profileValues = {
         publicDisplayName: payload.publicDisplayName,
-        jobTitle: payload.jobTitle, specialty: payload.specialty,
-        color: payload.color, onlineBookingVisible: true,
-      });
+        jobTitle: payload.jobTitle ?? null, specialty: payload.specialty ?? null,
+        color: payload.color, onlineBookingVisible: true, status: "ACTIVE" as const,
+      };
+      const [formerProfile] = formerMembershipId
+        ? await tx.select({ id: staffProfiles.id }).from(staffProfiles).where(eq(staffProfiles.membershipId, membershipId)).limit(1)
+        : [];
+      const staffProfileId = formerProfile?.id ?? nanoid(21);
+      if (formerProfile) {
+        await tx.update(staffProfiles).set(profileValues).where(eq(staffProfiles.id, staffProfileId));
+        await tx.delete(staffLocations).where(eq(staffLocations.staffProfileId, staffProfileId));
+      } else {
+        await tx.insert(staffProfiles).values({ id: staffProfileId, membershipId, ...profileValues });
+      }
       if (payload.locationId) {
         await tx.insert(staffLocations).values({ staffProfileId, locationId: payload.locationId });
       }

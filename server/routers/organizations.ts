@@ -1,12 +1,12 @@
 import { and, asc, eq } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { nanoid } from "nanoid";
-import { auditLogs, locations, organizationMemberships, organizations, staffLocations, staffProfiles, trialAccessEvents } from "../../drizzle/schema";
+import { auditLogs, locationOpeningHours, locations, organizationMemberships, organizations, staffLocations, staffProfiles, trialAccessEvents } from "../../drizzle/schema";
 import { requireOrganizationRole } from "../access";
 import { requireDb } from "../db";
 import { normalizeEmail, normalizeGeorgianPhone } from "../lib/normalization";
 import { claimTrialForOrganization, requireApprovedTrialForWorkspaceCreation } from "../lib/trialAccess";
-import { locationCreateSchema, locationSettingsUpdateSchema, organizationCreateSchema, organizationScopeSchema, organizationSetVerticalSchema, workspaceSetupSchema } from "../../shared/validation";
+import { locationCreateSchema, locationSettingsUpdateSchema, opaqueIdSchema, organizationCreateSchema, organizationScopeSchema, organizationSetVerticalSchema, workspaceSetupSchema } from "../../shared/validation";
 import { protectedProcedure, router } from "../_core/trpc";
 
 export const organizationRouter = router({
@@ -166,5 +166,15 @@ export const organizationRouter = router({
       eq(locations.organizationId, input.organizationId),
       eq(locations.status, "ACTIVE"),
     )).orderBy(asc(locations.name));
+  }),
+
+  // Weekday follows the availability engine (0 = Monday); times are "HH:mm:ss" local to the location.
+  listLocationOpeningHours: protectedProcedure.input(organizationScopeSchema.extend({ locationId: opaqueIdSchema })).query(async ({ ctx, input }) => {
+    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"]);
+    const db = await requireDb();
+    return db.select({ weekday: locationOpeningHours.weekday, opensAt: locationOpeningHours.startLocalTime, closesAt: locationOpeningHours.endLocalTime }).from(locationOpeningHours)
+      .innerJoin(locations, eq(locations.id, locationOpeningHours.locationId))
+      .where(and(eq(locationOpeningHours.locationId, input.locationId), eq(locations.organizationId, input.organizationId)))
+      .orderBy(asc(locationOpeningHours.weekday));
   }),
 });

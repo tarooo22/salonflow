@@ -12,14 +12,15 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 
 const TIMEZONES = ["Asia/Tbilisi", "Europe/London", "Europe/Berlin", "America/New_York"];
+// Schema weekday is 0=Monday … 6=Sunday, the same as availability and the Staff editor.
 const WEEKDAYS = [
-  { weekday: 1, label: "ორშაბათი" }, { weekday: 2, label: "სამშაბათი" }, { weekday: 3, label: "ოთხშაბათი" },
-  { weekday: 4, label: "ხუთშაბათი" }, { weekday: 5, label: "პარასკევი" }, { weekday: 6, label: "შაბათი" }, { weekday: 0, label: "კვირა" },
+  { weekday: 0, label: "ორშაბათი" }, { weekday: 1, label: "სამშაბათი" }, { weekday: 2, label: "ოთხშაბათი" },
+  { weekday: 3, label: "ხუთშაბათი" }, { weekday: 4, label: "პარასკევი" }, { weekday: 5, label: "შაბათი" }, { weekday: 6, label: "კვირა" },
 ];
 
 type HoursRow = { weekday: number; enabled: boolean; startLocalTime: string; endLocalTime: string };
 
-const initialHours: HoursRow[] = WEEKDAYS.map(({ weekday }) => ({ weekday, enabled: weekday >= 1 && weekday <= 5, startLocalTime: "10:00", endLocalTime: "18:00" }));
+const initialHours: HoursRow[] = WEEKDAYS.map(({ weekday }) => ({ weekday, enabled: weekday <= 4, startLocalTime: "10:00", endLocalTime: "18:00" }));
 
 export default function WorkspaceSetup() {
   const [, setRoute] = useLocation();

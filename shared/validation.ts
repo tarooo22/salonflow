@@ -471,21 +471,6 @@ export const scheduleExceptionUpdateSchema = scheduleExceptionCreateSchema.safeE
   id: opaqueIdSchema,
 });
 
-export const appointmentCreateSchema = z.object({
-  organizationId: opaqueIdSchema,
-  locationId: opaqueIdSchema,
-  clientId: opaqueIdSchema.optional(),
-  staffProfileId: opaqueIdSchema,
-  startsAt: z.coerce.date(),
-  endsAt: z.coerce.date(),
-  source: z.enum(["PUBLIC_WEB", "MANAGER", "RECEPTION", "STAFF", "WALK_IN", "IMPORT"]),
-  customerNote: z.string().trim().max(2000).optional(),
-  internalNote: z.string().trim().max(2000).optional(),
-  subtotalTetri: z.number().int().min(0),
-  discountTetri: z.number().int().min(0).default(0),
-  totalTetri: z.number().int().min(0),
-});
-
 export const walkInCreateSchema = z.object({
   organizationId: opaqueIdSchema,
   locationId: opaqueIdSchema,
@@ -567,17 +552,6 @@ export const calendarRangeSchema = z.object({
 
 export const todayDashboardSchema = organizationScopeSchema.extend({
   locationId: opaqueIdSchema.optional(),
-});
-
-export const paymentCreateSchema = z.object({
-  organizationId: opaqueIdSchema,
-  appointmentId: opaqueIdSchema,
-  amountTetri: z.number().int().positive(),
-  refundedTetri: z.number().int().min(0).default(0),
-  method: z.enum(["CASH", "CARD_TERMINAL", "BANK_TRANSFER", "ONLINE", "OTHER"]),
-  status: z.enum(["PENDING", "PAID", "PARTIALLY_REFUNDED", "REFUNDED", "FAILED"]).default("PAID"),
-  externalReference: z.string().trim().max(160).optional(),
-  notes: z.string().trim().max(2000).optional(),
 });
 
 export const expenseCreateSchema = z.object({
