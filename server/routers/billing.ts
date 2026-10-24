@@ -17,7 +17,7 @@ async function ownerMembership(userId: number, organizationId: string) {
   return db;
 }
 function requireAdmin(role: string) { if (role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "ეს მოქმედება ხელმისაწვდომია მხოლოდ Chawera platform admin-ისთვის." }); }
-function monthFrom(date: Date) { const value = new Date(date); value.setMonth(value.getMonth() + 1); return value; }
+function monthFrom(date: Date) { const value = new Date(date); value.setUTCMonth(value.getUTCMonth() + 1); return value; }
 function hasReceiptSignature(bytes: Buffer, mimeType: string) {
   if (mimeType === "image/jpeg") return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
   if (mimeType === "image/png") return bytes.length >= 8 && bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
@@ -63,6 +63,9 @@ export const billingRouter = router({
     const stored = await storagePut(`billing-receipts/${organization.id}/${nanoid(12)}.${ext}`, bytes, input.mimeType);
     const id = nanoid(21);
     await db.transaction(async tx => {
+      await tx.select({ id: organizations.id }).from(organizations).where(eq(organizations.id, organization.id)).for("update");
+      const [pendingNow] = await tx.select({ id: billingPaymentSubmissions.id }).from(billingPaymentSubmissions).where(and(eq(billingPaymentSubmissions.organizationId, organization.id), or(eq(billingPaymentSubmissions.status, "SUBMITTED"), eq(billingPaymentSubmissions.status, "UNDER_REVIEW")))).limit(1);
+      if (pendingNow) throw new TRPCError({ code: "CONFLICT", message: "წინა ქვითარი უკვე შემოწმებას ელოდება. ახალი ფაილის გაგზავნამდე დაელოდეთ გადაწყვეტილებას." });
       await tx.insert(billingPaymentSubmissions).values({ id, organizationId: organization.id, submittedByUserId: ctx.user.id, billingCodeSnapshot: organization.billingCode!, amountTetri: config.monthlyPriceTetri, transferComment: input.transferComment, receiptKey: stored.key, receiptMimeType: input.mimeType, receiptOriginalName: input.originalName, receiptSizeBytes: bytes.length, status: "SUBMITTED" });
       await tx.insert(billingPaymentEvents).values({ id: nanoid(21), billingPaymentSubmissionId: id, eventType: "SUBMITTED", actorUserId: ctx.user.id, metadata: { billingCode: organization.billingCode, transferComment: input.transferComment } });
     });
@@ -82,16 +85,19 @@ export const billingRouter = router({
     const db = await requireDb();
     const [submission] = await db.select().from(billingPaymentSubmissions).where(eq(billingPaymentSubmissions.id, input.submissionId)).limit(1);
     if (!submission || !["SUBMITTED", "UNDER_REVIEW"].includes(submission.status)) throw new TRPCError({ code: "CONFLICT", message: "ეს ქვითარი უკვე დამუშავებულია ან ვერ მოიძებნა." });
-    const [existing] = await db.select().from(organizationAccessGrants).where(and(eq(organizationAccessGrants.organizationId, submission.organizationId), eq(organizationAccessGrants.status, "ACTIVE"), gt(organizationAccessGrants.endsAt, new Date()))).orderBy(desc(organizationAccessGrants.endsAt)).limit(1);
-    const startsAt = existing?.endsAt && existing.endsAt > new Date() ? existing.endsAt : new Date();
-    const endsAt = monthFrom(startsAt);
     const grantId = nanoid(21);
     const reviewedAt = new Date();
-    await db.transaction(async tx => {
+    const endsAt = await db.transaction(async tx => {
+      // Lock the organization row so concurrent approvals serialize and each reads the previous grant's end.
+      await tx.select({ id: organizations.id }).from(organizations).where(eq(organizations.id, submission.organizationId)).for("update");
       const result = await tx.update(billingPaymentSubmissions).set({ status: "APPROVED", reviewedByUserId: ctx.user.id, reviewedAt, reviewNoteKa: input.note ?? null }).where(and(eq(billingPaymentSubmissions.id, submission.id), or(eq(billingPaymentSubmissions.status, "SUBMITTED"), eq(billingPaymentSubmissions.status, "UNDER_REVIEW"))));
       if (result[0]?.affectedRows !== 1) throw new TRPCError({ code: "CONFLICT", message: "ეს ქვითარი უკვე დამუშავდა სხვა admin-ის მიერ." });
+      const [existing] = await tx.select().from(organizationAccessGrants).where(and(eq(organizationAccessGrants.organizationId, submission.organizationId), eq(organizationAccessGrants.status, "ACTIVE"), gt(organizationAccessGrants.endsAt, new Date()))).orderBy(desc(organizationAccessGrants.endsAt)).limit(1);
+      const startsAt = existing?.endsAt && existing.endsAt > new Date() ? existing.endsAt : new Date();
+      const endsAt = monthFrom(startsAt);
       await tx.insert(organizationAccessGrants).values({ id: grantId, organizationId: submission.organizationId, source: "MONTHLY_MANUAL", billingPaymentSubmissionId: submission.id, startsAt, endsAt, grantedByUserId: ctx.user.id, grantReasonKa: input.note ?? "ხელით დადასტურებული 1-თვიანი პაკეტი" });
       await tx.insert(billingPaymentEvents).values({ id: nanoid(21), billingPaymentSubmissionId: submission.id, eventType: "APPROVED_MONTHLY", actorUserId: ctx.user.id, metadata: { grantId, endsAt: endsAt.toISOString() } });
+      return endsAt;
     });
     return { endsAt };
   }),

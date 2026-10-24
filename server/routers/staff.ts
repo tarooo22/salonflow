@@ -63,6 +63,10 @@ export const staffRouter = router({
     const db = await requireDb();
     const [membership] = await db.select().from(organizationMemberships).where(and(eq(organizationMemberships.id, input.membershipId), eq(organizationMemberships.organizationId, input.organizationId), eq(organizationMemberships.status, "ACTIVE"))).limit(1);
     if (!membership) throw new Error("Membership is not active in this organization");
+    const locationRows = await db.select({ id: locations.id }).from(locations)
+      .where(and(eq(locations.organizationId, input.organizationId), eq(locations.status, "ACTIVE")));
+    const validIds = new Set(locationRows.map(row => row.id));
+    for (const id of input.locationIds) if (!validIds.has(id)) throw new TRPCError({ code: "BAD_REQUEST", message: "მითითებული ფილიალი აღარ არის აქტიური." });
     const staffProfileId = nanoid(21);
     await db.transaction(async tx => {
       await tx.insert(staffProfiles).values({ id: staffProfileId, membershipId: input.membershipId, publicDisplayName: input.publicDisplayName, jobTitle: input.jobTitle, specialty: input.specialty, onlineBookingVisible: input.onlineBookingVisible, color: input.color });

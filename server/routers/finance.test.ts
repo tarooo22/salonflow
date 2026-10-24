@@ -122,6 +122,28 @@ describe("finance router mutations", () => {
     expect(db.insert).not.toHaveBeenCalled();
   });
 
+  it("backfill allocates an appointment discount across its service lines instead of applying it to each", async () => {
+    const queue: unknown[][] = [
+      [{ id: ids.ruleId, organizationId: ids.organizationId, status: "ACTIVE", type: "PERCENTAGE", valueTetri: 1_000, locationId: null, staffProfileId: null, serviceId: null }],
+      [
+        { appt: { id: ids.appointmentId, locationId: ids.locationId, discountTetri: 3_000 }, line: { id: "line_1", staffProfileId: "staff_1", serviceId: "svc_1", priceTetriSnapshot: 10_000 } },
+        { appt: { id: ids.appointmentId, locationId: ids.locationId, discountTetri: 3_000 }, line: { id: "line_2", staffProfileId: "staff_1", serviceId: "svc_2", priceTetriSnapshot: 5_000 } },
+      ],
+      [],
+    ];
+    const chain: Record<string, unknown> = {};
+    chain.from = () => chain; chain.innerJoin = () => chain;
+    chain.where = () => ({ then: (resolve: (rows: unknown[]) => unknown) => Promise.resolve(queue.shift() ?? []).then(resolve) });
+    const values = vi.fn(async () => undefined);
+    mocked.db = { select: () => chain, insert: () => ({ values }) };
+    mocked.requireOrganizationAction.mockResolvedValue({ role: "OWNER" });
+
+    await expect(caller().runCommissionBackfill({ organizationId: ids.organizationId, startsAt: new Date("2026-08-01T00:00:00.000Z"), endsAt: new Date("2026-09-01T00:00:00.000Z") })).resolves.toEqual({ created: 2 });
+
+    expect(values).toHaveBeenNthCalledWith(1, expect.objectContaining({ calculationSnapshot: expect.objectContaining({ allocatedDiscountTetri: 2_000, netServiceTetri: 8_000 }) }));
+    expect(values).toHaveBeenNthCalledWith(2, expect.objectContaining({ calculationSnapshot: expect.objectContaining({ allocatedDiscountTetri: 1_000, netServiceTetri: 4_000 }) }));
+  });
+
   it("rejects a second commission for the same appointment-service line", async () => {
     const db = createCommissionDb([
       [{ id: ids.appointmentId, locationId: ids.locationId, discountTetri: 0 }],

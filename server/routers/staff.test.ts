@@ -36,11 +36,12 @@ const user = {
   lastSignedIn: new Date("2026-01-01T00:00:00.000Z"),
 };
 
-function createStaffDb(membershipRows: unknown[]) {
+function createStaffDb(membershipRows: unknown[], locationRows: unknown[] = [{ id: "location_0001" }, { id: "location_0002" }]) {
   const values = vi.fn(async () => undefined);
   const tx = { insert: () => ({ values }) };
+  const where = () => Object.assign(Promise.resolve(locationRows), { limit: vi.fn(async () => membershipRows) });
   return {
-    select: vi.fn(() => ({ from: vi.fn(() => ({ where: vi.fn(() => ({ limit: vi.fn(async () => membershipRows) })) })) })),
+    select: vi.fn(() => ({ from: vi.fn(() => ({ where: vi.fn(where) })) })),
     transaction: vi.fn(async (callback: (transaction: typeof tx) => Promise<void>) => callback(tx)),
     values,
   };
@@ -73,6 +74,22 @@ describe("staff.createProfile", () => {
       { staffProfileId: "staff_profile_00001", locationId: "location_0001" },
       { staffProfileId: "staff_profile_00001", locationId: "location_0002" },
     ]);
+  });
+
+  it("rejects a location that is not an active location of this organization", async () => {
+    const db = createStaffDb([{ id: "membership_0001", status: "ACTIVE" }], [{ id: "location_0001" }]);
+    mocked.db = db;
+    mocked.requireOrganizationRole.mockResolvedValue({ role: "OWNER" });
+
+    await expect(staffRouter.createCaller({ user } as never).createProfile({
+      organizationId: "organization_001",
+      membershipId: "membership_0001",
+      publicDisplayName: "ლელა ბერიძე",
+      onlineBookingVisible: true,
+      color: "#17826A",
+      locationIds: ["location_0001", "other_org_location"],
+    })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(db.transaction).not.toHaveBeenCalled();
   });
 });
 

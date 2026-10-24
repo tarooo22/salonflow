@@ -1,12 +1,12 @@
 import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { TRPCError } from "@trpc/server";
-import { locations, locationOpeningHours, organizationMemberships, organizations, serviceCategories, services, staffLocations, staffProfiles, staffServices, trialAccessEvents, trialAccessRequests, workingHourRules } from "../../drizzle/schema";
+import { locations, locationOpeningHours, organizationMemberships, organizations, serviceCategories, services, staffLocations, staffProfiles, staffServices, trialAccessEvents, workingHourRules } from "../../drizzle/schema";
 import { guidedOnboardingSchema } from "../../shared/validation";
 import { protectedProcedure, router } from "../_core/trpc";
 import { requireDb } from "../db";
 import { normalizeEmail, normalizeGeorgianPhone } from "../lib/normalization";
-import { requireApprovedTrialForWorkspaceCreation } from "../lib/trialAccess";
+import { claimTrialForOrganization, requireApprovedTrialForWorkspaceCreation } from "../lib/trialAccess";
 
 function duplicateCodeMessage(kind: "organization" | "location", value: string) {
   return kind === "location"
@@ -135,7 +135,7 @@ export const onboardingRouter = router({
         });
         await tx.insert(staffServices).values({ staffProfileId, serviceId, canPerform: true });
       }
-      await tx.update(trialAccessRequests).set({ organizationId }).where(and(eq(trialAccessRequests.id, trial.id), eq(trialAccessRequests.status, "APPROVED")));
+      await claimTrialForOrganization(tx, trial.id, organizationId);
       await tx.insert(trialAccessEvents).values({ id: nanoid(21), trialRequestId: trial.id, eventType: "WORKSPACE_CREATED", actorUserId: ctx.user.id, metadata: { organizationId, locationId } });
       });
     } catch (error) {

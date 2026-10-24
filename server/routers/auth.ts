@@ -21,7 +21,7 @@ async function issueSession(ctx: { req: any; res: any }, user: { openId: string;
 }
 
 export const authRouter = router({
-  me: publicProcedure.query(opts => opts.ctx.user),
+  me: publicProcedure.query(({ ctx }) => ctx.user ? { ...safeUser(ctx.user), lastSignedIn: ctx.user.lastSignedIn } : null),
   register: publicProcedure.input(localRegistrationSchema).mutation(async ({ ctx, input }) => {
     const existing = await getUserByNormalizedEmail(input.email);
     if (existing) throw new TRPCError({ code: "CONFLICT", message: "ამ ელფოსტით ანგარიში უკვე არსებობს. შედით სისტემაში." });

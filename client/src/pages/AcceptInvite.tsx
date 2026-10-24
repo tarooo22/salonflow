@@ -1,3 +1,4 @@
+import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +16,7 @@ export default function AcceptInvite() {
   const utils = trpc.useUtils();
   const token = params?.token ?? "";
   const preview = trpc.invitations.previewByToken.useQuery({ token }, { enabled: Boolean(token), retry: false });
+  const { user } = useAuth();
   const [fullName, setFullName] = useState("");
   const [password, setPassword] = useState("");
   const [visible, setVisible] = useState(false);
@@ -31,12 +33,15 @@ export default function AcceptInvite() {
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
+    if (signedInAsInvitee) { accept.mutate({ token }); return; }
     if (password.length < 10) { setError("პაროლი მინიმუმ 10 სიმბოლოს უნდა შეიცავდეს."); return; }
     accept.mutate({ token, password, fullName: fullName || undefined });
   };
 
   const invalid = preview.isSuccess && preview.data?.valid === false;
   const invite = preview.data?.valid ? preview.data : undefined;
+  // An existing account joins by being signed in; only a new invitee sets a password.
+  const signedInAsInvitee = Boolean(user?.email && invite && user.email.trim().toLowerCase() === invite.email.trim().toLowerCase());
 
   return <main className="sf-public-page sf-auth-shell grid min-h-screen lg:grid-cols-[.92fr_1.08fr]">
     <section className="sf-auth-hero hidden p-10 text-white lg:flex lg:flex-col lg:justify-between">
@@ -70,10 +75,13 @@ export default function AcceptInvite() {
             {preview.isLoading ? <p className="text-sm text-[var(--sf-muted)]">მოწვევა იტვირთება…</p> : null}
             {invalid ? <div className="flex gap-3 rounded-xl border border-[color-mix(in_srgb,var(--sf-danger)_30%,transparent)] bg-[color-mix(in_srgb,var(--sf-danger)_6%,transparent)] p-4 text-sm leading-6 text-[var(--sf-danger)]"><ShieldAlert className="mt-0.5 size-5 shrink-0" aria-hidden="true" /><div><p className="font-semibold">ეს მოწვევა აღარ მოქმედებს</p><p className="mt-1">ბმულის ვადა გავიდა ან უკვე გამოყენებულია. მოითხოვეთ ახალი მოწვევა თქვენი მენეჯერისგან.</p></div></div> : null}
             {invite ? <form className="space-y-5" onSubmit={submit} noValidate>
+              {signedInAsInvitee ? <p className="text-sm leading-6 text-[var(--sf-muted)]">შესული ხართ როგორც <span className="font-semibold">{user?.email}</span>. დაადასტურეთ და გუნდს ამ ანგარიშით შეუერთდებით.</p> : <>
               <div className="space-y-2"><Label htmlFor="invite-name">სახელი (არასავალდებულო)</Label><div className="relative"><UserRound className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--sf-muted)]" aria-hidden="true" /><Input id="invite-name" className="h-11 bg-[var(--sf-surface)] pl-10" value={fullName} onChange={event => setFullName(event.target.value)} placeholder={invite.publicDisplayName} autoFocus /></div></div>
               <div className="space-y-2"><Label htmlFor="invite-password">პაროლი</Label><div className="relative"><LockKeyhole className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--sf-muted)]" aria-hidden="true" /><Input id="invite-password" className="h-11 bg-[var(--sf-surface)] pl-10 pr-12" value={password} onChange={event => setPassword(event.target.value)} autoComplete="new-password" minLength={10} type={visible ? "text" : "password"} aria-invalid={Boolean(error)} required /><Button type="button" variant="publicQuiet" size="icon-sm" className="absolute right-1 top-1/2 -translate-y-1/2" aria-label={visible ? "პაროლის დამალვა" : "პაროლის ჩვენება"} onClick={() => setVisible(current => !current)}>{visible ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}</Button></div><p className="text-xs text-[var(--sf-muted)]">მინიმუმ 10 სიმბოლო.</p></div>
+              <p className="text-sm text-[var(--sf-muted)]">ამ ელფოსტით უკვე გაქვთ ანგარიში? <Link href={`/login?returnTo=${encodeURIComponent(window.location.pathname)}`} className="font-semibold underline underline-offset-4">შედით სისტემაში</Link> და ხელახლა გახსენით ეს ბმული.</p>
+              </>}
               {error ? <p role="alert" className="rounded-xl border border-[color-mix(in_srgb,var(--sf-danger)_30%,transparent)] bg-[color-mix(in_srgb,var(--sf-danger)_6%,transparent)] p-3 text-sm leading-6 text-[var(--sf-danger)]">{error}</p> : null}
-              <Button type="submit" variant="public" size="lg" className="w-full" disabled={accept.isPending}>{accept.isPending ? "მიმდინარეობს…" : <><CheckCircle2 className="size-4" aria-hidden="true" /> ანგარიშის დადასტურება</>}</Button>
+              <Button type="submit" variant="public" size="lg" className="w-full" disabled={accept.isPending}>{accept.isPending ? "მიმდინარეობს…" : <><CheckCircle2 className="size-4" aria-hidden="true" /> {signedInAsInvitee ? "მოწვევის მიღება" : "ანგარიშის დადასტურება"}</>}</Button>
             </form> : null}
             <div className="mt-6 border-t border-[var(--sf-line)] pt-5 text-center text-sm text-[var(--sf-muted)]"><Link href="/" className="underline-offset-4 hover:text-[var(--sf-accent-strong)] hover:underline">მთავარ გვერდზე დაბრუნება</Link></div>
           </div>

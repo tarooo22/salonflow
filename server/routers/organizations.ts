@@ -1,11 +1,11 @@
 import { and, asc, eq } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { nanoid } from "nanoid";
-import { auditLogs, locations, organizationMemberships, organizations, staffLocations, staffProfiles, trialAccessEvents, trialAccessRequests } from "../../drizzle/schema";
+import { auditLogs, locations, organizationMemberships, organizations, staffLocations, staffProfiles, trialAccessEvents } from "../../drizzle/schema";
 import { requireOrganizationRole } from "../access";
 import { requireDb } from "../db";
 import { normalizeEmail, normalizeGeorgianPhone } from "../lib/normalization";
-import { requireApprovedTrialForWorkspaceCreation } from "../lib/trialAccess";
+import { claimTrialForOrganization, requireApprovedTrialForWorkspaceCreation } from "../lib/trialAccess";
 import { locationCreateSchema, locationSettingsUpdateSchema, organizationCreateSchema, organizationScopeSchema, organizationSetVerticalSchema, workspaceSetupSchema } from "../../shared/validation";
 import { protectedProcedure, router } from "../_core/trpc";
 
@@ -47,7 +47,7 @@ export const organizationRouter = router({
         invitedAt: new Date(),
         activatedAt: new Date(),
       });
-      await tx.update(trialAccessRequests).set({ organizationId }).where(and(eq(trialAccessRequests.id, trial.id), eq(trialAccessRequests.status, "APPROVED")));
+      await claimTrialForOrganization(tx, trial.id, organizationId);
       await tx.insert(trialAccessEvents).values({ id: nanoid(21), trialRequestId: trial.id, eventType: "WORKSPACE_CREATED_LEGACY", actorUserId: ctx.user.id, metadata: { organizationId } });
     });
     return { id: organizationId, membershipId };
@@ -95,7 +95,7 @@ export const organizationRouter = router({
         maximumAdvanceDays: input.location.maximumAdvanceDays,
         cancellationCutoffMinutes: input.location.cancellationCutoffMinutes,
       });
-      await tx.update(trialAccessRequests).set({ organizationId }).where(and(eq(trialAccessRequests.id, trial.id), eq(trialAccessRequests.status, "APPROVED")));
+      await claimTrialForOrganization(tx, trial.id, organizationId);
       await tx.insert(trialAccessEvents).values({ id: nanoid(21), trialRequestId: trial.id, eventType: "WORKSPACE_CREATED_LEGACY", actorUserId: ctx.user.id, metadata: { organizationId, locationId } });
     });
     return { organizationId, membershipId, locationId };

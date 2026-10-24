@@ -17,7 +17,7 @@ import {
 import { requireOrganizationAction, requireOrganizationRole } from "../access";
 import { requireDb } from "../db";
 import { appointmentBlocksInterval, canTransitionAppointment, derivePaymentDisplayState, intervalsOverlap, summarizeOperationalAppointments } from "../lib/appointments";
-import { appointmentCreateSchema, appointmentRescheduleSchema, appointmentStatusUpdateSchema, calendarRangeSchema, opaqueIdSchema, organizationScopeSchema, todayDashboardSchema, walkInCreateSchema } from "../../shared/validation";
+import { appointmentRescheduleSchema, appointmentStatusUpdateSchema, calendarRangeSchema, opaqueIdSchema, organizationScopeSchema, todayDashboardSchema, walkInCreateSchema } from "../../shared/validation";
 import { protectedProcedure, router } from "../_core/trpc";
 import { businessDayRange } from "@shared/timezones";
 
@@ -52,34 +52,6 @@ export const appointmentsRouter = router({
       .innerJoin(services, and(eq(services.id, staffServices.serviceId), eq(services.organizationId, input.organizationId), eq(services.status, "ACTIVE")))
       .where(and(eq(staffProfiles.status, "ACTIVE"), eq(organizationMemberships.organizationId, input.organizationId), eq(organizationMemberships.status, "ACTIVE")))
       .orderBy(asc(staffProfiles.publicDisplayName), asc(services.nameKa));
-  }),
-
-  listToday: protectedProcedure.input(organizationScopeSchema).query(async ({ ctx, input }) => {
-    const membership = await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"]);
-    const db = await requireDb();
-    const start = new Date();
-    start.setUTCHours(0, 0, 0, 0);
-    const end = new Date(start);
-    end.setUTCDate(end.getUTCDate() + 1);
-
-    const staffProfileIds = membership.role === "STAFF"
-      ? (await db.select({ id: staffProfiles.id }).from(staffProfiles).where(eq(staffProfiles.membershipId, membership.id))).map(profile => profile.id)
-      : [];
-    const where = membership.role === "STAFF"
-      ? staffProfileIds.length ? and(
-          eq(appointments.organizationId, input.organizationId),
-          inArray(appointments.staffProfileId, staffProfileIds),
-          sql`${appointments.startsAt} >= ${start}`,
-          sql`${appointments.startsAt} < ${end}`,
-        ) : undefined
-      : and(
-          eq(appointments.organizationId, input.organizationId),
-          sql`${appointments.startsAt} >= ${start}`,
-          sql`${appointments.startsAt} < ${end}`,
-        );
-    if (!where) return [];
-
-    return db.select().from(appointments).where(where).orderBy(asc(appointments.startsAt));
   }),
 
   listRange: protectedProcedure.input(calendarRangeSchema).query(async ({ ctx, input }) => {
@@ -138,64 +110,6 @@ export const appointmentsRouter = router({
       })),
       payment: paymentByAppointment.get(row.appointment.id),
     }));
-  }),
-
-  create: protectedProcedure.input(appointmentCreateSchema).mutation(async ({ ctx, input }) => {
-    await requireOrganizationAction(ctx.user, input.organizationId, "calendar:manage");
-    if (input.startsAt >= input.endsAt) throw new Error("Appointment end must be after its start");
-    if (input.totalTetri !== input.subtotalTetri - input.discountTetri) throw new Error("Appointment total must be derived server-side from subtotal minus discount");
-
-    const db = await requireDb();
-    const id = nanoid(21);
-    const lockDates = enumerateUtcDates(input.startsAt, input.endsAt);
-
-    await db.transaction(async tx => {
-      for (const dateKey of lockDates) {
-        await tx.insert(scheduleLocks).values({
-          id: `${input.staffProfileId}:${dateKey}`,
-          staffProfileId: input.staffProfileId,
-          localDate: new Date(`${dateKey}T00:00:00.000Z`),
-        }).onDuplicateKeyUpdate({ set: { createdAt: new Date() } });
-      }
-
-      const existing = await tx.select().from(appointments).where(and(
-        eq(appointments.organizationId, input.organizationId),
-        eq(appointments.staffProfileId, input.staffProfileId),
-        inArray(appointments.status, ["PENDING", "CONFIRMED", "CHECKED_IN", "IN_SERVICE", "COMPLETED", "NO_SHOW"]),
-      ));
-
-      const conflict = existing.find(item => intervalsOverlap(input.startsAt, input.endsAt, item.startsAt, item.endsAt));
-      if (conflict) throw new Error("Selected slot is no longer available");
-
-      await tx.insert(appointments).values({
-        id,
-        organizationId: input.organizationId,
-        locationId: input.locationId,
-        clientId: input.clientId,
-        staffProfileId: input.staffProfileId,
-        startsAt: input.startsAt,
-        endsAt: input.endsAt,
-        source: input.source,
-        customerNote: input.customerNote,
-        internalNote: input.internalNote,
-        subtotalTetri: input.subtotalTetri,
-        discountTetri: input.discountTetri,
-        totalTetri: input.totalTetri,
-        createdByUserId: ctx.user.id,
-        status: input.source === "PUBLIC_WEB" ? "PENDING" : "CONFIRMED",
-      });
-
-      await tx.insert(appointmentStatusHistory).values({
-        id: nanoid(21),
-        appointmentId: id,
-        oldStatus: null,
-        newStatus: input.source === "PUBLIC_WEB" ? "PENDING" : "CONFIRMED",
-        actorUserId: ctx.user.id,
-        metadata: { source: input.source },
-      });
-    });
-
-    return { id };
   }),
 
   createWalkIn: protectedProcedure.input(walkInCreateSchema).mutation(async ({ ctx, input }) => {

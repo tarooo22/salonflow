@@ -122,17 +122,26 @@ export const financeRouter = router({
     const lineIds = eligible.map(row => row.line.id);
     const existing = lineIds.length ? await db.select({ id: commissionEntries.appointmentServiceId }).from(commissionEntries).where(inArray(commissionEntries.appointmentServiceId, lineIds)) : [];
     const alreadyEntered = new Set(existing.map(row => row.id));
+    // Same per-appointment discount allocation as createCommissionEntry.
+    const linesByAppointment = new Map<string, number[]>();
+    for (const row of eligible) linesByAppointment.set(row.appt.id, [...(linesByAppointment.get(row.appt.id) ?? []), row.line.priceTetriSnapshot]);
+    const discountsByAppointment = new Map<string, number[]>();
+    const indexByAppointment = new Map<string, number>();
     let created = 0;
     for (const row of eligible) {
+      const lineIndex = indexByAppointment.get(row.appt.id) ?? 0;
+      indexByAppointment.set(row.appt.id, lineIndex + 1);
+      if (!discountsByAppointment.has(row.appt.id)) discountsByAppointment.set(row.appt.id, splitDiscountAcrossServices(linesByAppointment.get(row.appt.id)!, row.appt.discountTetri));
+      const allocatedDiscountTetri = discountsByAppointment.get(row.appt.id)![lineIndex] ?? 0;
       if (!row.line.staffProfileId || !row.line.serviceId || alreadyEntered.has(row.line.id)) continue;
       const matched = rules.find(rule => commissionRuleApplies(rule, { locationId: row.appt.locationId, staffProfileId: row.line.staffProfileId!, serviceId: row.line.serviceId! }));
       if (!matched) continue;
-      const netServiceTetri = row.line.priceTetriSnapshot - Math.round(row.appt.discountTetri * (row.line.priceTetriSnapshot / (row.line.priceTetriSnapshot || 1)));
+      const netServiceTetri = row.line.priceTetriSnapshot - allocatedDiscountTetri;
       const amountTetri = calculateCommissionTetri(netServiceTetri, matched);
       await db.insert(commissionEntries).values({
         id: nanoid(21), appointmentId: row.appt.id, appointmentServiceId: row.line.id,
         staffProfileId: row.line.staffProfileId, ruleId: matched.id, amountTetri,
-        calculationSnapshot: { servicePriceTetri: row.line.priceTetriSnapshot, allocatedDiscountTetri: 0, netServiceTetri, ruleType: matched.type, ruleValueTetri: matched.valueTetri },
+        calculationSnapshot: { servicePriceTetri: row.line.priceTetriSnapshot, allocatedDiscountTetri, netServiceTetri, ruleType: matched.type, ruleValueTetri: matched.valueTetri },
       });
       created += 1;
     }

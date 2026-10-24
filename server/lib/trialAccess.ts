@@ -1,4 +1,4 @@
-import { and, desc, eq, gt } from "drizzle-orm";
+import { and, desc, eq, gt, isNull } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { nanoid } from "nanoid";
 import { organizationAccessGrants, organizationGovernance, trialAccessEvents, trialAccessRequests } from "../../drizzle/schema";
@@ -21,6 +21,15 @@ export async function getTrialRequestForUser(userId: number) {
   const db = await requireDb();
   const [trial] = await db.select().from(trialAccessRequests).where(eq(trialAccessRequests.userId, userId)).limit(1);
   return trial ? markExpired(trial) : null;
+}
+
+/**
+ * Atomically links the trial to the new workspace. Call inside the workspace-creation transaction
+ * after inserting the organization; throws if a concurrent create already claimed the trial.
+ */
+export async function claimTrialForOrganization(tx: Pick<Awaited<ReturnType<typeof requireDb>>, "update">, trialId: string, organizationId: string) {
+  const result = await tx.update(trialAccessRequests).set({ organizationId }).where(and(eq(trialAccessRequests.id, trialId), eq(trialAccessRequests.status, "APPROVED"), isNull(trialAccessRequests.organizationId)));
+  if (result[0]?.affectedRows !== 1) throw new TRPCError({ code: "CONFLICT", message: "ამ საცდელი წვდომისთვის სალონი უკვე შეიქმნა." });
 }
 
 export async function requireApprovedTrialForWorkspaceCreation(userId: number) {

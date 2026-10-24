@@ -4,6 +4,7 @@ const mocked = vi.hoisted(() => ({
   db: null as unknown,
   nanoid: vi.fn(),
   requireApprovedTrialForWorkspaceCreation: vi.fn(async () => ({ id: "trial_workspace_001" })),
+  claimTrialForOrganization: vi.fn(async () => undefined),
   requireOrganizationRole: vi.fn(async () => ({ id: "membership_owner_01", role: "OWNER" })),
 }));
 
@@ -12,7 +13,7 @@ vi.mock("../db", () => ({
 }));
 
 vi.mock("nanoid", () => ({ nanoid: mocked.nanoid }));
-vi.mock("../lib/trialAccess", () => ({ requireApprovedTrialForWorkspaceCreation: mocked.requireApprovedTrialForWorkspaceCreation }));
+vi.mock("../lib/trialAccess", () => ({ requireApprovedTrialForWorkspaceCreation: mocked.requireApprovedTrialForWorkspaceCreation, claimTrialForOrganization: mocked.claimTrialForOrganization }));
 vi.mock("../access", () => ({ requireOrganizationRole: mocked.requireOrganizationRole }));
 
 import { organizationRouter } from "./organizations";
@@ -96,7 +97,7 @@ describe("organizations.createWorkspace", () => {
       timezone: "Asia/Tbilisi",
       email: "owner@example.com",
     }));
-    expect(db.update).toHaveBeenCalledTimes(1);
+    expect(mocked.claimTrialForOrganization).toHaveBeenCalledWith(expect.anything(), "trial_workspace_001", expect.any(String));
     expect(db.values).toHaveBeenNthCalledWith(4, expect.objectContaining({
       trialRequestId: "trial_workspace_001",
       eventType: "WORKSPACE_CREATED_LEGACY",

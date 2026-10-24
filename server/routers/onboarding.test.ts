@@ -4,11 +4,12 @@ const mocked = vi.hoisted(() => ({
   db: null as unknown,
   ids: ["org_onboard_000000001", "member_onboard_00001", "location_onboard_0001", "staff_onboard_0000001", "opening_one_000000001", "rule_one_000000000001", "opening_two_000000001", "rule_two_000000000001", "category_onboard_0001", "service_onboard_00001"] as string[],
   requireApprovedTrialForWorkspaceCreation: vi.fn(async () => ({ id: "trial_onboarding_001" })),
+  claimTrialForOrganization: vi.fn(async () => undefined),
 }));
 
 vi.mock("../db", () => ({ requireDb: vi.fn(async () => mocked.db) }));
 vi.mock("nanoid", () => ({ nanoid: vi.fn(() => mocked.ids.shift()) }));
-vi.mock("../lib/trialAccess", () => ({ requireApprovedTrialForWorkspaceCreation: mocked.requireApprovedTrialForWorkspaceCreation }));
+vi.mock("../lib/trialAccess", () => ({ requireApprovedTrialForWorkspaceCreation: mocked.requireApprovedTrialForWorkspaceCreation, claimTrialForOrganization: mocked.claimTrialForOrganization }));
 
 import { onboardingRouter } from "./onboarding";
 
@@ -57,7 +58,7 @@ describe("onboarding.complete", () => {
     expect(db.values).toHaveBeenCalledWith(expect.objectContaining({ id: "staff_onboard_0000001", onlineBookingVisible: true }));
     expect(db.values).toHaveBeenCalledWith(expect.objectContaining({ nameKa: "სტაილინგი", priceTetri: 7_500 }));
     expect(db.values).toHaveBeenCalledWith(expect.objectContaining({ staffProfileId: "staff_onboard_0000001", serviceId: "service_onboard_00001", canPerform: true }));
-    expect(db.update).toHaveBeenCalledTimes(1);
+    expect(mocked.claimTrialForOrganization).toHaveBeenCalledWith(expect.anything(), "trial_onboarding_001", "org_onboard_000000001");
     expect(db.values).toHaveBeenCalledWith(expect.objectContaining({ trialRequestId: "trial_onboarding_001", eventType: "WORKSPACE_CREATED", actorUserId: user.id, metadata: { organizationId: "org_onboard_000000001", locationId: "location_onboard_0001" } }));
   });
 

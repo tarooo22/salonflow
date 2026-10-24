@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, gt } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { nanoid } from "nanoid";
 import { createHash } from "node:crypto";
@@ -137,7 +137,8 @@ export const invitationsRouter = router({
     };
   }),
 
-  accept: publicProcedure.input(staffInviteAcceptSchema).mutation(async ({ ctx, input }) => {
+  // Password is only needed when the invite creates a new account.
+  accept: publicProcedure.input(staffInviteAcceptSchema.partial({ password: true })).mutation(async ({ ctx, input }) => {
     const payload = await verifyInviteToken(input.token);
     if (!payload) throw new TRPCError({ code: "BAD_REQUEST", message: "მოწვევის ბმული არასწორია ან ვადა გაუვიდა." });
     const db = await requireDb();
@@ -150,16 +151,21 @@ export const invitationsRouter = router({
     if (!normalizedEmail) throw new TRPCError({ code: "BAD_REQUEST", message: "ელფოსტა არასწორია." });
 
     const [existingUser] = await db.select().from(users).where(eq(users.normalizedEmail, normalizedEmail)).limit(1);
-    // If a user already exists, require them to sign in first to add membership.
-    if (existingUser && existingUser.loginMethod === "local") {
+    // An existing account joins only when its owner is the signed-in caller; the invite link alone is not proof of identity.
+    if (existingUser) {
+      if (ctx.user?.id !== existingUser.id) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "ამ ელფოსტით ანგარიში უკვე არსებობს. ჯერ შედით ამ ანგარიშით და შემდეგ ხელახლა გახსენით მოწვევის ბმული." });
+      }
       const [existingMembership] = await db.select().from(organizationMemberships)
         .where(and(eq(organizationMemberships.organizationId, payload.organizationId), eq(organizationMemberships.userId, existingUser.id))).limit(1);
       if (existingMembership && existingMembership.status === "ACTIVE") {
         throw new TRPCError({ code: "CONFLICT", message: "ეს მომხმარებელი უკვე მიღებულია სამუშაო სივრცეში." });
       }
+    } else if (!input.password) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: "პაროლი მინიმუმ 10 სიმბოლოს უნდა შეიცავდეს." });
     }
 
-    const passwordHash = await hashPassword(input.password);
+    const passwordHash = existingUser ? undefined : await hashPassword(input.password!);
     const displayName = input.fullName?.trim() || payload.publicDisplayName;
 
     const result = await db.transaction(async tx => {
@@ -170,10 +176,6 @@ export const invitationsRouter = router({
         userId = existingUser.id;
         userOpenId = existingUser.openId;
         userName = existingUser.name ?? displayName;
-        // If the existing user has no login method (legacy), attach a password + email.
-        if (!existingUser.loginMethod) {
-          await tx.update(users).set({ passwordHash, loginMethod: "local", name: userName, lastSignedIn: new Date() }).where(eq(users.id, existingUser.id));
-        }
       } else {
         userOpenId = `local_${nanoid(21)}`;
         userName = displayName;
@@ -205,13 +207,17 @@ export const invitationsRouter = router({
         await tx.insert(staffLocations).values({ staffProfileId, locationId: payload.locationId });
       }
 
-      await tx.update(staffInvites).set({ status: "ACCEPTED", acceptedByUserId: userId, acceptedAt: new Date() }).where(eq(staffInvites.id, invite.id));
+      const [claimed] = await tx.update(staffInvites).set({ status: "ACCEPTED", acceptedByUserId: userId, acceptedAt: new Date() })
+        .where(and(eq(staffInvites.id, invite.id), eq(staffInvites.status, "PENDING"), gt(staffInvites.expiresAt, new Date())));
+      if (claimed.affectedRows !== 1) throw new TRPCError({ code: "CONFLICT", message: "მოწვევის ბმული აღარ მოქმედებს." });
       return { userId, userOpenId, userName };
     });
 
-    // Issue a session cookie so the accepted invitee is immediately signed in.
-    const sessionToken = await createLocalSessionToken(result.userOpenId, result.userName);
-    ctx.res.cookie(COOKIE_NAME, sessionToken, { ...getSessionCookieOptions(ctx.req), maxAge: ONE_YEAR_MS });
+    // Only a newly created invitee needs a session; an existing user is already signed in.
+    if (!existingUser) {
+      const sessionToken = await createLocalSessionToken(result.userOpenId, result.userName);
+      ctx.res.cookie(COOKIE_NAME, sessionToken, { ...getSessionCookieOptions(ctx.req), maxAge: ONE_YEAR_MS });
+    }
     return { organizationId: payload.organizationId, role: payload.role };
   }),
 });

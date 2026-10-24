@@ -9,7 +9,8 @@ import { Link, useLocation } from "wouter";
 
 function getReturnTo() {
   const raw = new URLSearchParams(window.location.search).get("returnTo") ?? "/app/trial-status";
-  return raw.startsWith("/app/") ? raw : "/app/trial-status";
+  // Only same-site panel pages or an invite link, so returnTo cannot redirect off-site.
+  return raw.startsWith("/app/") || /^\/invite\/[A-Za-z0-9._-]+$/.test(raw) ? raw : "/app/trial-status";
 }
 
 function PasswordField({ value, onChange, autoComplete, minLength, error }: { value: string; onChange: (value: string) => void; autoComplete: string; minLength: number; error?: string }) {

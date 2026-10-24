@@ -290,14 +290,19 @@ export const marketplaceRouter = router({
       const requestedServiceIds = input.categoryServiceLinks.flatMap(link => link.serviceIds);
       const eligibleServices = requestedServiceIds.length ? await db.select({ id: services.id }).from(services).where(and(inArray(services.id, requestedServiceIds), eq(services.organizationId, location.organizationId), eq(services.status, "ACTIVE"), eq(services.onlineBookingEnabled, true))) : [];
       if (eligibleServices.length !== new Set(requestedServiceIds).size) throw new TRPCError({ code: "BAD_REQUEST", message: "Marketplace კატეგორიას მხოლოდ თქვენი აქტიური online-bookable სერვისი შეიძლება დაუკავშიროთ." });
-      await db.delete(marketplaceLocationCategoryServices).where(eq(marketplaceLocationCategoryServices.locationId, location.id));
-      await db.delete(marketplaceLocationCategories).where(eq(marketplaceLocationCategories.locationId, location.id));
+      // Validate every category first, then swap the links atomically so a failure cannot wipe an approved listing.
       for (const link of input.categoryServiceLinks) {
         const [category] = await db.select({ id: marketplaceCategories.id }).from(marketplaceCategories).where(and(eq(marketplaceCategories.id, link.categoryId), eq(marketplaceCategories.isActive, true))).limit(1);
         if (!category) throw new TRPCError({ code: "BAD_REQUEST", message: "არჩეული Marketplace კატეგორია მიუწვდომელია." });
-        await db.insert(marketplaceLocationCategories).values({ locationId: location.id, categoryId: link.categoryId });
-        await db.insert(marketplaceLocationCategoryServices).values(link.serviceIds.map(serviceId => ({ locationId: location.id, categoryId: link.categoryId, serviceId })));
       }
+      await db.transaction(async tx => {
+        await tx.delete(marketplaceLocationCategoryServices).where(eq(marketplaceLocationCategoryServices.locationId, location.id));
+        await tx.delete(marketplaceLocationCategories).where(eq(marketplaceLocationCategories.locationId, location.id));
+        for (const link of input.categoryServiceLinks!) {
+          await tx.insert(marketplaceLocationCategories).values({ locationId: location.id, categoryId: link.categoryId });
+          await tx.insert(marketplaceLocationCategoryServices).values(link.serviceIds.map(serviceId => ({ locationId: location.id, categoryId: link.categoryId, serviceId })));
+        }
+      });
     }
     await db.insert(marketplaceListingEvents).values({ id: nanoid(21), locationId: location.id, eventType: "OWNER_LISTING_UPDATED", actorUserId: ctx.user.id });
     return { success: true };

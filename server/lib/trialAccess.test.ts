@@ -5,7 +5,19 @@ const mocked = vi.hoisted(() => ({ db: null as unknown, nanoid: vi.fn(() => "tri
 vi.mock("../db", () => ({ requireDb: vi.fn(async () => mocked.db) }));
 vi.mock("nanoid", () => ({ nanoid: mocked.nanoid }));
 
-import { isOrganizationTrialPublicBookingActive, requireActiveTrialForOrganization, requireApprovedTrialForWorkspaceCreation } from "./trialAccess";
+import { claimTrialForOrganization, isOrganizationTrialPublicBookingActive, requireActiveTrialForOrganization, requireApprovedTrialForWorkspaceCreation } from "./trialAccess";
+
+describe("claimTrialForOrganization", () => {
+  const tx = (affectedRows: number) => ({ update: vi.fn(() => ({ set: vi.fn(() => ({ where: vi.fn(async () => [{ affectedRows }]) })) })) });
+
+  it("succeeds when the trial was still unlinked", async () => {
+    await expect(claimTrialForOrganization(tx(1) as never, "trial_1", "org_1")).resolves.toBeUndefined();
+  });
+
+  it("throws CONFLICT when a concurrent create already claimed the trial", async () => {
+    await expect(claimTrialForOrganization(tx(0) as never, "trial_1", "org_1")).rejects.toMatchObject({ code: "CONFLICT" });
+  });
+});
 
 type Trial = { id: string; userId: number; organizationId: string | null; status: "PENDING" | "APPROVED" | "REJECTED" | "EXPIRED" | "CANCELLED"; expiresAt: Date | null };
 function createDb(trial: Trial | null) {

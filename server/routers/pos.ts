@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { auditLogs, clients, inventoryMovements, inventoryStocks, locations, retailProducts, retailSaleLines, retailSales } from "../../drizzle/schema";
 import { inventoryAdjustSchema, organizationScopeSchema, retailProductCreateSchema, retailSaleCreateSchema } from "../../shared/validation";
 import { requireOrganizationAction, requireOrganizationRole } from "../access";
@@ -42,8 +42,14 @@ export const posRouter = router({
     const db = await requireDb();
     const [row] = await db.select({ stock: inventoryStocks, product: retailProducts }).from(inventoryStocks).innerJoin(retailProducts, eq(inventoryStocks.productId, retailProducts.id)).where(and(eq(inventoryStocks.productId, input.productId), eq(inventoryStocks.locationId, input.locationId), eq(retailProducts.organizationId, input.organizationId))).limit(1);
     if (!row) throw new Error("ამ ფილიალზე პროდუქტის მარაგი ვერ მოიძებნა.");
-    const nextQuantity = row.stock.currentQuantity + input.quantityDelta; if (nextQuantity < 0) throw new Error("მარაგი ნულზე ნაკლები ვერ გახდება.");
-    await db.transaction(async tx => { await tx.update(inventoryStocks).set({ currentQuantity: nextQuantity }).where(eq(inventoryStocks.id, row.stock.id)); await tx.insert(inventoryMovements).values({ id: nanoid(21), productId: input.productId, locationId: input.locationId, changeQuantity: input.quantityDelta, type: "ADJUSTMENT", reason: input.reason, recordedByUserId: ctx.user.id }); await tx.insert(auditLogs).values({ id: nanoid(21), organizationId: input.organizationId, actorUserId: ctx.user.id, action: "INVENTORY_ADJUSTED", entityType: "inventory_stock", entityId: row.stock.id, beforeState: { currentQuantity: row.stock.currentQuantity }, afterState: { currentQuantity: nextQuantity, reason: input.reason } }); });
+    if (row.stock.currentQuantity + input.quantityDelta < 0) throw new Error("მარაგი ნულზე ნაკლები ვერ გახდება.");
+    const nextQuantity = await db.transaction(async tx => {
+      // Atomic relative update: a concurrent sale cannot be overwritten or driven below zero.
+      const result = await tx.update(inventoryStocks).set({ currentQuantity: sql`${inventoryStocks.currentQuantity} + ${input.quantityDelta}` }).where(and(eq(inventoryStocks.id, row.stock.id), sql`${inventoryStocks.currentQuantity} + ${input.quantityDelta} >= 0`));
+      if (result[0]?.affectedRows !== 1) throw new Error("მარაგი ნულზე ნაკლები ვერ გახდება.");
+      const [updated] = await tx.select({ currentQuantity: inventoryStocks.currentQuantity }).from(inventoryStocks).where(eq(inventoryStocks.id, row.stock.id)).limit(1);
+      const nextQuantity = updated?.currentQuantity ?? row.stock.currentQuantity + input.quantityDelta;
+      await tx.insert(inventoryMovements).values({ id: nanoid(21), productId: input.productId, locationId: input.locationId, changeQuantity: input.quantityDelta, type: "ADJUSTMENT", reason: input.reason, recordedByUserId: ctx.user.id }); await tx.insert(auditLogs).values({ id: nanoid(21), organizationId: input.organizationId, actorUserId: ctx.user.id, action: "INVENTORY_ADJUSTED", entityType: "inventory_stock", entityId: row.stock.id, beforeState: { currentQuantity: row.stock.currentQuantity }, afterState: { currentQuantity: nextQuantity, reason: input.reason } }); return nextQuantity; });
     return { productId: input.productId, currentQuantity: nextQuantity };
   }),
 
@@ -61,7 +67,7 @@ export const posRouter = router({
     const saleId = nanoid(21); const subtotalTetri = input.lines.reduce((sum, line) => sum + (productById.get(line.productId)?.retailPriceTetri ?? 0) * line.quantity, 0);
     await db.transaction(async tx => {
       await tx.insert(retailSales).values({ id: saleId, organizationId: input.organizationId, locationId: input.locationId, clientId: input.clientId, subtotalTetri, totalTetri: subtotalTetri, method: input.method, collectedByUserId: ctx.user.id, note: input.note });
-      for (const line of input.lines) { const product = productById.get(line.productId)!; const stock = stockByProductId.get(line.productId)!; const lineTotalTetri = product.retailPriceTetri * line.quantity; await tx.insert(retailSaleLines).values({ id: nanoid(21), saleId, productId: product.id, productNameSnapshot: product.nameKa, quantity: line.quantity, unitPriceTetri: product.retailPriceTetri, lineTotalTetri }); await tx.update(inventoryStocks).set({ currentQuantity: stock.currentQuantity - line.quantity }).where(eq(inventoryStocks.id, stock.id)); await tx.insert(inventoryMovements).values({ id: nanoid(21), productId: product.id, locationId: input.locationId, saleId, changeQuantity: -line.quantity, type: "SALE", reason: "POS გაყიდვა", recordedByUserId: ctx.user.id }); }
+      for (const line of input.lines) { const product = productById.get(line.productId)!; const stock = stockByProductId.get(line.productId)!; const lineTotalTetri = product.retailPriceTetri * line.quantity; await tx.insert(retailSaleLines).values({ id: nanoid(21), saleId, productId: product.id, productNameSnapshot: product.nameKa, quantity: line.quantity, unitPriceTetri: product.retailPriceTetri, lineTotalTetri }); const decrement = await tx.update(inventoryStocks).set({ currentQuantity: sql`${inventoryStocks.currentQuantity} - ${line.quantity}` }).where(and(eq(inventoryStocks.id, stock.id), gte(inventoryStocks.currentQuantity, line.quantity))); if (decrement[0]?.affectedRows !== 1) throw new Error("არჩეული რაოდენობა მარაგში აღარ არის."); await tx.insert(inventoryMovements).values({ id: nanoid(21), productId: product.id, locationId: input.locationId, saleId, changeQuantity: -line.quantity, type: "SALE", reason: "POS გაყიდვა", recordedByUserId: ctx.user.id }); }
       await tx.insert(auditLogs).values({ id: nanoid(21), organizationId: input.organizationId, actorUserId: ctx.user.id, action: "RETAIL_SALE_COMPLETED", entityType: "retail_sale", entityId: saleId, afterState: { locationId: input.locationId, clientId: input.clientId ?? null, totalTetri: subtotalTetri, lineCount: input.lines.length, method: input.method } });
     });
     return { id: saleId, totalTetri: subtotalTetri };

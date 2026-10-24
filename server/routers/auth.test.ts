@@ -49,6 +49,13 @@ describe("local auth router", () => {
     expect(cookie).toHaveBeenCalledWith("app_session_id", "signed-local-session", expect.objectContaining({ httpOnly: true, sameSite: "lax" }));
   });
 
+  it("returns only safe user fields from me, never the password hash", async () => {
+    const lastSignedIn = new Date("2026-08-01T10:00:00.000Z");
+    const ctx = { req: {}, res: {}, user: { ...localUser, normalizedEmail: "tamari@example.com", lastSignedIn } } as never;
+
+    await expect(authRouter.createCaller(ctx).me()).resolves.toEqual({ id: 44, openId: "local_test_user_00001", name: "თამარი", email: "tamari@example.com", role: "user", lastSignedIn });
+  });
+
   it("rejects an invalid local login without issuing a session", async () => {
     mocks.getUserByNormalizedEmail.mockResolvedValue(localUser);
     mocks.verifyPassword.mockResolvedValue(false);

@@ -37,6 +37,12 @@ function query(rows: unknown[]) {
 }
 
 describe("appointments operational data contracts", () => {
+  it("exposes no unscoped create or UTC-day listToday procedures", () => {
+    const procedures = Object.keys((appointmentsRouter as any)._def.procedures);
+    expect(procedures).not.toContain("create");
+    expect(procedures).not.toContain("listToday");
+  });
+
   it("scopes the Today queue to its active location and timezone-derived business-day range", async () => {
     const startsAt = new Date("2026-08-13T20:00:00.000Z");
     const endsAt = new Date("2026-08-14T20:00:00.000Z");
