@@ -9,6 +9,7 @@ import { publicRouter } from "../routers/public";
 import { renderPublicSalonProfileHead, renderPublicSalonProfileSnapshot } from "../lib/publicProfileSeo";
 import { requestOrigin } from "../publicSeo";
 import { BRAND } from "../../shared/brand";
+import { slugSchema } from "../../shared/validation";
 
 // Matches whatever <title> index.html carries, so renaming the brand can't silently switch this off.
 const TITLE_TAG = /<title>[^<]*<\/title>/;
@@ -18,7 +19,8 @@ async function injectSalonProfileSeo(template: string, req: express.Request) {
   const canonicalOrigin = requestOrigin(req);
   const match = pathname.match(/^\/salon\/([a-z0-9]+(?:-[a-z0-9]+)*)\/?$/);
   if (!match) return null;
-  const profile = await publicRouter.createCaller({} as never).salonProfile(match[1]);
+  // A slug the schema rejects (e.g. too short) would throw inside the procedure; treat it as not found.
+  const profile = slugSchema.safeParse(match[1]).success ? await publicRouter.createCaller({} as never).salonProfile(match[1]) : null;
   if (!profile) return { status: 404, html: template.replace(TITLE_TAG, `<title>სალონი ვერ მოიძებნა | ${BRAND.name}</title>`).replace("<div id=\"root\"></div>", "<main class=\"sf-public-page grid min-h-screen place-items-center px-4\"><h1>სალონი ვერ მოიძებნა</h1></main>") };
   const head = renderPublicSalonProfileHead(profile, canonicalOrigin);
   const body = renderPublicSalonProfileSnapshot(profile, canonicalOrigin);
