@@ -479,6 +479,8 @@ export const walkInCreateSchema = z.object({
   serviceId: opaqueIdSchema,
   startsAt: z.coerce.date(),
   internalNote: z.string().trim().max(2_000).optional(),
+  /** Owner/manager only: skip the working-hours and opening-hours check (overlap, past and exceptions still apply). */
+  allowOutsideHours: z.boolean().optional(),
 });
 
 export const appointmentRescheduleSchema = z.object({
@@ -487,6 +489,8 @@ export const appointmentRescheduleSchema = z.object({
   startsAt: z.coerce.date(),
   staffProfileId: opaqueIdSchema.optional(),
   reason: z.string().trim().max(255).optional(),
+  /** Owner/manager only: skip the working-hours and opening-hours check (overlap, past and exceptions still apply). */
+  allowOutsideHours: z.boolean().optional(),
 });
 
 export const appointmentStatusUpdateSchema = z.object({
@@ -685,7 +689,16 @@ export const publicMultiAvailableSlotsSchema = publicMultiServiceSelectionSchema
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
 });
 
-export const publicMultiBookingCommitSchema = publicMultiAvailabilityCheckSchema.extend({
+// Per-day open-slot summary for a date strip: one to MAX_SELECTED_SERVICES services, up to 14 local days from fromDate.
+export const publicAvailabilityDaysSchema = z.object({
+  slug: slugSchema,
+  serviceIds: z.array(opaqueIdSchema).min(1).max(MAX_SELECTED_SERVICES).refine(ids => new Set(ids).size === ids.length, "Services must be unique"),
+  staffProfileId: z.union([opaqueIdSchema, z.literal("ANY_AVAILABLE")]),
+  fromDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  days: z.number().int().min(1).max(14),
+});
+
+export const publicMultiBookingCommitSchema =publicMultiAvailabilityCheckSchema.extend({
   firstName: z.string().trim().min(1).max(100),
   lastName: z.string().trim().max(100).optional(),
   phone: z.string().trim().min(6).max(32),

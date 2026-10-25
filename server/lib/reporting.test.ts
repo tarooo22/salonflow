@@ -17,19 +17,37 @@ describe("reporting summaries", () => {
     );
 
     expect(summary).toEqual({
-      grossBookedRevenueTetri: 20000,
+      grossBookedRevenueTetri: 12000,
       collectedRevenueTetri: 13000,
-      unpaidBalanceTetri: 7000,
+      unpaidBalanceTetri: 2000,
       refundsTetri: 2000,
       discountsTetri: 500,
       expensesTetri: 1500,
-      grossMarginTetri: 9500,
+      grossMarginTetri: 11500,
       appointmentCount: 2,
       completedAppointments: 1,
       cancelledAppointments: 0,
       noShowAppointments: 1,
-      averageTicketTetri: 10000,
+      averageTicketTetri: 12000,
     });
+  });
+
+  it("excludes cancelled and no-show visits from booked revenue, unpaid balance and average ticket", () => {
+    const summary = summarizeRevenue(
+      [
+        { id: "a1", totalTetri: 10000, discountTetri: 0, status: "COMPLETED" },
+        { id: "a2", totalTetri: 5000, discountTetri: 0, status: "CANCELLED" },
+        { id: "a3", totalTetri: 7000, discountTetri: 0, status: "NO_SHOW" },
+      ],
+      [{ appointmentId: "a1", amountTetri: 4000, refundedTetri: 1000, status: "PARTIALLY_REFUNDED", method: "CASH" }],
+      [{ amountTetri: 500 }],
+    );
+    expect(summary.grossBookedRevenueTetri).toBe(10000);
+    expect(summary.unpaidBalanceTetri).toBe(7000);
+    expect(summary.averageTicketTetri).toBe(10000);
+    expect(summary.appointmentCount).toBe(3);
+    // collected 3000 (net of the 1000 refund) minus 500 expenses
+    expect(summary.grossMarginTetri).toBe(2500);
   });
 
   it("summarizes successful payment methods only", () => {

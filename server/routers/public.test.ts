@@ -1,3 +1,5 @@
+// These suites cover enforced opening hours (off by default until the backfill; see fetchOpeningHours).
+process.env.ENFORCE_OPENING_HOURS = "true";
 import { MySqlDialect } from "drizzle-orm/mysql-core";
 import { describe, expect, it, vi } from "vitest";
 
@@ -90,6 +92,8 @@ function localStart(hour: number) {
   return zonedDateTimeToUtc({ year, month, day, hour, minute: 0, second: 0 }, "Asia/Tbilisi");
 }
 const workingRule = { startLocalTime: "09:00", endLocalTime: "18:00" };
+const weekdayOf = (dateKey: string) => (new Date(`${dateKey}T00:00:00.000Z`).getUTCDay() + 6) % 7;
+const dayRule = (start: Date) => ({ ...workingRule, weekday: weekdayOf(dateKeyInTimeZone(start, "Asia/Tbilisi")) });
 
 function availabilityInput() {
   return { slug: "gldani-beauty", serviceId: ids.serviceId, staffProfileId: ids.staffProfileId, startsAt: new Date(Date.now() + 7_200_000) };
@@ -130,15 +134,17 @@ describe("public booking router safeguards", () => {
 
   it("returns real contact context and clearly scoped specialist availability hours for a booking catalog", async () => {
     mocked.db = publicCatalogDb([
-      [{ location: { id: ids.locationId, organizationId: ids.organizationId, publicSlug: "gldani-beauty", name: "გლდანი", timezone: "Asia/Tbilisi", address: "გლდანი", phone: "+995555000000", email: "hello@example.com", publicDescription: "მზრუნველი მომსახურება" } }],
+      [{ location: { id: ids.locationId, organizationId: ids.organizationId, publicSlug: "gldani-beauty", name: "გლდანი", timezone: "Asia/Tbilisi", address: "გლდანი", phone: "+995555000000", email: "hello@example.com", publicDescription: "მზრუნველი მომსახურება", cancellationCutoffMinutes: 180 } }],
       [{ service: { id: ids.serviceId, nameKa: "თმის შეჭრა", defaultDurationMinutes: 60, priceTetri: 4_000 }, category: { nameKa: "თმის მოვლა" } }],
-      [{ id: ids.staffProfileId, name: "ლელა", specialty: "სტილისტი", bio: null, serviceId: ids.serviceId }],
+      [{ id: ids.staffProfileId, name: "ლელა", specialty: "სტილისტი", bio: null, avatarKey: "salons/org/staff.webp", serviceId: ids.serviceId }, { id: "staff_profile_002", name: "ნინო", specialty: null, bio: null, avatarKey: null, serviceId: ids.serviceId }],
       [{ weekday: 0, startLocalTime: "09:00", endLocalTime: "18:00" }],
     ]);
 
     const result = await caller().bookingCatalog("gldani-beauty");
-    expect(result?.location).toEqual(expect.objectContaining({ phone: "+995555000000", email: "hello@example.com", publicDescription: "მზრუნველი მომსახურება", workingHours: [{ weekday: 0, startLocalTime: "09:00", endLocalTime: "18:00" }] }));
-    expect(result?.team[0]).toMatchObject({ id: ids.staffProfileId, eligibleServiceIds: [ids.serviceId] });
+    expect(result?.location).toEqual(expect.objectContaining({ phone: "+995555000000", email: "hello@example.com", publicDescription: "მზრუნველი მომსახურება", cancellationCutoffMinutes: 180, workingHours: [{ weekday: 0, startLocalTime: "09:00", endLocalTime: "18:00" }] }));
+    expect(result?.team[0]).toMatchObject({ id: ids.staffProfileId, avatarUrl: "/manus-storage/salons/org/staff.webp", eligibleServiceIds: [ids.serviceId] });
+    expect(result?.team[1]).toMatchObject({ avatarUrl: null });
+    expect(JSON.stringify(result?.team)).not.toContain("avatarKey");
   });
 
   it("builds a public salon profile from only approved public media and excludes client identity data", async () => {
@@ -221,7 +227,7 @@ describe("public booking router safeguards", () => {
     const conflictingAppointment = { status: "CONFIRMED", startsAt, endsAt: new Date(startsAt.getTime() + 3_600_000), bufferBeforeMinutes: 0, bufferAfterMinutes: 0 };
     const db = anyAvailableCommitDb([
       [], [activeLocation], [activeService], [{ id: "staff_any_busy", name: "ანა", durationOverrideMinutes: null }, { id: "staff_any_free", name: "ნინო", durationOverrideMinutes: null }], [{ id: "persisted_any_02" }],
-    ], [[], [workingRule], [], [conflictingAppointment], [workingRule], [], [], []]);
+    ], [[], [workingRule], [], [], [conflictingAppointment], [workingRule], [], [], [], [], []]);
     mocked.db = db;
     const result = await caller().commitBooking({ slug: "gldani-beauty", serviceId: ids.serviceId, staffProfileId: "ANY_AVAILABLE", startsAt, firstName: "თამარი", phone: "+995 555 12 34 56", bookingTermsConsent: true, idempotencyKey: "booking_any_available_003" });
     expect(result).toMatchObject({ confirmed: true, assignedStaffName: "ნინო" });
@@ -234,7 +240,7 @@ describe("public booking router safeguards", () => {
   ])("rejects a public commit %s", async (_label, startsAt, exceptions) => {
     const db = anyAvailableCommitDb([
       [], [activeLocation], [activeService], [{ id: "staff_any_01", name: "ნინო", durationOverrideMinutes: null }],
-    ], [[], [workingRule], exceptions, [], []]);
+    ], [[], [workingRule], [], exceptions, [], []]);
     mocked.db = db;
     await expect(caller().commitBooking({ ...availabilityInput(), startsAt, staffProfileId: "ANY_AVAILABLE", firstName: "თამარი", phone: "+995 555 12 34 56", bookingTermsConsent: true, idempotencyKey: "booking_hours_guard_001" })).rejects.toMatchObject({ code: "CONFLICT", message: "The selected time is no longer available" });
     expect(db.values).not.toHaveBeenCalledWith(expect.objectContaining({ source: "PUBLIC_WEB" }));
@@ -253,12 +259,15 @@ describe("public booking router safeguards", () => {
     const appointmentQuery = new MySqlDialect().sqlToQuery(wheres[5] as never).sql;
     expect(appointmentQuery).toContain("`staffProfileId`");
     expect(appointmentQuery).not.toContain("`locationId`");
+    // Bounded to the candidate interval ± the max buffer instead of the specialist's whole history.
+    expect(appointmentQuery).toContain("`appointments`.`startsAt` < ?");
+    expect(appointmentQuery).toContain("`appointments`.`endsAt` > ?");
   });
 
   it("drops a slot from availableSlots when a closure covers it", async () => {
     const closure = { staffProfileId: null, locationId: null, startsAt: localStart(12), endsAt: localStart(13) };
     const run = async (exceptions: unknown[]) => {
-      mocked.db = publicCatalogDb([[activeLocation], [activeService], [{ id: "staff_any_01", durationOverrideMinutes: null }], [{ staffProfileId: "staff_any_01", ...workingRule }], [], exceptions]);
+      mocked.db = publicCatalogDb([[activeLocation], [activeService], [{ id: "staff_any_01", durationOverrideMinutes: null }], [{ staffProfileId: "staff_any_01", ...dayRule(localStart(10)) }], [], exceptions]);
       const date = dateKeyInTimeZone(localStart(10), "Asia/Tbilisi");
       return (await caller().availableSlots({ slug: "gldani-beauty", serviceId: ids.serviceId, staffProfileId: "ANY_AVAILABLE", date })).slots.map(slot => slot.startsAt);
     };
@@ -274,12 +283,109 @@ describe("public booking router safeguards", () => {
 
   it("offers reschedule slots for the whole booking and does not count the booking itself as busy", async () => {
     const booking = { id: "appt_self_000001", staffProfileId: "staff_any_01", locationId: ids.locationId, status: "CONFIRMED", startsAt: localStart(10), endsAt: new Date(localStart(10).getTime() + 90 * 60_000), bufferBeforeMinutes: 0, bufferAfterMinutes: 0, publicTokenExpiresAt: new Date(Date.now() + 30 * 86_400_000) };
-    mocked.db = publicCatalogDb([[booking], [{ ...activeLocation, cancellationCutoffMinutes: 0 }], [{ staffProfileId: "staff_any_01", ...workingRule }], [booking], []]);
+    mocked.db = publicCatalogDb([[booking], [{ ...activeLocation, cancellationCutoffMinutes: 0 }], [{ staffProfileId: "staff_any_01", ...dayRule(localStart(10)) }], [booking], []]);
     const date = dateKeyInTimeZone(localStart(10), "Asia/Tbilisi");
     const slots = (await caller().rescheduleSlots({ token: "t".repeat(40), date })).slots.map(slot => slot.startsAt);
     expect(slots).toContain(localStart(10).toISOString());
     expect(slots).toContain(new Date(localStart(16).getTime() + 30 * 60_000).toISOString());
     expect(slots).not.toContain(localStart(17).toISOString()); // 90 min from 17:00 runs past the 18:00 close
+  });
+
+  it("keeps public slots and commits inside the location's opening hours when they are on record", async () => {
+    const weekday = dayRule(localStart(10)).weekday;
+    const date = dateKeyInTimeZone(localStart(10), "Asia/Tbilisi");
+    const slotsWith = async (opening: unknown[]) => {
+      mocked.db = publicCatalogDb([[activeLocation], [activeService], [{ id: "staff_any_01", durationOverrideMinutes: null }], [{ staffProfileId: "staff_any_01", ...dayRule(localStart(10)) }], [], [], opening]);
+      return (await caller().availableSlots({ slug: "gldani-beauty", serviceId: ids.serviceId, staffProfileId: "ANY_AVAILABLE", date })).slots.map(slot => slot.startsAt);
+    };
+    const open = await slotsWith([{ weekday, startLocalTime: "10:00:00", endLocalTime: "14:00:00" }]);
+    expect(open).toContain(localStart(10).toISOString());
+    expect(open).toContain(localStart(13).toISOString()); // 13:00–14:00 ends exactly at closing
+    expect(open).not.toContain(localStart(9).toISOString());
+    expect(open).not.toContain(new Date(localStart(13).getTime() + 30 * 60_000).toISOString());
+    expect(await slotsWith([{ weekday: (weekday + 1) % 7, startLocalTime: "09:00:00", endLocalTime: "18:00:00" }])).toEqual([]); // closed that weekday
+    expect(await slotsWith([])).toContain(localStart(9).toISOString()); // no opening hours on record: staff hours only
+
+    const db = anyAvailableCommitDb([[], [activeLocation], [activeService], [{ id: "staff_any_01", name: "ნინო", durationOverrideMinutes: null }]],
+      [[], [workingRule], [{ weekday, startLocalTime: "12:00:00", endLocalTime: "18:00:00" }], [], []]);
+    mocked.db = db;
+    await expect(caller().commitBooking({ ...availabilityInput(), startsAt: localStart(10), staffProfileId: "ANY_AVAILABLE", firstName: "თამარი", phone: "+995 555 12 34 56", bookingTermsConsent: true, idempotencyKey: "booking_opening_guard_01" })).rejects.toMatchObject({ code: "CONFLICT" });
+    expect(db.values).not.toHaveBeenCalledWith(expect.objectContaining({ source: "PUBLIC_WEB" }));
+  });
+
+  describe("token cancel and reschedule only change a still-manageable booking", () => {
+    const booking = { id: "appt_token_000001", organizationId: ids.organizationId, staffProfileId: "staff_any_01", locationId: ids.locationId, status: "CONFIRMED", startsAt: localStart(10), endsAt: localStart(11), bufferBeforeMinutes: 0, bufferAfterMinutes: 0, publicTokenExpiresAt: new Date(Date.now() + 30 * 86_400_000) };
+    function tokenDb(outerRows: unknown[][], txRows: unknown[][], affectedRows: number) {
+      const updateWheres: unknown[] = [];
+      const values = vi.fn(() => ({ onDuplicateKeyUpdate: async () => undefined }));
+      const update = vi.fn(() => ({ set: () => ({ where: async (condition: unknown) => { updateWheres.push(condition); return [{ affectedRows }]; } }) }));
+      const transaction = vi.fn(async (callback: (tx: unknown) => Promise<void>) => callback({ select: () => queuedChain(txRows.shift() ?? []), insert: () => ({ values }), update }));
+      return { db: { select: () => queuedChain(outerRows.shift() ?? []), transaction }, updateWheres, values };
+    }
+    const statusChanged = { code: "CONFLICT", message: "ჯავშნის სტატუსი შეიცვალა. განაახლეთ გვერდი." };
+
+    it("cancels with a status-guarded update and reports a concurrent status change", async () => {
+      const raced = tokenDb([[booking], [{ cancellationCutoffMinutes: 0 }]], [], 0);
+      mocked.db = raced.db;
+      await expect(caller().cancelBookingByToken({ token: "t".repeat(40) })).rejects.toMatchObject(statusChanged);
+      expect(new MySqlDialect().sqlToQuery(raced.updateWheres[0] as never).sql).toContain("`appointments`.`appointment_status` in (?, ?)");
+      expect(raced.values).not.toHaveBeenCalled();
+
+      const ok = tokenDb([[booking], [{ cancellationCutoffMinutes: 0 }]], [], 1);
+      mocked.db = ok.db;
+      await expect(caller().cancelBookingByToken({ token: "t".repeat(40) })).resolves.toEqual({ success: true });
+      expect(ok.values).toHaveBeenCalledWith(expect.objectContaining({ newStatus: "CANCELLED" }));
+    });
+
+    it("reschedules with a status-guarded update and reports a concurrent status change", async () => {
+      const raced = tokenDb([[booking], [{ ...activeLocation, cancellationCutoffMinutes: 0 }]], [[workingRule], [], [], [booking]], 0);
+      mocked.db = raced.db;
+      await expect(caller().rescheduleBookingByToken({ token: "t".repeat(40), startsAt: localStart(12) })).rejects.toMatchObject(statusChanged);
+      expect(new MySqlDialect().sqlToQuery(raced.updateWheres[0] as never).sql).toContain("`appointments`.`appointment_status` in (?, ?)");
+      expect(raced.values).not.toHaveBeenCalledWith(expect.objectContaining({ reason: "CUSTOMER_RESCHEDULED" }));
+    });
+  });
+
+  it("refuses waitlist requests while the salon's public booking is suspended or its trial expired", async () => {
+    mocked.isOrganizationTrialPublicBookingActive.mockResolvedValueOnce(false);
+    mocked.db = queuedDb([[], [activeLocation]]);
+    const requestedDate = dateKeyInTimeZone(localStart(10), "Asia/Tbilisi");
+    await expect(caller().joinWaitlist({ slug: "gldani-beauty", serviceId: ids.serviceId, requestedDate, firstName: "თამარი", phone: "+995 555 12 34 56", bookingTermsConsent: true, idempotencyKey: "waitlist_trial_gate_01" })).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
+  });
+
+  describe("availabilityDays", () => {
+    const tz = "Asia/Tbilisi";
+    const addDaysKey = (key: string, offset: number) => { const [y, m, d] = key.split("-").map(Number) as [number, number, number]; return new Date(Date.UTC(y, m - 1, d + offset)).toISOString().slice(0, 10); };
+    const at = (key: string, hour: number) => { const [year, month, day] = key.split("-").map(Number) as [number, number, number]; return zonedDateTimeToUtc({ year, month, day, hour, minute: 0, second: 0 }, tz); };
+    const input = (fromDate: string, days: number) => ({ slug: "gldani-beauty", serviceIds: [ids.serviceId], staffProfileId: "ANY_AVAILABLE" as const, fromDate, days });
+
+    it("reports per day exactly what availableSlots returns for the same inputs", async () => {
+      const dates = [0, 1, 2].map(offset => addDaysKey(dateKeyInTimeZone(localStart(10), tz), offset));
+      const hourRows = [{ staffProfileId: "staff_any_01", ...workingRule, weekday: weekdayOf(dates[0]!) }, { staffProfileId: "staff_any_01", startLocalTime: "12:00", endLocalTime: "15:00", weekday: weekdayOf(dates[1]!) }];
+      const booked = [{ id: "appt_busy_000001", staffProfileId: "staff_any_01", status: "CONFIRMED", startsAt: at(dates[0]!, 9), endsAt: at(dates[0]!, 11), bufferBeforeMinutes: 0, bufferAfterMinutes: 0 }];
+      const closure = [{ staffProfileId: null, locationId: null, startsAt: at(dates[1]!, 13), endsAt: at(dates[1]!, 14) }];
+      mocked.db = publicCatalogDb([[activeLocation], [{ ...activeService, nameKa: "თმის შეჭრა", priceTetri: 4_000 }], [{ id: "staff_any_01", name: "ნინო", serviceId: ids.serviceId, durationOverrideMinutes: null, priceOverrideTetri: null }], hourRows, booked, closure, []]);
+      const summary = await caller().availabilityDays(input(dates[0]!, 3));
+      expect(summary.timezone).toBe(tz);
+      expect(summary.days.map(day => day.slotCount)).toEqual([13, 2, 0]);
+      for (const [index, date] of dates.entries()) {
+        mocked.db = publicCatalogDb([[activeLocation], [activeService], [{ id: "staff_any_01", durationOverrideMinutes: null }], hourRows, booked, closure, []]);
+        const { slots } = await caller().availableSlots({ slug: "gldani-beauty", serviceId: ids.serviceId, staffProfileId: "ANY_AVAILABLE", date });
+        expect(summary.days[index]).toEqual({ date, slotCount: slots.length, firstStartsAt: slots[0]?.startsAt ?? null, firstLabel: slots[0]?.label ?? null });
+      }
+      expect(summary.days[0]).toMatchObject({ firstStartsAt: at(dates[0]!, 11).toISOString(), firstLabel: "11:00" });
+    });
+
+    it("rejects more than 14 days and returns no days for an unknown slug or an inactive salon", async () => {
+      const fromDate = dateKeyInTimeZone(localStart(10), tz);
+      mocked.db = queuedDb([]);
+      await expect(caller().availabilityDays(input(fromDate, 15))).rejects.toMatchObject({ code: "BAD_REQUEST" });
+      mocked.db = queuedDb([[]]);
+      await expect(caller().availabilityDays(input(fromDate, 7))).resolves.toEqual({ timezone: tz, days: [] });
+      mocked.isOrganizationTrialPublicBookingActive.mockResolvedValueOnce(false);
+      mocked.db = queuedDb([[activeLocation]]);
+      await expect(caller().availabilityDays(input(fromDate, 7))).resolves.toEqual({ timezone: tz, days: [] });
+    });
   });
 
   it("rejects invalid public phone input before touching the booking transaction", async () => {

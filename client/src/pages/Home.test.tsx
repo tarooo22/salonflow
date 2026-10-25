@@ -13,6 +13,23 @@ describe("catalog home", () => {
     expect(source).toContain('marketplaceDiscoveryHref("/salons", undefined, what, where)');
   });
 
+  it("opens on the field words with a ring on the chosen one, and no stock photo hero or photo tiles", () => {
+    expect(source).toContain('role="group" aria-labelledby={labelId}');
+    expect(source).toContain("aria-pressed={selected}");
+    expect(source).toContain('<Ring variant="wide" draw={selected && ready} />');
+    expect(source).toContain("window.setTimeout(() => setReady(true), 200)");
+    expect(source).toContain('<Ring variant="square" />');
+    expect(source).toContain('"რას ეძებ?"');
+    expect(source).not.toContain("აირჩიე სფერო");
+    expect(source).not.toContain("PHOTO_GROUPS");
+    expect(source).not.toContain("cat-hair");
+  });
+
+  it("puts the VIP carousel after the hero and keeps the paid-placement disclosure", () => {
+    expect(source.indexOf("<Hero ")).toBeLessThan(source.indexOf("<Banner items"));
+    expect(source).toContain("ფასიანი განთავსება");
+  });
+
   it("lists only real approved listings and never fabricates businesses", () => {
     expect(source).toContain("trpc.marketplace.directory.useQuery");
     expect(source).toContain("პირველი გადამოწმებული ადგილები მალე გამოჩნდება.");

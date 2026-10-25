@@ -67,7 +67,7 @@ export default function PanelVacancies() {
   return (
     <DashboardLayout>
       <div className="sf-workspace-page mx-auto w-full max-w-7xl space-y-5">
-        <WorkspacePageHeader title="ვაკანსიები" actions={<>{enabled ? <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" />ვაკანსიის დამატება</Button> : null}</>} />
+        <WorkspacePageHeader title="ვაკანსიები" description="განცხადებები სამუშაოს შესახებ, რომლებიც კატალოგში ჩანს." actions={<>{enabled ? <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" />ვაკანსიის დამატება</Button> : null}</>} />
         {organizations.isLoading ? <WorkspaceState kind="loading" title="იტვირთება…" /> : null}
         {organizations.isError ? <WorkspaceState kind="error" title="მონაცემები მიუწვდომელია" /> : null}
         {organization && !canManage ? <WorkspaceState kind="empty" title="წვდომა მხოლოდ მფლობელს და მენეჯერს აქვს" /> : null}

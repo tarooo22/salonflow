@@ -2,8 +2,8 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { formatKaDayKey } from "@/lib/presentation";
 import { trpc } from "@/lib/trpc";
-import { Bell, ChevronRight, CheckCircle2, Check, Circle, CircleAlert, X } from "lucide-react";
-import React from "react";
+import { Bell, ChevronDown, ChevronRight, CheckCircle2, Check, Circle, CircleAlert, X } from "lucide-react";
+import React, { useState } from "react";
 import { Link } from "wouter";
 
 type Notice = { key: string; title: string; description: string; href: string; tone: "warning" | "info" };
@@ -26,6 +26,7 @@ export function DayCloseChecklist({ organizationId, locationId, businessDate, lo
   const utils = trpc.useUtils();
   const state = trpc.productivity.dailyCloseState.useQuery({ organizationId, locationId, businessDate }, { enabled: Boolean(organizationId && locationId && canClose) });
   const save = trpc.productivity.saveDailyClose.useMutation({ onSuccess: () => void utils.productivity.dailyCloseState.invalidate({ organizationId, locationId, businessDate }) });
+  const [expanded, setExpanded] = useState(false);
   if (!canClose) return null;
   const completed = (state.data?.completedKeys ?? []).filter((key): key is ChecklistKey => checklistKeys.includes(key as ChecklistKey));
   const rows = [
@@ -35,12 +36,14 @@ export function DayCloseChecklist({ organizationId, locationId, businessDate, lo
     { key: "TOMORROW", title: "ხვალინდელი განრიგი", detail: "შემდეგი დღის პირველი ჩანაწერები", href: "/app/calendar" },
   ] as const;
   const toggle = (key: typeof rows[number]["key"]) => { const next = completed.includes(key) ? completed.filter(item => item !== key) : [...completed, key]; save.mutate({ organizationId, locationId, businessDate, completedKeys: next }); };
+  const listId = "day-close-list";
   return <section aria-label="დღის დახურვის სია" className="cwk-sheet">
-    <div className="cwk-sheet-head">
-      <div className="min-w-0"><h2 className="cwk-sheet-title">დღის დახურვა</h2><p className="cwk-sheet-desc"><span>{locationName}</span> · <span>{formatKaDayKey(businessDate)}</span></p></div>
+    <h2 className={expanded ? "border-b border-[var(--cwk-rule)]" : ""}><button type="button" aria-expanded={expanded} aria-controls={listId} onClick={() => setExpanded(value => !value)} className="flex min-h-12 w-full items-center gap-3 rounded-[inherit] px-4 py-2 text-left transition-colors hover:bg-[var(--sf-surface-2)] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--sf-focus)]">
+      <span className="cwk-sheet-title min-w-0 flex-1">დღის დახურვა<span className="sr-only"> · {locationName}, {formatKaDayKey(businessDate)}</span></span>
       {state.data?.closedAt ? <span className="cwk-mark" data-tone="success"><CheckCircle2 aria-hidden="true" />დახურულია</span> : <span className="cwk-mark" data-tone="count"><span className="cwk-num">{completed.length}/4</span></span>}
-    </div>
-    <ul className="divide-y divide-border">{rows.map(row => {
+      <ChevronDown className={`size-4 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none ${expanded ? "rotate-180" : ""}`} aria-hidden="true" />
+    </button></h2>
+    <ul id={listId} hidden={!expanded} className="divide-y divide-border">{rows.map(row => {
       const done = completed.includes(row.key);
       return <li key={row.key} className="relative flex min-h-14 items-center gap-3 px-4 py-2 transition-colors hover:bg-[var(--sf-surface-2)]">
         <Link href={row.href} className="group min-w-0 flex-1 rounded-sm py-1 after:absolute after:inset-0 after:content-[''] focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-inset focus-visible:after:ring-[var(--sf-focus)]"><span className="block text-sm font-semibold">{row.title}</span><span className="block text-xs text-muted-foreground">{row.detail}</span></Link>

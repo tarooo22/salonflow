@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 const query = (data: unknown) => ({ data, isLoading: false, isError: false, refetch: vi.fn() });
 
+vi.mock("wouter", () => ({ Link: ({ href, children, className }: { href: string; children: React.ReactNode; className?: string }) => <a href={href} className={className}>{children}</a> }));
 vi.mock("@/components/DashboardLayout", () => ({ default: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
 vi.mock("@/components/ui/button", () => ({ Button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props}>{children}</button> }));
 vi.mock("@/components/ui/input", () => ({ Input: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} /> }));
@@ -51,5 +52,13 @@ describe("Settings profile and privacy surface", () => {
     expect(markup).toContain("შეტყობინებები აპში");
     expect(markup).toContain("ანგარიში");
     expect(markup).not.toContain("ავტომატური booking confirmation");
+  });
+
+  it("names the personal tab \"ჩემი ანგარიში\" and links owners to billing", () => {
+    const markup = renderToStaticMarkup(<Settings />);
+    expect(markup).toContain("ჩემი ანგარიში");
+    expect(markup).not.toContain("ჩემი გარემო");
+    expect(markup).toContain("პაკეტი და გადახდა");
+    expect(markup).toContain('href="/app/billing"');
   });
 });

@@ -1,4 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { ChaweraMark } from "@/components/brand/ChaweraMark";
 import { PublicLanguageSelector } from "@/components/public/PublicPrimitives";
 import { usePublicLocale } from "@/contexts/PublicLocaleContext";
 import { BRAND } from "@shared/brand";
@@ -46,7 +47,7 @@ export function hasTabBar(path: string) {
 }
 
 export function CatalogWordmark() {
-  return <span className="cw-wordmark">{BRAND.nameKa}</span>;
+  return <span className="cw-wordmark"><ChaweraMark size={24} />{BRAND.nameKa}</span>;
 }
 
 function NavItem({ href, label, onNavigate }: { href: string; label: NavLabel | "forBusiness"; onNavigate?: () => void }) {
@@ -106,6 +107,8 @@ export function CatalogFooter() {
   const [path] = useLocation();
   const text = ui[locale];
   const year = new Date().getFullYear();
+  // The booking flow has its own bottom bar.
+  if (path.startsWith("/book/")) return null;
   return <footer className="cw-footer" data-tabbar={hasTabBar(path)}>
     <div className="cw-container cw-footer-grid">
       <div>

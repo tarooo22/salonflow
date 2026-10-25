@@ -1,5 +1,6 @@
 import { and, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { appointmentServices, appointments, clientConsents, clients, commissionEntries, customerFeedback, expenses, organizations, payments, staffProfiles } from "../../drizzle/schema";
+import { dateKeyInTimeZone } from "../../shared/timezones";
 import { bookingHistorySchema, reportingRangeSchema } from "../../shared/validation";
 import { requireOrganizationAction } from "../access";
 import { requireDb } from "../db";
@@ -81,7 +82,7 @@ export const reportingRouter = router({
   feedbackInsights: protectedProcedure.input(reportingRangeSchema).query(async ({ ctx, input }) => {
     await requireOrganizationAction(ctx.user, input.organizationId, "reports:view");
     const db = await requireDb();
-    const [feedbackRows, consentRows] = await Promise.all([
+    const [feedbackRows, consentRows, [organization]] = await Promise.all([
       db.select({ rating: customerFeedback.rating, status: customerFeedback.status, submittedAt: customerFeedback.submittedAt }).from(customerFeedback).where(and(
         eq(customerFeedback.organizationId, input.organizationId),
         gte(customerFeedback.submittedAt, input.startsAt),
@@ -90,12 +91,14 @@ export const reportingRouter = router({
       db.select({ clientId: clientConsents.clientId, consentType: clientConsents.consentType, granted: clientConsents.granted, withdrawnAt: clientConsents.withdrawnAt, createdAt: clientConsents.createdAt }).from(clientConsents)
         .innerJoin(clients, eq(clientConsents.clientId, clients.id))
         .where(and(eq(clients.organizationId, input.organizationId), lte(clientConsents.createdAt, input.endsAt))),
+      db.select({ defaultTimezone: organizations.defaultTimezone }).from(organizations).where(eq(organizations.id, input.organizationId)).limit(1),
     ]);
+    if (!organization) throw new Error("ორგანიზაცია ვერ მოიძებნა");
     const ratings = [1, 2, 3, 4, 5].map(rating => ({ rating, count: feedbackRows.filter(row => row.rating === rating).length }));
     const statuses = ["PENDING", "APPROVED", "HIDDEN", "REJECTED"].map(status => ({ status, count: feedbackRows.filter(row => row.status === status).length }));
     const byDate = new Map<string, number>();
     for (const row of feedbackRows) {
-      const day = row.submittedAt.toISOString().slice(0, 10);
+      const day = dateKeyInTimeZone(row.submittedAt, organization.defaultTimezone);
       byDate.set(day, (byDate.get(day) ?? 0) + 1);
     }
     const latestConsent = new Map<string, { consentType: "MARKETING_SMS" | "MARKETING_EMAIL" | "BOOKING_TERMS"; granted: boolean; withdrawnAt: Date | null; createdAt: Date }>();

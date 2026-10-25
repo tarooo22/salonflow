@@ -7,7 +7,7 @@ export type BookingCalendarEvent = {
 };
 
 function escapeIcsText(value: string) {
-  return value.replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/,/g, "\\,").replace(/;/g, "\\;");
+  return value.replace(/\\/g, "\\\\").replace(/\r\n?|\n/g, "\\n").replace(/,/g, "\\,").replace(/;/g, "\\;");
 }
 
 function formatIcsDate(value: Date) {

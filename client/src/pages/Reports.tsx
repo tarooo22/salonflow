@@ -2,20 +2,22 @@ import { RevenueTrendChart, CommissionDistributionChart } from "@/components/rep
 import { BookingForecastPanel, PeakHourHeatmapPanel, RetentionCohortPanel, WeekComparisonPanel } from "@/components/reports/AdvancedAnalyticsPanels";
 import { FeedbackConsentInsights } from "@/components/reports/FeedbackConsentInsights";
 import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CompactMetricRail, MetricCell } from "@/components/workspace/DashboardModules";
-import { WorkspaceFilterBar, WorkspacePageHeader, WorkspaceSection, WorkspaceState, WorkspaceStatusPill, type WorkspaceStatus } from "@/components/workspace/WorkspacePrimitives";
+import { WorkspaceFilterBar, WorkspaceMetric, WorkspacePageHeader, WorkspaceSection, WorkspaceState, WorkspaceStatusPill, type WorkspaceStatus } from "@/components/workspace/WorkspacePrimitives";
 import { SavedViewMenu, type SavedViewPayload } from "@/components/workspace/SavedViewMenu";
 import { gelInputToTetri } from "@/lib/money";
 import { formatGelTetri, formatKaDate, formatKaDateTime, formatPaymentMethod } from "@/lib/presentation";
 import { trpc } from "@/lib/trpc";
-import { ChevronLeft, ChevronRight, Download, PlayCircle, Plus, Trash2, Wallet } from "lucide-react";
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { ChevronDown, ChevronLeft, ChevronRight, Download, PlayCircle, Plus, Trash2, Wallet } from "lucide-react";
+import React, { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { dateKeyInTimeZone, localInputToUtc } from "@shared/timezones";
 import { toast } from "sonner";
+import { useLocation, useSearch } from "wouter";
 import DashboardLayout from "@/components/DashboardLayout";
 
 const HISTORY_PAGE_SIZE = 10;
@@ -44,8 +46,17 @@ const feedbackHasData = (data: { feedback: { total: number }; consent: { current
 function SectionLoading({ title }: { title: string }) { return <WorkspaceState kind="loading" title={title} />; }
 function SectionEmpty({ title }: { title: string }) { return <WorkspaceState kind="empty" title={title} />; }
 
+/** The report has something to show once a visit was completed or money was collected in the period. */
+export function reportHasData(summary: { completedAppointments: number; collectedRevenueTetri: number } | undefined) {
+  return Boolean(summary && (summary.completedAppointments > 0 || summary.collectedRevenueTetri > 0));
+}
+
 export default function Reports() {
   const utils = trpc.useUtils();
+  const search = useSearch();
+  const [pathname, navigate] = useLocation();
+  const detailsOpen = new URLSearchParams(search).get("details") === "1";
+  const setDetailsOpen = (open: boolean) => navigate(open ? `${pathname}?details=1` : pathname, { replace: true });
   const organizations = trpc.organizations.listMine.useQuery();
   const organizationEntry = organizations.data?.[0];
   const organization = organizationEntry?.organization;
@@ -155,7 +166,8 @@ export default function Reports() {
       <div className="sf-workspace-page mx-auto w-full max-w-7xl space-y-5">
         <WorkspacePageHeader
           title="ანგარიშები"
-          actions={<>{organization && canManageFinance ? <Button onClick={() => { setExpenseFormError(""); setExpenseOpen(true); }}><Plus className="mr-2 size-4" aria-hidden="true" />ხარჯი</Button> : null}<Button variant="outline" disabled={!organization || csvExport.isFetching} onClick={download} title="CSV ფაილად ჩამოტვირთვა"><Download className="mr-2 size-4" />{csvExport.isFetching ? "მზადდება…" : "ექსპორტი"}</Button></>}
+          description="შემოსავალი და ჯავშნები არჩეული პერიოდისთვის."
+          actions={organization && canManageFinance ? <Button onClick={() => { setExpenseFormError(""); setExpenseOpen(true); }}><Plus className="mr-2 size-4" aria-hidden="true" />ხარჯი</Button> : undefined}
         />
 
         <WorkspaceFilterBar>
@@ -168,7 +180,24 @@ export default function Reports() {
         {!organization && !organizations.isLoading ? <WorkspaceState kind="empty" title="ჯერ შექმენით სამუშაო სივრცე" /> : null}
 
         {organization ? <>
-          <CompactMetricRail label="ფინანსური მაჩვენებლები"><MetricCell label="შემოსავალი" value={report.isLoading ? "…" : gel(summary?.collectedRevenueTetri ?? 0)} /><MetricCell label="დარჩენილი ბალანსი" value={report.isLoading ? "…" : gel(summary?.unpaidBalanceTetri ?? 0)} /><MetricCell label="ხარჯები" value={report.isLoading ? "…" : gel(summary?.expensesTetri ?? 0)} /></CompactMetricRail>
+          {report.isLoading ? <SectionLoading title="იტვირთება…" /> : null}
+          {summary && !reportHasData(summary) ? <WorkspaceState kind="empty" title="ანგარიში პირველი დასრულებული ვიზიტის შემდეგ გამოჩნდება." action={<Button variant="outline" onClick={() => navigate("/app/calendar")}>კალენდრის გახსნა</Button>} /> : null}
+          {summary && reportHasData(summary) ? <>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <WorkspaceMetric label="შემოსავალი" value={gel(summary.collectedRevenueTetri)} />
+              <WorkspaceMetric label="ჯავშნები" value={summary.appointmentCount} />
+              {summary.averageTicketTetri > 0 ? <WorkspaceMetric label="საშუალო ჩეკი" value={gel(summary.averageTicketTetri)} /> : null}
+            </div>
+            {revenueTrend.length ? <WorkspaceSection title="შემოსავალი დღეების მიხედვით"><RevenueTrendChart data={revenueTrend} /></WorkspaceSection> : null}
+          </> : null}
+
+          <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen} className="space-y-5">
+          <CollapsibleTrigger asChild><button type="button" className="flex min-h-11 w-full items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 text-left text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sf-focus)]"><span>დეტალური ანალიზი</span><ChevronDown className={`size-4 transition-transform ${detailsOpen ? "rotate-180" : ""}`} aria-hidden="true" /></button></CollapsibleTrigger>
+          <CollapsibleContent className="space-y-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <CompactMetricRail label="ფინანსური მაჩვენებლები"><MetricCell label="დარჩენილი ბალანსი" value={report.isLoading ? "…" : gel(summary?.unpaidBalanceTetri ?? 0)} /><MetricCell label="ხარჯები" value={report.isLoading ? "…" : gel(summary?.expensesTetri ?? 0)} /></CompactMetricRail>
+            <Button variant="outline" disabled={csvExport.isFetching} onClick={download} title="CSV ფაილად ჩამოტვირთვა"><Download className="mr-2 size-4" aria-hidden="true" />{csvExport.isFetching ? "მზადდება…" : "ექსპორტი"}</Button>
+          </div>
 
 
           <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[.9fr_1.1fr]">
@@ -188,12 +217,7 @@ export default function Reports() {
             </dl>
           </WorkspaceSection>
 
-          <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[1.15fr_.85fr]">
-            <WorkspaceSection title="შემოსავალი დღეების მიხედვით">
-              {analytics.isLoading ? <SectionLoading title="იტვირთება…" /> : null}
-              {!analytics.isLoading && !revenueTrend.length ? <SectionEmpty title="ამ პერიოდში შემოსავალი არ არის" /> : null}
-              {!analytics.isLoading && revenueTrend.length ? <RevenueTrendChart data={revenueTrend} /> : null}
-            </WorkspaceSection>
+          <div className="grid grid-cols-1 items-start gap-4">
 
             <WorkspaceSection title="გუნდი">
               {analytics.isLoading ? <SectionLoading title="იტვირთება…" /> : null}
@@ -240,6 +264,8 @@ export default function Reports() {
           </> : null}
 
           <WorkspaceSection title="ჯავშნების ისტორია" action={<span className="cwk-num text-sm text-muted-foreground">{history?.total ?? 0}</span>}>{bookingHistory.isError ? <WorkspaceState kind="error" title="ისტორია მიუწვდომელია" description="შეამოწმეთ კავშირი და სცადეთ ხელახლა." action={<Button variant="outline" onClick={() => { void bookingHistory.refetch(); }}>თავიდან ცდა</Button>} /> : null}{bookingHistory.isLoading ? <WorkspaceState kind="loading" title="იტვირთება…" /> : null}{!bookingHistory.isLoading && !bookingHistory.isError && !history?.items.length ? <WorkspaceState kind="empty" title="ამ პერიოდში ჯავშანი არ არის" /> : null}{!bookingHistory.isLoading && !bookingHistory.isError && history?.items.length ? <><div className="overflow-x-auto rounded-xl border border-border"><table className="w-full min-w-[30rem] text-left text-sm"><thead className="bg-[var(--sf-surface-2)] text-[13px] font-semibold text-muted-foreground"><tr><th className="px-4 py-2.5">ნომერი</th><th className="px-4 py-2.5">თარიღი და დრო</th><th className="px-4 py-2.5">სტატუსი</th><th className="px-4 py-2.5 text-right">ჯამი</th></tr></thead><tbody className="divide-y">{history.items.map(appointment => <tr key={appointment.id} className="transition-colors hover:bg-muted/40"><td className="px-4 py-2.5 cwk-num text-xs font-medium">#{appointment.id.slice(-8).toUpperCase()}</td><td className="px-4 py-2.5 cwk-num text-muted-foreground">{formatKaDateTime(new Date(appointment.startsAt))}</td><td className="px-4 py-2.5"><WorkspaceStatusPill status={appointment.status as WorkspaceStatus} /></td><td className="px-4 py-2.5 text-right cwk-num font-semibold">{gel(appointment.totalTetri)}</td></tr>)}</tbody></table></div><div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-sm"><p className="cwk-num text-muted-foreground">{pageStart}–{pageEnd} / {history.total}</p><div className="flex gap-2"><Button variant="outline" size="sm" className="max-md:h-11" onClick={() => setOffset(current => Math.max(0, current - HISTORY_PAGE_SIZE))} disabled={offset === 0}><ChevronLeft className="mr-1 size-4" />წინა</Button><Button variant="outline" size="sm" className="max-md:h-11" onClick={() => setOffset(current => current + HISTORY_PAGE_SIZE)} disabled={offset + HISTORY_PAGE_SIZE >= history.total}>შემდეგი<ChevronRight className="ml-1 size-4" /></Button></div></div></> : null}</WorkspaceSection>
+          </CollapsibleContent>
+          </Collapsible>
         </> : null}
       </div>
 

@@ -8,6 +8,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { registerPublicSeoRoutes } from "../publicSeo";
+import { securityHeaders } from "./securityHeaders";
 import { AUTH_PROCEDURES, PUBLIC_BOOKING_WRITE_PROCEDURES, rateLimit } from "./rateLimit";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -34,6 +35,8 @@ async function startServer() {
   const server = createServer(app);
   // Railway terminates TLS at its proxy; trust the first proxy for secure cookie/protocol handling.
   app.set("trust proxy", 1);
+  app.disable("x-powered-by");
+  app.use(securityHeaders);
   // Lightweight process-readiness endpoint for Railway and external uptime checks.
   app.get("/health", (_req, res) => {
     res.status(200).json({ ok: true, service: "salonflow" });
@@ -54,6 +57,10 @@ async function startServer() {
     createExpressMiddleware({
       router: appRouter,
       createContext,
+      // The rate limiter counts one HTTP request; cap how many procedures one batch can carry (client sends ≤20).
+      maxBatchSize: 20,
+      // Never log params: Drizzle query errors embed bound values (personal data).
+      onError: ({ path, error }) => console.error("[trpc]", path, error.code, error.message.startsWith("Failed query") ? "db query failed" : error.message),
     })
   );
   // development mode uses Vite, production mode uses static files

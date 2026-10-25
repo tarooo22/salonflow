@@ -209,6 +209,17 @@ Primitives live in `client/src/components/ui/` and carry the shared radius, heig
 
 Press 120ms, hover 180ms, sheet 260ms, carousel 400ms. Ease `cubic-bezier(.2, 0, 0, 1)`, exit `cubic-bezier(.4, 0, 1, 1)`. The carousel never autoplays. Under `prefers-reduced-motion` transforms and animations switch off.
 
+## Signature: the ring (შემოხაზვა)
+
+People circle an appointment on a paper calendar; Chawera's mark is that gesture, a hand-drawn open ring whose tail overshoots its start. **Rule: the ring marks your choice.** It is the only ornament in the product; everything else stays plain.
+
+- **Primitive:** `components/brand/Ring.tsx`, `<Ring variant="wide" | "square" draw? tone? />`, placed inside a `position: relative` parent. Absolute, `inset: -6px -8px` (square `-5px`), `pointer-events: none`, `aria-hidden`. Stroke 2.25, round caps, `pathLength=1`. Colour `accent-ink`; `#F48A9B` in dark mode and on the band (`tone="band"` or a `.cw-on-band` ancestor); `#fff` on photos (`tone="photo"` or `.cw-on-photo`); `Highlight` in forced-colors. No `vector-effect`: with `pathLength` it mis-scales the dash in Chromium, so the stroke scales gently with the box instead.
+- **Where (at most 3 per viewport, all marking the same choice):** hero vertical words, selected filter chip, booking day (square), slot and summary time (wide), confirmation time, category tiles and empty-state icons (static square), panel "დაიწყეთ აქ" completed step numbers.
+- **Never on:** buttons, navigation, tables, status marks, list prices, errors, destructive actions, photos (except the hero frame), headlines or body text, other panel pages. Never the only cue: a selected item also has the `accent-soft` fill, `accent-ink` 700 text and `aria-pressed` / `aria-checked`.
+- **Mark and favicon:** `components/brand/ChaweraMark.tsx` (24px ring plus a dot where the pen rests) sits left of the "ჩაწერა" wordmark; `client/public/favicon.svg` is the same mark with a dark-scheme colour switch.
+- **Motion:** `draw` true: `stroke-dashoffset` 1 to 0, 360ms `cubic-bezier(.2, 0, 0, 1)`. `draw` false: opacity to 0 in 120ms. `draw` omitted: static, fully drawn. Static under `prefers-reduced-motion` and `[data-reduce-motion="true"]`.
+- **A11y:** decorative only; meaning lives in text and ARIA state. Keep `Ring` always mounted and pass `draw={selected}` when deselect should fade.
+
 ## Do's and Don'ts
 
 ### Do

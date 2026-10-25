@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canUseCalendarSpecialistFilter, openingStartMinute, placeTickets } from "./Calendar";
+import { boardScrollTargetMinute, canUseCalendarSpecialistFilter, isOutsideHoursError, nextQuarterHour, openingStartMinute, placeTickets } from "./Calendar";
 
 describe("Calendar specialist filter access", () => {
   it("shows the team filter to owners and managers", () => {
@@ -37,5 +37,36 @@ describe("Calendar opening hours", () => {
   it("falls back to 09:00 when no opening hours are known for the shown days", () => {
     expect(openingStartMinute(hours, [6])).toBe(9 * 60);
     expect(openingStartMinute(undefined, [0])).toBe(9 * 60);
+  });
+});
+
+describe("Calendar reschedule hours override", () => {
+  it("offers the override only for the server's outside-hours rejection", () => {
+    expect(isOutsideHoursError({ data: { code: "PRECONDITION_FAILED" } })).toBe(true);
+    expect(isOutsideHoursError({ data: { code: "CONFLICT" } })).toBe(false);
+    expect(isOutsideHoursError({ data: null })).toBe(false);
+    expect(isOutsideHoursError(null)).toBe(false);
+  });
+});
+
+describe("Calendar board scroll target", () => {
+  const base = { isToday: true, nowMinute: 14 * 60, workStartMinute: 10 * 60 };
+
+  it("opens 30 minutes before the first booking, even when now is later", () => {
+    expect(boardScrollTargetMinute({ ...base, earliestBooking: 10 * 60 + 15 })).toBe(9 * 60 + 45);
+  });
+
+  it("without bookings opens an hour before now, but only today and inside hours", () => {
+    expect(boardScrollTargetMinute({ ...base, earliestBooking: Infinity })).toBe(13 * 60);
+    expect(boardScrollTargetMinute({ ...base, earliestBooking: Infinity, isToday: false })).toBe(9 * 60 + 45);
+    expect(boardScrollTargetMinute({ ...base, earliestBooking: Infinity, nowMinute: 8 * 60 })).toBe(9 * 60 + 45);
+    expect(boardScrollTargetMinute({ ...base, earliestBooking: Infinity, nowMinute: 22 * 60 })).toBe(9 * 60 + 45);
+  });
+});
+
+describe("Calendar ?create=1 preset", () => {
+  it("rounds up to the next quarter hour and never returns the current instant", () => {
+    expect(nextQuarterHour(new Date("2026-10-25T10:07:00.000Z")).toISOString()).toBe("2026-10-25T10:15:00.000Z");
+    expect(nextQuarterHour(new Date("2026-10-25T10:15:00.000Z")).toISOString()).toBe("2026-10-25T10:30:00.000Z");
   });
 });

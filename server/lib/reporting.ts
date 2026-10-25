@@ -37,9 +37,11 @@ export function summarizeRevenue(
     }),
   );
 
-  const grossBookedRevenueTetri = appointments.reduce((sum, appointment) => sum + appointment.totalTetri, 0);
+  // Cancelled and no-show visits are not revenue and not money owed; any payment taken on them still counts as collected.
+  const billable = appointments.filter(appointment => appointment.status !== "CANCELLED" && appointment.status !== "NO_SHOW");
+  const grossBookedRevenueTetri = billable.reduce((sum, appointment) => sum + appointment.totalTetri, 0);
   const collectedRevenueTetri = Array.from(collectedByAppointment.values()).reduce((sum, item) => sum + item.collectedTetri, 0);
-  const unpaidBalanceTetri = Array.from(collectedByAppointment.values()).reduce((sum, item) => sum + item.balanceTetri, 0);
+  const unpaidBalanceTetri = billable.reduce((sum, appointment) => sum + (collectedByAppointment.get(appointment.id)?.balanceTetri ?? 0), 0);
   const refundsTetri = payments.reduce((sum, payment) => sum + payment.refundedTetri, 0);
   const discountsTetri = appointments.reduce((sum, appointment) => sum + appointment.discountTetri, 0);
   const expensesTetri = expenses.reduce((sum, expense) => sum + expense.amountTetri, 0);
@@ -54,12 +56,13 @@ export function summarizeRevenue(
     refundsTetri,
     discountsTetri,
     expensesTetri,
-    grossMarginTetri: collectedRevenueTetri - refundsTetri - expensesTetri,
+    // collectedRevenueTetri is already net of refunds.
+    grossMarginTetri: collectedRevenueTetri - expensesTetri,
     appointmentCount: appointments.length,
     completedAppointments,
     cancelledAppointments,
     noShowAppointments,
-    averageTicketTetri: appointments.length > 0 ? Math.round(grossBookedRevenueTetri / appointments.length) : 0,
+    averageTicketTetri: billable.length > 0 ? Math.round(grossBookedRevenueTetri / billable.length) : 0,
   };
 }
 

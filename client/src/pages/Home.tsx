@@ -1,33 +1,27 @@
+import { Ring } from "@/components/brand/Ring";
 import { CatalogFooter, CatalogHeader } from "@/components/catalog/CatalogChrome";
-import { Float, HeroIn, HeroPhoto, RevealGroup, RevealItem } from "@/components/catalog/HomeMotion";
+import { RevealGroup, RevealItem } from "@/components/catalog/HomeMotion";
 import { ProductCard, VacancyTicket } from "@/components/catalog/Commerce";
-import { categoryIcon, cssVars, EmptyCatalog, listingMatchesVertical, newestListings, SalonGrid, SalonLoading, ui as ticketsUi, type CatalogCategory as Category, type CatalogListing as Listing } from "@/components/catalog/Tickets";
+import { categoryIcon, cssVars, EmptyCatalog, listingMatchesVertical, newestListings, CarouselArrows, SalonGrid, SalonLoading, useScrollRow, ui as ticketsUi, type CatalogCategory as Category, type CatalogListing as Listing } from "@/components/catalog/Tickets";
 import { marketplaceDiscoveryHref } from "@/components/public/MarketplaceDiscovery";
 import { usePublicMeta } from "@/components/public/PublicMeta";
 import { usePublicLocale } from "@/contexts/PublicLocaleContext";
 import { trpc } from "@/lib/trpc";
 import { VERTICALS, verticalForCategory, verticalLabel, type Vertical } from "@/lib/verticals";
 import { BRAND } from "@shared/brand";
-import { ArrowRight, CalendarCheck, Check, ChevronLeft, ChevronRight, Globe, MapPin, Scissors, Search, Smile, Sparkles, UsersRound, Wallet, type LucideIcon } from "lucide-react";
-import { type FormEvent, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ArrowRight, CalendarCheck, ChevronLeft, ChevronRight, Globe, MapPin, Search, UsersRound, Wallet } from "lucide-react";
+import { type FormEvent, type ReactNode, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
-
-function plural(count: number, one: string, few: string, many: string) {
-  const rule = new Intl.PluralRules("ru").select(count);
-  return rule === "one" ? one : rule === "few" ? few : many;
-}
 
 export const ui = {
   ka: {
     metaTitle: `${BRAND.name} — ონლაინ ჩაწერა სალონში, ესთეტიკის ცენტრსა და სტომატოლოგთან`,
     metaDescription: "იპოვე გადამოწმებული სალონი, ესთეტიკის ცენტრი ან სტომატოლოგიური კლინიკა მთელ საქართველოში და ჩაეწერე ონლაინ — სერვისი, სპეციალისტი და თავისუფალი დრო ერთ ადგილას.",
-    searchSection: "ძებნა", chooseField: "სფეროს არჩევა", all: "ყველა",
-    heroTitle: "იპოვე და ჩაეწერე ონლაინ", heroLede: "სალონები, ესთეტიკის ცენტრები და სტომატოლოგიური კლინიკები მთელ საქართველოში.",
+    searchSection: "ძებნა", looking: "რას ეძებ?", all: "ყველა",
+    heroTitle: "იპოვე და ჩაეწერე ონლაინ",
     searchForm: "ადგილის ძებნა", what: "რა გჭირდება?", whatSr: " — სერვისი ან ადგილის სახელი", where: "სად?", whereSr: " — ქალაქი ან უბანი", wherePlaceholder: "ქალაქი ან უბანი", search: "მოძებნე",
     bannerLabel: "გამორჩეული ადგილები", slideLabel: (index: number, total: number) => `${index} / ${total}`, prev: "წინა", next: "შემდეგი",
     categoriesTitle: "კატეგორიები",
-    verticalsTitle: "აირჩიე სფერო", allCategories: "ყველა კატეგორია",
-    chipCategories: (count: number) => `${count} კატეგორია`, chipFields: (count: number) => `${count} სფერო`,
     vip: "VIP ადგილები", recommended: "რეკომენდებული", paidNote: "ფასიანი განთავსება", fresh: "ახალი კატალოგში", allPlaces: "ყველა ადგილი", viewAll: "ყველას ნახვა",
     loading: "იტვირთება", placesFailed: "ადგილების ჩატვირთვა ვერ მოხერხდა.", retry: "სცადე თავიდან",
     emptyDental: "სტომატოლოგიური კლინიკები მალე დაემატება.", emptyVertical: (label: string) => `${label} — პირველი ადგილები მალე გამოჩნდება.`, emptyDefault: "პირველი გადამოწმებული ადგილები მალე გამოჩნდება.",
@@ -50,13 +44,11 @@ export const ui = {
   en: {
     metaTitle: `${BRAND.name} — online booking at salons, aesthetics centres and dentists`,
     metaDescription: "Find a verified salon, aesthetics centre or dental clinic across Georgia and book online — service, specialist and free time in one place.",
-    searchSection: "Search", chooseField: "Choose a field", all: "All",
-    heroTitle: "Find and book online", heroLede: "Salons, aesthetics centres and dental clinics across Georgia.",
+    searchSection: "Search", looking: "What are you looking for?", all: "All",
+    heroTitle: "Find and book online",
     searchForm: "Search for a place", what: "What do you need?", whatSr: " — service or place name", where: "Where?", whereSr: " — city or area", wherePlaceholder: "City or area", search: "Search",
     bannerLabel: "Featured places", slideLabel: (index: number, total: number) => `${index} / ${total}`, prev: "Previous", next: "Next",
     categoriesTitle: "Categories",
-    verticalsTitle: "Choose a field", allCategories: "All categories",
-    chipCategories: (count: number) => `${count} ${count === 1 ? "category" : "categories"}`, chipFields: (count: number) => `${count} ${count === 1 ? "field" : "fields"}`,
     vip: "VIP places", recommended: "Recommended", paidNote: "Paid placement", fresh: "New in the catalog", allPlaces: "All places", viewAll: "View all",
     loading: "Loading", placesFailed: "Places could not be loaded.", retry: "Try again",
     emptyDental: "Dental clinics will be added soon.", emptyVertical: (label: string) => `${label} — the first places will appear soon.`, emptyDefault: "The first verified places will appear soon.",
@@ -79,13 +71,11 @@ export const ui = {
   ru: {
     metaTitle: `${BRAND.name} — онлайн-запись в салон, центр эстетики и к стоматологу`,
     metaDescription: "Найдите проверенный салон, центр эстетики или стоматологическую клинику по всей Грузии и запишитесь онлайн — услуга, специалист и свободное время в одном месте.",
-    searchSection: "Поиск", chooseField: "Выбор сферы", all: "Все",
-    heroTitle: "Найдите и запишитесь онлайн", heroLede: "Салоны, центры эстетики и стоматологические клиники по всей Грузии.",
+    searchSection: "Поиск", looking: "Что вы ищете?", all: "Все",
+    heroTitle: "Найдите и запишитесь онлайн",
     searchForm: "Поиск места", what: "Что вам нужно?", whatSr: " — услуга или название места", where: "Где?", whereSr: " — город или район", wherePlaceholder: "Город или район", search: "Найти",
     bannerLabel: "Избранные места", slideLabel: (index: number, total: number) => `${index} / ${total}`, prev: "Назад", next: "Вперёд",
     categoriesTitle: "Категории",
-    verticalsTitle: "Выберите сферу", allCategories: "Все категории",
-    chipCategories: (count: number) => `${count} ${plural(count, "категория", "категории", "категорий")}`, chipFields: (count: number) => `${count} ${plural(count, "сфера", "сферы", "сфер")}`,
     vip: "VIP-места", recommended: "Рекомендуем", paidNote: "Платное размещение", fresh: "Новое в каталоге", allPlaces: "Все места", viewAll: "Смотреть все",
     loading: "Загрузка", placesFailed: "Не удалось загрузить места.", retry: "Повторить",
     emptyDental: "Стоматологические клиники скоро появятся.", emptyVertical: (label: string) => `${label} — первые места скоро появятся.`, emptyDefault: "Первые проверенные места скоро появятся.",
@@ -194,50 +184,55 @@ function Banner({ items }: { items: Listing[] }) {
   </section>;
 }
 
-/** Hero: brand photo with the search on it. The chip shows real catalog counts and is decoration, hidden from assistive tech. */
-function Hero({ categoryCount }: { categoryCount: number }) {
+/** Hero on a plain ground: H1, the four field words (they also filter the listings below), the search bar, and one decorative photo on desktop. The ring on the chosen word is the page's only load animation. */
+function Hero({ vertical, onVertical }: { vertical: Vertical | null; onVertical: (next: Vertical | null) => void }) {
   const { locale } = usePublicLocale();
   const text = ui[locale];
   const [, setLocation] = useLocation();
   const [what, setWhat] = useState("");
   const [where, setWhere] = useState("");
+  const [ready, setReady] = useState(false);
+  const labelId = useId();
+  // The ring draws once, shortly after first paint.
+  useEffect(() => {
+    const timer = window.setTimeout(() => setReady(true), 200);
+    return () => window.clearTimeout(timer);
+  }, []);
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setLocation(marketplaceDiscoveryHref("/salons", undefined, what, where));
   };
+  const words: Array<{ id: Vertical | null; label: string }> = [{ id: null, label: text.all }, ...VERTICALS.map(item => ({ id: item.id, label: verticalLabel(item.id, locale) }))];
 
   return <section className="cw-container hh" aria-label={text.searchSection}>
-    <div className="hh-stage">
-      <HeroPhoto className="hh-media"><BrandImg name="hero" width={1600} height={900} eager /></HeroPhoto>
-      <div className="hh-copy">
-        <HeroIn><h1 className="cw-display">{text.heroTitle}</h1></HeroIn>
-        <HeroIn delay={0.08}><p className="cw-lede">{text.heroLede}</p></HeroIn>
+    <div className="hh-copy">
+      <h1 className="hh-title">{text.heroTitle}</h1>
+      <p id={labelId} className="hh-label">{text.looking}</p>
+      <div className="hh-words" role="group" aria-labelledby={labelId}>
+        {words.map(word => {
+          const selected = vertical === word.id;
+          return <button key={word.id ?? "all"} type="button" className="hh-word" aria-pressed={selected} onClick={() => onVertical(word.id && selected ? null : word.id)}>
+            {word.label}
+            <Ring variant="wide" draw={selected && ready} />
+          </button>;
+        })}
       </div>
-      <HeroIn delay={0.16} className="hh-formwrap">
-        <form onSubmit={submit} className="hm-bar hh-form" role="search" aria-label={text.searchForm}>
-          <label className="hm-bar-field">
-            <span className="sr-only">{text.what}{text.whatSr}</span>
-            <Search className="size-5 shrink-0" aria-hidden="true" />
-            <input value={what} onChange={event => setWhat(event.target.value)} placeholder={text.what} maxLength={120} autoComplete="off" enterKeyHint="search" />
-          </label>
-          <label className="hm-bar-field">
-            <span className="sr-only">{text.where}{text.whereSr}</span>
-            <MapPin className="size-5 shrink-0" aria-hidden="true" />
-            <input value={where} onChange={event => setWhere(event.target.value)} placeholder={text.wherePlaceholder} maxLength={120} list="hm-cities" autoComplete="off" enterKeyHint="search" />
-          </label>
-          <datalist id="hm-cities">{CITIES.map(city => <option key={city.value} value={city.value} />)}</datalist>
-          <button type="submit" className="hm-bar-btn">{text.search}</button>
-        </form>
-      </HeroIn>
-      <div className="hh-chips" aria-hidden="true">
-        {categoryCount > 0 ? <Float className="hh-chip-pos">
-          <div className="hh-chip">
-            <span className="hh-chip-icon"><Sparkles className="size-5" /></span>
-            <span><span className="hh-chip-title">{text.chipCategories(categoryCount)} · {text.chipFields(VERTICALS.length)}</span></span>
-          </div>
-        </Float> : null}
-      </div>
+      <form onSubmit={submit} className="hm-bar hh-form" role="search" aria-label={text.searchForm}>
+        <label className="hm-bar-field">
+          <span className="sr-only">{text.what}{text.whatSr}</span>
+          <Search className="size-5 shrink-0" aria-hidden="true" />
+          <input value={what} onChange={event => setWhat(event.target.value)} placeholder={text.what} maxLength={120} autoComplete="off" enterKeyHint="search" />
+        </label>
+        <label className="hm-bar-field">
+          <span className="sr-only">{text.where}{text.whereSr}</span>
+          <MapPin className="size-5 shrink-0" aria-hidden="true" />
+          <input value={where} onChange={event => setWhere(event.target.value)} placeholder={text.wherePlaceholder} maxLength={120} list="hm-cities" autoComplete="off" enterKeyHint="search" />
+        </label>
+        <datalist id="hm-cities">{CITIES.map(city => <option key={city.value} value={city.value} />)}</datalist>
+        <button type="submit" className="hm-bar-btn">{text.search}</button>
+      </form>
     </div>
+    <div className="hh-photo" aria-hidden="true"><BrandImg name="hero" width={1600} height={900} /></div>
   </section>;
 }
 
@@ -247,108 +242,48 @@ function Zone({ labelledBy, label, tone, children }: { labelledBy?: string; labe
   </section>;
 }
 
-function Head({ id, title, note, href }: { id: string; title: string; note?: string; href: string }) {
+function Head({ id, title, note, href, controls }: { id: string; title: string; note?: string; href: string; controls?: ReactNode }) {
   const text = ui[usePublicLocale().locale];
   return <RevealGroup className="hm-head">
     <RevealItem>
       <h2 id={id} className="cw-h2">{title}</h2>
       {note ? <p className="hm-note">{note}</p> : null}
     </RevealItem>
-    <RevealItem><Link href={href} className="hm-all">{text.viewAll} <ArrowRight className="size-4" aria-hidden="true" /></Link></RevealItem>
+    <RevealItem className="hm-head-end">{controls}<Link href={href} className="hm-all">{text.viewAll} <ArrowRight className="size-4" aria-hidden="true" /></Link></RevealItem>
   </RevealGroup>;
 }
 
-const VERTICAL_ART: Record<Vertical, { photo: string; Icon: LucideIcon }> = {
-  beauty: { photo: "cat-hair", Icon: Scissors },
-  aesthetics: { photo: "cat-aesthetics", Icon: Sparkles },
-  dental: { photo: "cat-dental", Icon: Smile },
-};
-
-/** Three large field cards. Same filter behaviour as the old chips: a pressed card filters, pressing again clears. */
-function Verticals({ vertical, onVertical, categories }: { vertical: Vertical | null; onVertical: (next: Vertical | null) => void; categories: Category[] }) {
-  const { locale } = usePublicLocale();
-  const text = ui[locale];
-  return <Zone labelledBy="hm-fields-title">
-    <div className="hm-head">
-      <h2 id="hm-fields-title" className="cw-h2">{text.verticalsTitle}</h2>
-      <button type="button" className="hm-vchip" aria-pressed={vertical === null} onClick={() => onVertical(null)}>{text.all}</button>
-    </div>
-    <RevealGroup className="hv-grid">
-      {VERTICALS.map(item => {
-        const { photo, Icon } = VERTICAL_ART[item.id];
-        const blurb = categories.filter(category => verticalForCategory(category.slug) === item.id).slice(0, 3).map(category => category.nameKa).join(" · ");
-        return <RevealItem key={item.id} className="hv-item">
-          <button type="button" className="hv-card" aria-pressed={vertical === item.id} style={cssVars({ "--vc-bg": item.bg, "--vc-ink": item.ink })} onClick={() => onVertical(vertical === item.id ? null : item.id)}>
-            <Icon className="hv-fallback" aria-hidden="true" />
-            <BrandImg name={photo} width={800} height={600} />
-            <span className="hv-text">
-              <span className="hv-title">{verticalLabel(item.id, locale)}</span>
-              {blurb ? <span className="hv-blurb">{blurb}</span> : null}
-            </span>
-            <span className="hv-check" aria-hidden="true"><Check className="size-4" /></span>
-          </button>
+/** Every category as a lucide icon inside a static square ring, label below. A chosen field narrows the list. */
+function Categories({ vertical, categories }: { vertical: Vertical | null; categories: Category[] }) {
+  const text = ui[usePublicLocale().locale];
+  const shown = useMemo(() => categories.filter(category => !vertical || verticalForCategory(category.slug) === vertical), [categories, vertical]);
+  if (!shown.length) return null;
+  return <Zone labelledBy="hm-categories-title">
+    <RevealGroup className="hm-head"><RevealItem><h2 id="hm-categories-title" className="cw-h2">{text.categoriesTitle}</h2></RevealItem></RevealGroup>
+    <RevealGroup as="ul" className="hp-grid">
+      {shown.map(category => {
+        const Icon = categoryIcon(category.iconKey);
+        return <RevealItem as="li" key={category.id}>
+          <Link href={marketplaceDiscoveryHref("/salons", category.slug)} className="hp-tile">
+            <span className="hp-icon"><Icon className="size-[26px]" aria-hidden="true" /><Ring variant="square" /></span>
+            <span className="hp-name">{category.nameKa}</span>
+          </Link>
         </RevealItem>;
       })}
     </RevealGroup>
   </Zone>;
 }
 
-// The eight photo tiles. A tile with `slug` is that category; one with `vertical` links to the first category of that field.
-const PHOTO_GROUPS: ReadonlyArray<{ key: string; photo: string; slug?: string; vertical?: Vertical }> = [
-  { key: "hair", photo: "cat-hair", slug: "hair" },
-  { key: "nails", photo: "cat-nails", slug: "nails" },
-  { key: "makeup", photo: "cat-makeup", slug: "makeup" },
-  { key: "brows", photo: "cat-brows", slug: "brows-lashes" },
-  { key: "massage", photo: "cat-massage", slug: "massage-spa" },
-  { key: "barber", photo: "cat-barber", slug: "barber" },
-  { key: "aesthetics", photo: "cat-aesthetics", vertical: "aesthetics" },
-  { key: "dental", photo: "cat-dental", vertical: "dental" },
-];
-
-function Categories({ vertical, categories }: { vertical: Vertical | null; categories: Category[] }) {
-  const { locale } = usePublicLocale();
-  const text = ui[locale];
-  const shown = useMemo(() => categories.filter(category => !vertical || verticalForCategory(category.slug) === vertical), [categories, vertical]);
-  const tiles = useMemo(() => PHOTO_GROUPS.flatMap(group => {
-    const category = group.slug ? categories.find(item => item.slug === group.slug) : categories.find(item => verticalForCategory(item.slug) === group.vertical);
-    const field = group.vertical ?? verticalForCategory(group.slug!);
-    if (!category || (vertical && field !== vertical)) return [];
-    return [{ key: group.key, photo: group.photo, slug: category.slug, name: group.vertical ? verticalLabel(group.vertical, locale) : category.nameKa, Icon: categoryIcon(category.iconKey) }];
-  }), [categories, vertical, locale]);
-  // The chip list below the photo tiles only carries categories that have no tile of their own.
-  const tiled = new Set(tiles.map(tile => tile.slug));
-  const rest = shown.filter(category => !tiled.has(category.slug));
-  if (!shown.length) return null;
-  return <Zone labelledBy="hm-categories-title">
-    <RevealGroup className="hm-head"><RevealItem><h2 id="hm-categories-title" className="cw-h2">{text.categoriesTitle}</h2></RevealItem></RevealGroup>
-    {tiles.length ? <RevealGroup as="ul" className="hp-grid">
-      {tiles.map(tile => <RevealItem as="li" key={tile.key}>
-        <Link href={marketplaceDiscoveryHref("/salons", tile.slug)} className="hp-tile">
-          <tile.Icon className="hp-fallback" aria-hidden="true" />
-          <BrandImg name={tile.photo} width={800} height={600} />
-          <span className="hp-name">{tile.name}</span>
-        </Link>
-      </RevealItem>)}
-    </RevealGroup> : null}
-    {rest.length ? <>
-    <h3 className="hq-title">{text.allCategories}</h3>
-    <ul className="hq">
-      {rest.map(category => {
-        const Icon = categoryIcon(category.iconKey);
-        return <li key={category.id}>
-          <Link href={marketplaceDiscoveryHref("/salons", category.slug)} className="hq-chip"><Icon className="size-[18px]" aria-hidden="true" />{category.nameKa}</Link>
-        </li>;
-      })}
-    </ul>
-    </> : null}
-  </Zone>;
-}
+// More than four places scroll sideways with arrows in the header; four or fewer stay in the grid.
+const SCROLL_ROW_MIN = 5;
 
 function Strip({ id, title, note, items, rail = true }: { id: string; title: string; note?: string; items: Listing[]; rail?: boolean }) {
+  const row = useScrollRow();
   if (!items.length) return null;
+  const scrolls = rail && items.length >= SCROLL_ROW_MIN;
   return <Zone labelledBy={id}>
-    <Head id={id} title={title} note={note} href="/salons" />
-    <SalonGrid items={items} rail={rail} reveal />
+    <Head id={id} title={title} note={note} href="/salons" controls={scrolls ? <CarouselArrows row={row} /> : undefined} />
+    <SalonGrid items={items} rail={rail} reveal row={scrolls ? row : undefined} />
   </Zone>;
 }
 
@@ -477,12 +412,9 @@ export default function Home() {
   return <div className="cw">
     <CatalogHeader />
     <main id="main-content" className="hm">
-      <div className="hm-top">
-        <Hero categoryCount={categories.length} />
-        {slides.length ? <Banner items={slides} /> : null}
-      </div>
+      <Hero vertical={vertical} onVertical={setVertical} />
+      {slides.length ? <Banner items={slides} /> : null}
       <div className="hm-zones">
-        <Verticals vertical={vertical} onVertical={setVertical} categories={categories} />
         <Categories vertical={vertical} categories={categories} />
         <Listings items={items} loading={directory.isLoading} failed={directory.isError} onRetry={() => directory.refetch()} vertical={vertical} />
         <HowItWorks />

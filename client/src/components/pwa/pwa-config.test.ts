@@ -9,7 +9,10 @@ describe("PWA configuration", () => {
 
     expect(manifest.name).toContain("Chawera");
     expect(manifest.display).toBe("standalone");
-    expect(manifest.icons[0].src).toContain("/manus-storage/");
+    expect(manifest.icons[0].src).toBe("/favicon.svg");
+    expect(manifest.icons[0].purpose).toBe("any");
+    expect(serviceWorker).toContain('"/favicon.svg"');
+    expect(serviceWorker).not.toContain("manus-storage");
     expect(serviceWorker).toContain('url.pathname.startsWith("/api/")');
     expect(serviceWorker).not.toContain("caches.match(request)");
   });

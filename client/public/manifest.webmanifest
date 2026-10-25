@@ -11,10 +11,10 @@
   "dir": "ltr",
   "icons": [
     {
-      "src": "/manus-storage/salonflow-pwa-icon_7b626d05.svg",
+      "src": "/favicon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ]
 }

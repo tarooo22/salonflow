@@ -63,6 +63,12 @@ button.cwk-group-caption:hover { background: var(--cwk-desk-soft); color: var(--
 .cwk-user-mail { font-size: 0.75rem; color: var(--cwk-on-desk-soft); }
 .cwk-avatar { border-radius: 8px; background: var(--cwk-desk-soft); color: var(--cwk-on-desk); }
 .cwk-avatar span { border-radius: 8px; background: var(--cwk-desk-soft); color: var(--cwk-on-desk); font-weight: 700; }
+/* settings next to help in the rail foot; stacked when the rail is an icon strip */
+.cwk-rail-links { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+/* both labels stay whole: tighter padding keeps them on one row at the default rail width, and a narrower rail wraps them to two rows instead of cutting a word */
+.cwk-rail-links > .cwk-rail-link { flex: 1 1 auto; min-width: 0; width: auto; gap: 0.4rem; padding-inline: 0.5rem; white-space: nowrap; }
+.cwk-rail-link[aria-current="page"] { background: var(--cwk-desk-soft); font-weight: 700; }
+[data-collapsible="icon"] .cwk-rail-links { flex-direction: column; }
 /* keyboard-reachable width handle between rail and page */
 .cwk-resize { transition: background-color var(--sf-motion-standard); }
 .cwk-resize:hover { background: color-mix(in srgb, var(--cwk-stamp) 30%, transparent); }
@@ -75,18 +81,21 @@ button.cwk-group-caption:hover { background: var(--cwk-desk-soft); color: var(--
 .cwk-topbtn:hover { background: var(--sf-surface-2); }
 .cwk-topbtn:focus-visible, .cwk-tab:focus-visible { outline: 2px solid var(--sf-focus); outline-offset: 2px; }
 .cwk-tabbar { min-height: 4rem; background: var(--cwk-sheet); border-top: 1px solid var(--cwk-rule); box-shadow: var(--sf-shadow-md); }
-.cwk-tab { position: relative; display: grid; min-height: 3.5rem; place-items: center; align-content: center; border-radius: 8px; font-size: 0.75rem; font-weight: 600; color: var(--cwk-ink-soft); transition: color var(--sf-motion-standard), background-color var(--sf-motion-standard); }
+.cwk-tab { position: relative; display: grid; min-height: 3.5rem; min-width: 0; padding-inline: 0; place-items: center; align-content: center; border-radius: 8px; font-size: 0.75rem; font-weight: 600; color: var(--cwk-ink-soft); transition: color var(--sf-motion-standard), background-color var(--sf-motion-standard); }
 .cwk-tab:hover { background: var(--sf-surface-2); color: var(--cwk-ink); }
-.cwk-tab[aria-current="page"] { color: var(--sf-accent-ink); }
-.cwk-tab[aria-current="page"]::before { content: ""; position: absolute; top: 0; left: 50%; width: 2rem; height: 4px; border-radius: var(--sf-r-pill); background: var(--cwk-stamp); transform: translateX(-50%); }
+/* labels are never cut: 11px, no side padding; a multi-word label (ცვლა და ჩაი) wraps at its spaces, a single word never breaks */
+.cwk-tab-label { display: block; max-width: 100%; margin-top: 0.125rem; text-align: center; white-space: normal; overflow-wrap: normal; word-break: keep-all; text-wrap: balance; font-size: 0.6875rem; letter-spacing: -0.02em; line-height: 1.15; }
+.cwk-tab[aria-current="page"], .cwk-tab[data-active="true"] { color: var(--sf-accent-ink); }
+.cwk-tab[aria-current="page"]::before, .cwk-tab[data-active="true"]::before { content: ""; position: absolute; top: 0; left: 50%; width: 2rem; height: 4px; border-radius: var(--sf-r-pill); background: var(--cwk-stamp); transform: translateX(-50%); }
 
 /* ---------- page primitives ---------- */
 .cwk-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.6rem 1rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--cwk-rule); }
 .cwk-head-text { min-width: 0; flex: 1 1 auto; }
 .cwk-title { margin: 0; font-size: 1.375rem; color: var(--cwk-ink); }
 @media (min-width: 640px) { .cwk-title { font-size: 1.5rem; } }
-.cwk-desc { margin: 0.15rem 0 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.875rem; color: var(--cwk-ink-soft); }
-@media (max-width: 639px) { .cwk-desc { display: none; } }
+/* page hint: one line on desktop, up to two on phones (never hidden) */
+.cwk-desc { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; margin: 0.15rem 0 0; overflow: hidden; font-size: 0.875rem; line-height: 1.45; color: var(--cwk-ink-soft); text-wrap: pretty; }
+@media (min-width: 640px) { .cwk-desc { -webkit-line-clamp: 1; line-clamp: 1; } }
 .cwk-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 0.5rem; }
 @media (max-width: 639px) { .cwk-actions { justify-content: flex-start; width: 100%; } }
 
@@ -101,8 +110,9 @@ button.cwk-group-caption:hover { background: var(--cwk-desk-soft); color: var(--
 
 /* empty / loading / error: soft block, round icon tile, one title, one muted line, one action */
 .cwk-state { display: flex; min-height: 8rem; flex-direction: column; align-items: center; justify-content: center; gap: 0.25rem; padding: 1.25rem; border-radius: 12px; background: var(--sf-surface-2); color: var(--cwk-ink); text-align: center; }
-.cwk-state-icon { display: grid; width: 2.5rem; height: 2.5rem; margin-bottom: 0.35rem; place-items: center; border-radius: var(--sf-r-pill); background: var(--sf-accent-soft); color: var(--sf-accent-ink); }
-.cwk-state-icon svg { width: 1.25rem; height: 1.25rem; }
+/* 44px static ring (brand/Ring) around a 20px icon; the ring replaces the old filled circle */
+.cwk-state-icon { position: relative; display: grid; width: 2.75rem; height: 2.75rem; margin-bottom: 0.5rem; place-items: center; border-radius: var(--sf-r-pill); color: var(--sf-accent-ink); }
+.cwk-state-icon > svg:not([data-ring]) { width: 1.25rem; height: 1.25rem; }
 .cwk-state-title { margin: 0; font-size: 0.9375rem; font-weight: 700; line-height: 1.4; }
 .cwk-state-desc { max-width: 36rem; margin: 0; font-size: 0.875rem; line-height: 1.5; color: var(--cwk-ink-soft); }
 .cwk-state[data-kind="error"] { background: var(--sf-danger-soft); }
@@ -232,3 +242,28 @@ button.cwk-group-caption:hover { background: var(--cwk-desk-soft); color: var(--
   .cwk-datebtn { flex-shrink: 0; }
   .cwk-corner, .cwk-colhead { display: none; }
 }
+
+/* phone "მეტი" sheet: the pages the tab bar has no room for */
+.cwk-more-sheet { max-height: 85dvh; border-top-left-radius: 16px; border-top-right-radius: 16px; background: var(--cwk-sheet); color: var(--cwk-ink); padding-bottom: max(0.75rem, env(safe-area-inset-bottom)); }
+.cwk-more-body { display: flex; flex-direction: column; gap: 0.75rem; overflow-y: auto; padding: 0 0.75rem 0.5rem; }
+.cwk-more-group + .cwk-more-group { padding-top: 0.5rem; border-top: 1px solid var(--cwk-rule); }
+.cwk-more-caption { margin: 0 0.5rem 0.25rem; font-size: 0.75rem; font-weight: 600; color: var(--cwk-ink-soft); }
+.cwk-more-group ul { margin: 0; padding: 0; list-style: none; }
+.cwk-more-link { display: flex; width: 100%; min-height: 3rem; align-items: center; gap: 0.75rem; border-radius: 8px; padding: 0 0.5rem; text-align: left; font-size: 0.9375rem; font-weight: 600; color: var(--cwk-ink); transition: background-color var(--sf-motion-standard); }
+.cwk-more-link:hover { background: var(--sf-surface-2); }
+.cwk-more-link svg { color: var(--cwk-ink-soft); }
+.cwk-more-link[aria-current="page"] { background: var(--sf-accent-soft); color: var(--sf-accent-ink); font-weight: 700; }
+.cwk-more-link[aria-current="page"] svg { color: var(--sf-accent-ink); }
+.cwk-more-link:focus-visible { outline: 2px solid var(--sf-focus); outline-offset: 2px; }
+
+/* online-page sub-navigation (OnlinePageTabs): segmented link row, scrolls sideways on narrow phones */
+.cwk-pagetabs { display: flex; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.cwk-pagetabs::-webkit-scrollbar { display: none; }
+.cwk-pagetabs ul { display: inline-flex; margin: 0; padding: 0; list-style: none; border: 1px solid var(--cwk-rule-strong); border-radius: 8px; overflow: hidden; background: var(--cwk-sheet); }
+.cwk-pagetabs li + li { border-left: 1px solid var(--cwk-rule-strong); }
+.cwk-pagetab { display: inline-flex; min-height: 2.5rem; align-items: center; padding: 0 0.9rem; white-space: nowrap; font-size: 0.875rem; font-weight: 600; color: var(--cwk-ink); text-decoration: none; transition: background-color var(--sf-motion-standard); }
+.cwk-pagetab:hover { background: var(--sf-surface-2); }
+.cwk-pagetab[aria-current="page"] { background: var(--sf-accent-soft); color: var(--sf-accent-ink); font-weight: 700; }
+.cwk-pagetab:focus-visible { outline: 2px solid var(--sf-focus); outline-offset: -2px; }
+@media (max-width: 767px) { .cwk-pagetab { min-height: 2.75rem; } }
+@media (forced-colors: active) { .cwk-pagetab[aria-current="page"] { outline: 2px solid Highlight; outline-offset: -2px; } }

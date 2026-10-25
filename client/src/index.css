@@ -318,3 +318,20 @@
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
   .sf-interactive:active, .sf-reveal { transform: none !important; }
 }
+
+/* Signature ring (components/brand/Ring.tsx). Parent is position: relative. No vector-effect: with pathLength it mis-scales the dash in Chromium. Dash "1 2" on pathLength 1 hides the whole path at offset 1.03 without a round-cap dot. */
+.cw-ring { position: absolute; inset: -6px -8px; width: calc(100% + 16px); height: calc(100% + 12px); overflow: visible; pointer-events: none; color: var(--sf-accent-ink); }
+.cw-ring--square { inset: -5px; width: calc(100% + 10px); height: calc(100% + 10px); }
+.cw-ring--band, .cw-on-band .cw-ring { color: #f48a9b; }
+.cw-ring--photo, .cw-on-photo .cw-ring { color: #fff; }
+.cw-ring path { stroke-dasharray: 1 2; stroke-dashoffset: 0; }
+.cw-ring[data-state="off"] { opacity: 0; transition: opacity 120ms var(--sf-ease-out); }
+.cw-ring--draw path { animation: cw-ring-draw 360ms var(--sf-ease-out) both; }
+@keyframes cw-ring-draw { from { stroke-dashoffset: 1.03; } to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) { .cw-ring path { animation: none !important; } .cw-ring[data-state="off"] { transition: none; } }
+[data-reduce-motion="true"] .cw-ring path { animation: none !important; }
+[data-reduce-motion="true"] .cw-ring[data-state="off"] { transition: none; }
+@media (forced-colors: active) { .cw-ring, .cw-ring--band, .cw-ring--photo { color: Highlight; } }
+.cw-mark { flex: none; color: var(--sf-accent-ink); }
+.cw-on-band .cw-mark { color: #f48a9b; }
+@media (forced-colors: active) { .cw-mark { color: CanvasText; } }

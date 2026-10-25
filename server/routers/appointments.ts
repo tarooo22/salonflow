@@ -14,12 +14,61 @@ import {
   staffServices,
   services,
 } from "../../drizzle/schema";
-import { requireOrganizationAction, requireOrganizationRole } from "../access";
+import { TRPCError } from "@trpc/server";
+import { requireOrganizationAction, requireOrganizationRole, type SalonRole } from "../access";
 import { requireDb } from "../db";
 import { appointmentBlocksInterval, canTransitionAppointment, derivePaymentDisplayState, intervalsOverlap, summarizeOperationalAppointments } from "../lib/appointments";
+import { exceptionBlocks, fetchBlockingExceptions, fitsWorkingHours } from "../lib/availability";
 import { appointmentRescheduleSchema, appointmentStatusUpdateSchema, calendarRangeSchema, opaqueIdSchema, organizationScopeSchema, todayDashboardSchema, walkInCreateSchema } from "../../shared/validation";
 import { protectedProcedure, router } from "../_core/trpc";
 import { businessDayRange } from "@shared/timezones";
+
+type Db = Awaited<ReturnType<typeof requireDb>>;
+type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
+
+// A move may not land in the past; a walk-in is often entered after the client has already sat down, so it gets more slack.
+const RESCHEDULE_PAST_GRACE_MS = 5 * 60_000;
+const WALK_IN_PAST_GRACE_MS = 30 * 60_000;
+const OUTSIDE_HOURS_MESSAGE = "არჩეული დრო სპეციალისტის სამუშაო საათებს სცდება.";
+
+function assertNotPast(startsAt: Date, graceMs: number) {
+  if (startsAt.getTime() < Date.now() - graceMs) throw new TRPCError({ code: "BAD_REQUEST", message: "გასულ დროზე ჩაწერა შეუძლებელია. აირჩიეთ მიმდინარე ან მომავალი დრო." });
+}
+
+function assertOverrideAllowed(role: SalonRole | undefined, allowOutsideHours: boolean | undefined) {
+  if (allowOutsideHours && role !== "OWNER" && role !== "MANAGER") throw new TRPCError({ code: "FORBIDDEN", message: "სამუშაო საათების გარეთ ჩაწერა მხოლოდ მფლობელს ან მენეჯერს შეუძლია." });
+}
+
+/**
+ * Runs inside the booking transaction, after the scheduleLocks upserts. Working/opening hours (skipped only by the
+ * owner/manager override), blocking exceptions, then the buffered overlap the public booking path uses.
+ */
+async function assertStaffSlotFree(tx: Tx, slot: {
+  organizationId: string;
+  location: { id: string; organizationId: string; timezone: string };
+  staffProfileId: string;
+  startsAt: Date;
+  endsAt: Date;
+  bufferBeforeMinutes: number;
+  bufferAfterMinutes: number;
+  ignoreAppointmentId?: string;
+  allowOutsideHours?: boolean;
+}) {
+  const { location, staffProfileId, startsAt, endsAt } = slot;
+  if (!slot.allowOutsideHours && !await fitsWorkingHours(tx, location, staffProfileId, startsAt, endsAt, slot.bufferAfterMinutes)) {
+    throw new TRPCError({ code: "PRECONDITION_FAILED", message: OUTSIDE_HOURS_MESSAGE });
+  }
+  const exceptions = await fetchBlockingExceptions(tx, location, startsAt, endsAt);
+  if (exceptions.some(exception => exceptionBlocks(exception, location.id, staffProfileId, startsAt, endsAt))) {
+    throw new TRPCError({ code: "CONFLICT", message: "ამ დროს სპეციალისტი ან ფილიალი მიუწვდომელია (შვებულება, შესვენება ან დახურვა)." });
+  }
+  const protectedStart = new Date(startsAt.getTime() - slot.bufferBeforeMinutes * 60_000);
+  const protectedEnd = new Date(endsAt.getTime() + slot.bufferAfterMinutes * 60_000);
+  const existing = await tx.select().from(appointments).where(and(eq(appointments.organizationId, slot.organizationId), eq(appointments.staffProfileId, staffProfileId)));
+  if (existing.some(item => item.id !== slot.ignoreAppointmentId && appointmentBlocksInterval(item.status) && intervalsOverlap(protectedStart, protectedEnd, new Date(item.startsAt.getTime() - item.bufferBeforeMinutes * 60_000), new Date(item.endsAt.getTime() + item.bufferAfterMinutes * 60_000)))) {
+    throw new TRPCError({ code: "CONFLICT", message: "არჩეული დრო უკვე დაკავებულია." });
+  }
+}
 
 function enumerateUtcDates(start: Date, end: Date) {
   const dates: string[] = [];
@@ -113,9 +162,11 @@ export const appointmentsRouter = router({
   }),
 
   createWalkIn: protectedProcedure.input(walkInCreateSchema).mutation(async ({ ctx, input }) => {
-    await requireOrganizationAction(ctx.user, input.organizationId, "calendar:manage");
+    const membership = await requireOrganizationAction(ctx.user, input.organizationId, "calendar:manage");
+    assertOverrideAllowed(membership?.role, input.allowOutsideHours);
+    assertNotPast(input.startsAt, WALK_IN_PAST_GRACE_MS);
     const db = await requireDb();
-    const [location] = await db.select({ id: locations.id }).from(locations).where(and(
+    const [location] = await db.select({ id: locations.id, organizationId: locations.organizationId, timezone: locations.timezone }).from(locations).where(and(
       eq(locations.id, input.locationId),
       eq(locations.organizationId, input.organizationId),
       eq(locations.status, "ACTIVE"),
@@ -156,12 +207,14 @@ export const appointmentsRouter = router({
     const startsAt = input.startsAt;
     const endsAt = new Date(startsAt.getTime() + durationMinutes * 60_000);
     const id = nanoid(21);
+    const bufferBeforeMinutes = assignment.serviceBufferBeforeMinutes;
+    const bufferAfterMinutes = assignment.serviceBufferAfterMinutes;
     await db.transaction(async tx => {
-      for (const dateKey of enumerateUtcDates(startsAt, endsAt)) {
+      // Lock every UTC day the buffered interval touches, so buffer-only overlaps across midnight still serialize.
+      for (const dateKey of enumerateUtcDates(new Date(startsAt.getTime() - bufferBeforeMinutes * 60_000), new Date(endsAt.getTime() + bufferAfterMinutes * 60_000))) {
         await tx.insert(scheduleLocks).values({ id: `${input.staffProfileId}:${dateKey}`, staffProfileId: input.staffProfileId, localDate: new Date(`${dateKey}T00:00:00.000Z`) }).onDuplicateKeyUpdate({ set: { createdAt: new Date() } });
       }
-      const existing = await tx.select().from(appointments).where(and(eq(appointments.organizationId, input.organizationId), eq(appointments.staffProfileId, input.staffProfileId)));
-      if (existing.some(item => appointmentBlocksInterval(item.status) && intervalsOverlap(startsAt, endsAt, item.startsAt, item.endsAt))) throw new Error("არჩეული დრო უკვე დაკავებულია.");
+      await assertStaffSlotFree(tx, { organizationId: input.organizationId, location, staffProfileId: input.staffProfileId, startsAt, endsAt, bufferBeforeMinutes, bufferAfterMinutes, allowOutsideHours: input.allowOutsideHours });
       await tx.insert(appointments).values({
         id, organizationId: input.organizationId, locationId: input.locationId, clientId: input.clientId,
         staffProfileId: input.staffProfileId, startsAt, endsAt,
@@ -175,17 +228,21 @@ export const appointmentsRouter = router({
         bufferBeforeMinutesSnapshot: assignment.serviceBufferBeforeMinutes, bufferAfterMinutesSnapshot: assignment.serviceBufferAfterMinutes,
         priceTetriSnapshot: priceTetri, sortOrder: 0,
       });
-      await tx.insert(appointmentStatusHistory).values({ id: nanoid(21), appointmentId: id, oldStatus: null, newStatus: "CONFIRMED", actorUserId: ctx.user.id, metadata: { source: "WALK_IN" } });
+      await tx.insert(appointmentStatusHistory).values({ id: nanoid(21), appointmentId: id, oldStatus: null, newStatus: "CONFIRMED", actorUserId: ctx.user.id, metadata: { source: "WALK_IN", ...(input.allowOutsideHours ? { allowOutsideHours: true } : {}) } });
     });
     return { id, startsAt, endsAt, totalTetri: priceTetri };
   }),
 
   reschedule: protectedProcedure.input(appointmentRescheduleSchema).mutation(async ({ ctx, input }) => {
-    await requireOrganizationAction(ctx.user, input.organizationId, "calendar:manage");
+    const membership = await requireOrganizationAction(ctx.user, input.organizationId, "calendar:manage");
+    assertOverrideAllowed(membership?.role, input.allowOutsideHours);
     const db = await requireDb();
     const [appointment] = await db.select().from(appointments).where(and(eq(appointments.id, input.appointmentId), eq(appointments.organizationId, input.organizationId))).limit(1);
     if (!appointment) throw new Error("ჯავშანი ვერ მოიძებნა.");
     if (!(appointment.status === "PENDING" || appointment.status === "CONFIRMED")) throw new Error("ამ სტატუსის ჯავშნის გადატანა აღარ შეიძლება.");
+    assertNotPast(input.startsAt, RESCHEDULE_PAST_GRACE_MS);
+    const [location] = await db.select({ id: locations.id, organizationId: locations.organizationId, timezone: locations.timezone }).from(locations).where(and(eq(locations.id, appointment.locationId), eq(locations.organizationId, input.organizationId))).limit(1);
+    if (!location) throw new TRPCError({ code: "NOT_FOUND", message: "ჯავშნის ფილიალი ვერ მოიძებნა." });
     const targetStaffProfileId = input.staffProfileId ?? appointment.staffProfileId;
     if (targetStaffProfileId !== appointment.staffProfileId) {
       const bookedServices = await db.select({ serviceId: appointmentServices.serviceId }).from(appointmentServices).where(eq(appointmentServices.appointmentId, appointment.id));
@@ -199,16 +256,17 @@ export const appointmentsRouter = router({
       if (new Set(eligibleRows.map(row => row.serviceId)).size !== new Set(serviceIds).size) throw new Error("არჩეული სპეციალისტი ამ ფილიალში ყველა სერვისისთვის ხელმისაწვდომი არ არის.");
     }
     const endsAt = new Date(input.startsAt.getTime() + appointment.endsAt.getTime() - appointment.startsAt.getTime());
+    const { bufferBeforeMinutes, bufferAfterMinutes } = appointment;
     await db.transaction(async tx => {
-      for (const dateKey of enumerateUtcDates(input.startsAt, endsAt)) {
+      // Lock every UTC day the buffered interval touches, so buffer-only overlaps across midnight still serialize.
+      for (const dateKey of enumerateUtcDates(new Date(input.startsAt.getTime() - bufferBeforeMinutes * 60_000), new Date(endsAt.getTime() + bufferAfterMinutes * 60_000))) {
         await tx.insert(scheduleLocks).values({ id: `${targetStaffProfileId}:${dateKey}`, staffProfileId: targetStaffProfileId, localDate: new Date(`${dateKey}T00:00:00.000Z`) }).onDuplicateKeyUpdate({ set: { createdAt: new Date() } });
       }
-      const existing = await tx.select().from(appointments).where(and(eq(appointments.organizationId, input.organizationId), eq(appointments.staffProfileId, targetStaffProfileId)));
-      if (existing.some(item => item.id !== appointment.id && appointmentBlocksInterval(item.status) && intervalsOverlap(input.startsAt, endsAt, item.startsAt, item.endsAt))) throw new Error("არჩეული დრო უკვე დაკავებულია.");
+      await assertStaffSlotFree(tx, { organizationId: input.organizationId, location, staffProfileId: targetStaffProfileId, startsAt: input.startsAt, endsAt, bufferBeforeMinutes, bufferAfterMinutes, ignoreAppointmentId: appointment.id, allowOutsideHours: input.allowOutsideHours });
       await tx.update(appointments).set({ staffProfileId: targetStaffProfileId, startsAt: input.startsAt, endsAt }).where(eq(appointments.id, appointment.id));
       await tx.insert(appointmentStatusHistory).values({
         id: nanoid(21), appointmentId: appointment.id, oldStatus: appointment.status, newStatus: appointment.status, actorUserId: ctx.user.id,
-        reason: input.reason, metadata: { event: "RESCHEDULED", previousStartsAt: appointment.startsAt.toISOString(), previousEndsAt: appointment.endsAt.toISOString(), previousStaffProfileId: appointment.staffProfileId, staffProfileId: targetStaffProfileId, startsAt: input.startsAt.toISOString(), endsAt: endsAt.toISOString() },
+        reason: input.reason, metadata: { event: "RESCHEDULED", previousStartsAt: appointment.startsAt.toISOString(), previousEndsAt: appointment.endsAt.toISOString(), previousStaffProfileId: appointment.staffProfileId, staffProfileId: targetStaffProfileId, startsAt: input.startsAt.toISOString(), endsAt: endsAt.toISOString(), ...(input.allowOutsideHours ? { allowOutsideHours: true } : {}) },
       });
     });
     return { id: appointment.id, startsAt: input.startsAt, endsAt };

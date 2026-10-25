@@ -1,3 +1,4 @@
+import { Ring } from "@/components/brand/Ring";
 import "@/components/catalog/discovery.css";
 import { cssVars, type CatalogCategory as Category } from "@/components/catalog/Tickets";
 import { type PublicLocale, usePublicLocale } from "@/contexts/PublicLocaleContext";
@@ -112,7 +113,7 @@ export function DiscoveryFilters(props: DiscoveryFiltersProps) {
             {VERTICALS.map(item => {
               const on = vertical === item.id;
               return <button key={item.id} type="button" className="cw-chip" data-vertical="true" style={cssVars({ "--chip-bg": item.bg, "--chip-ink": item.ink })} aria-pressed={on} onClick={() => onVertical(on ? null : item.id)}>
-                {on ? <Check className="size-4" aria-hidden="true" /> : <span className="cw-chip-dot" aria-hidden="true" />}{verticalLabel(item.id, locale)}
+                {on ? <Check className="size-4" aria-hidden="true" /> : <span className="cw-chip-dot" aria-hidden="true" />}{verticalLabel(item.id, locale)}<Ring variant="wide" draw={on} />
               </button>;
             })}
           </div>
@@ -121,7 +122,7 @@ export function DiscoveryFilters(props: DiscoveryFiltersProps) {
             <div className="df-group" role="group" aria-label={text.categories}>
               {list.map(category => {
                 const on = categorySlug === category.slug;
-                return <button key={category.id} type="button" className="cw-chip" aria-pressed={on} onClick={() => onCategory(on ? undefined : category.slug)}>{on ? <Check className="size-4" aria-hidden="true" /> : null}{category.nameKa}</button>;
+                return <button key={category.id} type="button" className="cw-chip" aria-pressed={on} onClick={() => onCategory(on ? undefined : category.slug)}>{on ? <Check className="size-4" aria-hidden="true" /> : null}{category.nameKa}<Ring variant="wide" draw={on} /></button>;
               })}
             </div>
           </> : null}

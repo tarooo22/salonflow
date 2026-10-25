@@ -37,6 +37,12 @@ describe("Staff performance panel", () => {
     expect(renderToStaticMarkup(<Staff />)).toContain("…");
   });
 
+  it("uses the panel titles for team and working hours", () => {
+    const markup = renderToStaticMarkup(<Staff />);
+    expect(markup).toContain("გუნდი და საათები");
+    expect(markup).toContain("სპეციალისტები, მათი სერვისები და სამუშაო საათები.");
+  });
+
   it("renders an empty-period explanation", () => {
     expect(renderToStaticMarkup(<Staff />)).toContain("სტატისტიკა: ბოლო 30 დღე");
   });

@@ -1,4 +1,5 @@
 import DashboardLayout from "@/components/DashboardLayout";
+import { OnlinePageTabs } from "@/components/workspace/OnlinePageTabs";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -51,7 +52,8 @@ export default function FeedbackModeration() {
     requestPlatformReview.mutate({ organizationId: entry.organization.id, feedbackId: reviewTarget.id, reason, note: note.trim() || undefined });
   };
 
-  return <DashboardLayout><div className="sf-workspace-page mx-auto w-full max-w-6xl space-y-5"><WorkspacePageHeader title="კლიენტების შეფასებები" description="დამალვას ან უარყოფას წყვეტს პლატფორმა." actions={<Select value={status} onValueChange={value => setStatus(value as typeof status)}><SelectTrigger className="w-44 bg-card" aria-label="შეფასების სტატუსი"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="PENDING">განხილვაზეა</SelectItem><SelectItem value="APPROVED">საჯაროა</SelectItem><SelectItem value="HIDDEN">დამალულია</SelectItem><SelectItem value="REJECTED">უარყოფილია</SelectItem></SelectContent></Select>} />
+  return <DashboardLayout><div className="sf-workspace-page mx-auto w-full max-w-6xl space-y-5"><WorkspacePageHeader title="შეფასებები" description="კლიენტების შეფასებები ვიზიტის შემდეგ." actions={<Select value={status} onValueChange={value => setStatus(value as typeof status)}><SelectTrigger className="w-44 bg-card" aria-label="შეფასების სტატუსი"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="PENDING">განხილვაზეა</SelectItem><SelectItem value="APPROVED">საჯაროა</SelectItem><SelectItem value="HIDDEN">დამალულია</SelectItem><SelectItem value="REJECTED">უარყოფილია</SelectItem></SelectContent></Select>} />
+      <OnlinePageTabs />
     {organizations.isLoading ? <WorkspaceState kind="loading" title="იტვირთება…" /> : null}
     {!organizations.isLoading && (!entry || !allowed) ? <WorkspaceState kind="error" title="ამ გვერდის ნახვის უფლება არ გაქვთ" description="ხელმისაწვდომია მფლობელისა და მენეჯერისთვის." /> : null}
     {allowed && list.isLoading ? <WorkspaceState kind="loading" title="იტვირთება…" /> : null}

@@ -1,4 +1,5 @@
 import React, { FormEvent, useEffect, useMemo, useState } from "react";
+import { OnlinePageTabs } from "@/components/workspace/OnlinePageTabs";
 import { Link } from "wouter";
 import { ImagePlus, Images, Link2, Sparkles, UploadCloud, UsersRound } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -62,7 +63,8 @@ export default function Media() {
   const uploadAvatar = async (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); if (!organization || !staffId || !avatarFile) return; try { const imageDataUrl = await toDataUrl(avatarFile); if (imageDataUrl) setAvatar.mutate({ organizationId: organization.id, staffProfileId: staffId, imageDataUrl, altTextKa: avatarAlt }); } catch (error) { toast.error(error instanceof Error ? error.message : "ავატარის წაკითხვა ვერ მოხერხდა."); } };
   const publishFeed = async (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); if (!organization || !locationId || !feedFile) return; try { const imageDataUrl = await toDataUrl(feedFile); if (imageDataUrl) createFeed.mutate({ organizationId: organization.id, locationId, imageDataUrl, altTextKa: feedAlt, titleKa: feedTitle || undefined, captionKa: feedCaption || undefined, publicVisible: feedPublic }); } catch (error) { toast.error(error instanceof Error ? error.message : "ფოტოს წაკითხვა ვერ მოხერხდა."); } };
 
-  return <DashboardLayout><main className="sf-workspace-page mx-auto w-full max-w-7xl space-y-5"><WorkspacePageHeader title="მედია და პროფილი" actions={selectedLocation ? <Link href={`/salon/${selectedLocation.publicSlug}`} className="inline-flex"><Button variant="outline"><Link2 className="mr-2 h-4 w-4" />საჯარო გვერდის ნახვა</Button></Link> : null} />
+  return <DashboardLayout><main className="sf-workspace-page mx-auto w-full max-w-7xl space-y-5"><WorkspacePageHeader title="ფოტოები და აღწერა" description="სალონის ფოტოები და აღწერა, რომლებიც კატალოგში ჩანს." actions={selectedLocation ? <Link href={`/salon/${selectedLocation.publicSlug}`} className="inline-flex"><Button variant="outline"><Link2 className="mr-2 h-4 w-4" />საჯარო გვერდის ნახვა</Button></Link> : null} />
+      <OnlinePageTabs />
     {organizations.isLoading || locations.isLoading ? <WorkspaceState kind="loading" title="იტვირთება…" /> : null}
     {organizations.isError || locations.isError ? <WorkspaceState kind="error" title="მონაცემები მიუწვდომელია" /> : null}
     {!organizations.isLoading && organization && !canManage ? <WorkspaceState kind="empty" title="მედიის მართვის უფლება არ გაქვთ" description="ხელმისაწვდომია მფლობელისა და მენეჯერისთვის." /> : null}

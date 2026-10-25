@@ -3,6 +3,7 @@ import { ProductGrid } from "@/components/catalog/Commerce";
 import { HeroIn } from "@/components/catalog/HomeMotion";
 import { cssVars } from "@/components/catalog/Tickets";
 import "@/components/catalog/profile.css";
+import { DATE_NAMES, addDaysKey, schemaWeekdayOf } from "@/components/public/BookingPrimitives";
 import { usePublicMeta } from "@/components/public/PublicMeta";
 import { usePublicLocale, type PublicLocale } from "@/contexts/PublicLocaleContext";
 import { formatPhoneDisplay } from "@/lib/phone";
@@ -10,6 +11,7 @@ import { formatGelTetri } from "@/lib/presentation";
 import { trpc } from "@/lib/trpc";
 import { verticalForCategory, verticalStyle, verticalsForListing } from "@/lib/verticals";
 import { BRAND } from "@shared/brand";
+import { dateKeyInTimeZone } from "@shared/timezones";
 import { MAX_SELECTED_SERVICES } from "@shared/validation";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "../../../server/routers";
@@ -28,7 +30,7 @@ const copy = {
     tabs: "პროფილის განყოფილებები", tabServices: "სერვისები", tabTeam: "გუნდი", tabHours: "სამუშაო საათები", tabProducts: "პროდუქტები", productsTitle: "პროდუქტები", productsNote: "შეძენა ხდება უშუალოდ ბიზნესში; ონლაინ გადახდა არ არის.",
     searchLabel: "მომსახურების ძებნა", searchPlaceholder: "სახელი ან კატეგორია", found: "ნაპოვნია", nothingFound: "ამ მოთხოვნით მომსახურება ვერ მოიძებნა.", minutes: "წთ", noServices: "საჯარო მომსახურებები ჯერ არ არის დამატებული.",
     toggleGroup: "კატეგორიის გახსნა ან დახურვა", limit: `ერთდროულად მაქსიმუმ ${MAX_SELECTED_SERVICES} მომსახურების არჩევა შეგიძლია.`, selectService: "მომსახურების არჩევა",
-    team: "გუნდი", specialist: "სპეციალისტი", noTeam: "საჯარო გუნდის პროფილები ჯერ არ არის დამატებული.", experience: "წლის გამოცდილება",
+    team: "გუნდი", specialist: "სპეციალისტი", noTeam: "საჯარო გუნდის პროფილები ჯერ არ არის დამატებული.", experience: "წლის გამოცდილება", bookStaff: "ჩაწერა", nearest: "უახლოესი: {d}, {t}",
     hours: "სამუშაო საათები", hoursNote: "გუნდის გრაფიკის მიხედვით. კონკრეტული დრო ჯავშნისას მოწმდება.", hoursLoading: "სამუშაო საათები იტვირთება…", hoursMissing: "სამუშაო საათები ჯერ არ არის გამოქვეყნებული.", closedDay: "დახურულია",
     openUntil: "ღიაა, იკეტება {t}-ზე", closed: "დაკეტილია", opensAt: "იხსნება {d} {t}-ზე", today: "დღეს", tomorrow: "ხვალ",
     summary: "შენი ჩანაწერი", selected: "არჩეულია", selectedCount: "არჩეულია: {n} სერვისი", total: "ჯამი", duration: "ხანგრძლივობა", nothingSelected: "მომსახურება არ არის არჩეული.",
@@ -47,7 +49,7 @@ const copy = {
     tabs: "Profile sections", tabServices: "Services", tabTeam: "Team", tabHours: "Opening hours", tabProducts: "Products", productsTitle: "Products", productsNote: "Purchased at the business itself; there is no online checkout.",
     searchLabel: "Search services", searchPlaceholder: "Name or category", found: "Found", nothingFound: "No service matches your search.", minutes: "min", noServices: "No public services have been added yet.",
     toggleGroup: "Expand or collapse category", limit: `You can select up to ${MAX_SELECTED_SERVICES} services at once.`, selectService: "Select service",
-    team: "Team", specialist: "Specialist", noTeam: "No public team profiles have been added yet.", experience: "years of experience",
+    team: "Team", specialist: "Specialist", noTeam: "No public team profiles have been added yet.", experience: "years of experience", bookStaff: "Book", nearest: "Next free: {d}, {t}",
     hours: "Opening hours", hoursNote: "Based on the team's schedules. The exact time is checked when you book.", hoursLoading: "Loading opening hours…", hoursMissing: "Opening hours have not been published yet.", closedDay: "Closed",
     openUntil: "Open, closes at {t}", closed: "Closed", opensAt: "opens {d} at {t}", today: "today", tomorrow: "tomorrow",
     summary: "Your booking", selected: "Selected", selectedCount: "Selected: {n}", total: "Total", duration: "Duration", nothingSelected: "No services selected.",
@@ -66,7 +68,7 @@ const copy = {
     tabs: "Разделы профиля", tabServices: "Услуги", tabTeam: "Команда", tabHours: "Часы работы", tabProducts: "Товары", productsTitle: "Товары", productsNote: "Покупка — непосредственно в заведении; онлайн-оплаты нет.",
     searchLabel: "Поиск услуг", searchPlaceholder: "Название или категория", found: "Найдено", nothingFound: "По вашему запросу услуг не найдено.", minutes: "мин", noServices: "Публичные услуги ещё не добавлены.",
     toggleGroup: "Развернуть или свернуть категорию", limit: `Одновременно можно выбрать не более ${MAX_SELECTED_SERVICES} услуг.`, selectService: "Выбрать услугу",
-    team: "Команда", specialist: "Специалист", noTeam: "Публичные профили команды ещё не добавлены.", experience: "лет опыта",
+    team: "Команда", specialist: "Специалист", noTeam: "Публичные профили команды ещё не добавлены.", experience: "лет опыта", bookStaff: "Записаться", nearest: "Ближайшее: {d}, {t}",
     hours: "Часы работы", hoursNote: "По графикам команды. Точное время проверяется при записи.", hoursLoading: "Загрузка часов работы…", hoursMissing: "Часы работы ещё не опубликованы.", closedDay: "Закрыто",
     openUntil: "Открыто, закрывается в {t}", closed: "Закрыто", opensAt: "откроется {d} в {t}", today: "сегодня", tomorrow: "завтра",
     summary: "Ваша запись", selected: "Выбрано", selectedCount: "Выбрано: {n}", total: "Итого", duration: "Длительность", nothingSelected: "Услуги не выбраны.",
@@ -130,6 +132,11 @@ export function openStatus(hours: ReadonlyArray<WorkingHour>, timeZone: string, 
 export function bookingHref(slug: string, serviceIds: ReadonlyArray<string>) {
   const base = `/book/${slug}`;
   return serviceIds.length ? `${base}?services=${serviceIds.map(encodeURIComponent).join(",")}` : base;
+}
+
+/** Team card link: the booking flow preselects the specialist from ?staff=. */
+export function staffBookingHref(slug: string, staffProfileId: string) {
+  return `/book/${slug}?staff=${encodeURIComponent(staffProfileId)}`;
 }
 
 /* ---------- Page ---------- */
@@ -212,10 +219,22 @@ function ProfileView({ data, slug, ui, locale, categories, promotion, approved }
     return next;
   });
   const chosen = services.filter(service => selected.has(service.id));
+  const chosenIds = chosen.map(service => service.id);
   const total = chosen.reduce((sum, service) => sum + service.priceTetri, 0);
   const minutes = chosen.reduce((sum, service) => sum + service.durationMinutes, 0);
   const anyFrom = chosen.some(service => service.isFromPrice);
-  const href = bookingHref(salon.publicSlug, chosen.map(service => service.id));
+  const href = bookingHref(salon.publicSlug, chosenIds);
+
+  // Nearest free day for the chosen services (any specialist), in the location's calendar. Server-computed; display only.
+  const today = useMemo(() => (timezone ? dateKeyInTimeZone(new Date(), timezone) : ""), [timezone]);
+  const nearest = trpc.public.availabilityDays.useQuery(
+    { slug, serviceIds: chosenIds, staffProfileId: "ANY_AVAILABLE", fromDate: today, days: 7 },
+    { enabled: bookable && chosenIds.length > 0 && Boolean(slug) && Boolean(today) },
+  );
+  const nextFree = chosenIds.length ? nearest.data?.days.find(day => day.slotCount > 0 && day.firstLabel) : undefined;
+  const nearestText = nextFree?.firstLabel
+    ? fill(ui.nearest, { d: nextFree.date === today ? ui.today : nextFree.date === addDaysKey(today, 1) ? ui.tomorrow : DATE_NAMES[locale].weekdayShort[schemaWeekdayOf(nextFree.date)]!, t: nextFree.firstLabel })
+    : "";
   const money = (tetri: number, from = false) => from ? fill(ui.from, { p: formatGelTetri(tetri) }) : formatGelTetri(tetri);
   const totalLabel = chosen.length ? money(total, anyFrom) : "";
   // With nothing chosen the booking button waits for a service; a business without public services still links to the flow.
@@ -286,7 +305,7 @@ function ProfileView({ data, slug, ui, locale, categories, promotion, approved }
         {tabKeys.map(key => <div key={key} role="tabpanel" id={`${tabIds}-panel-${key}`} aria-labelledby={`${tabIds}-tab-${key}`} hidden={tab !== key} tabIndex={0} className="cwp-panel">
           {key !== "hours" ? <h2 className="sr-only">{tabLabels[key]}</h2> : null}
           {key === "services" ? <ServicesPanel services={services} selected={selected} onToggle={toggle} bookable={bookable} ui={ui} money={money} /> : null}
-          {key === "team" ? <TeamPanel team={team} ui={ui} /> : null}
+          {key === "team" ? <TeamPanel team={team} ui={ui} slug={slug} bookable={bookable} /> : null}
           {key === "hours" ? <HoursPanel ui={ui} bookable={bookable} loading={catalog.isLoading} failed={catalog.isError} hours={workingHours} timezone={timezone} now={now} /> : null}
           {key === "products" ? (products.length ? <section aria-label={ui.productsTitle}>
             <p className="cwp-muted mb-4 max-w-2xl text-sm">{ui.productsNote}</p>
@@ -332,6 +351,7 @@ function ProfileView({ data, slug, ui, locale, categories, promotion, approved }
               <dt className="cwp-muted">{selectedCount}</dt><dd className="cw-num text-right">{minutes} {ui.minutes}</dd>
               <dt className="font-bold">{ui.total}</dt><dd className="cwp-price text-right text-lg">{totalLabel}</dd>
             </dl> : null}
+            {chosen.length && nearestText ? <p className="cwp-nearest">{nearestText}</p> : null}
             {needsService
               ? <button type="button" className="cwp-btn cwp-btn-primary w-full" disabled>{ui.pickService}</button>
               : <Link href={href} className="cwp-btn cwp-btn-primary w-full">{services.length ? ui.pickTime : ui.book}</Link>}
@@ -345,6 +365,7 @@ function ProfileView({ data, slug, ui, locale, categories, promotion, approved }
       {chosen.length ? <div className="min-w-0" aria-live="polite" aria-atomic="true">
         <p className="cwp-bar-count">{selectedCount}</p>
         <p className="cwp-bar-total">{totalLabel}</p>
+        {nearestText ? <p className="cwp-bar-nearest">{nearestText}</p> : null}
       </div> : null}
       {needsService
         ? <button type="button" className="cwp-btn cwp-btn-primary cwp-bar-cta" disabled>{ui.pickService}</button>
@@ -416,7 +437,7 @@ function ServicesPanel({ services, selected, onToggle, bookable, ui, money }: { 
 
 /* ---------- Team ---------- */
 
-function TeamPanel({ team, ui }: { team: ProfileData["team"]; ui: Copy }) {
+function TeamPanel({ team, ui, slug, bookable }: { team: ProfileData["team"]; ui: Copy; slug: string; bookable: boolean }) {
   if (!team.length) return <p className="cwp-empty">{ui.noTeam}</p>;
   return <ul className="grid gap-3 sm:grid-cols-2">{team.map(member => <li key={member.id} className="cwp-card p-4">
     <div className="flex items-center gap-4">
@@ -427,6 +448,7 @@ function TeamPanel({ team, ui }: { team: ProfileData["team"]; ui: Copy }) {
     </div>
     {member.bio ? <p className="mt-3 text-sm leading-6">{member.bio}</p> : null}
     {member.experienceYears ? <p className="mt-3 text-sm font-semibold"><span className="cw-num">{member.experienceYears}</span> {ui.experience}</p> : null}
+    {bookable ? <Link href={staffBookingHref(slug, member.id)} className="cwp-btn cwp-btn-line mt-4 w-full" aria-label={`${ui.bookStaff}: ${member.name}`}>{ui.bookStaff}</Link> : null}
   </li>)}</ul>;
 }
 

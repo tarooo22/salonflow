@@ -32,6 +32,8 @@
 .cw ::selection { background: var(--sf-accent-soft); color: var(--cw-ink); }
 .cw :focus-visible { outline: 3px solid var(--cw-stamp); outline-offset: 2px; }
 .cw a { text-underline-offset: 0.2em; }
+/* Skip link: out of sight until it takes keyboard focus (unlayered, so it wins over the global rule on every public page). */
+.sf-skip-link:not(:focus):not(:focus-visible) { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; opacity: 0; pointer-events: none; box-shadow: none; }
 
 .cw-container { width: min(100% - 2rem, 75rem); margin-inline: auto; }
 /* Page roots that carry the catalog header are a column, so the footer sits at the bottom of short pages. */
@@ -68,7 +70,7 @@
 
 .cw-header { position: sticky; top: 0; z-index: 30; background: var(--sf-surface); color: var(--sf-text); border-bottom: 1px solid var(--sf-border); }
 .cw-header-bar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; height: 56px; }
-.cw-wordmark { font-size: 1.5rem; font-weight: 800; line-height: 1; letter-spacing: 0; color: var(--sf-accent-ink); }
+.cw-wordmark { display: inline-flex; align-items: center; gap: 8px; font-size: 1.5rem; font-weight: 800; line-height: 1; letter-spacing: 0; color: var(--sf-accent-ink); }
 .cw-nav { display: none; align-items: center; gap: 0.25rem; }
 .cw-nav-link { display: inline-flex; align-items: center; min-height: 40px; padding: 0 0.875rem; border-radius: var(--sf-r-pill); font-size: 0.9375rem; font-weight: 600; color: var(--sf-text); transition: background-color 180ms var(--sf-ease-out), color 180ms var(--sf-ease-out); }
 .cw-nav-link:hover { background: var(--sf-surface-2); }
@@ -134,8 +136,12 @@
 
 /* Public empty state: icon circle, title, one muted line, one action. */
 .cw-empty { display: grid; justify-items: start; gap: 0.5rem; padding: 1.5rem; background: var(--sf-surface-2); border-radius: 16px; }
-.cw-empty-icon { display: grid; place-items: center; width: 40px; height: 40px; margin-bottom: 0.25rem; border-radius: 50%; background: var(--sf-accent-soft); color: var(--sf-accent-ink); }
+/* Icon inside a 44px static ring (the Chawera ring path as a mask, so the pages keep their <span class="cw-empty-icon"><Icon/></span> markup). */
+.cw-empty-icon { position: relative; display: grid; place-items: center; width: 44px; height: 44px; margin: 5px 5px 0.5rem; color: var(--sf-accent-ink); }
 .cw-empty-icon svg { width: 20px; height: 20px; }
+.cw-empty-icon::after { content: ""; position: absolute; inset: -5px; background: currentColor; pointer-events: none; -webkit-mask: var(--cw-ring-mask) center / 100% 100% no-repeat; mask: var(--cw-ring-mask) center / 100% 100% no-repeat; }
+.cw-empty-icon { --cw-ring-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='none'%3E%3Cpath d='M10 36 C6 18 22 6 36 7 C52 8 60 22 57 36 C54 50 40 58 28 56 C14 54 7 44 9 32 C10 24 16 17 24 13' stroke='%23000' stroke-width='3.3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
+@media (forced-colors: active) { .cw-empty-icon::after { background: Highlight; forced-color-adjust: none; } }
 .cw-empty h2, .cw-empty-title { margin: 0; font-size: 1rem; font-weight: 700; line-height: 1.4; color: var(--sf-text); }
 .cw-empty p { margin: 0; font-size: 0.875rem; line-height: 1.5; color: var(--sf-muted); }
 .cw-empty .cw-btn { margin-top: 0.5rem; }

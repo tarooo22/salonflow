@@ -1,9 +1,10 @@
-import { Check, ChevronLeft, ChevronRight, CircleAlert, CircleCheck } from "lucide-react";
+import { ChevronLeft, ChevronRight, CircleAlert, CircleCheck } from "lucide-react";
+import { Ring } from "@/components/brand/Ring";
 import { type PublicLocale, usePublicLocale } from "@/contexts/PublicLocaleContext";
-import React, { useRef, type ReactNode, type Ref } from "react";
+import React, { useEffect, useMemo, useState, type KeyboardEvent, type ReactNode, type Ref } from "react";
 import "../catalog/booking.css";
 
-export type BookingSlot = { startsAt: string; label: string };
+export type BookingSlot = { startsAt: string; label: string; unavailable?: boolean };
 
 export const WEEKDAY_FULL = ["ორშაბათი", "სამშაბათი", "ოთხშაბათი", "ხუთშაბათი", "პარასკევი", "შაბათი", "კვირა"];
 const WEEKDAY_SHORT = ["ორშ", "სამ", "ოთხ", "ხუთ", "პარ", "შაბ", "კვ"];
@@ -28,9 +29,9 @@ export const DATE_NAMES = {
 } as const;
 
 export const ui = {
-  ka: { step: "ნაბიჯი", done: " — შესრულებულია", hours: (title: string) => `${title} საათები`, date: "თარიღი", prevDays: "წინა დღეები", nextDays: "შემდეგი დღეები", today: "დღეს", todayLong: ", დღეს", past: ", გასულია", closed: ", დახურულია", closedShort: "დაკეტ." },
-  en: { step: "Step", done: " — completed", hours: (title: string) => `${title} times`, date: "Date", prevDays: "Previous days", nextDays: "Next days", today: "Today", todayLong: ", today", past: ", past", closed: ", closed", closedShort: "Closed" },
-  ru: { step: "Шаг", done: " — завершено", hours: (title: string) => `Время: ${title}`, date: "Дата", prevDays: "Предыдущие дни", nextDays: "Следующие дни", today: "Сегодня", todayLong: ", сегодня", past: ", прошёл", closed: ", закрыто", closedShort: "Закр." },
+  ka: { step: "ნაბიჯი", done: " — შესრულებულია", hours: (title: string) => `${title} საათები`, date: "თარიღი", prevWeek: "წინა კვირა", nextWeek: "შემდეგი კვირა", today: "დღეს", todayLong: ", დღეს", past: ", გასულია", closed: ", დახურულია", full: ", სავსეა", closedMark: "დაკეტ.", fullMark: "სავსეა" },
+  en: { step: "Step", done: " — completed", hours: (title: string) => `${title} times`, date: "Date", prevWeek: "Previous week", nextWeek: "Next week", today: "Today", todayLong: ", today", past: ", past", closed: ", closed", full: ", fully booked", closedMark: "Closed", fullMark: "Full" },
+  ru: { step: "Шаг", done: " — завершено", hours: (title: string) => `Время: ${title}`, date: "Дата", prevWeek: "Предыдущая неделя", nextWeek: "Следующая неделя", today: "Сегодня", todayLong: ", сегодня", past: ", прошёл", closed: ", закрыто", full: ", занято", closedMark: "Закр.", fullMark: "Занято" },
 } as const;
 
 // Date keys are "YYYY-MM-DD" strings in the location's timezone; arithmetic happens in UTC so it never drifts.
@@ -79,17 +80,6 @@ export function BookingBusinessStrip({ name, address, action, children }: { name
   </>;
 }
 
-export type BookingChoice = { id: string; text: string; onChange?: () => void; changeLabel?: string; changeAria?: string };
-
-// Sticky strip under the card header: what has been chosen so far. Chips with onChange carry a "შეცვლა" button.
-export function BookingChoiceStrip({ choices, label }: { choices: BookingChoice[]; label: string }) {
-  if (!choices.length) return null;
-  return <div className="cwb-choices" role="group" aria-label={label}>{choices.map(choice => <span key={choice.id} className={choice.onChange ? "cwb-chip" : "cwb-chip cwb-chip-fixed"}>
-    <span className="cwb-chip-text">{choice.text}</span>
-    {choice.onChange ? <button type="button" className="cwb-chip-change" aria-label={choice.changeAria} onClick={choice.onChange}>{choice.changeLabel}</button> : null}
-  </span>)}</div>;
-}
-
 // One row of a multi-select (checkbox) or single-select (radio) list. The input is native, so the
 // keyboard path (Space, arrow keys inside a radio group) and screen-reader semantics come for free.
 export function BookingChoiceCard({ selected, onSelect, children, label, conversionEvent, kind = "checkbox", name, leading }: { selected: boolean; onSelect: () => void; children: ReactNode; label: string; conversionEvent?: string; kind?: "checkbox" | "radio"; name?: string; leading?: ReactNode }) {
@@ -100,48 +90,82 @@ export function BookingChoiceCard({ selected, onSelect, children, label, convers
   </label>;
 }
 
+// Radio semantics for a row of buttons: arrow keys move focus between the enabled radios of the same group (Space/Enter still selects).
+export function moveRadioFocus(event: KeyboardEvent<HTMLElement>) {
+  if (!["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp"].includes(event.key)) return;
+  const group = (event.target as HTMLElement).closest('[role="radiogroup"]');
+  if (!group) return;
+  const radios = Array.from(group.querySelectorAll<HTMLElement>('[role="radio"]:not(:disabled)'));
+  const index = radios.indexOf(event.target as HTMLElement);
+  if (index < 0) return;
+  event.preventDefault();
+  const forward = event.key === "ArrowRight" || event.key === "ArrowDown";
+  radios[(index + (forward ? 1 : -1) + radios.length) % radios.length]?.focus();
+}
+
 export function BookingSlotGroup({ title, slots, selectedStartsAt, onSelect, conversionEvent }: { title: string; slots: BookingSlot[]; selectedStartsAt: string; onSelect: (startsAt: string) => void; conversionEvent?: string }) {
   const text = ui[usePublicLocale().locale];
   if (!slots.length) return null;
-  return <section className="cwb-slot-group" aria-label={text.hours(title)}>
+  return <section className="cwb-slot-group">
     <h3 className="cwb-slot-title">{title}</h3>
-    <div className="cwb-slots">{slots.map(slot => {
+    <div className="cwb-slots" role="radiogroup" aria-label={text.hours(title)} onKeyDown={moveRadioFocus}>{slots.map(slot => {
       const active = selectedStartsAt === slot.startsAt;
-      return <button key={slot.startsAt} type="button" className="cwb-slot" data-conversion-event={conversionEvent} aria-pressed={active} onClick={() => onSelect(slot.startsAt)}>{active ? <Check className="size-4 shrink-0" aria-hidden="true" /> : null}{slot.label}</button>;
+      return <button key={slot.startsAt} type="button" role="radio" className="cwb-slot" data-conversion-event={conversionEvent} aria-checked={active} disabled={slot.unavailable} onClick={() => onSelect(slot.startsAt)}>{slot.label}<Ring variant="wide" draw={active} /></button>;
     })}</div>
   </section>;
 }
 
-export type BookingDay = { key: string; closed?: boolean };
+export type BookingDay = { key: string; closed?: boolean; full?: boolean };
 
-// Horizontal date strip of 56 x 64 day cards: weekday, day number, and "today" or "closed" underneath. Past and closed days are disabled.
-export function BookingDateStrip({ days, selected, todayKey, onSelect, label }: { days: BookingDay[]; selected: string; todayKey: string; onSelect: (key: string) => void; label?: string }) {
+const weekStartOf = (key: string) => addDaysKey(key, -schemaWeekdayOf(key));
+
+// Compact week strip (Monday to Sunday): month label, round previous/next-week buttons and seven day circles.
+// Days outside `days` (before today, past the booking window) and closed days are disabled; the selected day is a filled accent circle.
+export function BookingDateStrip({ days, selected, todayKey, onSelect, label, selectableUnavailable }: { days: BookingDay[]; selected: string; todayKey: string; onSelect: (key: string) => void; label?: string; selectableUnavailable?: boolean }) {
   const { locale } = usePublicLocale();
   const text = ui[locale];
   const names = DATE_NAMES[locale];
-  const scroller = useRef<HTMLDivElement>(null);
-  const scrollBy = (direction: 1 | -1) => {
-    const element = scroller.current;
-    if (!element) return;
-    const reduced = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    element.scrollBy({ left: direction * element.clientWidth * 0.8, behavior: reduced ? "auto" : "smooth" });
-  };
-  return <div className="cwb-dates-wrap" role="group" aria-label={label ?? text.date}>
-    <button type="button" className="cwb-date-nav" aria-label={text.prevDays} onClick={() => scrollBy(-1)}><ChevronLeft className="size-5" aria-hidden="true" /></button>
-    <div className="cwb-dates" ref={scroller}>{days.map(day => {
-      const [, month, dayNumber] = day.key.split("-").map(Number) as [number, number, number];
-      const past = day.key < todayKey;
-      const disabled = past || Boolean(day.closed);
-      const isToday = day.key === todayKey;
-      const weekday = schemaWeekdayOf(day.key);
-      const full = `${names.weekdayFull[weekday]}, ${dayNumber} ${names.monthFull[month - 1]}${isToday ? text.todayLong : ""}${past ? text.past : day.closed ? text.closed : ""}`;
-      return <button key={day.key} type="button" className="cwb-date" disabled={disabled} aria-pressed={day.key === selected} aria-label={full} onClick={() => onSelect(day.key)}>
-        <span className="cwb-date-weekday" aria-hidden="true">{names.weekdayShort[weekday]}</span>
-        <span className="cwb-date-day" aria-hidden="true">{dayNumber}</span>
-        <span className="cwb-date-sub" aria-hidden="true">{day.closed ? text.closedShort : isToday ? text.today : " "}</span>
+  const [weekStart, setWeekStart] = useState(() => weekStartOf(selected || days[0]?.key || todayKey));
+  const [direction, setDirection] = useState<1 | -1 | 0>(0);
+  const byKey = useMemo(() => new Map(days.map(day => [day.key, day])), [days]);
+  const lastKey = days[days.length - 1]?.key ?? todayKey;
+  const go = (target: string) => { setDirection(target > weekStart ? 1 : -1); setWeekStart(target); };
+  // A selection made elsewhere (for example "next day") that lands in another week brings that week into view.
+  useEffect(() => {
+    if (!selected) return;
+    const target = weekStartOf(selected);
+    if (target !== weekStart) { setDirection(target > weekStart ? 1 : -1); setWeekStart(target); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected]);
+  const prevDisabled = addDaysKey(weekStart, -1) < todayKey;
+  const nextDisabled = addDaysKey(weekStart, 7) > lastKey;
+  const week = Array.from({ length: 7 }, (_, index) => addDaysKey(weekStart, index));
+  const [startYear, startMonth] = weekStart.split("-").map(Number) as [number, number];
+  const [endYear, endMonth] = week[6]!.split("-").map(Number) as [number, number];
+  const monthLabel = startMonth === endMonth ? `${names.monthFull[startMonth - 1]} ${startYear}` : `${names.monthShort[startMonth - 1]} – ${names.monthShort[endMonth - 1]} ${endYear}`;
+  return <div className="cwb-week" role="group" aria-label={label ?? text.date}>
+    <div className="cwb-week-head">
+      <p className="cwb-week-month" aria-live="polite">{monthLabel}</p>
+      <div className="cwb-week-nav">
+        <button type="button" className="cwb-week-btn" aria-label={text.prevWeek} disabled={prevDisabled} onClick={() => go(addDaysKey(weekStart, -7))}><ChevronLeft className="size-4" aria-hidden="true" /></button>
+        <button type="button" className="cwb-week-btn" aria-label={text.nextWeek} disabled={nextDisabled} onClick={() => go(addDaysKey(weekStart, 7))}><ChevronRight className="size-4" aria-hidden="true" /></button>
+      </div>
+    </div>
+    <div className="cwb-week-days" key={weekStart} data-dir={direction} role="radiogroup" aria-label={label ?? text.date} onKeyDown={moveRadioFocus}>{week.map(key => {
+      const day = byKey.get(key);
+      const [, month, dayNumber] = key.split("-").map(Number) as [number, number, number];
+      const past = key < todayKey;
+      const disabled = past || !day || (Boolean(day.closed) && !selectableUnavailable);
+      const mark = !past && day ? day.closed ? text.closedMark : day.full ? text.fullMark : null : null;
+      const isToday = key === todayKey;
+      const weekday = schemaWeekdayOf(key);
+      const full = `${names.weekdayFull[weekday]}, ${dayNumber} ${names.monthFull[month - 1]}${isToday ? text.todayLong : ""}${past ? text.past : day?.closed ? text.closed : day?.full ? text.full : ""}`;
+      return <button key={key} type="button" role="radio" className="cwb-day" data-today={isToday} data-mark={mark ? "true" : undefined} disabled={disabled} aria-checked={key === selected} aria-label={full} onClick={() => onSelect(key)}>
+        <span className="cwb-day-weekday" aria-hidden="true">{names.weekdayShort[weekday]}</span>
+        <span className="cwb-day-num" aria-hidden="true">{dayNumber}<Ring variant="square" draw={key === selected} /></span>
+        {mark ? <span className="cwb-day-mark" aria-hidden="true">{mark}</span> : null}
       </button>;
     })}</div>
-    <button type="button" className="cwb-date-nav" aria-label={text.nextDays} onClick={() => scrollBy(1)}><ChevronRight className="size-5" aria-hidden="true" /></button>
   </div>;
 }
 
@@ -153,16 +177,16 @@ export function BookingNotice({ tone = "info", title, children, noticeRef, role 
   </div>;
 }
 
-// Sticky bottom bar: running summary + total, and the one primary button. The button uses
-// aria-disabled (not disabled) so it stays focusable and its reason is announced via the hint.
-export function BookingBar({ summary, total, label, blocked, hint, onClick, conversionEvent }: { summary?: string; total?: string; label: string; blocked: boolean; hint?: string; onClick: () => void; conversionEvent?: string }) {
-  // Nothing chosen yet: the bar is just the disabled button, no empty summary or 0,00 total.
+// Sticky bottom bar. Phones: the left side is a button (two lines: services, then time or duration) that opens the
+// summary drawer; the primary sits on the right. From 1024px the summary lives in the side card, so only the primary stays.
+// The primary uses aria-disabled (not disabled) so it stays focusable and its reason is announced via the hint.
+export function BookingBar({ summary, detail, label, blocked, hint, onClick, conversionEvent, summaryOpen, onOpenSummary, summaryLabel }: { summary?: string; detail?: string; label: string; blocked: boolean; hint?: string; onClick: () => void; conversionEvent?: string; summaryOpen?: boolean; onOpenSummary?: () => void; summaryLabel?: string }) {
   return <div className="cwb-bar" data-bare={!summary}>
-    {summary ? <div>
-      <p className="cwb-bar-sum">{summary}</p>
-      <p className="cwb-bar-total">{total}</p>
-    </div> : null}
+    {summary ? <button type="button" className="cwb-bar-open" aria-expanded={Boolean(summaryOpen)} aria-haspopup="dialog" aria-label={summaryLabel ? `${summaryLabel}: ${summary}${detail ? `, ${detail}` : ""}` : undefined} onClick={onOpenSummary}>
+      <span className="cwb-bar-sum">{summary}</span>
+      {detail ? <span className="cwb-bar-detail">{detail}</span> : null}
+    </button> : null}
     <button type="button" className="cwb-btn cwb-btn-primary" aria-disabled={blocked} aria-describedby={hint ? "booking-bar-hint" : undefined} data-conversion-event={blocked ? undefined : conversionEvent} onClick={onClick}>{label}</button>
-    {hint ? <p id="booking-bar-hint" className="cwb-bar-hint">{hint}</p> : null}
+    {hint ? <p id="booking-bar-hint" className="sr-only">{hint}</p> : null}
   </div>;
 }

@@ -21,47 +21,39 @@ import {
 } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
 import { MotionConfig } from "framer-motion";
-import { BarChart3, BriefcaseBusiness, Package,CalendarDays, CalendarHeart, ChevronDown, CircleHelp, Clock3, Images, LayoutDashboard, ListChecks, LogOut, MessageSquareText, MoreHorizontal, PanelLeft, ReceiptText, Scissors, Search, Settings2, Store, Users } from "lucide-react";
+import { ChevronDown, CircleHelp, LogOut, MoreHorizontal, PanelLeft, Search } from "lucide-react";
 import { BRAND } from "@shared/brand";
 import "@/components/workspace/panel.css";
-import { ComponentType, CSSProperties, useEffect, useRef, useState } from "react";
+import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 import { trpc } from "@/lib/trpc";
-import { clientTerms } from "@/lib/verticalTerms";
+import { isBillingVisible, isPanelNavActive, panelNav, panelTabBar, type PanelNavItem } from "@/lib/panelNav";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { GuidedHelpTour } from "@/components/workspace/GuidedHelpTour";
 import { CommandPalette } from "@/components/workspace/CommandPalette";
+import { ChaweraMark } from "@/components/brand/ChaweraMark";
 
-type RailIcon = ComponentType<{ className?: string }>;
 const VERTICAL_CHIP: Record<string, string> = { SALON: "სალონი", AESTHETICS: "ესთეტიკა", DENTAL: "სტომატოლოგია" };
+const RAIL_OPEN_KEY = "chawera.rail.open";
 
-const menuItems = [
-  { icon: LayoutDashboard, label: "დღეს", path: "/app/today", group: "დღის მართვა", roles: ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"] },
-  { icon: CalendarDays, label: "კალენდარი", path: "/app/calendar", group: "დღის მართვა", roles: ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"] },
-  { icon: CalendarHeart, label: "მოლოდინის სია", path: "/app/waitlist", group: "დღის მართვა", roles: ["OWNER", "MANAGER", "RECEPTIONIST"] },
-  { icon: Clock3, label: "ოპერაციები", path: "/app/operations", group: "დღის მართვა", roles: ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"] },
-  { icon: ReceiptText, label: "სალარო", path: "/app/pos", group: "კლიენტები და გაყიდვა", roles: ["OWNER", "MANAGER", "RECEPTIONIST"] },
-  { icon: Users, label: "კლიენტები", path: "/app/clients", group: "კლიენტები და გაყიდვა", roles: ["OWNER", "MANAGER", "RECEPTIONIST"] },
-  { icon: Images, label: "კლიენტის გალერეა", path: "/app/client-gallery", group: "კლიენტები და გაყიდვა", roles: ["OWNER"] },
-  { icon: Scissors, label: "სერვისები", path: "/app/services", group: "სალონის მართვა", roles: ["OWNER"] },
-  { icon: Users, label: "გუნდი", path: "/app/staff", group: "სალონის მართვა", roles: ["OWNER", "STAFF"] },
-  { icon: BarChart3, label: "ანგარიშები", path: "/app/reports", group: "სალონის მართვა", roles: ["OWNER"] },
-  { icon: Images, label: "მედია და პროფილი", path: "/app/media", group: "სალონის მართვა", roles: ["OWNER"] },
-  { icon: Store, label: "კატალოგის პროფილი", path: "/app/marketplace", group: "სალონის მართვა", roles: ["OWNER"] },
-  { icon: BriefcaseBusiness, label: "ვაკანსიები", path: "/app/vacancies", group: "სალონის მართვა", roles: ["OWNER", "MANAGER"] },
-  { icon: Package, label: "პროდუქტები", path: "/app/products", group: "სალონის მართვა", roles: ["OWNER", "MANAGER"] },
-  { icon: MessageSquareText, label: "შეფასებები", path: "/app/feedback", group: "სალონის მართვა", roles: ["OWNER", "MANAGER"] },
-  { icon: Settings2, label: "პარამეტრები", path: "/app/settings", group: "სალონის მართვა", roles: ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"] },
-] as const;
-
-const menuGroups = ["დღის მართვა", "კლიენტები და გაყიდვა", "სალონის მართვა"] as const;
-const platformAdminItems = [
-  { icon: ListChecks, label: "საცდელი მოთხოვნები", path: "/app/trial-admin" },
-  { icon: Store, label: "სალონების კონტროლი", path: "/app/organization-governance" },
-  { icon: ReceiptText, label: "გადახდები", path: "/app/billing-admin" },
-  { icon: MessageSquareText, label: "შეფასებების მოდერაცია", path: "/app/feedback-admin" },
-] as const;
+/** Open/closed state of the collapsible rail groups ("მეტი", "პლატფორმა"), kept on this device. */
+function readRailOpen(): Record<string, boolean> {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(RAIL_OPEN_KEY) ?? "{}");
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+function writeRailOpen(value: Record<string, boolean>) {
+  try {
+    localStorage.setItem(RAIL_OPEN_KEY, JSON.stringify(value));
+  } catch {
+    /* private mode or blocked storage: the group still opens, it just is not remembered */
+  }
+}
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
 const DEFAULT_WIDTH = 280;
@@ -152,27 +144,41 @@ function DashboardLayoutContent({
   const reduceMotion = preferences.data?.settings?.reducedMotion === true;
   const workspaceLocked = workspaceStatus.data?.locked === true;
   const workspaceRestricted = Boolean(organizationId && (workspaceStatus.isLoading || workspaceStatus.isError || workspaceLocked));
-  const lockedOwnerItems = workspaceRestricted && role === "OWNER" ? [{ icon: ReceiptText, label: "პაკეტის გააქტიურება", path: "/app/billing", group: "წვდომის აღდგენა", roles: ["OWNER"] }] : [];
-  const clientsLabel = clientTerms(organizations.data?.[0]?.organization.vertical).plural;
-  const visibleMenuItems = role ? [...menuItems.filter(item => (item.roles as readonly string[]).includes(role) && (!workspaceRestricted || item.path === "/app/today")).map(item => item.path === "/app/clients" ? { ...item, label: clientsLabel } : item), ...lockedOwnerItems] : [];
-  const dailyItems = visibleMenuItems.filter(item => item.group === "დღის მართვა");
-  const salesItems = visibleMenuItems.filter(item => item.group === "კლიენტები და გაყიდვა");
-  const managementItems = visibleMenuItems.filter(item => item.group === "სალონის მართვა");
-  const visiblePlatformAdminItems = user?.role === "admin" ? platformAdminItems : [];
+  const vertical = organizations.data?.[0]?.organization.vertical;
+  // Billing shows in the rail only when the workspace is locked (or its status is unknown) or access ends within 3 days.
+  const billingVisible = workspaceRestricted || isBillingVisible(workspaceStatus.data);
+  const nav = panelNav(role, { vertical, isPlatformAdmin: user?.role === "admin", billingVisible });
+  // A locked workspace only reaches "დღეს" and the billing page.
+  const railGroups = workspaceRestricted
+    ? nav.groups.filter(group => group.key === "main" || group.key === "billing" || group.key === "platform").map(group => group.key === "main" ? { ...group, items: group.items.filter(item => item.href === "/app/today") } : group)
+    : nav.groups;
+  const railFooter = workspaceRestricted ? [] : nav.footer;
+  const tabItems = workspaceRestricted
+    ? railGroups.filter(group => group.key === "main" || group.key === "billing").flatMap(group => group.items)
+    : panelTabBar(role, vertical);
+  const sheetGroups = railGroups
+    .map(group => ({ ...group, items: group.items.filter(item => !tabItems.some(tab => tab.href === item.href)) }))
+    .filter(group => group.items.length);
+  const sheetItems = [...sheetGroups.flatMap(group => group.items), ...railFooter];
   const isMobile = useIsMobile();
   const [helpOpen, setHelpOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
-  const [managementOpen, setManagementOpen] = useState(() => managementItems.some(item => item.path === location));
-  const mobileQuickItems = workspaceRestricted
-    ? visibleMenuItems.slice(0, 3)
-    : ["/app/today", "/app/calendar", role === "STAFF" ? "/app/staff" : "/app/clients"].map(path => visibleMenuItems.find(item => item.path === path)).filter((item): item is typeof visibleMenuItems[number] => Boolean(item));
+  const [moreSheetOpen, setMoreSheetOpen] = useState(false);
+  const [railOpen, setRailOpen] = useState<Record<string, boolean>>(readRailOpen);
+  const activeCollapsibleKeys = railGroups.filter(group => group.collapsible && group.items.some(item => isPanelNavActive(item, location))).map(group => group.key).join(",");
 
   useEffect(() => {
     document.documentElement.dataset.reduceMotion = String(reduceMotion);
     return () => { delete document.documentElement.dataset.reduceMotion; };
   }, [reduceMotion]);
   useEffect(() => { if (workspaceLocked && location !== "/app/today" && location !== "/app/billing" && user?.role !== "admin") setLocation("/app/today"); }, [location, setLocation, user?.role, workspaceLocked]);
-  useEffect(() => { if (managementItems.some(item => item.path === location)) setManagementOpen(true); }, [location, managementItems]);
+  // A collapsed group opens by itself when one of its pages is the current one (not remembered: only a click is).
+  useEffect(() => {
+    if (!activeCollapsibleKeys) return;
+    setRailOpen(open => activeCollapsibleKeys.split(",").every(key => open[key]) ? open : { ...open, ...Object.fromEntries(activeCollapsibleKeys.split(",").map(key => [key, true])) });
+  }, [activeCollapsibleKeys]);
+  useEffect(() => { setMoreSheetOpen(false); }, [location]);
+  const toggleRailGroup = (key: string) => setRailOpen(open => { const next = { ...open, [key]: !open[key] }; writeRailOpen(next); return next; });
 
   useEffect(() => {
     if (isCollapsed) {
@@ -211,13 +217,13 @@ function DashboardLayoutContent({
   }, [isResizing, setSidebarWidth]);
 
   const organization = organizations.data?.[0]?.organization;
-  const railItem = (item: { icon: RailIcon; label: string; path: string }, label = item.label) => {
-    const isActive = location === item.path;
+  const railItem = (item: PanelNavItem) => {
+    const isActive = isPanelNavActive(item, location);
     return (
-      <SidebarMenuItem key={item.path}>
-        <SidebarMenuButton isActive={isActive} onClick={() => setLocation(item.path)} tooltip={label} className="cwk-nav min-h-11 md:min-h-10">
-          <item.icon className="h-4 w-4" />
-          <span>{label}</span>
+      <SidebarMenuItem key={item.key}>
+        <SidebarMenuButton isActive={isActive} onClick={() => setLocation(item.href)} tooltip={item.label} aria-current={isActive ? "page" : undefined} className="cwk-nav min-h-11 md:min-h-10">
+          {item.icon ? <item.icon className="h-4 w-4" /> : null}
+          <span>{item.label}</span>
         </SidebarMenuButton>
       </SidebarMenuItem>
     );
@@ -227,7 +233,7 @@ function DashboardLayoutContent({
   return (
     <MotionConfig reducedMotion={reduceMotion ? "always" : "user"}>
       <div className="relative" ref={sidebarRef}>
-        <Sidebar collapsible="icon" className="cwk-rail border-r-0" disableTransition={isResizing}>
+        <Sidebar collapsible="icon" className="cwk-rail cw-on-band border-r-0" disableTransition={isResizing}>
           <SidebarHeader className="cwk-rail-head justify-center p-0">
             <div className="flex min-h-[4rem] w-full items-center gap-2 px-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
               <button onClick={toggleSidebar} className="cwk-rail-btn" aria-label="ნავიგაციის გადართვა">
@@ -235,7 +241,7 @@ function DashboardLayoutContent({
               </button>
               {!isCollapsed ? (
                 <>
-                  <span className="cwk-wordmark min-w-0 flex-1"><span className="cwk-wordmark-ka">{BRAND.nameKa}</span></span>
+                  <span className="cwk-wordmark cw-on-band min-w-0 flex-1 gap-2"><ChaweraMark size={24} /><span className="cwk-wordmark-ka">{BRAND.nameKa}</span></span>
                   <button type="button" onClick={() => setCommandOpen(true)} className="cwk-rail-btn" aria-label="სწრაფი ძიება"><Search className="size-4" aria-hidden="true" /></button>
                 </>
               ) : null}
@@ -249,28 +255,23 @@ function DashboardLayoutContent({
           </SidebarHeader>
 
           <SidebarContent className="gap-0 px-2 pb-5 pt-4">
-            {[{ label: "დღის მართვა", items: dailyItems }, { label: "კლიენტები და გაყიდვა", items: salesItems }].filter(group => group.items.length).map((group, groupIndex) => <div key={group.label} className={groupIndex ? "mt-5" : ""}>
-              {groupCaption(group.label)}
-              <SidebarMenu className="gap-0.5">
-                {group.items.map(item => railItem(item, item.path === "/app/staff" && role === "STAFF" ? "ჩემი პროფილი" : item.label))}
-              </SidebarMenu>
-            </div>)}
-            {managementItems.length ? <div className="mt-5">
-              {!isCollapsed ? <button type="button" onClick={() => setManagementOpen(open => !open)} aria-expanded={managementOpen} className="cwk-group-caption"><span>სალონის მართვა</span><ChevronDown className={`size-4 transition-transform motion-reduce:transition-none motion-reduce:transform-none ${managementOpen ? "rotate-180" : ""}`} aria-hidden="true" /></button> : null}
-              {(managementOpen || isCollapsed) ? <SidebarMenu className="mt-1 gap-0.5">{managementItems.map(item => railItem(item))}</SidebarMenu> : null}
-            </div> : null}
-            {lockedOwnerItems.length ? <div className="mt-5">
-              {groupCaption("წვდომის აღდგენა")}
-              <SidebarMenu className="gap-0.5">{lockedOwnerItems.map(item => railItem(item))}</SidebarMenu>
-            </div> : null}
-            {visiblePlatformAdminItems.length ? <div className={(dailyItems.length || salesItems.length || managementItems.length) ? "mt-5" : ""}>
-              {groupCaption("პლატფორმის მართვა")}
-              <SidebarMenu className="gap-0.5">{visiblePlatformAdminItems.map(item => railItem(item))}</SidebarMenu>
-            </div> : null}
+            {railGroups.map((group, index) => {
+              const open = !group.collapsible || isCollapsed || railOpen[group.key] === true;
+              const listId = `cwk-rail-${group.key}`;
+              return <div key={group.key} className={index ? "mt-5" : ""}>
+                {group.label ? (group.collapsible
+                  ? (!isCollapsed ? <button type="button" onClick={() => toggleRailGroup(group.key)} aria-expanded={open} aria-controls={listId} className="cwk-group-caption"><span>{group.label}</span><ChevronDown className={`size-4 transition-transform motion-reduce:transition-none motion-reduce:transform-none ${open ? "rotate-180" : ""}`} aria-hidden="true" /></button> : null)
+                  : groupCaption(group.label)) : null}
+                {open ? <SidebarMenu id={listId} className={`gap-0.5 ${group.collapsible ? "mt-1" : ""}`}>{group.items.map(railItem)}</SidebarMenu> : null}
+              </div>;
+            })}
           </SidebarContent>
 
           <SidebarFooter className="cwk-rail-foot p-2">
-            <button type="button" onClick={() => setHelpOpen(true)} className="cwk-rail-link group-data-[collapsible=icon]:justify-center" aria-label="სამუშაო სივრცის დახმარება"><CircleHelp className="size-4" /><span className="group-data-[collapsible=icon]:hidden">დახმარება</span></button>
+            <div className="cwk-rail-links">
+              {railFooter.map(item => { const isActive = isPanelNavActive(item, location); return <button key={item.key} type="button" onClick={() => setLocation(item.href)} aria-current={isActive ? "page" : undefined} title={item.label} className="cwk-rail-link group-data-[collapsible=icon]:justify-center">{item.icon ? <item.icon className="size-4 shrink-0" aria-hidden="true" /> : null}<span className="group-data-[collapsible=icon]:hidden">{item.label}</span></button>; })}
+              <button type="button" onClick={() => setHelpOpen(true)} className="cwk-rail-link group-data-[collapsible=icon]:justify-center" aria-label="სამუშაო სივრცის დახმარება"><CircleHelp className="size-4 shrink-0" /><span className="group-data-[collapsible=icon]:hidden">დახმარება</span></button>
+            </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="cwk-rail-link min-h-12 gap-3 group-data-[collapsible=icon]:justify-center">
@@ -333,10 +334,21 @@ function DashboardLayoutContent({
           </div>
         )}
         <main key={location} className="cwk-main sf-motion-enter flex-1 p-3 pb-24 sm:p-5 sm:pb-5 xl:p-6">{children}</main>
-        {isMobile ? <nav aria-label="სწრაფი ნავიგაცია" className="cwk-tabbar fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 gap-1 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2">
-          {mobileQuickItems.map(item => { const isActive = location === item.path; return <button key={item.path} type="button" onClick={() => setLocation(item.path)} aria-current={isActive ? "page" : undefined} className="cwk-tab"><item.icon className="size-[22px]" aria-hidden="true" /><span className="mt-0.5 max-w-20 truncate">{item.path === "/app/staff" && role === "STAFF" ? "პროფილი" : item.label}</span></button>; })}
-          <button type="button" onClick={toggleSidebar} className="cwk-tab"><MoreHorizontal className="size-[22px]" aria-hidden="true" /><span className="mt-0.5">მეტი</span></button>
+        {isMobile ? <nav aria-label="სწრაფი ნავიგაცია" className="cwk-tabbar fixed inset-x-0 bottom-0 z-40 grid gap-0 px-1 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2" style={{ gridTemplateColumns: `repeat(${tabItems.length + 1}, minmax(0, 1fr))` }}>
+          {tabItems.map(item => { const isActive = isPanelNavActive(item, location); return <button key={item.key} type="button" onClick={() => setLocation(item.href)} aria-current={isActive ? "page" : undefined} title={item.label} className="cwk-tab">{item.icon ? <item.icon className="size-[22px]" aria-hidden="true" /> : null}<span className="cwk-tab-label">{item.label}</span></button>; })}
+          <button type="button" onClick={() => setMoreSheetOpen(true)} aria-haspopup="dialog" aria-expanded={moreSheetOpen} data-active={sheetItems.some(item => isPanelNavActive(item, location)) ? "true" : undefined} className="cwk-tab"><MoreHorizontal className="size-[22px]" aria-hidden="true" /><span className="cwk-tab-label">მეტი</span></button>
         </nav> : null}
+        {isMobile ? <Sheet open={moreSheetOpen} onOpenChange={setMoreSheetOpen}>
+          <SheetContent side="bottom" className="cwk-more-sheet">
+            <SheetHeader><SheetTitle>მეტი</SheetTitle><SheetDescription className="sr-only">დანარჩენი გვერდები და პარამეტრები</SheetDescription></SheetHeader>
+            <div className="cwk-more-body">
+              {[...sheetGroups.map(group => ({ key: group.key, label: group.key === "more" ? null : group.label, items: group.items })), ...(railFooter.length ? [{ key: "footer", label: null, items: railFooter }] : [])].map(group => <section key={group.key} className="cwk-more-group">
+                {group.label ? <p className="cwk-more-caption">{group.label}</p> : null}
+                <ul>{group.items.map(item => { const isActive = isPanelNavActive(item, location); return <li key={item.key}><button type="button" onClick={() => { setMoreSheetOpen(false); setLocation(item.href); }} aria-current={isActive ? "page" : undefined} className="cwk-more-link">{item.icon ? <item.icon className="size-5 shrink-0" aria-hidden="true" /> : null}<span>{item.label}</span></button></li>; })}</ul>
+              </section>)}
+            </div>
+          </SheetContent>
+        </Sheet> : null}
       </SidebarInset>
       {/* Mounted only while open: the tour must never pop up on its own. */}
       {helpOpen && organizations.data?.[0]?.organization.id ? <GuidedHelpTour organizationId={organizations.data[0].organization.id} role={role} open={helpOpen} onOpenChange={setHelpOpen} /> : null}

@@ -4,13 +4,14 @@ const mocked = vi.hoisted(() => ({
   db: null as unknown,
   nanoid: vi.fn(),
   requireOrganizationRole: vi.fn(),
+  requireOrganizationAction: vi.fn(),
 }));
 
 vi.mock("../db", () => ({
   requireDb: vi.fn(async () => mocked.db),
 }));
 
-vi.mock("../access", () => ({ requireOrganizationRole: mocked.requireOrganizationRole }));
+vi.mock("../access", () => ({ requireOrganizationRole: mocked.requireOrganizationRole, requireOrganizationAction: mocked.requireOrganizationAction }));
 vi.mock("nanoid", () => ({ nanoid: mocked.nanoid }));
 
 import { clientsRouter } from "./clients";
@@ -165,28 +166,63 @@ describe("clients.updateCare", () => {
   });
 });
 
-describe("clients.merge", () => {
-  it("merges two active organization clients by reassigning appointments and client gallery sets before creating an audit record", async () => {
-    const values = vi.fn(async () => undefined);
-    const source = { id: "client_source_001", organizationId: "organization_001", status: "ACTIVE" };
-    const target = { id: "client_target_001", organizationId: "organization_001", status: "ACTIVE" };
-    const tx = {
-      select: vi.fn(() => ({ from: () => ({ where: vi.fn(async () => [source, target]) }) })),
-      update: vi.fn(() => ({ set: vi.fn(() => ({ where: vi.fn(async () => undefined) })) })),
-      insert: vi.fn(() => ({ values })),
-    };
-    const db = { transaction: vi.fn(async (callback: (transaction: typeof tx) => Promise<unknown>) => callback(tx)) };
-    mocked.db = db;
-    mocked.requireOrganizationRole.mockResolvedValue({ role: "MANAGER" });
-    mocked.nanoid.mockReturnValueOnce("client_merge_000001");
+function createMergeDb(selects: unknown[][]) {
+  const values = vi.fn(async () => undefined);
+  const forUpdate = vi.fn();
+  const tx = {
+    select: vi.fn(() => {
+      const rows = selects.shift() ?? [];
+      const chain = {
+        from: () => chain,
+        where: () => chain,
+        orderBy: () => chain,
+        limit: () => chain,
+        for: (mode: string) => { forUpdate(mode); return chain; },
+        then: (resolve: (value: unknown[]) => unknown, reject: (reason: unknown) => unknown) => Promise.resolve(rows).then(resolve, reject),
+      };
+      return chain;
+    }),
+    update: vi.fn(() => ({ set: vi.fn(() => ({ where: vi.fn(async () => undefined) })) })),
+    insert: vi.fn(() => ({ values })),
+  };
+  return { db: { transaction: vi.fn(async (callback: (transaction: typeof tx) => Promise<unknown>) => callback(tx)) }, tx, values, forUpdate };
+}
 
-    await expect(clientsRouter.createCaller({ user } as never).merge({
-      organizationId: "organization_001",
-      sourceClientId: source.id,
-      targetClientId: target.id,
-      reason: "დუბლიკატი ჩანაწერი",
-    })).resolves.toEqual({ id: "client_merge_000001" });
-    expect(tx.update).toHaveBeenCalledTimes(5); // appointments, gallery, dental chart, aesthetic records, source status;
+const source = { id: "client_source_001", organizationId: "organization_001", status: "ACTIVE" };
+const target = { id: "client_target_001", organizationId: "organization_001", status: "ACTIVE" };
+const mergeInput = { organizationId: "organization_001", sourceClientId: source.id, targetClientId: target.id, reason: "დუბლიკატი ჩანაწერი" };
+
+describe("clients.merge", () => {
+  it("row-locks both clients, merges them and writes merge and audit records", async () => {
+    const { db, tx, values, forUpdate } = createMergeDb([[source, target], [{ vertical: "SALON" }]]);
+    mocked.db = db;
+    mocked.requireOrganizationRole.mockResolvedValue({ role: "RECEPTIONIST" });
+    mocked.nanoid.mockReturnValueOnce("client_merge_000001").mockReturnValueOnce("audit_merge_0000001");
+
+    await expect(clientsRouter.createCaller({ user } as never).merge(mergeInput)).resolves.toEqual({ id: "client_merge_000001" });
+    expect(forUpdate).toHaveBeenCalledWith("update");
+    expect(tx.update).toHaveBeenCalledTimes(5); // appointments, gallery, dental chart, aesthetic records, source status
     expect(values).toHaveBeenCalledWith(expect.objectContaining({ sourceClientId: source.id, targetClientId: target.id, mergedByUserId: user.id }));
+    expect(values).toHaveBeenCalledWith(expect.objectContaining({ action: "CLIENT_MERGED", entityId: "client_merge_000001" }));
+  });
+
+  it("rejects a merge when either client is already merged after the lock", async () => {
+    const { db, tx } = createMergeDb([[{ ...source, status: "MERGED" }, target]]);
+    mocked.db = db;
+    mocked.requireOrganizationRole.mockResolvedValue({ role: "OWNER" });
+
+    await expect(clientsRouter.createCaller({ user } as never).merge(mergeInput)).rejects.toThrow("Both active clients");
+    expect(tx.update).not.toHaveBeenCalled();
+  });
+
+  it("requires clinical:write when a dental or aesthetic merge moves clinical records", async () => {
+    const { db, tx } = createMergeDb([[source, target], [{ vertical: "DENTAL" }], [{ total: 3 }], [{ total: 0 }]]);
+    mocked.db = db;
+    mocked.requireOrganizationRole.mockResolvedValue({ role: "RECEPTIONIST" });
+    mocked.requireOrganizationAction.mockRejectedValueOnce(new Error("forbidden"));
+
+    await expect(clientsRouter.createCaller({ user } as never).merge(mergeInput)).rejects.toThrow("forbidden");
+    expect(mocked.requireOrganizationAction).toHaveBeenCalledWith(user, "organization_001", "clinical:write");
+    expect(tx.update).not.toHaveBeenCalled();
   });
 });

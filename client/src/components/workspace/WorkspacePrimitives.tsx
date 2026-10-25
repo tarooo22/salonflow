@@ -5,6 +5,7 @@ import { AlertCircle, CalendarCheck, Check, Clock, Inbox, LoaderCircle, MoreHori
 import type { ComponentProps, ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Ring } from "@/components/brand/Ring";
 import "./panel.css";
 
 type WorkspacePageHeaderProps = {
@@ -77,7 +78,7 @@ export function WorkspaceState({ kind, title, description, action }: { kind: "lo
   const Icon = kind === "loading" ? LoaderCircle : kind === "error" ? AlertCircle : Inbox;
   return (
     <div className="cwk-state" data-kind={kind} role={kind === "error" ? "alert" : kind === "loading" ? "status" : undefined} aria-live={kind === "loading" ? "polite" : undefined}>
-      <span className="cwk-state-icon"><Icon className={cn(kind === "loading" && "animate-spin motion-reduce:animate-none")} aria-hidden="true" /></span>
+      <span className="cwk-state-icon">{kind === "empty" ? <Ring variant="square" /> : null}<Icon className={cn(kind === "loading" && "animate-spin motion-reduce:animate-none")} aria-hidden="true" /></span>
       <p className="cwk-state-title">{title}</p>
       {description ? <p className="cwk-state-desc">{description}</p> : null}
       {action ? <div className="mt-3">{action}</div> : null}

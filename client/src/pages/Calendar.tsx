@@ -1,6 +1,8 @@
 import DashboardLayout from "@/components/DashboardLayout";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarCheck, CalendarClock, Check, ChevronLeft, ChevronRight, Clock, MapPin, Plus, UserCheck, X, type LucideIcon } from "lucide-react";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { useLocation, useSearch } from "wouter";
+import { Bookmark, CalendarCheck, CalendarClock, Check, ChevronLeft, ChevronRight, Clock, MapPin, Plus, UserCheck, X, type LucideIcon } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { DragEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { dateKeyInTimeZone, formatTimeInTimeZone, zonedDateTimeToUtc } from "@shared/timezones";
@@ -66,8 +68,26 @@ export function openingStartMinute(openingHours: Array<{ weekday: number; opensA
   return starts.length ? Math.max(FIRST_HOUR * 60, Math.min(...starts)) : WORK_START_HOUR * 60;
 }
 
+/** Minute of day the board opens at: 30 min before the first booking shown, else an hour before now (today, inside hours), else just before opening. */
+export function boardScrollTargetMinute({ earliestBooking, isToday, nowMinute, workStartMinute }: { earliestBooking: number; isToday: boolean; nowMinute: number; workStartMinute: number }) {
+  if (Number.isFinite(earliestBooking)) return earliestBooking - 30;
+  if (isToday && nowMinute >= workStartMinute && nowMinute < LAST_HOUR * 60) return nowMinute - 60;
+  return workStartMinute - 15;
+}
+
+/** Next quarter hour after `now`, as a UTC instant; presets "+ ჯავშანი" from ?create=1. */
+export function nextQuarterHour(now: Date) {
+  const step = 15 * 60_000;
+  return new Date(Math.ceil((now.getTime() + 1) / step) * step);
+}
+
 export function canUseCalendarSpecialistFilter(role?: string) {
   return role === "OWNER" || role === "MANAGER";
+}
+
+/** The server rejects a move outside working/opening hours with PRECONDITION_FAILED; owners and managers may then resubmit with the override. */
+export function isOutsideHoursError(error: { data?: { code?: string } | null } | null | undefined) {
+  return error?.data?.code === "PRECONDITION_FAILED";
 }
 
 export default function Calendar() {
@@ -87,6 +107,11 @@ export default function Calendar() {
   const [cursorKey, setCursorKey] = useState<string | null>(null);
   const [staffFilter, setStaffFilter] = useState("ALL");
   const [walkInOpen, setWalkInOpen] = useState(false);
+  const [walkInStart, setWalkInStart] = useState<Date | undefined>(undefined);
+  const [viewsOpen, setViewsOpen] = useState(false);
+  const walkInRef = useRef<HTMLDivElement>(null);
+  const search = useSearch();
+  const [, navigate] = useLocation();
   const [mobileKey, setMobileKey] = useState("");
   const [now, setNow] = useState(() => new Date());
   const todayKey = dateKeyInTimeZone(now, timezone);
@@ -95,6 +120,14 @@ export default function Calendar() {
 
   useEffect(() => { if (!activeLocationId && locations.data?.[0]) setActiveLocationId(locations.data[0].id); }, [activeLocationId, locations.data]);
   useEffect(() => { const timer = setInterval(() => setNow(new Date()), 60_000); return () => clearInterval(timer); }, []);
+
+  // ?create=1 (Today's "+ ჯავშანი") opens the existing walk-in form once, then drops the parameter so a refresh does not reopen it.
+  useEffect(() => {
+    if (new URLSearchParams(search).get("create") !== "1" || !organization || !selectedLocation) return;
+    if (canManageCalendar) { setWalkInStart(nextQuarterHour(new Date())); setWalkInOpen(true); }
+    navigate("/app/calendar", { replace: true });
+  }, [search, organization, selectedLocation, canManageCalendar, navigate]);
+  useEffect(() => { if (walkInOpen) walkInRef.current?.scrollIntoView({ block: "nearest" }); }, [walkInOpen, walkInStart]);
 
   const days = useMemo(() => view === "week" ? Array.from({ length: 7 }, (_, index) => addDays(startOfWeek(cursor), index)) : [cursor], [cursor.getTime(), view]);
   const range = useMemo(() => ({ startsAt: dayStart(days[0], timezone), endsAt: dayStart(addDays(days[days.length - 1], 1), timezone) }), [days, timezone]);
@@ -148,11 +181,11 @@ export default function Calendar() {
   const boardRef = useRef<HTMLDivElement>(null);
   const rangeKey = `${view}:${dayKey(days[0])}`;
   const workStartMinute = openingStartMinute(openingHours.data, days.map(weekdayIndex));
-  // Open the board 1h before now when today is inside working hours; otherwise at the opening time of the shown days (or the earliest booking, if earlier).
+  // Open the board at the first booking of the shown range; with none, 1h before now (today, inside working hours); otherwise at opening time.
   useEffect(() => {
     if (!showBoard || !boardRef.current) return;
-    const earliest = calendarAppointments.reduce((min, appointment) => Math.min(min, minuteOfDay(new Date(appointment.startsAt), timezone)), Infinity);
-    const target = isToday && nowMinute >= workStartMinute && nowMinute < LAST_HOUR * 60 ? nowMinute - 60 : Math.min(workStartMinute - 15, earliest - 30);
+    const earliestBooking = calendarAppointments.reduce((min, appointment) => Math.min(min, minuteOfDay(new Date(appointment.startsAt), timezone)), Infinity);
+    const target = boardScrollTargetMinute({ earliestBooking, isToday, nowMinute, workStartMinute });
     boardRef.current.scrollTop = Math.max(0, (target - FIRST_HOUR * 60) * pixelsPerMinute);
   }, [showBoard, rangeKey, pixelsPerMinute, workStartMinute]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -165,23 +198,26 @@ export default function Calendar() {
     <button type="button" className="cwk-datebtn" onClick={() => setCursorKey(null)}>დღეს</button>
   </div>;
   const emptyRange = showBoard && !calendarAppointments.length;
+  const toggleCreate = () => { if (walkInOpen) { setWalkInOpen(false); return; } setWalkInStart(undefined); setWalkInOpen(true); };
+  // A tap on empty board space presets the walk-in form to that quarter hour; the server still validates the booking on submit.
+  const createAt = (startsAt: Date) => { if (!canManageCalendar || !selectedLocation) return; setWalkInStart(startsAt); setWalkInOpen(true); };
 
   return <DashboardLayout><div className="sf-workspace-page mx-auto w-full max-w-[96rem] space-y-4">
-    <WorkspacePageHeader title="კალენდარი" className="cwk-head--split" actions={organization ? <>
+    <WorkspacePageHeader title="კალენდარი" description={canManageCalendar ? "ყველა ჯავშანი სპეციალისტების მიხედვით. ახალი ჯავშნისთვის დააჭირეთ თავისუფალ დროს." : "თქვენი ჯავშნები დროის მიხედვით."} className="cwk-head--split" moreActions={organization ? <DropdownMenuItem onSelect={() => setViewsOpen(true)}><Bookmark className="size-4" aria-hidden="true" />შენახული ხედები</DropdownMenuItem> : undefined} actions={organization ? <>
       {dateControls}
       <div className="flex items-center gap-2 max-md:order-3 max-md:w-full">
         <div className="cwk-seg" role="group" aria-label="ხედი"><button type="button" aria-pressed={view === "day"} onClick={() => switchView("day")}>დღე</button><button type="button" aria-pressed={view === "week"} onClick={() => switchView("week")}>კვირა</button></div>
         {(locations.data?.length ?? 0) > 1 ? <Select value={activeLocationId || locations.data![0]?.id} onValueChange={setActiveLocationId}><SelectTrigger aria-label="ფილიალი" className="cwk-loc h-9 w-44 bg-card max-md:h-11 max-md:w-auto"><MapPin className="mr-1 size-4 shrink-0 text-[var(--cwk-ink-soft)]" aria-hidden="true" /><SelectValue placeholder="ფილიალი" /></SelectTrigger><SelectContent>{locations.data!.map(location => <SelectItem key={location.id} value={location.id}>{location.name}</SelectItem>)}</SelectContent></Select> : null}
         {canManageCalendar ? <Select value={staffFilter} onValueChange={setStaffFilter}><SelectTrigger aria-label="სპეციალისტი" className="cwk-off h-9 w-auto min-w-44 bg-card"><SelectValue placeholder="ყველა სპეციალისტი" /></SelectTrigger><SelectContent><SelectItem value="ALL">ყველა სპეციალისტი</SelectItem>{staff.data?.map(item => <SelectItem key={item.profile.id} value={item.profile.id}>{item.profile.publicDisplayName}</SelectItem>)}</SelectContent></Select> : null}
-        <span className="cwk-views max-md:ml-auto"><SavedViewMenu organizationId={organization.id} route="/app/calendar" filterPayload={{ view, locationId: selectedLocation?.id, ...(staffFilter !== "ALL" ? { staffFilter } : {}) }} onApply={applySavedView} /></span>
+        <SavedViewMenu organizationId={organization.id} route="/app/calendar" filterPayload={{ view, locationId: selectedLocation?.id, ...(staffFilter !== "ALL" ? { staffFilter } : {}) }} onApply={applySavedView} open={viewsOpen} onOpenChange={setViewsOpen} hideTrigger />
       </div>
-      {canManageCalendar && selectedLocation ? <button type="button" className="cwk-stampbtn ml-auto" aria-expanded={walkInOpen} onClick={() => setWalkInOpen(open => !open)}><Plus className="size-4" aria-hidden="true" />ჯავშანი</button> : null}
+      {canManageCalendar && selectedLocation ? <button type="button" className="cwk-stampbtn ml-auto" aria-expanded={walkInOpen} onClick={toggleCreate}><Plus className="size-4" aria-hidden="true" />ჯავშანი</button> : null}
     </> : null} />
     {organizations.isLoading ? <WorkspaceState kind="loading" title="სამუშაო სივრცე იტვირთება…" /> : null}
     {organizations.isError ? <WorkspaceState kind="error" title="სამუშაო სივრცის მონაცემები მიუწვდომელია" /> : null}
     {!organizations.isLoading && !organizations.isError && !organization ? <WorkspaceState kind="empty" title="ჯერ შექმენით სამუშაო სივრცე" description="კალენდარი გამოჩნდება პირველი ფილიალის შექმნის შემდეგ." /> : null}
-    {organization && selectedLocation && canManageCalendar && walkInOpen ? <WalkInQuickEntry organizationId={organization.id} locationId={selectedLocation.id} open={walkInOpen} onOpenChange={setWalkInOpen} /> : null}
-    {organization && canManageCalendar && rescheduleTarget ? <RescheduleDialog key={rescheduleTarget.id} target={rescheduleTarget} timezone={timezone} staff={(staff.data ?? []).map(item => ({ id: item.profile.id, name: item.profile.publicDisplayName }))} firstHour={FIRST_HOUR} lastHour={LAST_HOUR} pending={rescheduleFromDialog.isPending} error={rescheduleFromDialog.error ? rescheduleFromDialog.error.message || "ჯავშნის გადატანა ვერ მოხერხდა." : undefined} onClose={() => setRescheduleTarget(null)} onSubmit={(startsAt, staffProfileId) => rescheduleFromDialog.mutate({ organizationId: organization.id, appointmentId: rescheduleTarget.id, startsAt, staffProfileId, reason: "CALENDAR_RESCHEDULE_DIALOG" })} /> : null}
+    {organization && selectedLocation && canManageCalendar && walkInOpen ? <div ref={walkInRef}><WalkInQuickEntry key={walkInStart?.getTime() ?? "now"} defaultStartsAt={walkInStart} organizationId={organization.id} locationId={selectedLocation.id} timeZone={selectedLocation.timezone} open={walkInOpen} onOpenChange={setWalkInOpen} /></div> : null}
+    {organization && canManageCalendar && rescheduleTarget ? <RescheduleDialog key={rescheduleTarget.id} target={rescheduleTarget} timezone={timezone} staff={(staff.data ?? []).map(item => ({ id: item.profile.id, name: item.profile.publicDisplayName }))} firstHour={FIRST_HOUR} lastHour={LAST_HOUR} pending={rescheduleFromDialog.isPending} error={rescheduleFromDialog.error ? rescheduleFromDialog.error.message || "ჯავშნის გადატანა ვერ მოხერხდა." : undefined} outsideHours={isOutsideHoursError(rescheduleFromDialog.error)} canOverrideHours={canManageCalendar} onClose={() => setRescheduleTarget(null)} onSubmit={(startsAt, staffProfileId, allowOutsideHours) => rescheduleFromDialog.mutate({ organizationId: organization.id, appointmentId: rescheduleTarget.id, startsAt, staffProfileId, reason: "CALENDAR_RESCHEDULE_DIALOG", allowOutsideHours })} /> : null}
     {organization ? <>
       {loading ? <WorkspaceState kind="loading" title="კალენდარი იტვირთება…" /> : null}
       {failed ? <WorkspaceState kind="error" title="კალენდრის მონაცემები ვერ ჩაიტვირთა" /> : null}
@@ -190,11 +226,10 @@ export default function Calendar() {
       {showBoard ? <>
         <div className="cwk-strip" role="group" aria-label={view === "week" ? "დღე" : "სპეციალისტი"}>{columns.map(column => <button key={column.key} type="button" aria-pressed={column.key === activeKey} onClick={() => setMobileKey(column.key)}>{column.dot ? <span className="cwk-dot" style={{ backgroundColor: column.dot }} aria-hidden="true" /> : null}{view === "week" ? <>{names.weekdayShort[weekdayIndex(column.day)]} <Num>{column.day.getUTCDate()}</Num></> : column.label}</button>)}</div>
         <div className="relative">
-          <Board innerRef={boardRef} columns={columns} activeKey={activeKey} timezone={timezone} pixelsPerMinute={pixelsPerMinute} weekView={view === "week"} todayKey={todayKey} nowMinute={nowMinute} canManageCalendar={canManageCalendar} busy={busy} onAdvance={advance} onMove={moveAppointment} onReschedule={openReschedule} />
+          <Board innerRef={boardRef} columns={columns} activeKey={activeKey} timezone={timezone} pixelsPerMinute={pixelsPerMinute} weekView={view === "week"} todayKey={todayKey} nowMinute={nowMinute} canManageCalendar={canManageCalendar} busy={busy} onAdvance={advance} onMove={moveAppointment} onReschedule={openReschedule} onCreateAt={canManageCalendar ? createAt : undefined} />
           {emptyRange ? <div className="pointer-events-none absolute inset-0 z-20 grid place-items-center p-2">
-            <div className="pointer-events-auto flex max-w-full flex-wrap items-center justify-center gap-x-3 gap-y-2 rounded-[1.25rem] border border-[var(--cwk-rule)] bg-card px-3 py-2 text-sm font-semibold text-[var(--cwk-ink)] shadow-sm" role="status">
-              <span>{view === "week" ? "ამ კვირაში ჯავშანი არ არის." : "ამ დღეს ჯავშანი არ არის."}</span>
-              {canManageCalendar ? <button type="button" className="cwk-stampbtn" onClick={() => setWalkInOpen(true)}><Plus className="size-4" aria-hidden="true" />ჯავშანი</button> : null}
+            <div className="pointer-events-auto w-full max-w-sm overflow-hidden rounded-[1.25rem] border border-[var(--cwk-rule)] bg-card shadow-sm">
+              <WorkspaceState kind="empty" title={view === "week" ? "ამ კვირაში ჯავშანი არ არის." : "ამ დღეს ჯავშანი არ არის."} description={canManageCalendar ? "ახალი ჯავშნისთვის დააჭირეთ თავისუფალ დროს." : undefined} action={canManageCalendar ? <button type="button" className="cwk-stampbtn" onClick={() => { setWalkInStart(undefined); setWalkInOpen(true); }}><Plus className="size-4" aria-hidden="true" />ჯავშანი</button> : undefined} />
             </div>
           </div> : null}
         </div>
@@ -224,7 +259,7 @@ export function placeTickets(items: Array<{ appointment: AppointmentEntry; start
   return placed;
 }
 
-function Board({ innerRef, columns, activeKey, timezone, pixelsPerMinute, weekView, todayKey, nowMinute, canManageCalendar, busy, onAdvance, onMove, onReschedule }: { innerRef: React.Ref<HTMLDivElement>; columns: BoardColumn[]; activeKey: string; timezone: string; pixelsPerMinute: number; weekView: boolean; todayKey: string; nowMinute: number; canManageCalendar: boolean; busy: boolean; onAdvance: (appointment: AppointmentEntry) => void; onMove: (appointment: AppointmentEntry, startsAt: Date, staffProfileId?: string) => void; onReschedule: (appointment: AppointmentEntry) => void }) {
+function Board({ innerRef, columns, activeKey, timezone, pixelsPerMinute, weekView, todayKey, nowMinute, canManageCalendar, busy, onAdvance, onMove, onReschedule, onCreateAt }: { innerRef: React.Ref<HTMLDivElement>; columns: BoardColumn[]; activeKey: string; timezone: string; pixelsPerMinute: number; weekView: boolean; todayKey: string; nowMinute: number; canManageCalendar: boolean; busy: boolean; onAdvance: (appointment: AppointmentEntry) => void; onMove: (appointment: AppointmentEntry, startsAt: Date, staffProfileId?: string) => void; onReschedule: (appointment: AppointmentEntry) => void; onCreateAt?: (startsAt: Date) => void }) {
   const hourHeight = 60 * pixelsPerMinute;
   const bodyHeight = (LAST_HOUR - FIRST_HOUR) * hourHeight;
   const nowTop = (nowMinute - FIRST_HOUR * 60) * pixelsPerMinute;
@@ -252,7 +287,7 @@ function Board({ innerRef, columns, activeKey, timezone, pixelsPerMinute, weekVi
           if (!encoded) return;
           try { onMove(JSON.parse(encoded) as AppointmentEntry, dropSlot(event, column.day, timezone, pixelsPerMinute), column.staffProfileId); } catch { /* malformed drag payload is ignored */ }
         };
-        return <div key={column.key} className={`cwk-col ${hidden(column.key)}`} style={ruling} onDragOver={event => { if (canManageCalendar) event.preventDefault(); }} onDrop={drop}>
+        return <div key={column.key} className={`cwk-col ${hidden(column.key)}`} style={ruling} onDragOver={event => { if (canManageCalendar) event.preventDefault(); }} onDrop={drop} onClick={event => { if (onCreateAt && event.target === event.currentTarget) onCreateAt(dropSlot(event as unknown as DragEvent<HTMLDivElement>, column.day, timezone, pixelsPerMinute)); }}>
           {placeTickets(items).map(ticket => <Ticket key={ticket.appointment.id} ticket={ticket} timezone={timezone} pixelsPerMinute={pixelsPerMinute} showStaff={weekView} canManageCalendar={canManageCalendar} busy={busy} onAdvance={onAdvance} onReschedule={onReschedule} />)}
           {nowVisible && isTodayColumn ? <div className="cwk-now" style={{ top: nowTop }} aria-hidden="true" /> : null}
         </div>;

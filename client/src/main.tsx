@@ -50,6 +50,8 @@ const trpcClient = trpc.createClient({
     httpBatchLink({
       url: "/api/trpc",
       transformer: superjson,
+      // Must not exceed the server's maxBatchSize (server/_core/index.ts).
+      maxItems: 20,
       headers() {
         return {};
       },

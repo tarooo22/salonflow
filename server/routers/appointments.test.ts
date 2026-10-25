@@ -1,4 +1,7 @@
-import { describe, expect, it, vi } from "vitest";
+// These suites cover enforced opening hours (off by default until the backfill; see fetchOpeningHours).
+process.env.ENFORCE_OPENING_HOURS = "true";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { appointments, locationOpeningHours, locations, scheduleExceptions, staffProfiles, workingHourRules } from "../../drizzle/schema";
 
 const mocked = vi.hoisted(() => ({ db: null as unknown, requireOrganizationRole: vi.fn(), requireOrganizationAction: vi.fn(), businessDayRange: vi.fn() }));
 
@@ -126,5 +129,111 @@ describe("appointments operational data contracts", () => {
       organizationId, appointmentId, startsAt: new Date("2026-08-14T10:00:00.000Z"),
     })).rejects.toThrow("ამ სტატუსის ჯავშნის გადატანა აღარ შეიძლება");
     expect(db.transaction).not.toHaveBeenCalled();
+  });
+});
+
+// Friday 2026-08-14 (schema weekday 4) in Tbilisi (UTC+4); staff hours 10:00–19:00 local = 06:00–15:00Z.
+const at = (time: string) => new Date(`2026-08-14T${time}:00.000Z`);
+const booked = { id: appointmentId, organizationId, locationId, staffProfileId, startsAt: new Date("2026-08-13T08:00:00.000Z"), endsAt: new Date("2026-08-13T09:00:00.000Z"), bufferBeforeMinutes: 0, bufferAfterMinutes: 15, status: "CONFIRMED" as const };
+
+/** DB double that answers each select by its `from` table; the transaction runs on the same double and records updates. */
+function tableDb(rowsByTable: Map<unknown, unknown[]>) {
+  const updates: unknown[] = [];
+  const select = vi.fn(() => ({ from: (table: unknown) => query(rowsByTable.get(table) ?? []) }));
+  const tx = {
+    select,
+    insert: vi.fn(() => ({ values: vi.fn(() => ({ onDuplicateKeyUpdate: vi.fn(async () => undefined), then: (resolve: (value: unknown) => unknown) => Promise.resolve(undefined).then(resolve) })) })),
+    update: vi.fn(() => ({ set: (values: unknown) => ({ where: async () => { updates.push(values); } }) })),
+  };
+  const db = { select, transaction: vi.fn(async (run: (transaction: typeof tx) => Promise<unknown>) => run(tx)) };
+  return { db, tx, updates };
+}
+
+describe("staff-side reschedule integrity", () => {
+  beforeEach(() => { vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(new Date("2026-08-14T05:00:00.000Z")); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  const hours = [{ startLocalTime: "10:00:00", endLocalTime: "19:00:00" }];
+  const setup = ({ role = "OWNER", others = [] as unknown[], opening = [] as unknown[], exceptions = [] as unknown[] } = {}) => {
+    mocked.requireOrganizationAction.mockResolvedValueOnce({ role });
+    const rows = new Map<unknown, unknown[]>([
+      [locations, [{ id: locationId, organizationId, timezone: "Asia/Tbilisi" }]],
+      [workingHourRules, hours],
+      [locationOpeningHours, opening],
+      [scheduleExceptions, exceptions],
+    ]);
+    const harness = tableDb(rows);
+    // The first appointments read is the booking being moved; later reads are the staff member's bookings inside the transaction.
+    let appointmentReads = 0;
+    harness.db.select.mockImplementation(() => ({ from: (table: unknown) => query(table === appointments ? (appointmentReads++ === 0 ? [booked] : [booked, ...others]) : rows.get(table) ?? []) }));
+    mocked.db = harness.db;
+    return harness;
+  };
+  const move = (startsAt: Date, extra: { allowOutsideHours?: boolean } = {}) => appointmentsRouter.createCaller({ user } as never).reschedule({ organizationId, appointmentId, startsAt, ...extra });
+
+  it("moves a booking that fits the staff member's hours and is clear of other bookings", async () => {
+    const { updates } = setup();
+    await expect(move(at("08:00"))).resolves.toMatchObject({ id: appointmentId, endsAt: at("09:00") });
+    expect(updates).toEqual([expect.objectContaining({ startsAt: at("08:00"), endsAt: at("09:00"), staffProfileId })]);
+  });
+
+  it("rejects a move whose after-buffer overlaps the next booking even though the visits only touch", async () => {
+    const { updates } = setup({ others: [{ ...booked, id: "other_2026_abcdefghij", startsAt: at("09:00"), endsAt: at("10:00"), bufferAfterMinutes: 0 }] });
+    await expect(move(at("08:00"))).rejects.toMatchObject({ code: "CONFLICT", message: "არჩეული დრო უკვე დაკავებულია." });
+    expect(updates).toEqual([]);
+  });
+
+  it("rejects a move into the past before taking any schedule lock", async () => {
+    const { db } = setup();
+    await expect(move(new Date("2026-08-14T04:50:00.000Z"))).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(db.transaction).not.toHaveBeenCalled();
+  });
+
+  it("rejects a move that runs past the staff member's working hours with PRECONDITION_FAILED", async () => {
+    const { updates } = setup();
+    await expect(move(at("14:30"))).rejects.toMatchObject({ code: "PRECONDITION_FAILED", message: "არჩეული დრო სპეციალისტის სამუშაო საათებს სცდება." });
+    expect(updates).toEqual([]);
+  });
+
+  it("rejects a move outside the location's opening hours even inside staff hours", async () => {
+    setup({ opening: [{ weekday: 4, startLocalTime: "10:00:00", endLocalTime: "18:00:00" }] });
+    await expect(move(at("13:30"))).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
+  });
+
+  it("rejects a move into a blocking exception and the override does not skip it", async () => {
+    setup({ exceptions: [{ staffProfileId, locationId: null, type: "VACATION", startsAt: at("00:00"), endsAt: at("20:00") }] });
+    await expect(move(at("08:00"))).rejects.toMatchObject({ code: "CONFLICT" });
+    setup({ exceptions: [{ staffProfileId, locationId: null, type: "VACATION", startsAt: at("00:00"), endsAt: at("20:00") }] });
+    await expect(move(at("14:30"), { allowOutsideHours: true })).rejects.toMatchObject({ code: "CONFLICT" });
+  });
+
+  it.each(["OWNER", "MANAGER"])("lets an %s move outside hours with the explicit override, still checking overlap", async role => {
+    const { updates } = setup({ role });
+    await expect(move(at("14:30"), { allowOutsideHours: true })).resolves.toMatchObject({ endsAt: at("15:30") });
+    expect(updates).toHaveLength(1);
+    setup({ role, others: [{ ...booked, id: "other_2026_abcdefghij", startsAt: at("15:30"), endsAt: at("16:00"), bufferAfterMinutes: 0 }] });
+    await expect(move(at("14:30"), { allowOutsideHours: true })).rejects.toMatchObject({ code: "CONFLICT" });
+  });
+
+  it("rejects a walk-in whose service buffer would touch the next booking", async () => {
+    mocked.requireOrganizationAction.mockResolvedValueOnce({ role: "RECEPTIONIST" });
+    const assignment = { staffProfileId, serviceId: "service_2026_abcdefgh", serviceName: "ფენი", serviceDurationMinutes: 60, serviceBufferBeforeMinutes: 0, serviceBufferAfterMinutes: 15, servicePriceTetri: 5_000, durationOverrideMinutes: null, priceOverrideTetri: null };
+    const { db, updates } = tableDb(new Map<unknown, unknown[]>([
+      [locations, [{ id: locationId, organizationId, timezone: "Asia/Tbilisi" }]],
+      [staffProfiles, [assignment]],
+      [workingHourRules, [{ startLocalTime: "10:00:00", endLocalTime: "19:00:00" }]],
+      [appointments, [{ ...booked, id: "other_2026_abcdefghij", startsAt: at("09:00"), endsAt: at("10:00") }]],
+    ]));
+    mocked.db = db;
+
+    await expect(appointmentsRouter.createCaller({ user } as never).createWalkIn({ organizationId, locationId, staffProfileId, serviceId: assignment.serviceId, startsAt: at("08:00") }))
+      .rejects.toMatchObject({ code: "CONFLICT", message: "არჩეული დრო უკვე დაკავებულია." });
+    expect(updates).toEqual([]);
+  });
+
+  it.each(["RECEPTIONIST", "STAFF"])("refuses the hours override for %s before reading any booking", async role => {
+    const { db } = setup({ role });
+    await expect(move(at("14:30"), { allowOutsideHours: true })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect(db.select).not.toHaveBeenCalled();
   });
 });

@@ -5,16 +5,17 @@ import { trpc } from "@/lib/trpc";
 import { Clock3, UserPlus } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { localInputToUtc, utcToLocalInput } from "@shared/timezones";
 
-export function WalkInQuickEntry({ organizationId, locationId, open, onOpenChange }: { organizationId: string; locationId: string; open: boolean; onOpenChange: (value: boolean) => void }) {
+export function WalkInQuickEntry({ organizationId, locationId, timeZone, open, onOpenChange, defaultStartsAt }: { organizationId: string; locationId: string; timeZone: string; open: boolean; onOpenChange: (value: boolean) => void; /** Preset start (a tapped free time); defaults to now. */ defaultStartsAt?: Date }) {
   const utils = trpc.useUtils();
   const options = trpc.appointments.walkInOptions.useQuery({ organizationId, locationId }, { enabled: open });
   const [assignment, setAssignment] = useState("");
-  const [startsAt, setStartsAt] = useState(() => new Date().toISOString().slice(0, 16));
+  const [startsAt, setStartsAt] = useState(() => utcToLocalInput(defaultStartsAt ?? new Date(), timeZone));
   const [note, setNote] = useState("");
   const create = trpc.appointments.createWalkIn.useMutation({ onSuccess: async () => { await Promise.all([utils.appointments.dashboard.invalidate(), utils.appointments.listRange.invalidate()]); setAssignment(""); setNote(""); onOpenChange(false); toast.success("ადგილზე მოსულის ჩაწერა დაემატა კალენდარში."); }, onError: error => toast.error(error.message || "ადგილზე მოსულის ჩაწერა ვერ დაემატა.") });
   const choices = useMemo(() => (options.data ?? []).map(item => ({ key: `${item.staffProfileId}:${item.serviceId}`, ...item })), [options.data]);
-  const submit = (event: FormEvent) => { event.preventDefault(); const selected = choices.find(item => item.key === assignment); if (!selected || !startsAt) return; create.mutate({ organizationId, locationId, staffProfileId: selected.staffProfileId, serviceId: selected.serviceId, startsAt: new Date(startsAt), internalNote: note || undefined }); };
+  const submit = (event: FormEvent) => { event.preventDefault(); const selected = choices.find(item => item.key === assignment); if (!selected || !startsAt) return; create.mutate({ organizationId, locationId, staffProfileId: selected.staffProfileId, serviceId: selected.serviceId, startsAt: localInputToUtc(startsAt, timeZone), internalNote: note || undefined }); };
   return <section className="cwk-sheet" aria-label="ადგილზე მოსულის ჩაწერა">
     <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3">
       <p className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground"><UserPlus className="size-4 shrink-0 text-primary" aria-hidden="true" /><span>სწრაფად დაამატეთ ადგილზე მოსული კლიენტი.</span></p>

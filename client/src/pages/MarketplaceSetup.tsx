@@ -1,4 +1,5 @@
 import DashboardLayout from "@/components/DashboardLayout";
+import { OnlinePageTabs } from "@/components/workspace/OnlinePageTabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -103,7 +104,8 @@ export default function MarketplaceSetup() {
   };
 
   return <DashboardLayout><main className="sf-workspace-page mx-auto w-full max-w-7xl space-y-5">
-    <WorkspacePageHeader title="კატალოგის პროფილი" description="კატალოგში გამოჩნდება მხოლოდ განხილვის შემდეგ." />
+    <WorkspacePageHeader title="კატალოგში გამოჩენა" description="როგორ გამოიყურება თქვენი სალონი კატალოგში." />
+      <OnlinePageTabs />
     {organizations.isLoading ? <WorkspaceState kind="loading" title="იტვირთება…" /> : null}
     {organizations.isError ? <WorkspaceState kind="error" title="მონაცემები მიუწვდომელია" /> : null}
     {!organizations.isLoading && !organizations.isError && !isOwner ? <WorkspaceState kind="empty" title="კატალოგის პროფილს მხოლოდ მფლობელი მართავს" /> : null}

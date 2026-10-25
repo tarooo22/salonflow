@@ -1,7 +1,7 @@
 import { and, asc, count, desc, eq, inArray, like } from "drizzle-orm";
 import { nanoid } from "nanoid";
-import { aestheticProcedureRecords, appointmentServices, appointments, clientConsents, clientMediaSets, clientMerges, clients, dentalToothRecords } from "../../drizzle/schema";
-import { requireOrganizationRole } from "../access";
+import { aestheticProcedureRecords, appointmentServices, appointments, auditLogs, clientConsents, clientMediaSets, clientMerges, clients, dentalToothRecords, organizations } from "../../drizzle/schema";
+import { requireOrganizationAction, requireOrganizationRole } from "../access";
 import { requireDb } from "../db";
 import { cleanSearch, normalizeEmail, normalizeGeorgianPhone } from "../lib/normalization";
 import { clientBookingHistorySchema, clientCareUpdateSchema, clientConsentSchema, clientCreateSchema, clientDetailSchema, clientListSchema, clientMergeSchema } from "../../shared/validation";
@@ -136,10 +136,23 @@ export const clientsRouter = router({
     await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER", "RECEPTIONIST"]);
     const db = await requireDb();
     return db.transaction(async tx => {
-      const records = await tx.select().from(clients).where(and(eq(clients.organizationId, input.organizationId), inArray(clients.id, [input.sourceClientId, input.targetClientId])));
+      // Lock both rows (in id order, so A->B and B->A queue instead of deadlocking) and re-check status after the lock.
+      const records = await tx.select().from(clients).where(and(eq(clients.organizationId, input.organizationId), inArray(clients.id, [input.sourceClientId, input.targetClientId]))).orderBy(asc(clients.id)).for("update");
       const source = records.find(client => client.id === input.sourceClientId);
       const target = records.find(client => client.id === input.targetClientId);
       if (!source || !target || source.status !== "ACTIVE" || target.status !== "ACTIVE") throw new Error("Both active clients must belong to this organization");
+      const [organization] = await tx.select({ vertical: organizations.vertical }).from(organizations).where(eq(organizations.id, input.organizationId)).limit(1);
+      const clinicalVertical = organization?.vertical === "DENTAL" || organization?.vertical === "AESTHETICS";
+      let clinicalRecordsMoved = 0;
+      if (clinicalVertical) {
+        const [[dental], [aesthetic]] = await Promise.all([
+          tx.select({ total: count() }).from(dentalToothRecords).where(and(eq(dentalToothRecords.organizationId, input.organizationId), eq(dentalToothRecords.clientId, source.id))),
+          tx.select({ total: count() }).from(aestheticProcedureRecords).where(and(eq(aestheticProcedureRecords.organizationId, input.organizationId), eq(aestheticProcedureRecords.clientId, source.id))),
+        ]);
+        clinicalRecordsMoved = Number(dental?.total ?? 0) + Number(aesthetic?.total ?? 0);
+        // Moving clinical history is a clinical write, not just a client-list edit.
+        if (clinicalRecordsMoved > 0) await requireOrganizationAction(ctx.user, input.organizationId, "clinical:write");
+      }
       await tx.update(appointments).set({ clientId: target.id }).where(and(eq(appointments.organizationId, input.organizationId), eq(appointments.clientId, source.id)));
       await tx.update(clientMediaSets).set({ clientId: target.id }).where(and(eq(clientMediaSets.organizationId, input.organizationId), eq(clientMediaSets.clientId, source.id)));
       // Clinical history follows the patient, otherwise it would be split across the merged ids.
@@ -148,6 +161,7 @@ export const clientsRouter = router({
       await tx.update(clients).set({ status: "MERGED", mergedIntoClientId: target.id }).where(eq(clients.id, source.id));
       const id = nanoid(21);
       await tx.insert(clientMerges).values({ id, organizationId: input.organizationId, sourceClientId: source.id, targetClientId: target.id, mergedByUserId: ctx.user.id, reason: input.reason });
+      await tx.insert(auditLogs).values({ id: nanoid(21), organizationId: input.organizationId, actorUserId: ctx.user.id, action: "CLIENT_MERGED", entityType: "client_merge", entityId: id, afterState: { sourceClientId: source.id, targetClientId: target.id, clinicalRecordsMoved } });
       return { id };
     });
   }),

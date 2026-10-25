@@ -28,6 +28,7 @@ function reportDb(queryRows: unknown[][]) {
       const chain = {
         from: () => chain,
         innerJoin: () => chain,
+        limit: () => chain,
         where: (condition: unknown) => { wheres.push(condition); return chain; },
         then: <TResult1 = unknown[], TResult2 = never>(onfulfilled?: ((value: unknown[]) => TResult1 | PromiseLike<TResult1>) | null, onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null) => Promise.resolve(rows).then(onfulfilled, onrejected),
       };
@@ -71,6 +72,7 @@ describe("reporting.feedbackInsights", () => {
     const db = reportDb([
       [{ rating: 5, status: "APPROVED", submittedAt: new Date("2026-08-01T09:00:00.000Z") }, { rating: 3, status: "HIDDEN", submittedAt: new Date("2026-08-02T09:00:00.000Z") }],
       [{ clientId: "client_a", consentType: "MARKETING_EMAIL", granted: true, withdrawnAt: null, createdAt: new Date("2026-08-01T09:00:00.000Z") }, { clientId: "client_a", consentType: "MARKETING_SMS", granted: false, withdrawnAt: new Date("2026-08-02T09:00:00.000Z") }],
+      [{ defaultTimezone: "Asia/Tbilisi" }],
     ]);
     mocked.db = db;
     const startsAt = new Date("2026-08-01T00:00:00.000Z");
@@ -83,5 +85,19 @@ describe("reporting.feedbackInsights", () => {
     expect(result.consent).toMatchObject({ currentOptIns: { marketingEmail: 1, marketingSms: 0 }, activity: { granted: 1, withdrawn: 1 } });
     expect(JSON.stringify(result)).not.toContain("client_a");
     expect(db.wheres[0]).toMatchObject({ kind: "and", conditions: expect.arrayContaining([expect.objectContaining({ kind: "eq", value: "organization_0001" })]) });
+  });
+
+  it("buckets the feedback trend by the organization's local day, not the UTC day", async () => {
+    mocked.requireOrganizationAction.mockResolvedValue({ role: "OWNER" });
+    // 21:00 UTC on Aug 1 is 01:00 on Aug 2 in Tbilisi (UTC+4).
+    mocked.db = reportDb([[{ rating: 5, status: "APPROVED", submittedAt: new Date("2026-08-01T21:00:00.000Z") }], [], [{ defaultTimezone: "Asia/Tbilisi" }]]);
+
+    const result = await reportingRouter.createCaller({ user } as never).feedbackInsights({
+      organizationId: "organization_0001",
+      startsAt: new Date("2026-08-01T00:00:00.000Z"),
+      endsAt: new Date("2026-08-03T23:59:59.999Z"),
+    });
+
+    expect(result.feedback.trend).toEqual([{ date: "2026-08-02", count: 1 }]);
   });
 });

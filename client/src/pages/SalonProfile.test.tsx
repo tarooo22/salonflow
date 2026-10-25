@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { MAX_SELECTED_SERVICES } from "@shared/validation";
-import { bookingHref, localWeekdayMinutes, openStatus } from "./SalonProfile";
+import { bookingHref, localWeekdayMinutes, openStatus, staffBookingHref } from "./SalonProfile";
 
 const source = readFileSync(new URL("./SalonProfile.tsx", import.meta.url), "utf8");
 const styles = readFileSync(new URL("../components/catalog/profile.css", import.meta.url), "utf8");
@@ -55,6 +55,13 @@ describe("SalonProfile booking handoff", () => {
     expect(source).toContain('role="tab"');
     expect(source).toContain('role="tabpanel"');
     expect(source).toContain("ArrowRight");
+  });
+});
+
+describe("SalonProfile team booking link", () => {
+  it("links each specialist card to the booking flow preselected with ?staff=", () => {
+    expect(staffBookingHref("gldani-beauty", "staff_01")).toBe("/book/gldani-beauty?staff=staff_01");
+    expect(source).toContain("staffBookingHref(slug, member.id)");
   });
 });
 
