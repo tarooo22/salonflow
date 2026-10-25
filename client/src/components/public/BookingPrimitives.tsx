@@ -90,6 +90,19 @@ export function BookingChoiceCard({ selected, onSelect, children, label, convers
   </label>;
 }
 
+// Specialist card: the whole card is one radio. Photo (or the initial / `icon` as a fallback) wears the square ring when selected.
+export function BookingStaffCard({ selected, onSelect, name, meta, extra, photoUrl, icon, label, conversionEvent }: { selected: boolean; onSelect: () => void; name: string; meta?: string | null; extra?: ReactNode; photoUrl?: string | null; icon?: ReactNode; label: string; conversionEvent?: string }) {
+  return <button type="button" role="radio" className="cwb-staff" aria-checked={selected} aria-label={label} data-conversion-event={conversionEvent} onClick={onSelect}>
+    <span className="cwb-staff-photo">
+      <span className="cwb-staff-disc">{photoUrl ? <img src={photoUrl} alt={name} loading="lazy" /> : icon ?? (name.trim().charAt(0).toLocaleUpperCase() || "·")}</span>
+      <Ring variant="square" draw={selected} />
+    </span>
+    <span className="cwb-staff-name">{name}</span>
+    {meta ? <span className="cwb-staff-meta">{meta}</span> : null}
+    {extra}
+  </button>;
+}
+
 // Radio semantics for a row of buttons: arrow keys move focus between the enabled radios of the same group (Space/Enter still selects).
 export function moveRadioFocus(event: KeyboardEvent<HTMLElement>) {
   if (!["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp"].includes(event.key)) return;

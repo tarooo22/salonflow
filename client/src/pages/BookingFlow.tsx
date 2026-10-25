@@ -1,9 +1,8 @@
 import { Ring } from "@/components/brand/Ring";
 import { CatalogHeader } from "@/components/catalog/CatalogChrome";
 import { EASE } from "@/components/catalog/HomeMotion";
-import { BookingBar, BookingBusinessStrip, BookingChoiceCard, BookingDateStrip, BookingNotice, BookingRail, BookingSlotGroup, BookingStepHeader, DATE_NAMES, addDaysKey, schemaWeekdayOf } from "@/components/public/BookingPrimitives";
+import { BookingBar, BookingBusinessStrip, BookingChoiceCard, BookingDateStrip, BookingNotice, BookingRail, BookingSlotGroup, BookingStaffCard, BookingStepHeader, moveRadioFocus, DATE_NAMES, addDaysKey, schemaWeekdayOf } from "@/components/public/BookingPrimitives";
 import { usePublicMeta } from "@/components/public/PublicMeta";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { type PublicLocale, usePublicLocale } from "@/contexts/PublicLocaleContext";
 import { downloadBookingCalendar } from "@/lib/bookingCalendar";
@@ -14,7 +13,7 @@ import { BRAND } from "@shared/brand";
 import { MAX_SELECTED_SERVICES } from "@shared/validation";
 import { dateKeyInTimeZone } from "@shared/timezones";
 import { AnimatePresence, motion, useReducedMotionConfig } from "framer-motion";
-import { CalendarClock, CalendarPlus, ChevronDown, ChevronLeft, CircleAlert, Clock, Link2, Mail, MapPin, Phone, RefreshCw, Share2, Users, X } from "lucide-react";
+import { CalendarClock, CalendarPlus, ChevronDown, ChevronLeft, CircleAlert, Clock, Link2, Mail, MapPin, Phone, RefreshCw, Share2, Sparkles, X } from "lucide-react";
 import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useRoute, useSearch } from "wouter";
 import { toast } from "sonner";
@@ -27,21 +26,22 @@ export const bookingUi = {
 } as const;
 
 const ANY_AVAILABLE = "ANY_AVAILABLE";
-const STEP_KEYS = ["services", "time", "details"] as const;
+const STEP_KEYS = ["services", "staff", "time", "details"] as const;
 
 // Wizard copy (steps, validation, review card). Georgian is the source of truth; business data (service and staff names) is never translated.
 export const flowUi = {
   ka: {
     metaWith: (name: string) => `ჩაწერა — ${name}`, metaOnline: "ონლაინ ჩაწერა", metaDescription: "აირჩიე სერვისი და თავისუფალი დრო და დაჯავშნე ონლაინ.",
-    steps: ["სერვისი", "დრო", "დეტალები"],
+    steps: ["სერვისი", "სპეციალისტი", "დრო", "დეტალები"],
     stepCopy: [
       { title: "რომელი სერვისი გჭირდება?", lede: "აირჩიე ერთი ან რამდენიმე სერვისი." },
+      { title: "ვინ მოგემსახურება?", lede: "აირჩიე სპეციალისტი ან დაგვანდე — თავისუფალს ჩვენ შეგირჩევთ." },
       { title: "რომელი დრო გერგება?", lede: "ნაჩვენებია მხოლოდ რეალურად თავისუფალი საათები. არჩეული დრო ჯავშნისას კვლავ გადამოწმდება." },
       { title: "ვის სახელზე ჩავწეროთ?", lede: "ჯავშანს სალონი დაგიდასტურებს." },
     ],
     issues: {
       service: { title: "ჯერ აირჩიე სერვისი", description: "მონიშნე სასურველი მომსახურება და გააგრძელე." },
-      staff: { title: "სპეციალისტი ვერ შეირჩა", description: "დაუბრუნდი სერვისებს და შეცვალე არჩევანი." },
+      staff: { title: "აირჩიე სპეციალისტი", description: "ან მონიშნე „ნებისმიერი თავისუფალი“ — სისტემა თავად შეარჩევს." },
       timeMissing: { title: "დაამატე სასურველი თარიღი და დრო", description: `დროის არჩევის შემდეგ ${BRAND.nameKa} ავტომატურად გადაამოწმებს ხელმისაწვდომობას.` },
       timeUnconfirmed: { title: "ეს დრო ჯერ არ დადასტურებულა", description: "აირჩიე სხვა დრო ან დაელოდე ხელმისაწვდომობის შემოწმების დასრულებას." },
       firstName: { title: "მიუთითე სახელი", description: "სახელი საჭიროა ჯავშნის მოთხოვნის დასადასტურებლად." },
@@ -55,8 +55,8 @@ export const flowUi = {
     noService: "სერვისი არ არის არჩეული", pickService: "აირჩიე სერვისი", from: (price: string) => `${price}-დან`, pickTime: "აირჩიე დრო", next: "გაგრძელება", checkingShort: "მოწმდება…", send: "ჯავშნის გაგზავნა", sending: "იგზავნება…",
     staffHours: "ხელმისაწვდომი სპეციალისტების საათები", noHours: "სამუშაო საათები ჯერ არ არის მითითებული. დროის არჩევისას ხელმისაწვდომობა მაინც ავტომატურად შემოწმდება.", dayFallback: "დღე",
     noServicesTitle: "ონლაინ სერვისი ჯერ არ არის", noServicesText: "ამ ფილიალში ონლაინ ჩასაწერი სერვისები ჯერ არ არის. დაუკავშირდი სალონს.", choose: (name: string) => `${name} არჩევა`, minutes: "წთ",
-    noStaffTitle: "სპეციალისტი ვერ მოიძებნა", noStaffText: "ამ სერვისების ერთად შესრულება ონლაინ ვერ ხერხდება. სცადე სერვისების ცალ-ცალკე დაჯავშნა.", changeServices: "სერვისების შეცვლა", specialist: "სპეციალისტი", specialistRow: "სპეციალისტი:", pickSpecialist: "აირჩიე სპეციალისტი",
-    anyStaffLabel: "ნებისმიერი თავისუფალი სპეციალისტის არჩევა", anyStaffMeta: "სისტემა თავისუფალ სპეციალისტს თავად შეარჩევს.",
+    noStaffTitle: "სპეციალისტი ვერ მოიძებნა", noStaffText: "ამ სერვისების ერთად შესრულება ონლაინ ვერ ხერხდება. სცადე სერვისების ცალ-ცალკე დაჯავშნა.", changeServices: "სერვისების შეცვლა", specialist: "სპეციალისტი", pickSpecialist: "აირჩიე სპეციალისტი",
+    anyStaffLabel: "ნებისმიერი თავისუფალი სპეციალისტის არჩევა", anyStaffMeta: "უახლოესი თავისუფალი დრო", nearestShort: "უახლოესი: ",
     duration: "ხანგრძლივობა: ", closedDay: "ამ დღეს დაკეტილია.", slotsLoading: "თავისუფალი დრო იტვირთება…", slotsFailed: "თავისუფალი დრო ვერ ჩაიტვირთა.", slotsLabel: "თავისუფალი დრო",
     morning: "დილა", afternoon: "შუადღე", evening: "საღამო",
     noSlotsTitle: "ამ დღეს თავისუფალი დრო აღარ არის.", noSlotsText: "შეგიძლია აირჩიო სხვა დღე ან დატოვო მოთხოვნა მოლოდინის სიაში. ეს არ არის დადასტურებული ჯავშანი და ავტომატური შეტყობინება ჯერ არ იგზავნება.", waitlist: "მოლოდინის სიის მოთხოვნა", nextOpenDay: "შემდეგი ღია დღე", nextFreeDay: "შემდეგი თავისუფალი დღე",
@@ -67,15 +67,16 @@ export const flowUi = {
   },
   en: {
     metaWith: (name: string) => `Booking — ${name}`, metaOnline: "Online booking", metaDescription: "Choose a service and a free time and book online.",
-    steps: ["Service", "Time", "Details"],
+    steps: ["Service", "Specialist", "Time", "Details"],
     stepCopy: [
       { title: "What would you like today?", lede: "Choose one or more services." },
+      { title: "Who will look after you?", lede: "Pick a specialist or leave it to us — we will choose whoever is free." },
       { title: "Which time suits you?", lede: "Only truly free times are shown. The chosen time is checked again when you book." },
       { title: "Whose name should we book under?", lede: "The salon will confirm your booking." },
     ],
     issues: {
       service: { title: "Choose a service first", description: "Select the service you want and continue." },
-      staff: { title: "No specialist could be selected", description: "Go back to the services and change your choice." },
+      staff: { title: "Choose a specialist", description: "Or pick “Any available” and the system will choose for you." },
       timeMissing: { title: "Add your preferred date and time", description: `After you choose a time, ${BRAND.name} automatically checks availability.` },
       timeUnconfirmed: { title: "This time has not been confirmed yet", description: "Choose another time or wait for the availability check to finish." },
       firstName: { title: "Enter your first name", description: "Your name is needed to confirm the booking request." },
@@ -89,8 +90,8 @@ export const flowUi = {
     noService: "No service selected", pickService: "Choose a service", from: (price: string) => `From ${price}`, pickTime: "Choose a time", next: "Continue", checkingShort: "Checking…", send: "Send booking", sending: "Sending…",
     staffHours: "Specialists' available hours", noHours: "Working hours have not been set yet. Availability is still checked automatically when you choose a time.", dayFallback: "Day",
     noServicesTitle: "No online services yet", noServicesText: "This location has no services available for online booking yet. Please contact the salon.", choose: (name: string) => `Select ${name}`, minutes: "min",
-    noStaffTitle: "No specialist found", noStaffText: "These services cannot be done together online. Try booking them separately.", changeServices: "Change services", specialist: "Specialist", specialistRow: "Specialist:", pickSpecialist: "Choose a specialist",
-    anyStaffLabel: "Select any available specialist", anyStaffMeta: "The system picks a free specialist for you.",
+    noStaffTitle: "No specialist found", noStaffText: "These services cannot be done together online. Try booking them separately.", changeServices: "Change services", specialist: "Specialist", pickSpecialist: "Choose a specialist",
+    anyStaffLabel: "Select any available specialist", anyStaffMeta: "Nearest free time", nearestShort: "Nearest: ",
     duration: "Duration: ", closedDay: "Closed on this day.", slotsLoading: "Loading free times…", slotsFailed: "Free times could not be loaded.", slotsLabel: "Free times",
     morning: "Morning", afternoon: "Afternoon", evening: "Evening",
     noSlotsTitle: "There is no free time left on this day.", noSlotsText: "You can choose another day or leave a waitlist request. This is not a confirmed booking, and no automatic notification is sent yet.", waitlist: "Waitlist request", nextOpenDay: "Next open day", nextFreeDay: "Next day with free time",
@@ -101,15 +102,16 @@ export const flowUi = {
   },
   ru: {
     metaWith: (name: string) => `Запись — ${name}`, metaOnline: "Онлайн-запись", metaDescription: "Выберите услугу и свободное время и запишитесь онлайн.",
-    steps: ["Услуга", "Время", "Данные"],
+    steps: ["Услуга", "Специалист", "Время", "Данные"],
     stepCopy: [
       { title: "Что вам нужно сегодня?", lede: "Выберите одну или несколько услуг." },
+      { title: "Кто вас обслужит?", lede: "Выберите специалиста или доверьтесь нам — свободного подберём мы." },
       { title: "Какое время вам подходит?", lede: "Показано только действительно свободное время. Выбранное время ещё раз проверяется при записи." },
       { title: "На чьё имя записать?", lede: "Запись подтвердит салон." },
     ],
     issues: {
       service: { title: "Сначала выберите услугу", description: "Отметьте нужную услугу и продолжайте." },
-      staff: { title: "Не удалось выбрать специалиста", description: "Вернитесь к услугам и измените выбор." },
+      staff: { title: "Выберите специалиста", description: "Или отметьте «Любой свободный» — система подберёт сама." },
       timeMissing: { title: "Укажите желаемую дату и время", description: `После выбора времени ${BRAND.name} автоматически проверит доступность.` },
       timeUnconfirmed: { title: "Это время ещё не подтверждено", description: "Выберите другое время или дождитесь завершения проверки доступности." },
       firstName: { title: "Укажите имя", description: "Имя необходимо для подтверждения запроса на запись." },
@@ -123,8 +125,8 @@ export const flowUi = {
     noService: "Услуга не выбрана", pickService: "Выберите услугу", from: (price: string) => `от ${price}`, pickTime: "Выберите время", next: "Продолжить", checkingShort: "Проверка…", send: "Отправить запись", sending: "Отправка…",
     staffHours: "Доступные часы специалистов", noHours: "Часы работы пока не указаны. Доступность всё равно проверяется автоматически при выборе времени.", dayFallback: "День",
     noServicesTitle: "Онлайн-услуг пока нет", noServicesText: "В этом филиале пока нет услуг для онлайн-записи. Свяжитесь с салоном.", choose: (name: string) => `Выбрать: ${name}`, minutes: "мин",
-    noStaffTitle: "Специалист не найден", noStaffText: "Эти услуги нельзя выполнить вместе онлайн. Попробуйте записаться на них по отдельности.", changeServices: "Изменить услуги", specialist: "Специалист", specialistRow: "Специалист:", pickSpecialist: "Выберите специалиста",
-    anyStaffLabel: "Выбрать любого свободного специалиста", anyStaffMeta: "Система сама подберёт свободного специалиста.",
+    noStaffTitle: "Специалист не найден", noStaffText: "Эти услуги нельзя выполнить вместе онлайн. Попробуйте записаться на них по отдельности.", changeServices: "Изменить услуги", specialist: "Специалист", pickSpecialist: "Выберите специалиста",
+    anyStaffLabel: "Выбрать любого свободного специалиста", anyStaffMeta: "Ближайшее свободное время", nearestShort: "Ближайшее: ",
     duration: "Длительность: ", closedDay: "В этот день закрыто.", slotsLoading: "Загрузка свободного времени…", slotsFailed: "Не удалось загрузить свободное время.", slotsLabel: "Свободное время",
     morning: "Утро", afternoon: "День", evening: "Вечер",
     noSlotsTitle: "На этот день свободного времени больше нет.", noSlotsText: "Можно выбрать другой день или оставить запрос в листе ожидания. Это не подтверждённая запись, и автоматическое уведомление пока не отправляется.", waitlist: "Запрос в лист ожидания", nextOpenDay: "Следующий рабочий день", nextFreeDay: "Следующий день со свободным временем",
@@ -153,16 +155,16 @@ export function formatGel(tetri: number) {
 // "40,00 ₾-დან" for services priced "from"; shown the same way on the salon profile.
 const priceLabel = (text: { from: (price: string) => string }, tetri: number, from?: boolean) => from ? text.from(formatGel(tetri)) : formatGel(tetri);
 
-// Steps: 0 = service, 1 = time (with the specialist), 2 = details.
+// Steps: 0 = service, 1 = specialist, 2 = time, 3 = details.
 export function getBookingValidationIssue(input: { step: number; serviceId?: string; staffProfileId?: string; startsAt: Date | null; available?: boolean; firstName: string; phone: string; termsAccepted: boolean; locale?: PublicLocale }): BookingValidationIssue | null {
   const issues = flowUi[input.locale ?? "ka"].issues;
   if (input.step === 0 && !input.serviceId) return { kind: "service", ...issues.service };
   if (input.step === 1 && !input.staffProfileId) return { kind: "staff", ...issues.staff };
-  if (input.step === 1 && !input.startsAt) return { kind: "time", ...issues.timeMissing };
-  if (input.step === 1 && input.available !== true) return { kind: "time", ...issues.timeUnconfirmed };
-  if (input.step === 2 && !input.firstName.trim()) return { kind: "contact", ...issues.firstName };
-  if (input.step === 2 && !input.phone.trim()) return { kind: "contact", ...issues.phone };
-  if (input.step === 2 && !input.termsAccepted) return { kind: "contact", ...issues.terms };
+  if (input.step === 2 && !input.startsAt) return { kind: "time", ...issues.timeMissing };
+  if (input.step === 2 && input.available !== true) return { kind: "time", ...issues.timeUnconfirmed };
+  if (input.step === 3 && !input.firstName.trim()) return { kind: "contact", ...issues.firstName };
+  if (input.step === 3 && !input.phone.trim()) return { kind: "contact", ...issues.phone };
+  if (input.step === 3 && !input.termsAccepted) return { kind: "contact", ...issues.terms };
   return null;
 }
 
@@ -184,12 +186,13 @@ export function parseRequestedServiceIds(search: string) {
   return Array.from(new Set(raw.split(",").map(id => id.trim()).filter(Boolean)));
 }
 
-// Which step the URL asks for: ?step=services|time|details; without it, a ?services= link opens on the time step.
+// Which step the URL asks for: ?step=services|staff|time|details; without it, a ?services= link opens on the specialist step
+// (the time step when ?staff= is given too). BookingFlow then falls back to the first step whose data is missing.
 export function stepFromSearch(search: string) {
   const params = new URLSearchParams(search);
   const index = STEP_KEYS.indexOf((params.get("step") ?? "") as (typeof STEP_KEYS)[number]);
   if (index >= 0) return index;
-  return parseRequestedServiceIds(search).length ? 1 : 0;
+  return parseRequestedServiceIds(search).length ? (params.get("staff") ? 2 : 1) : 0;
 }
 
 // Wall-clock parts of an instant in the location's timezone (display only).
@@ -201,20 +204,6 @@ export function bookingMoment(date: Date, timeZone: string | undefined, locale: 
   const weekday = schemaWeekdayOf(key);
   const time = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: tz }).format(date);
   return { key, day, time, weekdayFull: names.weekdayFull[weekday] as string, weekdayShort: names.weekdayShort[weekday] as string, monthFull: names.monthFull[month - 1] as string, monthShort: names.monthShort[month - 1] as string };
-}
-
-function useMinWidth(px: number) {
-  const query = `(min-width: ${px}px)`;
-  const [matches, setMatches] = useState(() => typeof window !== "undefined" && typeof window.matchMedia === "function" ? window.matchMedia(query).matches : false);
-  useEffect(() => {
-    if (typeof window.matchMedia !== "function") return;
-    const list = window.matchMedia(query);
-    const update = () => setMatches(list.matches);
-    update();
-    list.addEventListener("change", update);
-    return () => list.removeEventListener("change", update);
-  }, [query]);
-  return matches;
 }
 
 async function copyText(value: string) {
@@ -250,12 +239,12 @@ export default function BookingFlow() {
   const [confirmation, setConfirmation] = useState<{ token: string; assignedStaffName?: string; endsAt: Date }>();
   const [interactionError, setInteractionError] = useState<BookingValidationIssue | null>(null);
   const [slotTaken, setSlotTaken] = useState(false);
-  const [pickerOpen, setPickerOpen] = useState(false);
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [advanceWhenChecked, setAdvanceWhenChecked] = useState(false);
   const [checkingSlow, setCheckingSlow] = useState(false);
   const errorRef = useRef<HTMLDivElement>(null);
   const focusTitle = useRef(false);
+  const autoAdvance = useRef<number | undefined>(undefined);
   const reduceMotion = useReducedMotionConfig();
   const [moreOpen, setMoreOpen] = useState(false);
   const moreId = useId();
@@ -277,21 +266,24 @@ export default function BookingFlow() {
   const isMultiService = serviceIds.length > 1;
   const selectedServices = catalog.data?.catalog.filter(item => serviceIds.includes(item.service.id)).map(item => item.service) ?? [];
   const eligibleTeam = getEligibleTeam(catalog.data?.team ?? [], serviceIds);
-  // The specialist is part of the time step: ANY by default, the only eligible one when there is exactly one.
-  const staffId = serviceIds.length ? (staffProfileId === ANY_AVAILABLE || eligibleTeam.some(member => member.id === staffProfileId) ? staffProfileId : eligibleTeam.length === 1 ? eligibleTeam[0]!.id : eligibleTeam.length > 1 ? ANY_AVAILABLE : undefined) : undefined;
+  // The specialist has its own step: an explicit pick (or ANY), else the only eligible one when there is exactly one.
+  const staffId = serviceIds.length ? (staffProfileId === ANY_AVAILABLE || eligibleTeam.some(member => member.id === staffProfileId) ? staffProfileId : eligibleTeam.length === 1 ? eligibleTeam[0]!.id : undefined) : undefined;
 
   // Step lives in the URL (?step=), so the phone back gesture goes one step back. Guards keep a reloaded or hand-typed URL on a step that has its data.
   let step = stepFromSearch(search);
   if (step >= 1 && !serviceIds.length) step = 0;
-  if (step === 2 && !startsAt) step = 1;
+  // A bare ?services= link whose specialist is already known (only one eligible) goes straight to the time step.
+  if (step === 1 && staffId && !new URLSearchParams(search).get("step")) step = 2;
+  if (step >= 2 && !staffId) step = 1;
+  if (step === 3 && !startsAt) step = 2;
   const prevStep = useRef(step);
   if (prevStep.current !== step) { prevStep.current = step; focusTitle.current = true; }
   useEffect(() => { if (typeof window !== "undefined" && prevStep.current === step) window.scrollTo?.({ top: 0 }); }, [step]);
 
   const availabilityInput = useMemo(() => ({ slug, serviceId: serviceId ?? "pending-service", staffProfileId: staffId ?? "pending-specialist", startsAt: startsAt ?? new Date(0) }), [slug, serviceId, staffId, startsAt]);
   const multiAvailabilityInput = useMemo(() => ({ slug, serviceIds: isMultiService ? serviceIds : ["pending_service_001", "pending_service_002"], staffProfileId: staffId ?? "pending-specialist", startsAt: startsAt ?? new Date(0) }), [slug, serviceIds, isMultiService, staffId, startsAt]);
-  const singleAvailability = trpc.public.checkAvailability.useQuery(availabilityInput, { enabled: Boolean(serviceId && staffId && startsAt && step >= 1 && !isMultiService) });
-  const multiAvailability = trpc.public.checkMultiAvailability.useQuery(multiAvailabilityInput, { enabled: Boolean(isMultiService && staffId && startsAt && step >= 1) });
+  const singleAvailability = trpc.public.checkAvailability.useQuery(availabilityInput, { enabled: Boolean(serviceId && staffId && startsAt && step >= 2 && !isMultiService) });
+  const multiAvailability = trpc.public.checkMultiAvailability.useQuery(multiAvailabilityInput, { enabled: Boolean(isMultiService && staffId && startsAt && step >= 2) });
   const availability = isMultiService ? multiAvailability : singleAvailability;
   // Device-local "my bookings" entry: salon, service names and start time only, never the manage token or link.
   const rememberOnDevice = () => {
@@ -307,7 +299,7 @@ export default function BookingFlow() {
   // A taken slot sends the visitor back to the time step, same day, with an alert next to the slots (the alert takes focus).
   const onCommitError = (error: { message: string; data?: unknown }) => {
     // Refetch the availability check too, so its cached "available" can't wave the lost slot through again.
-    if (isSlotTakenError(error)) { setInteractionError(null); setSlotTaken(true); goTo(1, true); void (isMultiService ? multiAvailability : singleAvailability).refetch(); return; }
+    if (isSlotTakenError(error)) { setInteractionError(null); setSlotTaken(true); goTo(2, true); void (isMultiService ? multiAvailability : singleAvailability).refetch(); return; }
     setInteractionError({ kind: "submit", ...(isNetworkError(error) ? text.issues.network : text.issues.submit) });
   };
   const commitBooking = trpc.public.commitBooking.useMutation({ onSuccess: onCommitSuccess, onError: onCommitError });
@@ -341,23 +333,31 @@ export default function BookingFlow() {
     node.focus();
   };
 
-  const stepUrl = (target: number) => {
+  const stepUrl = (target: number, staff = staffId) => {
     const next = new URLSearchParams();
     if (serviceIds.length) next.set("services", serviceIds.join(","));
-    if (staffId && staffId !== ANY_AVAILABLE) next.set("staff", staffId);
+    if (staff && staff !== ANY_AVAILABLE) next.set("staff", staff);
     next.set("step", STEP_KEYS[target]!);
     return `/book/${slug}?${next.toString()}`;
   };
   // Push (not replace) so the browser back gesture steps back through the wizard; the marker lets our own back button do the same.
-  const goTo = (target: number, replace = false) => {
+  const goTo = (target: number, replace = false, staff = staffId) => {
+    window.clearTimeout(autoAdvance.current);
     setInteractionError(null);
     setSummaryOpen(false);
     if (target === step && !replace) return;
-    navigate(stepUrl(target), { replace, state: { cwbFlow: true } });
+    navigate(stepUrl(target, staff), { replace, state: { cwbFlow: true } });
   };
   const clearIssue = (kind?: BookingIssueKind) => setInteractionError(current => !kind || current?.kind === kind ? null : current);
   const selectService = (value: string) => { setServiceIds(current => current.includes(value) ? current.filter(item => item !== value) : [...current, value]); setStaffProfileId(undefined); setDateTime(""); clearIssue("service"); };
-  const selectStaff = (value: string) => { setStaffProfileId(value); setDateTime(""); setSlotTaken(false); clearIssue("time"); };
+  // Picking a specialist moves on to the time step after a beat (at once under reduced motion); another specialist clears the chosen time.
+  const selectStaff = (value: string) => {
+    if (value !== staffId) { setStaffProfileId(value); setDateTime(""); setSlotTaken(false); }
+    clearIssue("staff");
+    window.clearTimeout(autoAdvance.current);
+    if (reduceMotion) goTo(2, false, value); else autoAdvance.current = window.setTimeout(() => goTo(2, false, value), 250);
+  };
+  useEffect(() => () => window.clearTimeout(autoAdvance.current), []);
   const selectDateTime = (value: string) => { setDateTime(value); setSlotTaken(false); setAdvanceWhenChecked(false); clearIssue("time"); };
   const currentValidation = () => getBookingValidationIssue({ step, serviceId, staffProfileId: staffId, startsAt, available: slotTaken ? false : availability.data?.available, firstName, phone, termsAccepted, locale });
   const submitBooking = () => {
@@ -369,20 +369,20 @@ export default function BookingFlow() {
   const advanceBooking = () => {
     if (submitting) return;
     // A tap on "გაგრძელება" while the silent check is still running continues as soon as the check passes.
-    if (step === 1 && startsAt && availability.isLoading && !slotTaken) { setAdvanceWhenChecked(true); return; }
+    if (step === 2 && startsAt && availability.isLoading && !slotTaken) { setAdvanceWhenChecked(true); return; }
     const issue = currentValidation();
     if (issue) { setInteractionError(issue); return; }
     setInteractionError(null);
-    if (step < 2) goTo(step + 1);
+    if (step < 3) goTo(step === 0 && eligibleTeam.length === 1 ? 2 : step + 1);
     else submitBooking();
   };
   useEffect(() => {
     if (!advanceWhenChecked || availability.isLoading) return;
     setAdvanceWhenChecked(false);
     // The visitor may have left the time step while the check was running; only the time step auto-advances.
-    if (step !== 1) return;
+    if (step !== 2) return;
     const issue = currentValidation();
-    if (issue) setInteractionError(issue); else goTo(2);
+    if (issue) setInteractionError(issue); else goTo(3);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [advanceWhenChecked, availability.isLoading]);
 
@@ -403,11 +403,11 @@ export default function BookingFlow() {
   const barBlocked = Boolean(blockedIssue) || submitting;
   const moment = startsAt ? bookingMoment(startsAt, timeZone, locale) : null;
   const barLabel = step === 0 ? (serviceIds.length ? text.next : text.pickService)
-    : step === 1 ? (!startsAt ? text.pickTime : checkingSlow ? text.checkingShort : text.next)
+    : step === 1 ? (staffId ? text.next : text.pickSpecialist)
+    : step === 2 ? (!startsAt ? text.pickTime : checkingSlow ? text.checkingShort : text.next)
     : submitting ? text.sending : text.send;
   const barDetail = moment ? `${moment.weekdayShort}, ${moment.day} ${moment.monthShort} · ${moment.time}` : selectedServices.length ? `${totalMinutes} ${text.minutes}` : undefined;
-  const changeStaff = () => { goTo(1); if (eligibleTeam.length > 1) setPickerOpen(true); };
-  const summary = (idPrefix: string) => <BookingSummary idPrefix={idPrefix} services={selectedServices} staffLabel={step >= 1 ? staffLabel : undefined} startsAt={startsAt} ringOn={!slotTaken} timeZone={timeZone} totalTetri={totalTetri} totalIsFrom={anyFrom} canEditStaff={eligibleTeam.length > 1} onEditServices={() => goTo(0)} onEditStaff={changeStaff} onEditTime={() => goTo(1)} />;
+  const summary = (idPrefix: string) => <BookingSummary idPrefix={idPrefix} services={selectedServices} staffLabel={step >= 2 && staffId ? staffLabel : undefined} staffPhoto={selectedStaff?.avatarUrl} startsAt={startsAt} ringOn={!slotTaken} timeZone={timeZone} totalTetri={totalTetri} totalIsFrom={anyFrom} onEditServices={() => goTo(0)} onEditStaff={() => goTo(1)} onEditTime={() => goTo(2)} />;
 
   return <div className="cw min-h-screen">
     <CatalogHeader />
@@ -440,8 +440,9 @@ export default function BookingFlow() {
             <BookingStepHeader title={text.stepCopy[step]!.title} description={text.stepCopy[step]!.lede} headingRef={focusStepTitle} />
             <div className="mt-4">
               {step === 0 ? <ServiceStep catalog={catalog.data.catalog} selectedIds={serviceIds} onSelect={selectService} /> : null}
-              {step === 1 ? <TimeStep slug={slug} serviceId={serviceId} serviceIds={serviceIds} multiService={isMultiService} staffId={staffId} staffLabel={staffLabel} selectedStaff={selectedStaff} eligibleCount={eligibleTeam.length} onPickStaff={() => setPickerOpen(true)} onEditServices={() => goTo(0)} workingHours={catalog.data.location.workingHours} timezone={catalog.data.location.timezone} dateTime={dateTime} durationMinutes={totalMinutes} onChange={selectDateTime} availability={availability} slotTaken={slotTaken} /> : null}
-              {step === 2 ? <DetailsStep review={summary("details")} contactError={interactionError?.kind === "contact"} firstName={firstName} lastName={lastName} phone={phone} email={email} customerNote={customerNote} termsAccepted={termsAccepted} onFirstName={value => { setFirstName(value); clearIssue("contact"); }} onLastName={setLastName} onPhone={value => { setPhone(value); clearIssue("contact"); }} onEmail={setEmail} onNote={setCustomerNote} onTerms={value => { setTermsAccepted(value); clearIssue("contact"); }} /> : null}
+              {step === 1 ? <StaffStep team={eligibleTeam} selectedId={staffId} onSelect={selectStaff} onEditServices={() => goTo(0)} slug={slug} serviceIds={serviceIds} timezone={catalog.data.location.timezone} /> : null}
+              {step === 2 ? <TimeStep slug={slug} serviceId={serviceId} serviceIds={serviceIds} multiService={isMultiService} staffId={staffId} staffLabel={staffLabel} selectedStaff={selectedStaff} eligibleCount={eligibleTeam.length} onChangeStaff={() => goTo(1)} onEditServices={() => goTo(0)} workingHours={catalog.data.location.workingHours} timezone={catalog.data.location.timezone} dateTime={dateTime} durationMinutes={totalMinutes} onChange={selectDateTime} availability={availability} slotTaken={slotTaken} /> : null}
+              {step === 3 ? <DetailsStep review={summary("details")} contactError={interactionError?.kind === "contact"} firstName={firstName} lastName={lastName} phone={phone} email={email} customerNote={customerNote} termsAccepted={termsAccepted} onFirstName={value => { setFirstName(value); clearIssue("contact"); }} onLastName={setLastName} onPhone={value => { setPhone(value); clearIssue("contact"); }} onEmail={setEmail} onNote={setCustomerNote} onTerms={value => { setTermsAccepted(value); clearIssue("contact"); }} /> : null}
             </div>
           </motion.div>
           </AnimatePresence>
@@ -454,7 +455,7 @@ export default function BookingFlow() {
             label={barLabel}
             blocked={barBlocked}
             hint={selectedServices.length ? blockedIssue?.title : undefined}
-            conversionEvent={step === 2 ? "BOOKING_SUBMIT_SELECTED" : undefined}
+            conversionEvent={step === 3 ? "BOOKING_SUBMIT_SELECTED" : undefined}
             onClick={advanceBooking}
           />
         </> : null}
@@ -471,7 +472,6 @@ export default function BookingFlow() {
         <div className="cwb-drawer-body">{summaryOpen ? summary("drawer") : null}</div>
       </DrawerContent>
     </Drawer>
-    {catalog.data && available && step === 1 ? <StaffPicker open={pickerOpen} onOpenChange={setPickerOpen} team={eligibleTeam} selectedId={staffId} onSelect={selectStaff} /> : null}
   </div>;
 }
 
@@ -492,7 +492,7 @@ export function LocationContext({ location }: { location: BookingLocation }) {
 export function weekdayName(day: number, locale: PublicLocale = "ka") { return DATE_NAMES[locale].weekdayFull[day] ?? flowUi[locale].dayFallback; }
 
 // "შენი ჩაწერა": services and prices, specialist, ringed date and time, total; each editable. Used in the side card (>=1024), the phone drawer and the details step.
-function BookingSummary({ idPrefix, services, staffLabel, startsAt, ringOn, timeZone, totalTetri, totalIsFrom, canEditStaff, onEditServices, onEditStaff, onEditTime }: { idPrefix: string; services: BookingService[]; staffLabel?: string; startsAt: Date | null; ringOn: boolean; timeZone?: string; totalTetri: number; totalIsFrom: boolean; canEditStaff: boolean; onEditServices: () => void; onEditStaff: () => void; onEditTime: () => void }) {
+function BookingSummary({ idPrefix, services, staffLabel, staffPhoto, startsAt, ringOn, timeZone, totalTetri, totalIsFrom, onEditServices, onEditStaff, onEditTime }: { idPrefix: string; services: BookingService[]; staffLabel?: string; staffPhoto?: string | null; startsAt: Date | null; ringOn: boolean; timeZone?: string; totalTetri: number; totalIsFrom: boolean; onEditServices: () => void; onEditStaff: () => void; onEditTime: () => void }) {
   const { locale } = usePublicLocale();
   const text = flowUi[locale];
   const moment = startsAt ? bookingMoment(startsAt, timeZone, locale) : null;
@@ -505,8 +505,8 @@ function BookingSummary({ idPrefix, services, staffLabel, startsAt, ringOn, time
     </div>
     {staffLabel ? <div className="cwb-sum-row">
       <dt>{text.specialist}</dt>
-      <dd>{staffLabel}</dd>
-      {canEditStaff ? edit(text.specialist, onEditStaff) : null}
+      <dd className="cwb-sum-staff">{staffPhoto ? <img className="cwb-sum-photo" src={staffPhoto} alt="" loading="lazy" /> : null}{staffLabel}</dd>
+      {edit(text.specialist, onEditStaff)}
     </div> : null}
     {moment ? <div className="cwb-sum-row">
       <dt>{text.dateTime}</dt>
@@ -542,50 +542,48 @@ function ServiceStep({ catalog, selectedIds, onSelect }: { catalog: Array<{ serv
 
 const initialOf = (name: string) => name.trim().charAt(0).toLocaleUpperCase() || "·";
 
-function Avatar({ member }: { member: Pick<BookingTeamMember, "name" | "avatarUrl"> }) {
-  return <span className="cwb-avatar" aria-hidden="true">{member.avatarUrl ? <img src={member.avatarUrl} alt="" loading="lazy" /> : initialOf(member.name)}</span>;
+function Avatar({ member, small }: { member: Pick<BookingTeamMember, "name" | "avatarUrl">; small?: boolean }) {
+  return <span className={small ? "cwb-avatar cwb-avatar-sm" : "cwb-avatar"} aria-hidden="true">{member.avatarUrl ? <img src={member.avatarUrl} alt="" loading="lazy" /> : initialOf(member.name)}</span>;
 }
 
-// The specialist list shown in the picker: "any available" first (system chooses), then each eligible specialist with avatar or initial and specialty.
-export function StaffStep({ team, selectedId, onSelect, onEditServices }: { team: BookingTeamMember[]; selectedId?: string; onSelect: (id: string) => void; onEditServices?: () => void }) {
+// "tomorrow, 11:30" style label for a day's first free time; today / tomorrow are words, later days "Thu, 29 Oct, 11:30".
+function whenLabel(date: string, time: string, today: string, locale: PublicLocale) {
+  const text = flowUi[locale];
+  if (date === today) return `${text.todayWord.toLocaleLowerCase(locale)}, ${time}`;
+  if (date === addDaysKey(today, 1)) return `${text.tomorrowWord.toLocaleLowerCase(locale)}, ${time}`;
+  const weekday = DATE_NAMES[locale].weekdayShort[schemaWeekdayOf(date)];
+  const [, month, day] = date.split("-").map(Number) as [number, number, number];
+  return `${weekday}, ${day} ${DATE_NAMES[locale].monthShort[month - 1]}, ${time}`;
+}
+
+// Display-only hint under a specialist card. Silent while loading, on error and when nothing is free.
+function NearestFree({ slug, serviceIds, staffProfileId, today }: { slug: string; serviceIds: string[]; staffProfileId: string; today: string }) {
+  const { locale } = usePublicLocale();
+  const days = trpc.public.availabilityDays.useQuery({ slug, serviceIds, staffProfileId, fromDate: today, days: 7 });
+  const first = days.data?.days.find(day => day.slotCount > 0 && day.firstLabel);
+  return first ? <span className="cwb-staff-next">{flowUi[locale].nearestShort}<strong>{whenLabel(first.date, first.firstLabel!, today, locale)}</strong></span> : null;
+}
+
+const NEAREST_MAX_TEAM = 8;
+
+// The specialist step: "any available" first (the system chooses), then one photo card per eligible specialist.
+// Pass slug, serviceIds and timezone to show each specialist's nearest free time (skipped for larger teams).
+export function StaffStep({ team, selectedId, onSelect, onEditServices, slug, serviceIds, timezone }: { team: BookingTeamMember[]; selectedId?: string; onSelect: (id: string) => void; onEditServices?: () => void; slug?: string; serviceIds?: string[]; timezone?: string }) {
   const text = flowUi[usePublicLocale().locale];
+  const today = useMemo(() => timezone ? dateKeyInTimeZone(new Date(), timezone) : "", [timezone]);
   if (!team.length) return <div className="cwb-empty"><strong>{text.noStaffTitle}</strong>{text.noStaffText}{onEditServices ? <div className="mt-3"><button type="button" className="cwb-btn cwb-btn-line cwb-btn-sm" onClick={onEditServices}>{text.changeServices}</button></div> : null}</div>;
-  return <div className="cwb-list" role="radiogroup" aria-label={text.specialist}>
-    <BookingChoiceCard kind="radio" name="booking-specialist" conversionEvent="BOOKING_ANY_AVAILABLE_SELECTED" label={text.anyStaffLabel} selected={selectedId === ANY_AVAILABLE} onSelect={() => onSelect(ANY_AVAILABLE)} leading={<span className="cwb-avatar" aria-hidden="true"><Users className="size-5" /></span>}>
-      <span className="cwb-row-title block">{text.anyStaff}</span>
-      <span className="cwb-row-meta block">{text.anyStaffMeta}</span>
-    </BookingChoiceCard>
-    {team.map(member => <BookingChoiceCard key={member.id} kind="radio" name="booking-specialist" conversionEvent="BOOKING_SPECIALIST_SELECTED" label={text.choose(member.name)} selected={member.id === selectedId} onSelect={() => onSelect(member.id)} leading={<Avatar member={member} />}>
-      <span className="cwb-row-title block">{member.name}</span>
-      {member.specialty ? <span className="cwb-row-meta block">{member.specialty}</span> : null}
-    </BookingChoiceCard>)}
+  const showNearest = Boolean(slug && serviceIds?.length && today && team.length <= NEAREST_MAX_TEAM);
+  return <div className="cwb-staff-grid" role="radiogroup" aria-label={text.specialist} onKeyDown={moveRadioFocus}>
+    <BookingStaffCard conversionEvent="BOOKING_ANY_AVAILABLE_SELECTED" label={text.anyStaff} name={text.anyStaffShort} meta={text.anyStaffMeta} icon={<Sparkles className="size-7" />} selected={selectedId === ANY_AVAILABLE} onSelect={() => onSelect(ANY_AVAILABLE)} />
+    {team.map(member => <BookingStaffCard key={member.id} conversionEvent="BOOKING_SPECIALIST_SELECTED" label={member.name} name={member.name} meta={member.specialty} photoUrl={member.avatarUrl} selected={member.id === selectedId} onSelect={() => onSelect(member.id)} extra={showNearest ? <NearestFree slug={slug!} serviceIds={serviceIds!} staffProfileId={member.id} today={today} /> : undefined} />)}
   </div>;
-}
-
-// Drawer on phones, dialog from 640px.
-function StaffPicker({ open, onOpenChange, team, selectedId, onSelect }: { open: boolean; onOpenChange: (open: boolean) => void; team: BookingTeamMember[]; selectedId?: string; onSelect: (id: string) => void }) {
-  const text = flowUi[usePublicLocale().locale];
-  const wide = useMinWidth(640);
-  const body = <div className={wide ? "cwb-picker-body" : "cwb-picker-body cwb-picker-pad"}><StaffStep team={team} selectedId={selectedId} onSelect={id => { onSelect(id); onOpenChange(false); }} /></div>;
-  if (wide) return <Dialog open={open} onOpenChange={onOpenChange}>
-    <DialogContent className="sm:max-w-md">
-      <DialogHeader><DialogTitle>{text.pickSpecialist}</DialogTitle><DialogDescription className="sr-only">{text.anyStaffMeta}</DialogDescription></DialogHeader>
-      {body}
-    </DialogContent>
-  </Dialog>;
-  return <Drawer open={open} onOpenChange={onOpenChange}>
-    <DrawerContent aria-describedby={undefined}>
-      <DrawerHeader><DrawerTitle>{text.pickSpecialist}</DrawerTitle></DrawerHeader>
-      {body}
-    </DrawerContent>
-  </Drawer>;
 }
 
 const DAYS_AHEAD = 14;
 
 type SlotsQuery = { isLoading: boolean; isError: boolean; data?: { slots: Array<{ startsAt: string; label: string }> }; refetch: (options?: { cancelRefetch?: boolean }) => unknown };
 
-function TimeStep({ slug, serviceId, serviceIds, multiService, staffId, staffLabel, selectedStaff, eligibleCount, onPickStaff, onEditServices, workingHours, timezone, dateTime, durationMinutes, onChange, availability, slotTaken }: { slug: string; serviceId?: string; serviceIds: string[]; multiService: boolean; staffId?: string; staffLabel?: string; selectedStaff?: BookingTeamMember; eligibleCount: number; onPickStaff: () => void; onEditServices: () => void; workingHours: Array<{ weekday: number }>; timezone: string; dateTime: string; durationMinutes: number; onChange: (value: string) => void; availability: { isLoading: boolean; isError: boolean; data?: { available: boolean; reason?: string } }; slotTaken: boolean }) {
+function TimeStep({ slug, serviceId, serviceIds, multiService, staffId, staffLabel, selectedStaff, eligibleCount, onChangeStaff, onEditServices, workingHours, timezone, dateTime, durationMinutes, onChange, availability, slotTaken }: { slug: string; serviceId?: string; serviceIds: string[]; multiService: boolean; staffId?: string; staffLabel?: string; selectedStaff?: BookingTeamMember; eligibleCount: number; onChangeStaff: () => void; onEditServices: () => void; workingHours: Array<{ weekday: number }>; timezone: string; dateTime: string; durationMinutes: number; onChange: (value: string) => void; availability: { isLoading: boolean; isError: boolean; data?: { available: boolean; reason?: string } }; slotTaken: boolean }) {
   const { locale } = usePublicLocale();
   const text = flowUi[locale];
   const openWeekdays = useMemo(() => new Set(workingHours.map(hour => hour.weekday)), [workingHours]);
@@ -649,26 +647,19 @@ function TimeStep({ slug, serviceId, serviceIds, multiService, staffId, staffLab
 
   // Suggestion chip: the first free time overall, when it is not on the day being looked at.
   const suggestion = firstFree && firstFree.date !== selectedDate && !dateTime ? firstFree : undefined;
-  const suggestionLabel = (item: NonNullable<typeof firstFree>) => {
-    const tomorrow = addDaysKey(today, 1);
-    if (item.date === today) return `${text.todayWord.toLocaleLowerCase(locale)}, ${item.firstLabel}`;
-    if (item.date === tomorrow) return `${text.tomorrowWord.toLocaleLowerCase(locale)}, ${item.firstLabel}`;
-    const weekday = DATE_NAMES[locale].weekdayShort[schemaWeekdayOf(item.date)];
-    const [, month, day] = item.date.split("-").map(Number) as [number, number, number];
-    return `${weekday}, ${day} ${DATE_NAMES[locale].monthShort[month - 1]}, ${item.firstLabel}`;
-  };
-
   if (eligibleCount === 0 || !staffId) return <div className="cwb-empty"><strong>{text.noStaffTitle}</strong>{text.noStaffText}<div className="mt-3"><button type="button" className="cwb-btn cwb-btn-line cwb-btn-sm" onClick={onEditServices}>{text.changeServices}</button></div></div>;
 
   return <div className="grid gap-4">
     <div className="cwb-staff-row">
-      {selectedStaff ? <Avatar member={selectedStaff} /> : <span className="cwb-avatar" aria-hidden="true"><Users className="size-5" /></span>}
-      <p className="cwb-staff-text"><span>{text.specialistRow}</span> <strong>{staffId === ANY_AVAILABLE ? (staffLabel && staffLabel !== text.anyStaff ? staffLabel : text.anyStaffShort) : staffLabel}</strong></p>
-      {eligibleCount > 1 ? <button type="button" className="cwb-link" aria-label={text.changeAria(text.specialist)} onClick={onPickStaff}>{text.change}</button> : null}
+      <span className="cwb-staff-chip">
+        {selectedStaff ? <Avatar member={selectedStaff} small /> : <span className="cwb-avatar cwb-avatar-sm" aria-hidden="true"><Sparkles className="size-3.5" /></span>}
+        <strong>{staffId === ANY_AVAILABLE ? (staffLabel && staffLabel !== text.anyStaff ? staffLabel : text.anyStaffShort) : staffLabel}</strong>
+      </span>
+      <button type="button" className="cwb-link" aria-label={text.changeAria(text.specialist)} onClick={onChangeStaff}>{text.change}</button>
     </div>
     {suggestion ? <button type="button" className="cwb-suggest" onClick={() => { touched.current = true; setSelectedDate(suggestion.date); onChange(suggestion.firstStartsAt!); }}>
       <Clock className="size-4 shrink-0" aria-hidden="true" />
-      <span>{text.nearest} <strong>{suggestionLabel(suggestion)}</strong></span>
+      <span>{text.nearest} <strong>{whenLabel(suggestion.date, suggestion.firstLabel!, today, locale)}</strong></span>
     </button> : null}
     <BookingDateStrip days={days} selected={selectedDate} todayKey={today} onSelect={pickDate} selectableUnavailable />
     <div aria-live="polite" className="grid min-h-24 gap-4">

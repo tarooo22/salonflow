@@ -44,11 +44,28 @@ describe("public booking conversion helpers", () => {
     expect(markup).toContain("სამუშაო საათები ჯერ არ არის მითითებული");
   });
 
-  it("renders a clearly labelled any-available specialist choice alongside eligible staff", () => {
-    const markup = renderToStaticMarkup(<StaffStep team={[{ id: "staff-1", name: "ანა", specialty: "სტილისტი", bio: null, eligibleServiceIds: ["service-a"] }]} selectedId={undefined} onSelect={() => undefined} />);
-    expect(markup).toContain("ნებისმიერი თავისუფალი სპეციალისტი");
-    expect(markup).toContain("სისტემა თავისუფალ სპეციალისტს თავად შეარჩევს.");
-    expect(markup).toContain("ანა");
+  it("renders the specialist step as photo radio cards: any-available first, a photo or initial per specialist, the selected one ringed", () => {
+    const team = [
+      { id: "staff-1", name: "ანა", specialty: "სტილისტი", bio: null, avatarUrl: "/media/ana.jpg", eligibleServiceIds: ["service-a"] },
+      { id: "staff-2", name: "ნინო", specialty: null, bio: null, avatarUrl: null, eligibleServiceIds: ["service-a"] },
+    ];
+    const markup = renderToStaticMarkup(<StaffStep team={team} selectedId="staff-1" onSelect={() => undefined} />);
+    expect(markup).toContain('role="radiogroup"');
+    expect(markup.match(/role="radio"/g)?.length).toBe(3);
+    expect(markup.indexOf("ნებისმიერი თავისუფალი სპეციალისტი")).toBeLessThan(markup.indexOf("ანა"));
+    expect(markup).toContain("უახლოესი თავისუფალი დრო");
+    expect(markup).toContain('src="/media/ana.jpg" alt="ანა"');
+    expect(markup).toContain("სტილისტი");
+    expect(markup).toContain(">Ნ<");
+    expect(markup.match(/aria-checked="true"/g)?.length).toBe(1);
+    expect(markup).toContain('data-ring="square"');
+    expect(markup.match(/data-state="on"/g)?.length).toBe(1);
+  });
+
+  it("explains an empty specialist step with a way back to the services", () => {
+    const markup = renderToStaticMarkup(<StaffStep team={[]} onSelect={() => undefined} onEditServices={() => undefined} />);
+    expect(markup).toContain("სპეციალისტი ვერ მოიძებნა");
+    expect(markup).toContain("სერვისების შეცვლა");
   });
 
   it("keeps booking choice and slot analytics markers aggregate-only", () => {
@@ -90,29 +107,34 @@ describe("public booking conversion helpers", () => {
   });
 
   it("gives a focused, non-technical recovery message when a booking step is incomplete", () => {
-    const timeIssue = getBookingValidationIssue({ step: 1, serviceId: "service-a", staffProfileId: "staff-1", startsAt: null, firstName: "", phone: "", termsAccepted: false });
-    const contactIssue = getBookingValidationIssue({ step: 2, serviceId: "service-a", staffProfileId: "staff-1", startsAt: new Date("2026-08-16T10:00:00Z"), available: true, firstName: "ანა", phone: "", termsAccepted: false });
+    const timeIssue = getBookingValidationIssue({ step: 2, serviceId: "service-a", staffProfileId: "staff-1", startsAt: null, firstName: "", phone: "", termsAccepted: false });
+    const contactIssue = getBookingValidationIssue({ step: 3, serviceId: "service-a", staffProfileId: "staff-1", startsAt: new Date("2026-08-16T10:00:00Z"), available: true, firstName: "ანა", phone: "", termsAccepted: false });
     expect(timeIssue).toMatchObject({ kind: "time", title: "დაამატე სასურველი თარიღი და დრო" });
     expect(contactIssue).toMatchObject({ kind: "contact", title: "მიუთითე მობილურის ნომერი" });
     expect(contactIssue?.description).not.toContain("tRPC");
   });
 
-  it("validates the three steps: service, then time (with a silent availability check), then contact", () => {
+  it("validates the four steps: service, specialist, time (with a silent availability check), then contact", () => {
     const base = { serviceId: "s", staffProfileId: "p", startsAt: new Date("2026-08-16T10:00:00Z"), available: true, firstName: "ანა", phone: "555", termsAccepted: true };
     expect(getBookingValidationIssue({ ...base, step: 0, serviceId: undefined })).toMatchObject({ kind: "service" });
     expect(getBookingValidationIssue({ ...base, step: 0 })).toBeNull();
-    expect(getBookingValidationIssue({ ...base, step: 1, available: undefined })).toMatchObject({ kind: "time", title: "ეს დრო ჯერ არ დადასტურებულა" });
+    expect(getBookingValidationIssue({ ...base, step: 1, staffProfileId: undefined })).toMatchObject({ kind: "staff", title: "აირჩიე სპეციალისტი" });
     expect(getBookingValidationIssue({ ...base, step: 1 })).toBeNull();
-    expect(getBookingValidationIssue({ ...base, step: 2, termsAccepted: false })).toMatchObject({ kind: "contact" });
+    expect(getBookingValidationIssue({ ...base, step: 2, startsAt: null })).toMatchObject({ kind: "time" });
+    expect(getBookingValidationIssue({ ...base, step: 2, available: undefined })).toMatchObject({ kind: "time", title: "ეს დრო ჯერ არ დადასტურებულა" });
     expect(getBookingValidationIssue({ ...base, step: 2 })).toBeNull();
+    expect(getBookingValidationIssue({ ...base, step: 3, termsAccepted: false })).toMatchObject({ kind: "contact" });
+    expect(getBookingValidationIssue({ ...base, step: 3 })).toBeNull();
   });
 
-  it("keeps the wizard step in the URL: ?step= wins, a ?services= link opens on the time step", () => {
+  it("keeps the wizard step in the URL: ?step= wins, a ?services= link opens on the specialist step, with ?staff= on the time step", () => {
     expect(stepFromSearch("")).toBe(0);
     expect(stepFromSearch("?services=a")).toBe(1);
+    expect(stepFromSearch("?services=a&staff=s1")).toBe(2);
     expect(stepFromSearch("services=a&step=services")).toBe(0);
-    expect(stepFromSearch("?services=a&step=time")).toBe(1);
-    expect(stepFromSearch("?step=details")).toBe(2);
+    expect(stepFromSearch("?services=a&step=staff")).toBe(1);
+    expect(stepFromSearch("?services=a&step=time")).toBe(2);
+    expect(stepFromSearch("?step=details")).toBe(3);
     expect(stepFromSearch("?step=bogus")).toBe(0);
   });
 
