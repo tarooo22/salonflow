@@ -2,7 +2,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { useLocation, useSearch } from "wouter";
-import { Bookmark, CalendarCheck, CalendarClock, Check, ChevronLeft, ChevronRight, Clock, MapPin, Plus, UserCheck, X, type LucideIcon } from "lucide-react";
+import { Bookmark, CalendarCheck, CalendarClock, Check, ChevronLeft, ChevronRight, Clock, MapPin, Plus, UserCheck, Wallet, X, type LucideIcon } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { DragEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { dateKeyInTimeZone, formatTimeInTimeZone, zonedDateTimeToUtc } from "@shared/timezones";
@@ -14,6 +14,7 @@ import { WalkInQuickEntry } from "@/components/WalkInQuickEntry";
 import { WorkspacePageHeader, WorkspaceState } from "@/components/workspace/WorkspacePrimitives";
 import { SavedViewMenu, type SavedViewPayload } from "@/components/workspace/SavedViewMenu";
 import { RescheduleDialog, type RescheduleTarget } from "@/components/workspace/RescheduleDialog";
+import { ReceivePaymentDialog, canReceivePayment, type ReceivePaymentTarget } from "@/components/workspace/ReceivePaymentDialog";
 import { DATE_NAMES } from "@/components/public/BookingPrimitives";
 import { useIsMobile } from "@/hooks/useMobile";
 
@@ -37,7 +38,8 @@ type AppointmentEntry = {
   client: { firstName: string; lastName: string | null } | null;
   staff: { id: string; publicDisplayName: string; color: string };
   services: Array<{ id: string; serviceNameSnapshot: string; durationMinutesSnapshot: number; priceTetriSnapshot: number }>;
-  payment?: { state: string };
+  totalTetri: number;
+  payment?: { state: string; totals: { balanceTetri: number } };
 };
 type BoardColumn = { key: string; day: Date; label: string; dot?: string; sub: React.ReactNode; staffProfileId?: string; appointments: AppointmentEntry[] };
 
@@ -136,6 +138,9 @@ export default function Calendar() {
   const staff = trpc.staff.list.useQuery({ organizationId: organization?.id ?? "", locationId: selectedLocation?.id }, { enabled: Boolean(organization?.id && selectedLocation?.id) });
   const openingHours = trpc.organizations.listLocationOpeningHours.useQuery({ organizationId: organization?.id ?? "", locationId: selectedLocation?.id ?? "" }, { enabled: Boolean(organization?.id && selectedLocation?.id) });
   const [rescheduleTarget, setRescheduleTarget] = useState<RescheduleTarget | null>(null);
+  const [paymentTarget, setPaymentTarget] = useState<ReceivePaymentTarget | null>(null);
+  const role = organizationEntry?.membership.role;
+  const receivePayment = (appointment: AppointmentEntry) => setPaymentTarget({ id: appointment.id, clientName: appointment.client ? `${appointment.client.firstName} ${appointment.client.lastName ?? ""}`.trim() : "კლიენტი", detail: appointment.services.map(item => item.serviceNameSnapshot).join(", ") || undefined, totalTetri: appointment.totalTetri, balanceTetri: appointment.payment?.totals.balanceTetri ?? appointment.totalTetri });
   const invalidate = () => Promise.all([utils.appointments.listRange.invalidate(), utils.appointments.dashboard.invalidate()]);
   const updateStatus = trpc.appointments.updateStatus.useMutation({ onSuccess: async () => { await invalidate(); toast.success("ჯავშნის სტატუსი განახლდა."); }, onError: () => toast.error("სტატუსის განახლება ვერ მოხერხდა.") });
   const reschedule = trpc.appointments.reschedule.useMutation({ onSuccess: async () => { await invalidate(); toast.success("ჯავშანი კალენდარში განახლდა."); }, onError: error => toast.error(error.message || "ჯავშნის გადატანა ვერ მოხერხდა.") });
@@ -218,6 +223,7 @@ export default function Calendar() {
     {!organizations.isLoading && !organizations.isError && !organization ? <WorkspaceState kind="empty" title="ჯერ შექმენით სამუშაო სივრცე" description="კალენდარი გამოჩნდება პირველი ფილიალის შექმნის შემდეგ." /> : null}
     {organization && selectedLocation && canManageCalendar && walkInOpen ? <div ref={walkInRef}><WalkInQuickEntry key={walkInStart?.getTime() ?? "now"} defaultStartsAt={walkInStart} organizationId={organization.id} locationId={selectedLocation.id} timeZone={selectedLocation.timezone} open={walkInOpen} onOpenChange={setWalkInOpen} /></div> : null}
     {organization && canManageCalendar && rescheduleTarget ? <RescheduleDialog key={rescheduleTarget.id} target={rescheduleTarget} timezone={timezone} staff={(staff.data ?? []).map(item => ({ id: item.profile.id, name: item.profile.publicDisplayName }))} firstHour={FIRST_HOUR} lastHour={LAST_HOUR} pending={rescheduleFromDialog.isPending} error={rescheduleFromDialog.error ? rescheduleFromDialog.error.message || "ჯავშნის გადატანა ვერ მოხერხდა." : undefined} outsideHours={isOutsideHoursError(rescheduleFromDialog.error)} canOverrideHours={canManageCalendar} onClose={() => setRescheduleTarget(null)} onSubmit={(startsAt, staffProfileId, allowOutsideHours) => rescheduleFromDialog.mutate({ organizationId: organization.id, appointmentId: rescheduleTarget.id, startsAt, staffProfileId, reason: "CALENDAR_RESCHEDULE_DIALOG", allowOutsideHours })} /> : null}
+    {organization && paymentTarget ? <ReceivePaymentDialog key={paymentTarget.id} organizationId={organization.id} target={paymentTarget} onClose={() => setPaymentTarget(null)} /> : null}
     {organization ? <>
       {loading ? <WorkspaceState kind="loading" title="კალენდარი იტვირთება…" /> : null}
       {failed ? <WorkspaceState kind="error" title="კალენდრის მონაცემები ვერ ჩაიტვირთა" /> : null}
@@ -226,7 +232,7 @@ export default function Calendar() {
       {showBoard ? <>
         <div className="cwk-strip" role="group" aria-label={view === "week" ? "დღე" : "სპეციალისტი"}>{columns.map(column => <button key={column.key} type="button" aria-pressed={column.key === activeKey} onClick={() => setMobileKey(column.key)}>{column.dot ? <span className="cwk-dot" style={{ backgroundColor: column.dot }} aria-hidden="true" /> : null}{view === "week" ? <>{names.weekdayShort[weekdayIndex(column.day)]} <Num>{column.day.getUTCDate()}</Num></> : column.label}</button>)}</div>
         <div className="relative">
-          <Board innerRef={boardRef} columns={columns} activeKey={activeKey} timezone={timezone} pixelsPerMinute={pixelsPerMinute} weekView={view === "week"} todayKey={todayKey} nowMinute={nowMinute} canManageCalendar={canManageCalendar} busy={busy} onAdvance={advance} onMove={moveAppointment} onReschedule={openReschedule} onCreateAt={canManageCalendar ? createAt : undefined} />
+          <Board innerRef={boardRef} columns={columns} activeKey={activeKey} timezone={timezone} pixelsPerMinute={pixelsPerMinute} weekView={view === "week"} todayKey={todayKey} nowMinute={nowMinute} canManageCalendar={canManageCalendar} busy={busy} onAdvance={advance} onMove={moveAppointment} onReschedule={openReschedule} paymentRole={role} onReceivePayment={receivePayment} onCreateAt={canManageCalendar ? createAt : undefined} />
           {emptyRange ? <div className="pointer-events-none absolute inset-0 z-20 grid place-items-center p-2">
             <div className="pointer-events-auto w-full max-w-sm overflow-hidden rounded-[1.25rem] border border-[var(--cwk-rule)] bg-card shadow-sm">
               <WorkspaceState kind="empty" title={view === "week" ? "ამ კვირაში ჯავშანი არ არის." : "ამ დღეს ჯავშანი არ არის."} description={canManageCalendar ? "ახალი ჯავშნისთვის დააჭირეთ თავისუფალ დროს." : undefined} action={canManageCalendar ? <button type="button" className="cwk-stampbtn" onClick={() => { setWalkInStart(undefined); setWalkInOpen(true); }}><Plus className="size-4" aria-hidden="true" />ჯავშანი</button> : undefined} />
@@ -259,7 +265,7 @@ export function placeTickets(items: Array<{ appointment: AppointmentEntry; start
   return placed;
 }
 
-function Board({ innerRef, columns, activeKey, timezone, pixelsPerMinute, weekView, todayKey, nowMinute, canManageCalendar, busy, onAdvance, onMove, onReschedule, onCreateAt }: { innerRef: React.Ref<HTMLDivElement>; columns: BoardColumn[]; activeKey: string; timezone: string; pixelsPerMinute: number; weekView: boolean; todayKey: string; nowMinute: number; canManageCalendar: boolean; busy: boolean; onAdvance: (appointment: AppointmentEntry) => void; onMove: (appointment: AppointmentEntry, startsAt: Date, staffProfileId?: string) => void; onReschedule: (appointment: AppointmentEntry) => void; onCreateAt?: (startsAt: Date) => void }) {
+function Board({ innerRef, columns, activeKey, timezone, pixelsPerMinute, weekView, todayKey, nowMinute, canManageCalendar, busy, onAdvance, onMove, onReschedule, onCreateAt, paymentRole, onReceivePayment }: { innerRef: React.Ref<HTMLDivElement>; columns: BoardColumn[]; activeKey: string; timezone: string; pixelsPerMinute: number; weekView: boolean; todayKey: string; nowMinute: number; canManageCalendar: boolean; busy: boolean; onAdvance: (appointment: AppointmentEntry) => void; onMove: (appointment: AppointmentEntry, startsAt: Date, staffProfileId?: string) => void; onReschedule: (appointment: AppointmentEntry) => void; onCreateAt?: (startsAt: Date) => void; paymentRole?: string; onReceivePayment: (appointment: AppointmentEntry) => void }) {
   const hourHeight = 60 * pixelsPerMinute;
   const bodyHeight = (LAST_HOUR - FIRST_HOUR) * hourHeight;
   const nowTop = (nowMinute - FIRST_HOUR * 60) * pixelsPerMinute;
@@ -288,7 +294,7 @@ function Board({ innerRef, columns, activeKey, timezone, pixelsPerMinute, weekVi
           try { onMove(JSON.parse(encoded) as AppointmentEntry, dropSlot(event, column.day, timezone, pixelsPerMinute), column.staffProfileId); } catch { /* malformed drag payload is ignored */ }
         };
         return <div key={column.key} className={`cwk-col ${hidden(column.key)}`} style={ruling} onDragOver={event => { if (canManageCalendar) event.preventDefault(); }} onDrop={drop} onClick={event => { if (onCreateAt && event.target === event.currentTarget) onCreateAt(dropSlot(event as unknown as DragEvent<HTMLDivElement>, column.day, timezone, pixelsPerMinute)); }}>
-          {placeTickets(items).map(ticket => <Ticket key={ticket.appointment.id} ticket={ticket} timezone={timezone} pixelsPerMinute={pixelsPerMinute} showStaff={weekView} canManageCalendar={canManageCalendar} busy={busy} onAdvance={onAdvance} onReschedule={onReschedule} />)}
+          {placeTickets(items).map(ticket => <Ticket key={ticket.appointment.id} ticket={ticket} timezone={timezone} pixelsPerMinute={pixelsPerMinute} showStaff={weekView} canManageCalendar={canManageCalendar} busy={busy} onAdvance={onAdvance} onReschedule={onReschedule} paymentRole={paymentRole} onReceivePayment={onReceivePayment} />)}
           {nowVisible && isTodayColumn ? <div className="cwk-now" style={{ top: nowTop }} aria-hidden="true" /> : null}
         </div>;
       })}
@@ -296,7 +302,7 @@ function Board({ innerRef, columns, activeKey, timezone, pixelsPerMinute, weekVi
   </div>;
 }
 
-function Ticket({ ticket, timezone, pixelsPerMinute, showStaff, canManageCalendar, busy, onAdvance, onReschedule }: { ticket: PlacedTicket; timezone: string; pixelsPerMinute: number; showStaff: boolean; canManageCalendar: boolean; busy: boolean; onAdvance: (appointment: AppointmentEntry) => void; onReschedule: (appointment: AppointmentEntry) => void }) {
+function Ticket({ ticket, timezone, pixelsPerMinute, showStaff, canManageCalendar, busy, onAdvance, onReschedule, paymentRole, onReceivePayment }: { ticket: PlacedTicket; timezone: string; pixelsPerMinute: number; showStaff: boolean; canManageCalendar: boolean; busy: boolean; onAdvance: (appointment: AppointmentEntry) => void; onReschedule: (appointment: AppointmentEntry) => void; paymentRole?: string; onReceivePayment: (appointment: AppointmentEntry) => void }) {
   const { appointment, start, end, lane, lanes } = ticket;
   const minutes = Math.max(end - start, 15);
   const top = Math.max(0, (start - FIRST_HOUR * 60) * pixelsPerMinute) + 1;
@@ -313,6 +319,7 @@ function Ticket({ ticket, timezone, pixelsPerMinute, showStaff, canManageCalenda
   // A status change recolours the stub with a short stamp press (skipped on first render).
   useEffect(() => { if (lastStatus.current === appointment.status) return; lastStatus.current = appointment.status; setPressed(true); const timer = setTimeout(() => setPressed(false), 260); return () => clearTimeout(timer); }, [appointment.status]);
   const action = (className: string) => <AppointmentQuickAction role={canManageCalendar ? "RECEPTIONIST" : "STAFF"} status={appointment.status} cardHeight={height >= 40 ? 70 : 0} context="calendar" disabled={busy} onAction={() => onAdvance(appointment)} className={className} />;
+  const canPay = canReceivePayment(paymentRole, appointment.status, appointment.payment?.totals.balanceTetri ?? appointment.totalTetri);
   return <article
     draggable={draggable}
     onDragStart={event => { event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("application/x-salonflow-appointment", JSON.stringify(appointment)); }}
@@ -338,6 +345,7 @@ function Ticket({ ticket, timezone, pixelsPerMinute, showStaff, canManageCalenda
       </>}
     </div>
     {draggable ? <button type="button" aria-label={`გადატანა: ${clientName}, ${time}`} title="გადატანა" disabled={busy} onClick={() => onReschedule(appointment)} className="mr-1 grid size-7 shrink-0 self-center place-items-center rounded-md text-[var(--cwk-ink-soft)] hover:bg-[var(--sf-surface-2)] hover:text-[var(--cwk-ink)] focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--sf-focus)] disabled:opacity-40 group-focus-within:opacity-100 group-hover:opacity-100 md:opacity-0 max-md:size-9"><CalendarClock className="size-4" aria-hidden="true" /></button> : null}
+    {canPay ? <button type="button" aria-label={`გადახდის მიღება: ${clientName}, ${time}`} title="გადახდის მიღება" onClick={() => onReceivePayment(appointment)} className="mr-1 grid size-7 shrink-0 self-center place-items-center rounded-md text-[var(--cwk-ink-soft)] hover:bg-[var(--sf-surface-2)] hover:text-[var(--cwk-ink)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--sf-focus)] max-md:size-9"><Wallet className="size-4" aria-hidden="true" /></button> : null}
     {lanes === 1 ? action("cwk-tact") : null}
   </article>;
 }

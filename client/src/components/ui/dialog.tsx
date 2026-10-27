@@ -19,6 +19,18 @@ const DialogCompositionContext = React.createContext<{
 export const useDialogComposition = () =>
   React.useContext(DialogCompositionContext);
 
+/**
+ * Radix warns "Missing Description" when a Content has no Description. Passing `aria-describedby={undefined}`
+ * is the documented way to silence it, but it also removes the link to a real description, so it is only
+ * applied when none of the (nested) children is one of the given description components.
+ */
+export function describedByDefault(children: React.ReactNode, descriptionTypes: React.ElementType[]): { "aria-describedby"?: undefined } {
+  const found = (nodes: React.ReactNode): boolean =>
+    React.Children.toArray(nodes).some(node =>
+      React.isValidElement<{ children?: React.ReactNode }>(node) && (descriptionTypes.includes(node.type as React.ElementType) || found(node.props.children)));
+  return found(children) ? {} : { "aria-describedby": undefined };
+}
+
 function Dialog({
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Root>) {
@@ -128,6 +140,7 @@ function DialogContent({
           className
         )}
         onEscapeKeyDown={handleEscapeKeyDown}
+        {...describedByDefault(children, [DialogDescription, DialogPrimitive.Description])}
         {...props}
       >
         {children}

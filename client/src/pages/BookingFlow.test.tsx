@@ -115,7 +115,7 @@ describe("public booking conversion helpers", () => {
   });
 
   it("validates the four steps: service, specialist, time (with a silent availability check), then contact", () => {
-    const base = { serviceId: "s", staffProfileId: "p", startsAt: new Date("2026-08-16T10:00:00Z"), available: true, firstName: "ანა", phone: "555", termsAccepted: true };
+    const base = { serviceId: "s", staffProfileId: "p", startsAt: new Date("2026-08-16T10:00:00Z"), available: true, firstName: "ანა", phone: "555 12 34 56", termsAccepted: true };
     expect(getBookingValidationIssue({ ...base, step: 0, serviceId: undefined })).toMatchObject({ kind: "service" });
     expect(getBookingValidationIssue({ ...base, step: 0 })).toBeNull();
     expect(getBookingValidationIssue({ ...base, step: 1, staffProfileId: undefined })).toMatchObject({ kind: "staff", title: "აირჩიე სპეციალისტი" });
@@ -125,6 +125,15 @@ describe("public booking conversion helpers", () => {
     expect(getBookingValidationIssue({ ...base, step: 2 })).toBeNull();
     expect(getBookingValidationIssue({ ...base, step: 3, termsAccepted: false })).toMatchObject({ kind: "contact" });
     expect(getBookingValidationIssue({ ...base, step: 3 })).toBeNull();
+    expect(getBookingValidationIssue({ ...base, step: 3, phone: "+995 555 12 34 56" })).toBeNull();
+    expect(getBookingValidationIssue({ ...base, step: 3, phone: "555" })).toMatchObject({ kind: "contact", title: "შეიყვანე სწორი მობილურის ნომერი, მაგ. 555 12 34 56" });
+    expect(getBookingValidationIssue({ ...base, step: 3, phone: "322 12 34 56" })).toMatchObject({ kind: "contact" });
+  });
+
+  it("tells the visitor online booking is unavailable when no specialist is online-visible", () => {
+    const markup = renderToStaticMarkup(<StaffStep noOnlineTeam team={[]} onSelect={() => undefined} onEditServices={() => undefined} />);
+    expect(markup).toContain("ამ სალონში ონლაინ ჩაწერა ჯერ არ არის ხელმისაწვდომი.");
+    expect(markup).not.toContain("ერთად შესრულება");
   });
 
   it("keeps the wizard step in the URL: ?step= wins, a ?services= link opens on the specialist step, with ?staff= on the time step", () => {

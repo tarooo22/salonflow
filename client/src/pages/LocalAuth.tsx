@@ -27,6 +27,8 @@ function PasswordField({ value, onChange, autoComplete, minLength, error }: { va
     {minLength >= 10 ? <p id="auth-password-hint" className="mkt-hint mkt-hint-top">მინიმუმ 10 სიმბოლო.</p> : null}
   </div>;
 }
+/** Never show raw JSON (an unformatted validation error) to people. */
+const readableError = (message: string) => (/^\s*[[{]/.test(message) ? "შეამოწმეთ შეყვანილი მონაცემები." : message);
 
 export default function LocalAuth({ mode }: { mode: "login" | "register" | "claim" }) {
   const [, setLocation] = useLocation();
@@ -45,9 +47,9 @@ export default function LocalAuth({ mode }: { mode: "login" | "register" | "clai
     const safeDestination = user.role === "admin" && (destination === "/app/trial-status" || destination === "/app/trial-request") ? "/app/trial-admin" : destination;
     setLocation(safeDestination);
   };
-  const register = trpc.auth.register.useMutation({ onSuccess: user => finish(user, "/app/trial-request"), onError: cause => setError(cause.message) });
-  const login = trpc.auth.login.useMutation({ onSuccess: user => finish(user), onError: cause => setError(cause.message) });
-  const claimLegacyLocal = trpc.auth.claimLegacyLocal.useMutation({ onSuccess: user => finish(user), onError: cause => setError(cause.message) });
+  const register = trpc.auth.register.useMutation({ onSuccess: user => finish(user, "/app/trial-request"), onError: cause => setError(readableError(cause.message)) });
+  const login = trpc.auth.login.useMutation({ onSuccess: user => finish(user), onError: cause => setError(readableError(cause.message)) });
+  const claimLegacyLocal = trpc.auth.claimLegacyLocal.useMutation({ onSuccess: user => finish(user), onError: cause => setError(readableError(cause.message)) });
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");

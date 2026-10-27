@@ -294,3 +294,28 @@ describe("staff.performance", () => {
     ]) });
   });
 });
+
+describe("staff.setOnlineBookingVisible", () => {
+  function visibilityDb(profileRows: unknown[]) {
+    const updateWhere = vi.fn(async () => undefined);
+    const updateSet = vi.fn(() => ({ where: updateWhere }));
+    const chain = { from: () => chain, innerJoin: () => chain, where: () => ({ limit: vi.fn(async () => profileRows) }) };
+    return { select: vi.fn(() => chain), update: vi.fn(() => ({ set: updateSet })), updateSet, updateWhere };
+  }
+
+  it("lets an owner switch online visibility for a profile in the organization", async () => {
+    const db = visibilityDb([{ id: "staff_profile_00001" }]);
+    mocked.db = db;
+    mocked.requireOrganizationRole.mockResolvedValue({ id: "membership_0001", role: "OWNER" });
+
+    await expect(staffRouter.createCaller({ user } as never).setOnlineBookingVisible({ organizationId: "organization_001", staffProfileId: "staff_profile_00001", onlineBookingVisible: true })).resolves.toEqual({ success: true });
+    expect(db.updateSet).toHaveBeenCalledWith({ onlineBookingVisible: true });
+  });
+
+  it("rejects a profile outside the organization", async () => {
+    mocked.db = visibilityDb([]);
+    mocked.requireOrganizationRole.mockResolvedValue({ id: "membership_0001", role: "OWNER" });
+
+    await expect(staffRouter.createCaller({ user } as never).setOnlineBookingVisible({ organizationId: "organization_001", staffProfileId: "staff_profile_99999", onlineBookingVisible: false })).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+});

@@ -2,12 +2,13 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SalonFlowMark } from "@/components/public/PublicPrimitives";
+import { formatKaDateTime } from "@/lib/presentation";
 import { trpc } from "@/lib/trpc";
 import { CheckCircle2, Clock3, ExternalLink, MessageCircle, RefreshCw, ShieldAlert } from "lucide-react";
 import { useEffect } from "react";
 import { Link, useLocation } from "wouter";
 
-function formatDate(value: Date | null | undefined) { return value ? new Date(value).toLocaleString("ka-GE", { dateStyle: "medium", timeStyle: "short" }) : "—"; }
+function formatDate(value: Date | null | undefined) { return value ? formatKaDateTime(new Date(value)) : "—"; }
 
 export default function TrialStatus() {
   const { user, loading } = useAuth();

@@ -114,6 +114,19 @@ describe("Today dashboard experience", () => {
     expect(markup).not.toContain("დარჩენილი ბალანსი");
   });
 
+  it("offers \"გადახდის მიღება\" to the front desk only while the visit still owes money", () => {
+    state.role = "RECEPTIONIST";
+    expect(renderToStaticMarkup(<Today />)).toContain("გადახდის მიღება");
+    state.role = "STAFF";
+    expect(renderToStaticMarkup(<Today />)).not.toContain("გადახდის მიღება");
+    state.role = "OWNER";
+    state.dashboard = { ...(state.dashboard as object), appointments: [{ ...appointment, status: "COMPLETED", payment: { state: "PAID" } }], balances: [{ appointmentId: appointment.id, totals: { balanceTetri: 0 } }] };
+    const paid = renderToStaticMarkup(<Today />);
+    expect(paid).not.toContain("გადახდის მიღება");
+    expect(paid).not.toContain("გადასახდელია");
+    expect(paid).toContain("გადახდილი");
+  });
+
   it("warns the owner before an active trial or manual package expires and links to package activation", () => {
     state.activeEndsAt = new Date(Date.now() + 2 * 86_400_000);
     const markup = renderToStaticMarkup(<Today />);

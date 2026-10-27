@@ -22,6 +22,7 @@ import { exceptionBlocks, fetchBlockingExceptions, fitsWorkingHours } from "../l
 import { appointmentRescheduleSchema, appointmentStatusUpdateSchema, calendarRangeSchema, opaqueIdSchema, organizationScopeSchema, todayDashboardSchema, walkInCreateSchema } from "../../shared/validation";
 import { protectedProcedure, router } from "../_core/trpc";
 import { businessDayRange } from "@shared/timezones";
+import { notifyAppointmentStatusChange } from "../lib/notifications";
 
 type Db = Awaited<ReturnType<typeof requireDb>>;
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
@@ -300,6 +301,7 @@ export const appointmentsRouter = router({
       });
     });
 
+    void notifyAppointmentStatusChange(db, { appointmentId: appointment.id, status: input.nextStatus });
     return { success: true };
   }),
 

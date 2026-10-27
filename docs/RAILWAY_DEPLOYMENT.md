@@ -50,6 +50,22 @@ The Railway application service and the database are separate concerns. A new Ra
 
 Do not use `pnpm db:push` in production. Generate and review Drizzle migrations first, apply them in dependency order, and take a database backup before any destructive or structural operation. The current Railway configuration intentionally does not run migrations automatically during deploy, because automatic migration can make a release fail or create an irreversible schema change without an operator review.
 
+## Transactional email (Resend)
+
+Booking emails (customer "booking received" / "confirmed" / "cancelled" and the owner/manager "new online booking" alert) are sent through the Resend HTTP API. No SDK is installed.
+
+1. Create a Resend account and add the sending domain (for example `chawera.ge`) under Domains.
+2. Add the DNS records Resend shows (SPF, DKIM, and optionally DMARC) at the domain's DNS provider and wait until the domain is Verified.
+3. Create an API key with "Sending access" only and set these Railway variables:
+
+| Variable | Purpose | Example |
+|---|---|---|
+| `RESEND_API_KEY` | Resend API key. If it is missing, emails are skipped and `[notify] ...: skipped: email not configured` is logged; bookings are never affected. | `re_...` |
+| `NOTIFY_FROM` | Sender on the verified domain | `Chawera <noreply@chawera.ge>` |
+| `PUBLIC_SITE_URL` | Origin used for links in emails (`/manage-booking/<token>`, `/app/calendar`). In production the request `Host` header is not trusted for links; without this variable the Railway public domain is used. | `https://chawera.ge` |
+
+Sends happen after the booking is saved, are not awaited by the request, time out after 5 seconds, and log only the template name and result (no addresses or names). Owner alerts go to the ACTIVE owners and managers of the booking's organization and contain the client's first name only.
+
 ## File storage configuration
 
 The storage adapter now uses Cloudflare R2 through its S3-compatible API. Uploads are written to the private `salonflow-media` bucket, while public salon cover/avatar/feed routes are served through a narrow signed redirect proxy. Protected client before/after media and billing receipts are not allowed through that public proxy; they are returned only as short-lived signed URLs after the existing organization/role checks.

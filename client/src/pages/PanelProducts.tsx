@@ -1,4 +1,5 @@
 import DashboardLayout from "@/components/DashboardLayout";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { FilePicker } from "@/components/ui/file-picker";
@@ -30,6 +31,7 @@ export default function PanelProducts() {
   const products = trpc.products.list.useQuery({ organizationId, includeArchived: true }, { enabled });
   const locations = trpc.organizations.listLocations.useQuery({ organizationId }, { enabled });
   const [open, setOpen] = useState(false);
+  const [archiveTarget, setArchiveTarget] = useState<{ id: string; name: string } | null>(null);
   const [editing, setEditing] = useState<NonNullable<typeof products.data>[number] | null>(null);
   const [form, setForm] = useState<ProductForm>(emptyForm);
   const [error, setError] = useState("");
@@ -93,7 +95,7 @@ export default function PanelProducts() {
                   <Button variant="ghost" size="sm" onClick={() => openEdit(p)}><Pencil className="mr-1.5 h-3.5 w-3.5" />რედაქტირება</Button>
                   {archived
                     ? <Button variant="outline" size="sm" disabled={toggle.isPending} onClick={() => toggle.mutate({ organizationId, id: p.id, status: "ACTIVE" })}><RotateCcw className="mr-1.5 h-3.5 w-3.5" />აღდგენა</Button>
-                    : <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive" disabled={toggle.isPending} onClick={() => { if (window.confirm(`„${p.name}“ არქივში გადაიტანოთ? საჯარო კატალოგიდან გაქრება.`)) toggle.mutate({ organizationId, id: p.id, status: "ARCHIVED" }); }}><Archive className="mr-1.5 h-3.5 w-3.5" />არქივი</Button>}
+                    : <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive" disabled={toggle.isPending} onClick={() => setArchiveTarget({ id: p.id, name: p.name })}><Archive className="mr-1.5 h-3.5 w-3.5" />არქივი</Button>}
                 </div>
               </article>;
             })}
@@ -125,6 +127,18 @@ export default function PanelProducts() {
           </form>
         </DialogContent>
       </Dialog>
+      <AlertDialog open={Boolean(archiveTarget)} onOpenChange={next => { if (!next) setArchiveTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>პროდუქტის დაარქივება</AlertDialogTitle>
+            <AlertDialogDescription>{archiveTarget ? `„${archiveTarget.name}“ არქივში გადავა და საჯარო კატალოგიდან გაქრება.` : ""}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>გაუქმება</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { if (archiveTarget) toggle.mutate({ organizationId, id: archiveTarget.id, status: "ARCHIVED" }); setArchiveTarget(null); }}>დაარქივება</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }

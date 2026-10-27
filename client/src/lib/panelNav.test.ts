@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isBillingVisible, isPanelNavActive, panelNav, panelTabBar, type PanelRole } from "./panelNav";
+import { isBillingVisible, isPanelNavActive, isRouteAllowed, panelNav, panelTabBar, type PanelRole } from "./panelNav";
 
 const shape = (role: PanelRole, opts: Parameters<typeof panelNav>[1] = {}) =>
   panelNav(role, opts).groups.map(group => [group.key, group.label, group.items.map(item => `${item.label}|${item.href}`)] as const);
@@ -93,5 +93,28 @@ describe("panelNav", () => {
     expect(isBillingVisible({ locked: false, endsAt: new Date(now + 2 * day) }, now)).toBe(true);
     expect(isBillingVisible({ locked: false, endsAt: new Date(now + 3 * day) }, now)).toBe(true);
     expect(isBillingVisible({ locked: false, endsAt: new Date(now + 4 * day) }, now)).toBe(false);
+  });
+});
+
+describe("isRouteAllowed", () => {
+  it("blocks business pages a role has no rail link to", () => {
+    for (const path of ["/app/reports", "/app/pos", "/app/clients", "/app/marketplace", "/app/services", "/app/waitlist"]) expect(isRouteAllowed("STAFF", path)).toBe(false);
+    expect(isRouteAllowed("RECEPTIONIST", "/app/reports")).toBe(false);
+    expect(isRouteAllowed("RECEPTIONIST", "/app/staff")).toBe(false);
+    expect(isRouteAllowed("MANAGER", "/app/marketplace")).toBe(false);
+    expect(isRouteAllowed("STAFF", "/app/reports?from=2026-01-01")).toBe(false);
+  });
+
+  it("allows a role's own pages and pages outside the role gate", () => {
+    for (const path of ["/app/today", "/app/calendar", "/app/staff", "/app/operations", "/app/settings", "/app/billing", "/app/setup"]) expect(isRouteAllowed("STAFF", path)).toBe(true);
+    for (const path of ["/app/services", "/app/feedback", "/app/products"]) expect(isRouteAllowed("MANAGER", path)).toBe(true);
+    // The server keeps reports and media owner-only, so the guard must not send a manager there.
+    for (const path of ["/app/reports", "/app/media"]) expect(isRouteAllowed("MANAGER", path)).toBe(false);
+    for (const path of ["/app/marketplace", "/app/media", "/app/feedback", "/app/staff", "/app/client-gallery"]) expect(isRouteAllowed("OWNER", path)).toBe(true);
+  });
+
+  it("never blocks while the role is unknown", () => {
+    expect(isRouteAllowed(undefined, "/app/reports")).toBe(true);
+    expect(isRouteAllowed(null, "/app/pos")).toBe(true);
   });
 });

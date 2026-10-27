@@ -4,9 +4,12 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CompactMetricRail, MetricCell } from "@/components/workspace/DashboardModules";
 import { WorkspacePageHeader, WorkspaceSection, WorkspaceState, WorkspaceStatusPill } from "@/components/workspace/WorkspacePrimitives";
-import { formatGelTetri, formatPaymentMethod } from "@/lib/presentation";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ReceivePaymentDialog, canReceivePayment, type ReceivePaymentTarget } from "@/components/workspace/ReceivePaymentDialog";
+import { formatGelTetri, formatPaymentMethod, formatPaymentState } from "@/lib/presentation";
+import { formatTimeInTimeZone } from "@shared/timezones";
 import { trpc } from "@/lib/trpc";
-import { Minus, PackagePlus, Plus, ReceiptText } from "lucide-react";
+import { Minus, PackagePlus, Plus, ReceiptText, Wallet } from "lucide-react";
 import React, { FormEvent, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -40,6 +43,7 @@ export default function POS() {
   const [newReorder, setNewReorder] = useState("0");
   const [productError, setProductError] = useState("");
   const [saleError, setSaleError] = useState("");
+  const [tab, setTab] = useState<"products" | "visits">("products");
   const productErrorRef = useRef<HTMLParagraphElement>(null);
   useEffect(() => { if (productError) productErrorRef.current?.focus(); }, [productError]);
   const canCreateProduct = ["OWNER", "MANAGER"].includes(role ?? "");
@@ -72,7 +76,8 @@ export default function POS() {
   const emptyCart = !selected.length;
   return <DashboardLayout><div className="sf-workspace-page mx-auto w-full max-w-7xl space-y-5">
     <WorkspacePageHeader title="სალარო" actions={locations.data?.length ? <Select value={resolvedLocationId} onValueChange={setLocationId}><SelectTrigger className="w-full bg-card sm:w-auto sm:min-w-48" aria-label="ფილიალი"><SelectValue /></SelectTrigger><SelectContent>{locations.data.map(location => <SelectItem key={location.id} value={location.id}>{location.name}</SelectItem>)}</SelectContent></Select> : null} />
-    {!organization ? <WorkspaceState kind="empty" title="ჯერ შექმენით სამუშაო სივრცე" /> : <>
+    {organization ? <Tabs value={tab} onValueChange={value => setTab(value === "visits" ? "visits" : "products")}><TabsList aria-label="სალაროს განყოფილება"><TabsTrigger value="products" className="min-h-11">პროდუქტები</TabsTrigger><TabsTrigger value="visits" className="min-h-11">ვიზიტები</TabsTrigger></TabsList></Tabs> : null}
+    {!organization ? <WorkspaceState kind="empty" title="ჯერ შექმენით სამუშაო სივრცე" /> : tab === "visits" ? <PosVisits organizationId={organization.id} locationId={resolvedLocationId} role={role} /> : <>
       {inventory.isLoading ? <WorkspaceState kind="loading" title="იტვირთება…" /> : null}
       {inventory.isError ? <WorkspaceState kind="error" title="პროდუქტების სია ვერ ჩაიტვირთა" description="შეამოწმეთ კავშირი და სცადეთ ხელახლა." action={<Button variant="outline" onClick={() => { void inventory.refetch(); }}>თავიდან ცდა</Button>} /> : null}
       <CompactMetricRail label="სალაროს მაჩვენებლები"><MetricCell label="პროდუქტები" value={String(stockRows.length)} /><MetricCell label="კალათის ჯამი" value={formatGelTetri(total)} /><MetricCell label="მარაგი მცირეა" value={String(lowStock.length)} /></CompactMetricRail>
@@ -112,4 +117,39 @@ export default function POS() {
       </div>
     </>}
   </div></DashboardLayout>;
+}
+
+/** Today's visits at the selected location that still owe money, with the same "receive payment" dialog as Today and Calendar. */
+function PosVisits({ organizationId, locationId, role }: { organizationId: string; locationId: string; role: string | undefined }) {
+  const dashboard = trpc.appointments.dashboard.useQuery({ organizationId, locationId: locationId || undefined }, { enabled: Boolean(locationId) });
+  const [target, setTarget] = useState<ReceivePaymentTarget | null>(null);
+  const timezone = dashboard.data?.location?.timezone ?? "Asia/Tbilisi";
+  const balances = new Map((dashboard.data?.balances ?? []).map(item => [item.appointmentId, item.totals.balanceTetri]));
+  const visits = (dashboard.data?.appointments ?? [])
+    .map(appointment => ({ appointment, balanceTetri: balances.get(appointment.id) ?? appointment.totalTetri }))
+    .filter(({ appointment, balanceTetri }) => balanceTetri > 0 && appointment.status !== "CANCELLED" && appointment.status !== "NO_SHOW");
+  const outstandingTetri = visits.reduce((sum, visit) => sum + visit.balanceTetri, 0);
+
+  if (dashboard.isLoading) return <WorkspaceState kind="loading" title="იტვირთება…" />;
+  if (dashboard.isError) return <WorkspaceState kind="error" title="დღის ვიზიტები ვერ ჩაიტვირთა" description="შეამოწმეთ კავშირი და სცადეთ ხელახლა." action={<Button variant="outline" onClick={() => { void dashboard.refetch(); }}>თავიდან ცდა</Button>} />;
+  return <>
+    <CompactMetricRail label="დღის ვიზიტების მაჩვენებლები"><MetricCell label="გადასახდელი ვიზიტები" value={String(visits.length)} /><MetricCell label="დარჩენილი ბალანსი" value={formatGelTetri(outstandingTetri)} /></CompactMetricRail>
+    <WorkspaceSection title="დღევანდელი ვიზიტები" description={dashboard.data?.location?.name}>
+      {visits.length ? <div className="divide-y divide-border">{visits.map(({ appointment, balanceTetri }) => {
+        const clientName = appointment.client ? `${appointment.client.firstName} ${appointment.client.lastName ?? ""}`.trim() : "კლიენტი მითითებული არ არის";
+        const services = appointment.services.map(service => service.serviceNameSnapshot).join(", ");
+        return <article key={appointment.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-3 first:pt-0 last:pb-0">
+          <p className="cwk-num w-12 shrink-0 font-semibold">{formatTimeInTimeZone(new Date(appointment.startsAt), timezone)}</p>
+          <div className="min-w-0 flex-1 basis-40">
+            <p className="truncate font-semibold">{clientName}</p>
+            <p className="truncate text-xs text-[var(--sf-muted)]">{services || "სერვისი მითითებული არ არის"} · {appointment.staff.publicDisplayName}</p>
+          </div>
+          <WorkspaceStatusPill tone="neutral">{formatPaymentState(appointment.payment?.state)}</WorkspaceStatusPill>
+          <p className="text-sm">დარჩენილი: <span className="cwk-num font-semibold">{formatGelTetri(balanceTetri)}</span></p>
+          {canReceivePayment(role, appointment.status, balanceTetri) ? <Button type="button" variant="outline" size="sm" className="max-md:min-h-11" onClick={() => setTarget({ id: appointment.id, clientName, detail: services || undefined, totalTetri: appointment.totalTetri, balanceTetri })}><Wallet className="size-4" aria-hidden="true" />გადახდის მიღება</Button> : null}
+        </article>;
+      })}</div> : <WorkspaceState kind="empty" title="დღეს გადასახდელი ვიზიტი არ არის" />}
+    </WorkspaceSection>
+    {target ? <ReceivePaymentDialog key={target.id} organizationId={organizationId} target={target} onClose={() => setTarget(null)} /> : null}
+  </>;
 }

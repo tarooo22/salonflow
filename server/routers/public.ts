@@ -14,6 +14,7 @@ import { mediaUrl } from "../lib/media";
 import { storageGetSignedUrl } from "../storage";
 import { publicProcedure, router } from "../_core/trpc";
 import { isOrganizationTrialPublicBookingActive } from "../lib/trialAccess";
+import { notifyNewOnlineBooking, resolveSiteOrigin } from "../lib/notifications";
 
 function enumerateUtcDates(start: Date, end: Date) {
   const dates: string[] = [];
@@ -38,10 +39,11 @@ function confirmationTokenForAppointment(appointmentId: string) {
 async function appointmentForPublicToken(db: Awaited<ReturnType<typeof requireDb>>, token: string) {
   const tokenHash = publicTokenHash(token);
   const [appointment] = await db.select().from(appointments).where(eq(appointments.publicTokenHash, tokenHash)).limit(1);
-  if (!appointment || !appointment.publicTokenExpiresAt || appointment.publicTokenExpiresAt <= new Date()) throw new Error("ჯავშნის მართვის ბმული არასწორია ან ვადა გაუვიდა.");
+  if (!appointment || !appointment.publicTokenExpiresAt || appointment.publicTokenExpiresAt <= new Date()) throw new TRPCError({ code: "NOT_FOUND", message: "ჯავშნის მართვის ბმული არასწორია ან ვადა გაუვიდა." });
   return appointment;
 }
 
+const PHONE_ERROR = "შეიყვანე სწორი ქართული მობილურის ნომერი.";
 const CUSTOMER_MANAGEABLE_STATUSES: Array<"PENDING" | "CONFIRMED"> = ["PENDING", "CONFIRMED"];
 const BOOKING_STATUS_CHANGED = "ჯავშნის სტატუსი შეიცვალა. განაახლეთ გვერდი.";
 
@@ -50,8 +52,8 @@ export function canCustomerManage(appointment: { status: string; startsAt: Date 
 }
 
 export function assertWaitlistFuturePreference(input: { requestedDate: string; preferredStartLocalTime?: string }, timeZone: string, reference = new Date()) {
-  if (isDateKeyInPast(input.requestedDate, timeZone, reference)) throw new Error("გასული თარიღისთვის waitlist მოთხოვნას ვერ დატოვებთ.");
-  if (input.preferredStartLocalTime && isLocalDateTimeElapsed(input.requestedDate, input.preferredStartLocalTime, timeZone, reference)) throw new Error("გასული დროის არჩევა შეუძლებელია. აირჩიეთ მოქმედი ან მომავალი საათი.");
+  if (isDateKeyInPast(input.requestedDate, timeZone, reference)) throw new TRPCError({ code: "BAD_REQUEST", message: "გასული თარიღისთვის waitlist მოთხოვნას ვერ დატოვებთ." });
+  if (input.preferredStartLocalTime && isLocalDateTimeElapsed(input.requestedDate, input.preferredStartLocalTime, timeZone, reference)) throw new TRPCError({ code: "BAD_REQUEST", message: "გასული დროის არჩევა შეუძლებელია. აირჩიეთ მოქმედი ან მომავალი საათი." });
 }
 
 type MultiServiceSnapshot = { id: string; nameKa: string; durationMinutes: number; priceTetri: number; bufferBeforeMinutes: number; bufferAfterMinutes: number };
@@ -61,7 +63,7 @@ type MultiCandidate = { id: string; name: string; services: MultiServiceSnapshot
 async function resolveMultiCandidates(db: Awaited<ReturnType<typeof requireDb>>, location: typeof locations.$inferSelect, serviceIds: string[], requestedStaffId: string, onUnavailableService: "throw" | "empty" = "throw") {
   const serviceRows = await db.select().from(services).where(and(inArray(services.id, serviceIds), eq(services.organizationId, location.organizationId), eq(services.status, "ACTIVE"), eq(services.onlineBookingEnabled, true)));
   if (serviceRows.length !== serviceIds.length && onUnavailableService === "empty") return [];
-  if (serviceRows.length !== serviceIds.length) throw new Error("არჩეული სერვისებიდან ერთი ან მეტი ონლაინ ჩაწერისთვის მიუწვდომელია.");
+  if (serviceRows.length !== serviceIds.length) throw new TRPCError({ code: "BAD_REQUEST", message: "არჩეული სერვისებიდან ერთი ან მეტი ონლაინ ჩაწერისთვის მიუწვდომელია." });
   const rows = await db.select({ id: staffProfiles.id, name: staffProfiles.publicDisplayName, serviceId: staffServices.serviceId, durationOverrideMinutes: staffServices.durationOverrideMinutes, priceOverrideTetri: staffServices.priceOverrideTetri }).from(staffProfiles)
     .innerJoin(staffLocations, eq(staffProfiles.id, staffLocations.staffProfileId))
     .innerJoin(staffServices, eq(staffProfiles.id, staffServices.staffProfileId))
@@ -220,7 +222,7 @@ export const publicRouter = router({
 
   bookingCatalog: publicProcedure.input(slugSchema).query(async ({ input: slug }) => {
     const db = await requireDb();
-    const [location] = await db.select({ location: locations }).from(locations)
+    const [found] = await db.select({ location: locations, organizationName: organizations.name }).from(locations)
       .innerJoin(organizations, eq(locations.organizationId, organizations.id))
       .leftJoin(organizationGovernance, eq(organizationGovernance.organizationId, organizations.id))
       .where(and(
@@ -229,10 +231,12 @@ export const publicRouter = router({
         eq(locations.bookingEnabled, true),
         eq(organizations.status, "ACTIVE"),
         or(isNull(organizationGovernance.organizationId), eq(organizationGovernance.publicVisible, true)),
-      )).limit(1).then(rows => rows.map(row => row.location));
+      )).limit(1);
+    const location = found?.location;
+    const organizationName = found?.organizationName ?? null;
     if (!location) return null;
     const onlineBookingAvailable = await isOrganizationTrialPublicBookingActive(location.organizationId);
-    if (!onlineBookingAvailable) return { location: { publicSlug: location.publicSlug, name: location.name, timezone: location.timezone, address: location.address, phone: location.phone, email: location.email, publicDescription: location.publicDescription, cancellationCutoffMinutes: location.cancellationCutoffMinutes, workingHours: [] }, catalog: [], team: [], onlineBookingAvailable: false as const, bookingUnavailableReason: "TRIAL_EXPIRED" as const };
+    if (!onlineBookingAvailable) return { location: { publicSlug: location.publicSlug, name: location.name, organizationName, timezone: location.timezone, address: location.address, phone: location.phone, email: location.email, publicDescription: location.publicDescription, cancellationCutoffMinutes: location.cancellationCutoffMinutes, workingHours: [] }, catalog: [], team: [], onlineBookingAvailable: false as const, bookingUnavailableReason: "TRIAL_EXPIRED" as const };
     const catalog = await db.select({ service: services, category: serviceCategories }).from(services)
       .innerJoin(serviceCategories, eq(services.categoryId, serviceCategories.id))
       .where(and(eq(services.organizationId, location.organizationId), eq(services.status, "ACTIVE"), eq(services.onlineBookingEnabled, true)))
@@ -257,7 +261,7 @@ export const publicRouter = router({
       else hours.set(rule.weekday, { weekday: rule.weekday, startLocalTime: existing.startLocalTime < rule.startLocalTime ? existing.startLocalTime : rule.startLocalTime, endLocalTime: existing.endLocalTime > rule.endLocalTime ? existing.endLocalTime : rule.endLocalTime });
       return hours;
     }, new Map<number, { weekday: number; startLocalTime: string; endLocalTime: string }>()).values()).sort((a, b) => a.weekday - b.weekday);
-    return { location: { publicSlug: location.publicSlug, name: location.name, timezone: location.timezone, address: location.address, phone: location.phone, email: location.email, publicDescription: location.publicDescription, cancellationCutoffMinutes: location.cancellationCutoffMinutes, workingHours }, catalog, team, onlineBookingAvailable: true as const, bookingUnavailableReason: null };
+    return { location: { publicSlug: location.publicSlug, name: location.name, organizationName, timezone: location.timezone, address: location.address, phone: location.phone, email: location.email, publicDescription: location.publicDescription, cancellationCutoffMinutes: location.cancellationCutoffMinutes, workingHours }, catalog, team, onlineBookingAvailable: true as const, bookingUnavailableReason: null };
   }),
 
   salonProfile: publicProcedure.input(slugSchema).query(async ({ input: slug }) => {
@@ -328,9 +332,9 @@ export const publicRouter = router({
   submitFeedback: publicProcedure.input(publicFeedbackSubmitSchema).mutation(async ({ input }) => {
     const db = await requireDb();
     const appointment = await appointmentForPublicToken(db, input.token);
-    if (appointment.status !== "COMPLETED" || !appointment.clientId) throw new Error("უკუკავშირი ხელმისაწვდომია მხოლოდ დასრულებული ვიზიტის შემდეგ.");
+    if (appointment.status !== "COMPLETED" || !appointment.clientId) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "უკუკავშირი ხელმისაწვდომია მხოლოდ დასრულებული ვიზიტის შემდეგ." });
     const [existing] = await db.select({ id: customerFeedback.id }).from(customerFeedback).where(eq(customerFeedback.appointmentId, appointment.id)).limit(1);
-    if (existing) throw new Error("ამ ვიზიტისთვის უკუკავშირი უკვე დატოვებულია.");
+    if (existing) throw new TRPCError({ code: "CONFLICT", message: "ამ ვიზიტისთვის უკუკავშირი უკვე დატოვებულია." });
     const feedbackId = nanoid(21);
     await db.transaction(async tx => {
       await tx.insert(customerFeedback).values({ id: feedbackId, organizationId: appointment.organizationId, locationId: appointment.locationId, appointmentId: appointment.id, clientId: appointment.clientId!, rating: input.rating, comment: input.comment, displayName: input.publicNameConsent ? input.displayName ?? null : null, publicNameConsent: input.publicNameConsent, status: "PENDING" });
@@ -509,21 +513,21 @@ export const publicRouter = router({
     };
   }),
 
-  commitMultiBooking: publicProcedure.input(publicMultiBookingCommitSchema).mutation(async ({ input }) => {
+  commitMultiBooking: publicProcedure.input(publicMultiBookingCommitSchema).mutation(async ({ input, ctx }) => {
     const db = await requireDb();
     const normalizedPhone = normalizeGeorgianPhone(input.phone);
-    if (!normalizedPhone) throw new Error("მიუთითეთ სწორი ქართული მობილურის ნომერი.");
+    if (!normalizedPhone) throw new TRPCError({ code: "BAD_REQUEST", message: PHONE_ERROR });
     const normalizedEmail = normalizeEmail(input.email);
     const [previous] = await db.select({ id: appointments.id, endsAt: appointments.endsAt }).from(appointments).where(eq(appointments.idempotencyKey, input.idempotencyKey)).limit(1);
     if (previous) return { confirmed: true, replayed: true, confirmationToken: confirmationTokenForAppointment(previous.id), endsAt: previous.endsAt };
     const [location] = await db.select().from(locations).where(and(eq(locations.publicSlug, input.slug), eq(locations.status, "ACTIVE"), eq(locations.bookingEnabled, true))).limit(1);
-    if (!location) throw new Error("ეს ჩაწერის ბმული აღარ არის აქტიური.");
-    if (!await isOrganizationTrialPublicBookingActive(location.organizationId)) throw new Error("ონლაინ ჩაწერა ამ სალონისთვის დროებით მიუწვდომელია.");
+    if (!location) throw new TRPCError({ code: "NOT_FOUND", message: "ეს ჩაწერის ბმული აღარ არის აქტიური." });
+    if (!await isOrganizationTrialPublicBookingActive(location.organizationId)) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "ონლაინ ჩაწერა ამ სალონისთვის დროებით მიუწვდომელია." });
     const minimumStart = new Date(Date.now() + location.minimumNoticeMinutes * 60_000);
     const maximumStart = new Date(Date.now() + location.maximumAdvanceDays * 86_400_000);
     if (input.startsAt < minimumStart || input.startsAt > maximumStart) throw new TRPCError({ code: "CONFLICT", message: "არჩეული დრო ჩაწერის დაშვებულ დიაპაზონში არ არის." });
     const candidates = await resolveMultiCandidates(db, location, input.serviceIds, input.staffProfileId);
-    if (!candidates.length) throw new Error("არცერთი სპეციალისტი ვერ ასრულებს ყველა არჩეულ სერვისს.");
+    if (!candidates.length) throw new TRPCError({ code: "BAD_REQUEST", message: "არცერთი სპეციალისტი ვერ ასრულებს ყველა არჩეულ სერვისს." });
     const appointmentId = nanoid(21);
     const confirmationToken = confirmationTokenForAppointment(appointmentId);
     let assigned: MultiCandidate | undefined;
@@ -537,21 +541,22 @@ export const publicRouter = router({
         if (!existing.some(appointment => appointmentBlocksInterval(appointment.status) && intervalsOverlap(interval.protectedStart, interval.protectedEnd, new Date(appointment.startsAt.getTime() - appointment.bufferBeforeMinutes * 60_000), new Date(appointment.endsAt.getTime() + appointment.bufferAfterMinutes * 60_000)))) { assigned = candidate; endsAt = interval.endsAt; break; }
       }
       if (!assigned || !endsAt) throw new TRPCError({ code: "CONFLICT", message: "ეს დრო ახლახან დაიკავეს. აირჩიეთ სხვა თავისუფალი დრო." });
-      const [matchedClient] = await tx.select({ id: clients.id }).from(clients).where(and(eq(clients.organizationId, location.organizationId), eq(clients.normalizedPhone, normalizedPhone), eq(clients.status, "ACTIVE"))).limit(1);
+      const [matchedClient] = await tx.select({ id: clients.id, email: clients.email }).from(clients).where(and(eq(clients.organizationId, location.organizationId), eq(clients.normalizedPhone, normalizedPhone), eq(clients.status, "ACTIVE"))).limit(1);
       const clientId = matchedClient?.id ?? nanoid(21);
-      if (!matchedClient) await tx.insert(clients).values({ id: clientId, organizationId: location.organizationId, firstName: input.firstName, lastName: input.lastName, normalizedPhone, email: input.email, normalizedEmail, source: "PUBLIC_WEB" });
-      await tx.insert(appointments).values({ id: appointmentId, organizationId: location.organizationId, locationId: location.id, clientId, staffProfileId: assigned.id, startsAt: input.startsAt, endsAt, bufferBeforeMinutes: assigned.bufferBeforeMinutes, bufferAfterMinutes: assigned.bufferAfterMinutes, source: "PUBLIC_WEB", status: "PENDING", customerNote: input.customerNote, subtotalTetri: assigned.totalTetri, discountTetri: 0, totalTetri: assigned.totalTetri, publicTokenHash: publicTokenHash(confirmationToken), publicTokenExpiresAt: new Date(input.startsAt.getTime() + 90 * 86_400_000), idempotencyKey: input.idempotencyKey });
+      if (!matchedClient) await tx.insert(clients).values({ id: clientId, organizationId: location.organizationId, firstName: input.firstName, lastName: input.lastName, normalizedPhone, email: input.email, normalizedEmail, source: "PUBLIC_WEB" });      await tx.insert(appointments).values({ id: appointmentId, organizationId: location.organizationId, locationId: location.id, clientId, staffProfileId: assigned.id, startsAt: input.startsAt, endsAt, bufferBeforeMinutes: assigned.bufferBeforeMinutes, bufferAfterMinutes: assigned.bufferAfterMinutes, source: "PUBLIC_WEB", status: "PENDING", customerNote: input.customerNote, subtotalTetri: assigned.totalTetri, discountTetri: 0, totalTetri: assigned.totalTetri, publicTokenHash: publicTokenHash(confirmationToken), publicTokenExpiresAt: new Date(input.startsAt.getTime() + 90 * 86_400_000), idempotencyKey: input.idempotencyKey });
       await tx.insert(appointmentServices).values(assigned.services.map((service, sortOrder) => ({ id: nanoid(21), appointmentId, serviceId: service.id, staffProfileId: assigned!.id, serviceNameSnapshot: service.nameKa, durationMinutesSnapshot: service.durationMinutes, bufferBeforeMinutesSnapshot: service.bufferBeforeMinutes, bufferAfterMinutesSnapshot: service.bufferAfterMinutes, priceTetriSnapshot: service.priceTetri, sortOrder })));
       await tx.insert(appointmentStatusHistory).values({ id: nanoid(21), appointmentId, oldStatus: null, newStatus: "PENDING", metadata: { source: "PUBLIC_WEB", idempotencyKey: input.idempotencyKey, serviceCount: assigned.services.length } });
       await tx.insert(clientConsents).values({ id: nanoid(21), clientId, consentType: "BOOKING_TERMS", granted: true, source: "PUBLIC_WEB", grantedAt: new Date() });
     }, { isolationLevel: "read committed" }); // re-reads after each scheduleLocks upsert must see rows committed meanwhile
+    // Only reached when this call created the appointment (replays return early). Not awaited: email must never slow or fail a booking.
+    void notifyNewOnlineBooking(db, { appointmentId, manageToken: confirmationToken, customerEmail: input.email, customerFirstName: input.firstName, origin: resolveSiteOrigin(ctx?.req) });
     return { confirmed: true, replayed: false, confirmationToken, assignedStaffName: assigned?.name, endsAt: endsAt! };
   }),
 
-  commitBooking: publicProcedure.input(publicBookingCommitSchema).mutation(async ({ input }) => {
+  commitBooking: publicProcedure.input(publicBookingCommitSchema).mutation(async ({ input, ctx }) => {
     const db = await requireDb();
     const normalizedPhone = normalizeGeorgianPhone(input.phone);
-    if (!normalizedPhone) throw new Error("A valid Georgian mobile phone number is required");
+    if (!normalizedPhone) throw new TRPCError({ code: "BAD_REQUEST", message: PHONE_ERROR });
     const normalizedEmail = normalizeEmail(input.email);
 
     const [previousAttempt] = await db.select({ id: appointments.id, endsAt: appointments.endsAt }).from(appointments)
@@ -568,8 +573,8 @@ export const publicRouter = router({
       eq(locations.status, "ACTIVE"),
       eq(locations.bookingEnabled, true),
     )).limit(1);
-    if (!location) throw new Error("This booking link is unavailable");
-    if (!await isOrganizationTrialPublicBookingActive(location.organizationId)) throw new Error("Online booking is temporarily unavailable for this salon");
+    if (!location) throw new TRPCError({ code: "NOT_FOUND", message: "ეს ჩაწერის ბმული აღარ არის აქტიური." });
+    if (!await isOrganizationTrialPublicBookingActive(location.organizationId)) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "ონლაინ ჩაწერა ამ სალონისთვის დროებით მიუწვდომელია." });
 
     const [service] = await db.select().from(services).where(and(
       eq(services.id, input.serviceId),
@@ -577,7 +582,7 @@ export const publicRouter = router({
       eq(services.status, "ACTIVE"),
       eq(services.onlineBookingEnabled, true),
     )).limit(1);
-    if (!service) throw new Error("This service is unavailable for online booking");
+    if (!service) throw new TRPCError({ code: "BAD_REQUEST", message: "არჩეული სერვისი ონლაინ ჩაწერისთვის მიუწვდომელია." });
 
     const candidates = input.staffProfileId === "ANY_AVAILABLE"
       ? await db.select({ id: staffProfiles.id, name: staffProfiles.publicDisplayName, durationOverrideMinutes: staffServices.durationOverrideMinutes }).from(staffProfiles)
@@ -591,12 +596,12 @@ export const publicRouter = router({
         const [eligibility] = await db.select().from(staffServices).where(and(eq(staffServices.staffProfileId, input.staffProfileId), eq(staffServices.serviceId, service.id), eq(staffServices.canPerform, true))).limit(1);
         return staff && staffAtLocation && eligibility ? [{ id: staff.id, name: staff.publicDisplayName, durationOverrideMinutes: eligibility.durationOverrideMinutes }] : [];
       })();
-    if (!candidates.length) throw new Error("This specialist is unavailable for the selected service");
+    if (!candidates.length) throw new TRPCError({ code: "BAD_REQUEST", message: "არჩეული სპეციალისტი ამ სერვისისთვის მიუწვდომელია." });
 
     const now = new Date();
     const minimumStart = new Date(now.getTime() + location.minimumNoticeMinutes * 60_000);
     const maximumStart = new Date(now.getTime() + location.maximumAdvanceDays * 86_400_000);
-    if (input.startsAt < minimumStart || input.startsAt > maximumStart) throw new TRPCError({ code: "CONFLICT", message: "The selected time falls outside the booking window" });
+    if (input.startsAt < minimumStart || input.startsAt > maximumStart) throw new TRPCError({ code: "CONFLICT", message: "არჩეული დრო ჩაწერის დაშვებულ დიაპაზონში არ არის." });
 
     const appointmentId = nanoid(21);
     const confirmationToken = confirmationTokenForAppointment(appointmentId);
@@ -619,7 +624,7 @@ export const publicRouter = router({
         const conflict = concurrent.some(appointment => intervalsOverlap(protectedStart, protectedEnd, new Date(appointment.startsAt.getTime() - appointment.bufferBeforeMinutes * 60_000), new Date(appointment.endsAt.getTime() + appointment.bufferAfterMinutes * 60_000)));
         if (!conflict) { assigned = { id: candidate.id, name: candidate.name, durationMinutes, endsAt }; break; }
       }
-      if (!assigned) throw new TRPCError({ code: "CONFLICT", message: "The selected time is no longer available" });
+      if (!assigned) throw new TRPCError({ code: "CONFLICT", message: "ეს დრო ახლახან დაიკავეს. აირჩიეთ სხვა თავისუფალი დრო." });
 
       const [matchedClient] = await tx.select().from(clients).where(and(
         eq(clients.organizationId, location.organizationId),
@@ -639,6 +644,7 @@ export const publicRouter = router({
           source: "PUBLIC_WEB",
         });
       }
+      // An existing client's email is never set from a public booking: knowing someone's phone must not route their visit emails to you.
 
       await tx.insert(appointments).values({
         id: appointmentId,
@@ -690,7 +696,9 @@ export const publicRouter = router({
 
     const [persistedAppointment] = await db.select({ id: appointments.id, endsAt: appointments.endsAt }).from(appointments)
       .where(eq(appointments.idempotencyKey, input.idempotencyKey)).limit(1);
-    if (!persistedAppointment) throw new Error("Booking confirmation could not be persisted");
+    if (!persistedAppointment) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "ჯავშნის შენახვა ვერ დადასტურდა. სცადეთ თავიდან." });
+    // Notify only when this call created the appointment, not on an idempotent replay.
+    if (persistedAppointment.id === appointmentId) void notifyNewOnlineBooking(db, { appointmentId, manageToken: confirmationToken, customerEmail: input.email, customerFirstName: input.firstName, origin: resolveSiteOrigin(ctx?.req) });
     return {
       confirmed: true,
       replayed: persistedAppointment.id !== appointmentId,
@@ -706,7 +714,7 @@ export const publicRouter = router({
     const [location] = await db.select({ publicSlug: locations.publicSlug, name: locations.name, timezone: locations.timezone, address: locations.address, cancellationCutoffMinutes: locations.cancellationCutoffMinutes }).from(locations).where(eq(locations.id, appointment.locationId)).limit(1);
     const [staff] = await db.select({ name: staffProfiles.publicDisplayName }).from(staffProfiles).where(eq(staffProfiles.id, appointment.staffProfileId)).limit(1);
     const servicesForAppointment = await db.select({ id: appointmentServices.id, serviceId: appointmentServices.serviceId, name: appointmentServices.serviceNameSnapshot, durationMinutes: appointmentServices.durationMinutesSnapshot, priceTetri: appointmentServices.priceTetriSnapshot }).from(appointmentServices).where(eq(appointmentServices.appointmentId, appointment.id)).orderBy(asc(appointmentServices.sortOrder));
-    if (!location) throw new Error("ჯავშნის ფილიალი აღარ არის ხელმისაწვდომი.");
+    if (!location) throw new TRPCError({ code: "NOT_FOUND", message: "ჯავშნის ფილიალი აღარ არის ხელმისაწვდომი." });
     return {
       location: { publicSlug: location.publicSlug, name: location.name, timezone: location.timezone, address: location.address },
       appointment: { staffProfileId: appointment.staffProfileId, status: appointment.status, startsAt: appointment.startsAt, endsAt: appointment.endsAt, totalTetri: appointment.totalTetri, canManage: canCustomerManage(appointment, location.cancellationCutoffMinutes), cancellationCutoffMinutes: location.cancellationCutoffMinutes },
@@ -719,7 +727,7 @@ export const publicRouter = router({
     const db = await requireDb();
     const appointment = await appointmentForPublicToken(db, input.token);
     const [location] = await db.select({ cancellationCutoffMinutes: locations.cancellationCutoffMinutes }).from(locations).where(eq(locations.id, appointment.locationId)).limit(1);
-    if (!location || !canCustomerManage(appointment, location.cancellationCutoffMinutes)) throw new Error("ამ ჯავშნის გაუქმების ვადა უკვე გასულია ან სტატუსი აღარ იძლევა ცვლილების უფლებას.");
+    if (!location || !canCustomerManage(appointment, location.cancellationCutoffMinutes)) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "ამ ჯავშნის გაუქმების ვადა უკვე გასულია ან სტატუსი აღარ იძლევა ცვლილების უფლებას." });
     await db.transaction(async tx => {
       // The status was checked outside the transaction; only cancel if it is still customer-manageable.
       const result = await tx.update(appointments).set({ status: "CANCELLED", cancellationReason: input.reason ?? "CUSTOMER_CANCELLED", cancelledAt: new Date() }).where(and(eq(appointments.id, appointment.id), inArray(appointments.status, CUSTOMER_MANAGEABLE_STATUSES)));
@@ -744,7 +752,7 @@ export const publicRouter = router({
     const db = await requireDb();
     const appointment = await appointmentForPublicToken(db, input.token);
     const [location] = await db.select().from(locations).where(and(eq(locations.id, appointment.locationId), eq(locations.status, "ACTIVE"), eq(locations.bookingEnabled, true))).limit(1);
-    if (!location || !canCustomerManage(appointment, location.cancellationCutoffMinutes)) throw new Error("ამ ჯავშნის გადატანის ვადა უკვე გასულია ან სტატუსი აღარ იძლევა ცვლილების უფლებას.");
+    if (!location || !canCustomerManage(appointment, location.cancellationCutoffMinutes)) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "ამ ჯავშნის გადატანის ვადა უკვე გასულია ან სტატუსი აღარ იძლევა ცვლილების უფლებას." });
     const minimumStart = new Date(Date.now() + location.minimumNoticeMinutes * 60_000);
     const maximumStart = new Date(Date.now() + location.maximumAdvanceDays * 86_400_000);
     if (input.startsAt < minimumStart || input.startsAt > maximumStart) throw new TRPCError({ code: "CONFLICT", message: "არჩეული დრო ჩაწერის დაშვებულ დიაპაზონში არ არის." });
@@ -768,19 +776,19 @@ export const publicRouter = router({
   joinWaitlist: publicProcedure.input(publicWaitlistCreateSchema).mutation(async ({ input }) => {
     const db = await requireDb();
     const normalizedPhone = normalizeGeorgianPhone(input.phone);
-    if (!normalizedPhone) throw new Error("მიუთითეთ სწორი ქართული მობილურის ნომერი.");
+    if (!normalizedPhone) throw new TRPCError({ code: "BAD_REQUEST", message: PHONE_ERROR });
     const normalizedEmail = normalizeEmail(input.email);
     const [existingRequest] = await db.select({ id: waitlistEntries.id }).from(waitlistEntries).where(eq(waitlistEntries.idempotencyKey, input.idempotencyKey)).limit(1);
     if (existingRequest) return { id: existingRequest.id, replayed: true };
     const [location] = await db.select().from(locations).where(and(eq(locations.publicSlug, input.slug), eq(locations.status, "ACTIVE"), eq(locations.bookingEnabled, true))).limit(1);
-    if (!location) throw new Error("ეს ჩაწერის ბმული აღარ არის აქტიური.");
+    if (!location) throw new TRPCError({ code: "NOT_FOUND", message: "ეს ჩაწერის ბმული აღარ არის აქტიური." });
     if (!await isOrganizationTrialPublicBookingActive(location.organizationId)) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "ონლაინ ჩაწერა ამ სალონისთვის დროებით მიუწვდომელია." });
     assertWaitlistFuturePreference(input, location.timezone);
     const [service] = await db.select().from(services).where(and(eq(services.id, input.serviceId), eq(services.organizationId, location.organizationId), eq(services.status, "ACTIVE"), eq(services.onlineBookingEnabled, true))).limit(1);
-    if (!service) throw new Error("არჩეული სერვისი ონლაინ ჩაწერისთვის მიუწვდომელია.");
+    if (!service) throw new TRPCError({ code: "BAD_REQUEST", message: "არჩეული სერვისი ონლაინ ჩაწერისთვის მიუწვდომელია." });
     if (input.staffProfileId) {
       const [eligible] = await db.select({ id: staffProfiles.id }).from(staffProfiles).innerJoin(staffLocations, eq(staffProfiles.id, staffLocations.staffProfileId)).innerJoin(staffServices, eq(staffProfiles.id, staffServices.staffProfileId)).where(and(eq(staffProfiles.id, input.staffProfileId), eq(staffProfiles.status, "ACTIVE"), eq(staffProfiles.onlineBookingVisible, true), eq(staffLocations.locationId, location.id), eq(staffServices.serviceId, service.id), eq(staffServices.canPerform, true))).limit(1);
-      if (!eligible) throw new Error("არჩეული სპეციალისტი ამ სერვისისთვის მიუწვდომელია.");
+      if (!eligible) throw new TRPCError({ code: "BAD_REQUEST", message: "არჩეული სპეციალისტი ამ სერვისისთვის მიუწვდომელია." });
     }
     const id = nanoid(21);
     await db.transaction(async tx => {

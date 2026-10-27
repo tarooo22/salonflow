@@ -10,7 +10,10 @@ import { RevealGroup, RevealItem } from "./HomeMotion";
 export type CatalogCategory = { id: string; slug: string; nameKa: string; iconKey: string };
 export type CatalogListing = {
   publicSlug: string;
+  /** Branch name. */
   name: string;
+  /** Business name (organizations.name); the headline of the card when it differs from the branch name. */
+  organizationName?: string | null;
   areaLabelKa: string | null;
   publicDescription: string | null;
   coverImageUrl: string | null;
@@ -18,14 +21,26 @@ export type CatalogListing = {
   categories: CatalogCategory[];
   promotion: { tier: string; disclosure: string | null } | null;
   approvedAt?: string | Date | null;
+  /** Present only when the owner allowed map visibility (the server never sends coordinates otherwise). */
+  mapPoint?: { latitudeE6: number; longitudeE6: number } | null;
+  /** Set on the client by "near me"; never stored. */
+  distanceKm?: number | null;
 };
 
 export const NEW_LISTING_DAYS = 30;
 
+/** Business name first, branch second ("Visage Beauty Studio" / "ვაკის ფილიალი"); one line when both are the same. */
+export function businessAndBranch(organizationName: string | null | undefined, branchName: string) {
+  const business = organizationName?.trim();
+  const branch = branchName.trim();
+  if (!business || business.toLocaleLowerCase() === branch.toLocaleLowerCase()) return { primary: branch, secondary: null };
+  return { primary: business, secondary: branch };
+}
+
 export const ui = {
-  ka: { recommended: "რეკომენდებული", ad: "ფასიანი განთავსება", adSr: " — ფასიანი განთავსება", fresh: "ახალი", haveBusiness: "ბიზნესი გაქვს?", addPlace: "დაამატე შენი ადგილი", scrollPrev: "წინა ადგილები", scrollNext: "შემდეგი ადგილები", save: "შენახვა", unsave: "შენახულიდან ამოშლა" },
-  en: { recommended: "Recommended", ad: "Paid placement", adSr: " — paid placement", fresh: "New", haveBusiness: "Own a business?", addPlace: "Add your place", scrollPrev: "Previous places", scrollNext: "Next places", save: "Save", unsave: "Remove from saved" },
-  ru: { recommended: "Рекомендуем", ad: "Платное размещение", adSr: " — платное размещение", fresh: "Новое", haveBusiness: "У вас свой бизнес?", addPlace: "Добавьте своё место", scrollPrev: "Предыдущие места", scrollNext: "Следующие места", save: "Сохранить", unsave: "Убрать из сохранённых" },
+  ka: { recommended: "რეკომენდებული", ad: "ფასიანი განთავსება", adSr: " — ფასიანი განთავსება", fresh: "ახალი", haveBusiness: "ბიზნესი გაქვს?", addPlace: "დაამატე შენი ადგილი", km: "კმ", scrollPrev: "წინა ადგილები", scrollNext: "შემდეგი ადგილები", save: "შენახვა", unsave: "შენახულიდან ამოშლა" },
+  en: { recommended: "Recommended", ad: "Paid placement", adSr: " — paid placement", fresh: "New", haveBusiness: "Own a business?", addPlace: "Add your place", km: "km", scrollPrev: "Previous places", scrollNext: "Next places", save: "Save", unsave: "Remove from saved" },
+  ru: { recommended: "Рекомендуем", ad: "Платное размещение", adSr: " — платное размещение", fresh: "Новое", haveBusiness: "У вас свой бизнес?", addPlace: "Добавьте своё место", km: "км", scrollPrev: "Предыдущие места", scrollNext: "Следующие места", save: "Сохранить", unsave: "Убрать из сохранённых" },
 } as const;
 
 export function cssVars(vars: Record<string, string>) {
@@ -40,6 +55,11 @@ const CATEGORY_ICONS: Record<string, LucideIcon> = {
 
 export function categoryIcon(iconKey: string | null | undefined): LucideIcon {
   return CATEGORY_ICONS[(iconKey ?? "").trim().toLowerCase()] ?? Sparkles;
+}
+
+/** "0,8" / "3,4" / "12": one decimal under 10 km, whole kilometres beyond. */
+export function formatDistanceKm(km: number, locale: "ka" | "en" | "ru" = "ka") {
+  return new Intl.NumberFormat(locale === "ka" ? "ka-GE" : locale === "ru" ? "ru-RU" : "en-GB", { maximumFractionDigits: km < 10 ? 1 : 0 }).format(km);
 }
 
 export function listingMatchesVertical(listing: Pick<CatalogListing, "categories">, vertical: Vertical | null) {
@@ -70,6 +90,7 @@ export function SalonCard({ item, eager = false }: { item: CatalogListing; eager
   const promoted = item.promotion?.tier === "VIP" ? "VIP" : item.promotion?.tier === "RECOMMENDED" ? text.recommended : null;
   const fresh = !promoted && isNewListing(item);
   const Icon = categoryIcon(item.categories[0]?.iconKey);
+  const title = businessAndBranch(item.organizationName, item.name);
   const showCover = Boolean(item.coverImageUrl) && !broken;
   return <article className="sc">
     <Link href={`/salon/${item.publicSlug}`} className="sc-link">
@@ -77,15 +98,16 @@ export function SalonCard({ item, eager = false }: { item: CatalogListing; eager
         {showCover
           ? <img src={item.coverImageUrl!} alt={item.coverImageAltKa ?? ""} loading={eager ? "eager" : "lazy"} onError={() => setBroken(true)} />
           : <>
-            <span className="sc-initial" aria-hidden="true">{Array.from(item.name.trim())[0] ?? ""}</span>
+            <span className="sc-initial" aria-hidden="true">{Array.from(title.primary)[0] ?? ""}</span>
             <Icon className="sc-icon" aria-hidden="true" />
           </>}
         {promoted ? <span className="sc-chip" data-kind={item.promotion?.tier === "VIP" ? "vip" : "rec"} title={item.promotion?.disclosure ?? text.ad}>{promoted}<span className="sr-only">{text.adSr}</span></span>
           : fresh ? <span className="sc-chip" data-kind="new">{text.fresh}</span> : null}
       </div>
       <div className="sc-body">
-        <h3 id={nameId} className="sc-name">{item.name}</h3>
-        {item.areaLabelKa ? <p className="sc-area"><MapPin className="size-3.5 shrink-0" aria-hidden="true" />{item.areaLabelKa}</p> : null}
+        <h3 id={nameId} className="sc-name">{title.primary}</h3>
+        {title.secondary ? <p className="sc-cats">{title.secondary}</p> : null}
+        {item.areaLabelKa || item.distanceKm != null ? <p className="sc-area"><MapPin className="size-3.5 shrink-0" aria-hidden="true" />{item.areaLabelKa}{item.areaLabelKa && item.distanceKm != null ? " · " : ""}{item.distanceKm != null ? <span className="sc-dist cw-num">{formatDistanceKm(item.distanceKm, locale)} {text.km}</span> : null}</p> : null}
         {item.categories.length ? <p className="sc-cats">{item.categories.map(category => category.nameKa).join(", ")}</p> : null}
         <div className="sc-vchips">{verticals.map(id => <span key={id} className="sc-vchip" style={cssVars({ "--sc-bg": verticalStyle(id).bg, "--sc-ink": verticalStyle(id).ink })}>{verticalLabel(id, locale)}</span>)}</div>
       </div>

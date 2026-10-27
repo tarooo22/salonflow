@@ -51,6 +51,7 @@ const INTL_LOCALES = { ka: "ka-GE", en: "en-GB", ru: "ru-RU" } as const;
 
 /** Medium date + short time in the visitor's language (public pages). */
 export function formatDateTimeForLocale(value: Date, locale: keyof typeof INTL_LOCALES, timeZone?: string) {
+  if (locale === "ka") return formatKaDateTime(value, timeZone); // ka-GE ICU data is missing in many browsers
   return new Intl.DateTimeFormat(INTL_LOCALES[locale], { dateStyle: "medium", timeStyle: "short", ...(timeZone ? { timeZone } : {}) }).format(value);
 }
 

@@ -8,7 +8,7 @@ import { CheckCircle2, Eye, EyeOff, LockKeyhole, ShieldAlert, ShieldCheck, UserR
 import { FormEvent, useState } from "react";
 import { Link, useLocation, useRoute } from "wouter";
 
-const ROLE_LABEL: Record<string, string> = { MANAGER: "მენეჯერი", RECEPTIONIST: "რეცეფცია", STAFF: "სპეციალისტი" };
+const ROLE_LABEL: Record<string, string> = { MANAGER: "მენეჯერი", RECEPTIONIST: "ადმინისტრატორი", STAFF: "სპეციალისტი" };
 
 export default function AcceptInvite() {
   const [, params] = useRoute("/invite/:token");
@@ -68,7 +68,7 @@ export default function AcceptInvite() {
               <p><span className="text-[var(--sf-muted)]">ორგანიზაცია:</span> <span className="font-semibold">{invite.organizationName}</span></p>
               <p><span className="text-[var(--sf-muted)]">ელფოსტა:</span> <span className="font-semibold">{invite.email}</span></p>
               <p><span className="text-[var(--sf-muted)]">როლი:</span> <span className="font-semibold">{ROLE_LABEL[invite.role] ?? invite.role}</span></p>
-              <p><span className="text-[var(--sf-muted)]">დისპლეი:</span> <span className="font-semibold">{invite.publicDisplayName}</span></p>
+              <p><span className="text-[var(--sf-muted)]">სახელი კატალოგში:</span> <span className="font-semibold">{invite.publicDisplayName}</span></p>
             </div> : null}
           </div>
           <div className="px-6 py-7 sm:px-8">

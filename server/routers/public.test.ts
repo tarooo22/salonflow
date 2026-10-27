@@ -3,7 +3,7 @@ process.env.ENFORCE_OPENING_HOURS = "true";
 import { MySqlDialect } from "drizzle-orm/mysql-core";
 import { describe, expect, it, vi } from "vitest";
 
-const mocked = vi.hoisted(() => ({ db: null as unknown, ids: [] as string[], isOrganizationTrialPublicBookingActive: vi.fn(async () => true), storageGetSignedUrl: vi.fn(async (key: string) => `https://r2.test/${key}`) }));
+const mocked = vi.hoisted(() => ({ db: null as unknown, ids: [] as string[], isOrganizationTrialPublicBookingActive: vi.fn(async () => true), storageGetSignedUrl: vi.fn(async (key: string) => `https://r2.test/${key}`), notifyNewOnlineBooking: vi.fn(async () => undefined) }));
 
 vi.mock("../db", () => ({
   requireDb: vi.fn(async () => mocked.db),
@@ -11,6 +11,7 @@ vi.mock("../db", () => ({
 vi.mock("nanoid", () => ({ nanoid: vi.fn(() => mocked.ids.shift() ?? "generated_id_000000001") }));
 vi.mock("../lib/trialAccess", () => ({ isOrganizationTrialPublicBookingActive: mocked.isOrganizationTrialPublicBookingActive }));
 vi.mock("../storage", () => ({ storageGetSignedUrl: mocked.storageGetSignedUrl }));
+vi.mock("../lib/notifications", () => ({ notifyNewOnlineBooking: mocked.notifyNewOnlineBooking, resolveSiteOrigin: () => "https://chawera.test" }));
 
 import { dateKeyInTimeZone, zonedDateTimeToUtc } from "../../shared/timezones";
 import { assertWaitlistFuturePreference, canCustomerManage, publicRouter } from "./public";
@@ -134,14 +135,14 @@ describe("public booking router safeguards", () => {
 
   it("returns real contact context and clearly scoped specialist availability hours for a booking catalog", async () => {
     mocked.db = publicCatalogDb([
-      [{ location: { id: ids.locationId, organizationId: ids.organizationId, publicSlug: "gldani-beauty", name: "გლდანი", timezone: "Asia/Tbilisi", address: "გლდანი", phone: "+995555000000", email: "hello@example.com", publicDescription: "მზრუნველი მომსახურება", cancellationCutoffMinutes: 180 } }],
+      [{ organizationName: "Beauty Group", location: { id: ids.locationId, organizationId: ids.organizationId, publicSlug: "gldani-beauty", name: "გლდანი", timezone: "Asia/Tbilisi", address: "გლდანი", phone: "+995555000000", email: "hello@example.com", publicDescription: "მზრუნველი მომსახურება", cancellationCutoffMinutes: 180 } }],
       [{ service: { id: ids.serviceId, nameKa: "თმის შეჭრა", defaultDurationMinutes: 60, priceTetri: 4_000 }, category: { nameKa: "თმის მოვლა" } }],
       [{ id: ids.staffProfileId, name: "ლელა", specialty: "სტილისტი", bio: null, avatarKey: "salons/org/staff.webp", serviceId: ids.serviceId }, { id: "staff_profile_002", name: "ნინო", specialty: null, bio: null, avatarKey: null, serviceId: ids.serviceId }],
       [{ weekday: 0, startLocalTime: "09:00", endLocalTime: "18:00" }],
     ]);
 
     const result = await caller().bookingCatalog("gldani-beauty");
-    expect(result?.location).toEqual(expect.objectContaining({ phone: "+995555000000", email: "hello@example.com", publicDescription: "მზრუნველი მომსახურება", cancellationCutoffMinutes: 180, workingHours: [{ weekday: 0, startLocalTime: "09:00", endLocalTime: "18:00" }] }));
+    expect(result?.location).toEqual(expect.objectContaining({ organizationName: "Beauty Group", phone: "+995555000000", email: "hello@example.com", publicDescription: "მზრუნველი მომსახურება", cancellationCutoffMinutes: 180, workingHours: [{ weekday: 0, startLocalTime: "09:00", endLocalTime: "18:00" }] }));
     expect(result?.team[0]).toMatchObject({ id: ids.staffProfileId, avatarUrl: "/manus-storage/salons/org/staff.webp", eligibleServiceIds: [ids.serviceId] });
     expect(result?.team[1]).toMatchObject({ avatarUrl: null });
     expect(JSON.stringify(result?.team)).not.toContain("avatarKey");
@@ -214,12 +215,15 @@ describe("public booking router safeguards", () => {
     const input = { ...availabilityInput(), startsAt: localStart(10), staffProfileId: "ANY_AVAILABLE" as const, firstName: "თამარი", phone: "+995 555 12 34 56", bookingTermsConsent: true as const, idempotencyKey: "booking_any_available_001" };
     const result = await caller().commitBooking(input);
     expect(result).toMatchObject({ confirmed: true, replayed: false, assignedStaffName: "ნინო", endsAt: persistedEndsAt });
+    expect(mocked.notifyNewOnlineBooking).toHaveBeenCalledTimes(1);
+    expect(mocked.notifyNewOnlineBooking).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ appointmentId: "appointment_any_001", manageToken: result.confirmationToken, origin: "https://chawera.test" }));
     expect(db.values).toHaveBeenCalledWith(expect.objectContaining({ staffProfileId: "staff_any_01" }));
 
     mocked.db = anyAvailableCommitDb([[{ id: "appointment_any_001", endsAt: persistedEndsAt }], [{ name: "ნინო" }]], []);
     const replay = await caller().commitBooking(input);
     expect(replay).toMatchObject({ confirmed: true, replayed: true, assignedStaffName: "ნინო", endsAt: persistedEndsAt });
     expect(replay.confirmationToken).toBe(result.confirmationToken);
+    expect(mocked.notifyNewOnlineBooking).toHaveBeenCalledTimes(1); // idempotent replay sends nothing
   });
 
   it("falls back to the next eligible any-available candidate after final transactional conflict re-check", async () => {
@@ -242,7 +246,7 @@ describe("public booking router safeguards", () => {
       [], [activeLocation], [activeService], [{ id: "staff_any_01", name: "ნინო", durationOverrideMinutes: null }],
     ], [[], [workingRule], [], exceptions, [], []]);
     mocked.db = db;
-    await expect(caller().commitBooking({ ...availabilityInput(), startsAt, staffProfileId: "ANY_AVAILABLE", firstName: "თამარი", phone: "+995 555 12 34 56", bookingTermsConsent: true, idempotencyKey: "booking_hours_guard_001" })).rejects.toMatchObject({ code: "CONFLICT", message: "The selected time is no longer available" });
+    await expect(caller().commitBooking({ ...availabilityInput(), startsAt, staffProfileId: "ANY_AVAILABLE", firstName: "თამარი", phone: "+995 555 12 34 56", bookingTermsConsent: true, idempotencyKey: "booking_hours_guard_001" })).rejects.toMatchObject({ code: "CONFLICT", message: "ეს დრო ახლახან დაიკავეს. აირჩიეთ სხვა თავისუფალი დრო." });
     expect(db.values).not.toHaveBeenCalledWith(expect.objectContaining({ source: "PUBLIC_WEB" }));
   });
 
@@ -396,6 +400,6 @@ describe("public booking router safeguards", () => {
       phone: "abcdef",
       bookingTermsConsent: true,
       idempotencyKey: "booking_idempotency_001",
-    })).rejects.toThrow("A valid Georgian mobile phone number is required");
+    })).rejects.toMatchObject({ code: "BAD_REQUEST", message: "შეიყვანე სწორი ქართული მობილურის ნომერი." });
   });
 });

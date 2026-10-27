@@ -295,6 +295,32 @@
 .cw-loc-link { display: inline-flex; align-items: center; gap: 0.35rem; min-height: 2.25rem; padding: 0 0.5rem; border-radius: 8px; font-size: 0.875rem; font-weight: 700; color: var(--sf-accent-ink); text-decoration: underline; text-underline-offset: 0.2em; }
 .cw-loc-link:hover { background: var(--sf-accent-soft); }
 
+/* ---- Near me ---- */
+
+.sc-dist { font-weight: 700; color: var(--sf-text); white-space: nowrap; }
+.nm { display: grid; gap: 8px; padding-top: 12px; }
+.nm-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.nm-note { font-size: 14px; line-height: 1.5; color: var(--sf-muted); }
+.nm-msg { font-size: 14px; line-height: 1.5; color: var(--sf-text); }
+.nm-msg--warn { color: var(--sf-danger); font-weight: 600; }
+.nm-btn:disabled { cursor: progress; opacity: 0.7; }
+
+/* ---- Category landing page ---- */
+
+.cp-crumbs { padding-top: 20px; font-size: 14px; color: var(--sf-muted); }
+.cp-crumbs ol { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin: 0; padding: 0; list-style: none; }
+.cp-crumbs li + li::before { content: "/"; margin-right: 8px; color: var(--sf-border-strong); }
+.cp-crumbs a { display: inline-flex; align-items: center; min-height: 32px; font-weight: 600; text-decoration: underline; text-underline-offset: 0.2em; }
+.cp-crumbs a:hover { color: var(--sf-accent-ink); }
+.cp-intro { padding-block: 12px 4px; }
+.cp-intro h1 { font-size: clamp(1.75rem, 4vw, 2.5rem); font-weight: 800; line-height: 1.2; letter-spacing: 0; }
+.cp-intro .cw-lede { max-width: 40rem; margin-top: 12px; }
+.cp-count { margin-top: 10px; font-size: 14px; color: var(--sf-muted); }
+.cp-block { padding-block: 32px 0; }
+.cp-block:last-of-type { padding-bottom: 56px; }
+.cp-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 0; padding: 0; list-style: none; }
+.cp-empty { display: grid; gap: 12px; justify-items: start; }
+
 @media (prefers-reduced-motion: reduce) {
   .sc, .sc-heart, .sc-arrow, .sc-cover img, .hb-link, .hb-link img, .hb-nav, .hb-dot, .hp-icon, .hh-word, .hm-band-btn, .hm-bar-btn, .cw-chip, .hm-vchip, .cw-map-marker, .cw-loc { transition: none; }
   .sc:hover, .sc:hover .sc-cover img, .hp-tile:hover .hp-icon, .hm-band-btn:hover, .hb-link:hover img, .sc-heart:hover, .hb-nav:hover { transform: none; }

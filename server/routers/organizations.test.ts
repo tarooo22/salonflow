@@ -164,3 +164,86 @@ describe("organizations.listLocationOpeningHours", () => {
     expect(where).toHaveBeenCalledOnce();
   });
 });
+
+describe("organizations.setLocationOpeningHours", () => {
+  const days = [
+    { weekday: 0, open: true, startLocalTime: "10:00", endLocalTime: "19:30" },
+    { weekday: 1, open: true, startLocalTime: "10:00", endLocalTime: "19:30" },
+    { weekday: 5, open: false, startLocalTime: "10:00", endLocalTime: "18:00" },
+  ];
+  const input = { organizationId: "organization_0001", locationId: "location_00000001", days };
+
+  function openingHoursDb(locationRows: unknown[]) {
+    const calls: string[] = [];
+    const insertedValues: unknown[] = [];
+    const tx = {
+      select: (columns: Record<string, unknown>) => ({ from: () => ({
+        where: () => "id" in columns
+          ? { limit: () => ({ for: async () => { calls.push("lock"); return locationRows; } }) }
+          : { orderBy: async () => { calls.push("read"); return [{ weekday: 2, opensAt: "09:00:00", closesAt: "17:00:00" }]; } },
+      }) }),
+      delete: () => ({ where: async () => { calls.push("delete"); } }),
+      insert: () => ({ values: async (rows: unknown) => { calls.push("insert"); insertedValues.push(rows); } }),
+    };
+    const transaction = vi.fn(async (callback: (tx: unknown) => Promise<void>) => callback(tx));
+    return { db: { transaction }, calls, insertedValues, transaction };
+  }
+
+  it("is OWNER/MANAGER only and replaces the rows plus an audit entry in one transaction", async () => {
+    mocked.requireOrganizationRole.mockClear();
+    mocked.nanoid.mockReturnValue("generated_id_0000000001");
+    const harness = openingHoursDb([{ id: "location_00000001" }]);
+    mocked.db = harness.db;
+
+    await expect(organizationRouter.createCaller({ user } as never).setLocationOpeningHours(input)).resolves.toEqual({ success: true, openDays: 2 });
+
+    expect(mocked.requireOrganizationRole).toHaveBeenCalledWith(user, "organization_0001", ["OWNER", "MANAGER"]);
+    expect(harness.transaction).toHaveBeenCalledTimes(1);
+    expect(harness.calls).toEqual(["lock", "read", "delete", "insert", "insert"]);
+    expect(harness.insertedValues[0]).toEqual([
+      expect.objectContaining({ locationId: "location_00000001", weekday: 0, startLocalTime: "10:00:00", endLocalTime: "19:30:00" }),
+      expect.objectContaining({ locationId: "location_00000001", weekday: 1, startLocalTime: "10:00:00", endLocalTime: "19:30:00" }),
+    ]);
+    expect(harness.insertedValues[1]).toEqual(expect.objectContaining({
+      action: "LOCATION_OPENING_HOURS_CHANGED", entityType: "location", entityId: "location_00000001", organizationId: "organization_0001", actorUserId: user.id,
+      beforeState: { days: [{ weekday: 2, opensAt: "09:00:00", closesAt: "17:00:00" }] },
+      afterState: { days: [{ weekday: 0, opensAt: "10:00", closesAt: "19:30" }, { weekday: 1, opensAt: "10:00", closesAt: "19:30" }] },
+    }));
+  });
+
+  it("rejects a caller outside the organization before touching the database", async () => {
+    const harness = openingHoursDb([{ id: "location_00000001" }]);
+    mocked.db = harness.db;
+    mocked.requireOrganizationRole.mockRejectedValueOnce(new Error("FORBIDDEN"));
+    await expect(organizationRouter.createCaller({ user } as never).setLocationOpeningHours(input)).rejects.toThrow("FORBIDDEN");
+    expect(harness.transaction).not.toHaveBeenCalled();
+  });
+
+  it("does not write when the location is not an active location of the organization", async () => {
+    const harness = openingHoursDb([]);
+    mocked.db = harness.db;
+    await expect(organizationRouter.createCaller({ user } as never).setLocationOpeningHours(input)).rejects.toMatchObject({ code: "NOT_FOUND" });
+    expect(harness.calls).toEqual(["lock"]);
+  });
+
+  it.each([
+    ["duplicate weekdays", [days[0]!, days[0]!]],
+    ["a weekday above 6", [{ ...days[0]!, weekday: 7 }]],
+    ["an end before the start", [{ ...days[0]!, startLocalTime: "18:00", endLocalTime: "10:00" }]],
+    ["an equal start and end", [{ ...days[0]!, endLocalTime: "10:00" }]],
+    ["a malformed time", [{ ...days[0]!, startLocalTime: "9:00" }]],
+    ["every day closed (an empty set would mean no limit)", [{ ...days[0]!, open: false }]],
+    ["more than seven days", Array.from({ length: 8 }, (_, weekday) => ({ ...days[0]!, weekday }))],
+  ])("rejects %s", async (_label, badDays) => {
+    const harness = openingHoursDb([{ id: "location_00000001" }]);
+    mocked.db = harness.db;
+    await expect(organizationRouter.createCaller({ user } as never).setLocationOpeningHours({ ...input, days: badDays })).rejects.toThrow();
+    expect(harness.transaction).not.toHaveBeenCalled();
+  });
+
+  it("ignores the times of a closed day", async () => {
+    const harness = openingHoursDb([{ id: "location_00000001" }]);
+    mocked.db = harness.db;
+    await expect(organizationRouter.createCaller({ user } as never).setLocationOpeningHours({ ...input, days: [days[0]!, { weekday: 6, open: false, startLocalTime: "20:00", endLocalTime: "08:00" }] })).resolves.toEqual({ success: true, openDays: 1 });
+  });
+});

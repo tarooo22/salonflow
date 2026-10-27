@@ -1,7 +1,7 @@
 import { CatalogFooter, CatalogHeader } from "@/components/catalog/CatalogChrome";
 import { HeroIn } from "@/components/catalog/HomeMotion";
 import { listingMatchesVertical, SalonCard, type CatalogListing } from "@/components/catalog/Tickets";
-import { DiscoveryFilters, DiscoveryHead, marketplaceDiscoveryFilters, marketplaceDiscoveryHref } from "@/components/public/MarketplaceDiscovery";
+import { DiscoveryFilters, DiscoveryHead, marketplaceDiscoveryFilters, marketplaceDiscoveryHref, NearMe, sortByDistance, useNearMe } from "@/components/public/MarketplaceDiscovery";
 import { usePublicMeta } from "@/components/public/PublicMeta";
 import { usePublicLocale } from "@/contexts/PublicLocaleContext";
 import { trpc } from "@/lib/trpc";
@@ -150,10 +150,13 @@ export default function MarketplaceMap() {
     return () => window.clearTimeout(timer);
   }, [searchDraft, areaDraft, search, area, categorySlug, setLocation]);
 
-  const input = useMemo(() => ({ limit: 48, offset: 0, categorySlug, search: search.trim() || undefined, area: area.trim() || undefined }), [categorySlug, search, area]);
+  const near = useNearMe();
+  const input = useMemo(() => ({ limit: near.point ? 100 : 48, offset: 0, categorySlug, search: search.trim() || undefined, area: area.trim() || undefined }), [near.point, categorySlug, search, area]);
   const result = trpc.marketplace.mapResults.useQuery(input);
   const allListings = (result.data?.items ?? []) as unknown as MapListing[];
-  const listings = allListings.filter(item => listingMatchesVertical(item as unknown as CatalogListing, vertical));
+  const inVertical = allListings.filter(item => listingMatchesVertical(item as unknown as CatalogListing, vertical));
+  // "Near me": nearest first, computed here from the owner-approved map points; the visitor's position is never sent anywhere.
+  const listings: MapListing[] = near.point ? sortByDistance(inVertical, near.point) : inVertical;
   const submitNow = () => {
     const nextSearch = searchDraft.trim();
     const nextArea = areaDraft.trim();
@@ -204,6 +207,8 @@ export default function MarketplaceMap() {
           hasFilters={hasFilters}
           onClear={clearFilters}
       />
+
+      <NearMe near={near} placed={near.point ? listings.length : 0} rest={0} />
 
       <section className="pg-results" aria-label={text.mapAndList}>
         <div className="cw-container">

@@ -27,17 +27,19 @@ vi.mock("@/components/workspace/SettingsPrimitives", () => ({
 }));
 vi.mock("@/lib/trpc", () => ({
   trpc: {
-    useUtils: () => ({ organizations: { listLocations: { invalidate: vi.fn() } }, productivity: { preferences: { invalidate: vi.fn() } } }),
+    useUtils: () => ({ organizations: { listLocations: { invalidate: vi.fn() }, listLocationOpeningHours: { invalidate: vi.fn() } } , productivity: { preferences: { invalidate: vi.fn() } } }),
     organizations: {
       listMine: { useQuery: () => query([{ organization: { id: "organization_001", name: "სილამაზის სივრცე" }, membership: { role: "OWNER" } }]) },
       listLocations: { useQuery: () => query([{ id: "location_001", name: "ვაკე", publicSlug: "vake-beauty", timezone: "Asia/Tbilisi", address: null, phone: null, email: null, bookingEnabled: true, slotIntervalMinutes: 15, minimumNoticeMinutes: 60, maximumAdvanceDays: 60, cancellationCutoffMinutes: 120 }]) },
       updateLocationSettings: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
+      listLocationOpeningHours: { useQuery: () => query([{ weekday: 0, opensAt: "10:00:00", closesAt: "19:30:00" }, { weekday: 1, opensAt: "10:00:00", closesAt: "19:30:00" }]) },
+      setLocationOpeningHours: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
     },
     productivity: { preferences: { useQuery: () => query({ settings: { density: "COMFORTABLE", reducedMotion: false, defaultRoute: "/app/today", inAppAlertCategories: ["OPERATIONAL"] } }) }, savePreferences: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) } },
   },
 }));
 
-import Settings, { branchBookingLink } from "./Settings";
+import Settings, { OpeningHoursEditor, branchBookingLink, copyMondayToWeekdays, hoursFromRows, hoursProblem } from "./Settings";
 
 describe("Settings profile and privacy surface", () => {
   it("builds the exact owner-shareable booking URL for a branch", () => {
@@ -60,5 +62,46 @@ describe("Settings profile and privacy surface", () => {
     expect(markup).not.toContain("ჩემი გარემო");
     expect(markup).toContain("პაკეტი და გადახდა");
     expect(markup).toContain('href="/app/billing"');
+  });
+});
+
+describe("Settings opening-hours editor", () => {
+  const rows = [{ weekday: 0, opensAt: "10:00:00", closesAt: "19:30:00" }, { weekday: 6, opensAt: "11:00:00", closesAt: "16:00:00" }];
+
+  it("maps saved rows to seven days, Monday first, closed where there is no row", () => {
+    const days = hoursFromRows(rows);
+    expect(days).toHaveLength(7);
+    expect(days[0]).toEqual({ weekday: 0, open: true, startLocalTime: "10:00", endLocalTime: "19:30" });
+    expect(days[1]!.open).toBe(false);
+    expect(days[6]).toEqual({ weekday: 6, open: true, startLocalTime: "11:00", endLocalTime: "16:00" });
+  });
+
+  it("proposes Monday–Friday when nothing has been saved yet", () => {
+    expect(hoursFromRows([]).map(day => day.open)).toEqual([true, true, true, true, true, false, false]);
+  });
+
+  it("copies Monday onto Tuesday–Friday only", () => {
+    const days = copyMondayToWeekdays(hoursFromRows(rows));
+    expect(days.slice(1, 5).every(day => day.open && day.startLocalTime === "10:00" && day.endLocalTime === "19:30")).toBe(true);
+    expect(days[5]!.open).toBe(false);
+    expect(days[6]!.startLocalTime).toBe("11:00");
+  });
+
+  it("rejects all-closed weeks and end-before-start", () => {
+    expect(hoursProblem(hoursFromRows(rows))).toBeNull();
+    expect(hoursProblem(hoursFromRows(rows).map(day => ({ ...day, open: false })))).toContain("ერთი სამუშაო დღე");
+    expect(hoursProblem(hoursFromRows(rows).map(day => day.weekday === 0 ? { ...day, endLocalTime: "09:00" } : day))).toContain("ორშაბათი");
+  });
+
+  it("renders seven Monday-first rows, the open/closed labels, the helper and the hint", () => {
+    const markup = renderToStaticMarkup(<OpeningHoursEditor organizationId="organization_001" locations={[{ id: "location_001", name: "ვაკე", timezone: "Asia/Tbilisi" }]} />);
+    const order = ["ორშაბათი", "სამშაბათი", "ოთხშაბათი", "ხუთშაბათი", "პარასკევი", "შაბათი", "კვირა"].map(label => markup.indexOf(`aria-label="${label}"`));
+    expect(order.every(position => position > -1)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+    expect(markup).toContain("ღიაა");
+    expect(markup).toContain("დაკეტილია");
+    expect(markup).toContain("ყველა სამუშაო დღეზე გადატანა");
+    expect(markup).toContain("ამ საათების მიღმა ონლაინ ჩაწერა არ იქნება შესაძლებელი.");
+    expect(markup).not.toContain('aria-label="ფილიალი"');
   });
 });

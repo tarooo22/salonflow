@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, inArray, isNull, like, lte, or } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, isNull, like, lte, notLike, or } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import {
   locationMarketplaceProfiles,
@@ -55,7 +55,7 @@ export function marketplacePublicMapPoint(input: { mapVisibility: boolean; latit
 
 export function marketplaceLaunchReadiness(input: { hasCoverImage: boolean; hasCoverAlt: boolean; hasPublicDescription: boolean; hasOnlineServices: boolean; hasCategoryLinks: boolean; bookingEnabled: boolean; mapVisibility: boolean; hasConfirmedMapPoint: boolean }) {
   const items = [
-    { key: "cover", label: "ტიტულური ფოტო", complete: input.hasCoverImage, action: "ტიტულური ფოტო ატვირთეთ გვერდზე „მედია და პროფილი“." },
+    { key: "cover", label: "ტიტულური ფოტო", complete: input.hasCoverImage, action: "ტიტულური ფოტო ატვირთეთ გვერდზე „ფოტოები და აღწერა“." },
     { key: "alt", label: "ფოტოს აღწერა", complete: input.hasCoverImage && input.hasCoverAlt, action: "დაამატეთ ტიტულური ფოტოს მოკლე აღწერა ქართულად." },
     { key: "description", label: "საჯარო აღწერა", complete: input.hasPublicDescription, action: "დაამატეთ მოკლე, ფაქტობრივი საჯარო აღწერა." },
     { key: "booking", label: "ონლაინ ჩაწერა", complete: input.bookingEnabled && input.hasOnlineServices, action: "ჩართეთ ონლაინ ჩაწერა და დატოვეთ მინიმუმ ერთი აქტიური სერვისი, რომელზეც ონლაინ ჩაწერა შეიძლება." },
@@ -128,15 +128,60 @@ async function assertOwnerLocation(user: Parameters<typeof requireOrganizationRo
   return { db, location };
 }
 
+/** Escapes LIKE wildcards so a visitor's "%" or "_" is matched literally (MySQL's default escape character is backslash). */
+export function escapeLikePattern(value: string) {
+  return value.replace(/[\\%_]/g, character => `\\${character}`);
+}
+
+/**
+ * LIKE patterns for service/category names: the phrase itself plus, for a single longer word, its first four letters
+ * (a cheap Georgian stem: "ფრჩხილები" also finds "ფრჩხილების მოვლა"). A prefix of the whole name or of a later word.
+ */
+export function directoryNamePatterns(search: string) {
+  const phrase = search.trim();
+  if (!phrase) return [];
+  const patterns = [`%${escapeLikePattern(phrase)}%`];
+  const letters = Array.from(phrase);
+  if (!/\s/.test(phrase) && letters.length >= 5) {
+    const stem = escapeLikePattern(letters.slice(0, 4).join(""));
+    patterns.push(`${stem}%`, `% ${stem}%`);
+  }
+  return patterns;
+}
+
+/** Field names a visitor may type instead of a service ("სილამაზე") and the category slugs they stand for. */
+function verticalSlugCondition(search: string) {
+  const word = search.trim().toLocaleLowerCase("ka-GE");
+  if (word === "სილამაზე") return and(notLike(marketplaceCategories.slug, "dental%"), notLike(marketplaceCategories.slug, "aesthetic%"), notLike(marketplaceCategories.slug, "cosmetology"));
+  if (word === "ესთეტიკა") return or(like(marketplaceCategories.slug, "aesthetic%"), eq(marketplaceCategories.slug, "cosmetology"));
+  if (word === "სტომატოლოგია") return like(marketplaceCategories.slug, "dental%");
+  return undefined;
+}
+
 async function approvedDirectoryRows(input: { categorySlug?: string; search?: string; area?: string; limit: number; offset: number }) {
   const db = await requireDb();
-  const searchCondition = input.search ? or(like(locations.name, `%${input.search}%`), like(organizations.name, `%${input.search}%`), like(locationMarketplaceProfiles.areaLabelKa, `%${input.search}%`)) : undefined;
-  const areaCondition = input.area ? like(locationMarketplaceProfiles.areaLabelKa, `%${input.area}%`) : undefined;
+  let searchCondition;
+  if (input.search) {
+    const escaped = escapeLikePattern(input.search);
+    // Locations offering an active, online-bookable service whose name (or whose marketplace category name) matches.
+    const matchingServiceLocations = db.select({ locationId: marketplaceLocationCategoryServices.locationId }).from(marketplaceLocationCategoryServices)
+      .innerJoin(services, eq(marketplaceLocationCategoryServices.serviceId, services.id))
+      .innerJoin(marketplaceCategories, eq(marketplaceLocationCategoryServices.categoryId, marketplaceCategories.id))
+      .where(and(eq(services.status, "ACTIVE"), eq(services.onlineBookingEnabled, true), eq(marketplaceCategories.isActive, true), or(...directoryNamePatterns(input.search).flatMap(pattern => [like(services.nameKa, pattern), like(marketplaceCategories.nameKa, pattern)]), verticalSlugCondition(input.search))));
+    searchCondition = or(
+      like(locations.name, `%${escaped}%`),
+      like(organizations.name, `%${escaped}%`),
+      like(locationMarketplaceProfiles.areaLabelKa, `%${escaped}%`),
+      inArray(locations.id, matchingServiceLocations),
+    );
+  }
+  const areaCondition = input.area ? like(locationMarketplaceProfiles.areaLabelKa, `%${escapeLikePattern(input.area)}%`) : undefined;
   const baseRows = await db.select({
     locationId: locations.id,
     organizationId: locations.organizationId,
     publicSlug: locations.publicSlug,
     name: locations.name,
+    organizationName: organizations.name,
     address: locations.address,
     areaLabelKa: locationMarketplaceProfiles.areaLabelKa,
     approvedAt: locationMarketplaceProfiles.approvedAt,
@@ -193,7 +238,7 @@ export const marketplaceRouter = router({
 
   directory: publicProcedure.input(marketplaceDirectorySchema).query(async ({ input }) => {
     const result = await approvedDirectoryRows(input);
-    return { ...result, items: result.items.map(item => marketplaceDirectoryPublicListing(item as typeof item & { address: unknown; latitudeE6: number | null; longitudeE6: number | null; mapVisibility: boolean })) };
+    return { ...result, items: result.items.map(item => marketplaceDirectoryPublicListing(item as typeof item & { address: unknown; latitudeE6: number | null; longitudeE6: number | null; mapVisibility: boolean }, true)) };
   }),
 
   mapResults: publicProcedure.input(marketplaceDirectorySchema).query(async ({ input }) => {

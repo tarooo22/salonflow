@@ -1,11 +1,12 @@
 import { and, asc, desc, eq, gte, lt } from "drizzle-orm";
+import { z } from "zod";
 import { nanoid } from "nanoid";
 import { TRPCError } from "@trpc/server";
 import { randomBytes } from "node:crypto";
 import { appointments, locations, organizationMemberships, scheduleExceptions, staffLocations, staffProfiles, users, workingHourRules } from "../../drizzle/schema";
 import { requireOrganizationRole } from "../access";
 import { requireDb } from "../db";
-import { locationScopeSchema, scheduleExceptionCreateSchema, scheduleExceptionUpdateSchema, staffMemberCreateSchema, staffPerformanceSchema, staffProfileCreateSchema, staffScheduleListSchema, staffScheduleRecordDeleteSchema, staffSelfProfileUpdateSchema, workingHourRuleCreateSchema, workingHourRuleUpdateSchema } from "../../shared/validation";
+import { opaqueIdSchema, locationScopeSchema, scheduleExceptionCreateSchema, scheduleExceptionUpdateSchema, staffMemberCreateSchema, staffPerformanceSchema, staffProfileCreateSchema, staffScheduleListSchema, staffScheduleRecordDeleteSchema, staffSelfProfileUpdateSchema, workingHourRuleCreateSchema, workingHourRuleUpdateSchema } from "../../shared/validation";
 import { protectedProcedure, router } from "../_core/trpc";
 import { hashPassword } from "../lib/passwords";
 import { normalizeEmail } from "../lib/normalization";
@@ -55,6 +56,17 @@ export const staffRouter = router({
       ...(input.experienceYears !== undefined ? { experienceYears: input.experienceYears } : {}),
       ...(input.avatarAltKa !== undefined ? { avatarAltKa: input.avatarAltKa } : {}),
     }).where(and(eq(staffProfiles.id, input.staffProfileId), eq(staffProfiles.membershipId, membership.id)));
+    return { success: true };
+  }),
+
+  setOnlineBookingVisible: protectedProcedure.input(z.object({ organizationId: opaqueIdSchema, staffProfileId: opaqueIdSchema, onlineBookingVisible: z.boolean() })).mutation(async ({ ctx, input }) => {
+    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER"]);
+    const db = await requireDb();
+    const [profile] = await db.select({ id: staffProfiles.id }).from(staffProfiles)
+      .innerJoin(organizationMemberships, eq(staffProfiles.membershipId, organizationMemberships.id))
+      .where(and(eq(staffProfiles.id, input.staffProfileId), eq(organizationMemberships.organizationId, input.organizationId), eq(staffProfiles.status, "ACTIVE"))).limit(1);
+    if (!profile) throw new TRPCError({ code: "NOT_FOUND", message: "სპეციალისტი ვერ მოიძებნა." });
+    await db.update(staffProfiles).set({ onlineBookingVisible: input.onlineBookingVisible }).where(eq(staffProfiles.id, input.staffProfileId));
     return { success: true };
   }),
 

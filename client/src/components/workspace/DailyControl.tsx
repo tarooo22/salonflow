@@ -32,7 +32,7 @@ export function DayCloseChecklist({ organizationId, locationId, businessDate, lo
   const rows = [
     { key: "PENDING", title: "მომლოდინე ჯავშნები", detail: pendingCount ? `${pendingCount} ჯავშანი გადასამოწმებელია` : "მომლოდინე ჯავშანი არ არის", href: "/app/calendar" },
     { key: "COMPLETED", title: "დასრულებული ვიზიტები", detail: `დასრულებულია ${completedCount}`, href: "/app/operations" },
-    { key: "OUTSTANDING", title: "დარჩენილი ბალანსი", detail: outstandingTetri ? `${outstandingLabel} გადასამოწმებელია` : "ბალანსი დახურულია", href: "/app/reports" },
+    { key: "OUTSTANDING", title: "დარჩენილი ბალანსი", detail: outstandingTetri ? `${outstandingLabel} გადასამოწმებელია` : "ბალანსი დახურულია", href: "/app/pos" },
     { key: "TOMORROW", title: "ხვალინდელი განრიგი", detail: "შემდეგი დღის პირველი ჩანაწერები", href: "/app/calendar" },
   ] as const;
   const toggle = (key: typeof rows[number]["key"]) => { const next = completed.includes(key) ? completed.filter(item => item !== key) : [...completed, key]; save.mutate({ organizationId, locationId, businessDate, completedKeys: next }); };

@@ -23,7 +23,7 @@ export function createBookingCalendarIcs(event: BookingCalendarEvent) {
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     "BEGIN:VEVENT",
-    `UID:${crypto.randomUUID()}@salonflow`,
+    `UID:${crypto.randomUUID()}@chawera`,
     `DTSTAMP:${now}`,
     `DTSTART:${formatIcsDate(event.startsAt)}`,
     `DTEND:${formatIcsDate(event.endsAt)}`,
@@ -42,7 +42,7 @@ export function downloadBookingCalendar(event: BookingCalendarEvent) {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = "salonflow-booking.ics";
+  anchor.download = "chawera-booking.ics";
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();

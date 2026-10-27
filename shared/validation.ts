@@ -248,6 +248,25 @@ export const guidedOnboardingSchema = z.object({
 });
 
 export const organizationScopeSchema = z.object({ organizationId: opaqueIdSchema });
+
+const openingTimeSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "დრო უნდა იყოს ფორმატით სს:წწ.");
+/** Replaces a location's weekly opening hours. weekday 0 = Monday … 6 = Sunday, times "HH:MM" local to the location. At least one open day: an empty list would mean "no restriction". */
+export const locationOpeningHoursSetSchema = z.object({
+  organizationId: opaqueIdSchema,
+  locationId: opaqueIdSchema,
+  days: z.array(z.object({
+    weekday: z.number().int().min(0).max(6),
+    open: z.boolean(),
+    startLocalTime: openingTimeSchema,
+    endLocalTime: openingTimeSchema,
+  })).min(1).max(7),
+}).superRefine((input, ctx) => {
+  if (new Set(input.days.map(day => day.weekday)).size !== input.days.length) ctx.addIssue({ code: "custom", path: ["days"], message: "ერთი დღე ორჯერ არ შეიძლება მიეთითოს." });
+  input.days.forEach((day, index) => {
+    if (day.open && day.startLocalTime >= day.endLocalTime) ctx.addIssue({ code: "custom", path: ["days", index, "endLocalTime"], message: "დახურვის დრო გახსნის დროს უნდა მოჰყვებოდეს." });
+  });
+  if (!input.days.some(day => day.open)) ctx.addIssue({ code: "custom", path: ["days"], message: "ერთი სამუშაო დღე მაინც უნდა იყოს ღია." });
+});
 export const locationScopeSchema = z.object({ organizationId: opaqueIdSchema, locationId: opaqueIdSchema.optional() });
 
 export const guidedTourScopeSchema = organizationScopeSchema.extend({
@@ -543,6 +562,15 @@ export const retailSaleCreateSchema = organizationScopeSchema.extend({
   lines: z.array(z.object({ productId: opaqueIdSchema, quantity: z.number().int().positive().max(99) })).min(1).max(20).refine(lines => new Set(lines.map(line => line.productId)).size === lines.length, "Products must be unique"),
   method: z.enum(["CASH", "CARD_TERMINAL", "BANK_TRANSFER", "ONLINE", "OTHER"]),
   note: z.string().trim().max(2_000).optional(),
+});
+
+/** Front-desk payment for one visit. Status, refunds, collector and time are always set by the server. */
+export const appointmentPaymentRecordSchema = organizationScopeSchema.extend({
+  appointmentId: opaqueIdSchema,
+  amountTetri: z.number().int().positive().max(100_000_000),
+  method: z.enum(["CASH", "CARD_TERMINAL", "BANK_TRANSFER"]),
+  idempotencyKey: z.string().trim().min(16).max(128).regex(/^[A-Za-z0-9_-]+$/),
+  note: z.string().trim().max(300).optional(),
 });
 
 export const calendarRangeSchema = z.object({

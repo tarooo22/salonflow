@@ -1,7 +1,7 @@
 import { CatalogFooter, CatalogHeader } from "@/components/catalog/CatalogChrome";
 import { HeroIn } from "@/components/catalog/HomeMotion";
 import { EmptyCatalog, listingMatchesVertical, newestListings, SalonGrid, SalonLoading, type CatalogListing as Listing } from "@/components/catalog/Tickets";
-import { DiscoveryFilters, DiscoveryHead, marketplaceDiscoveryFilters, marketplaceDiscoveryHref } from "@/components/public/MarketplaceDiscovery";
+import { DiscoveryFilters, DiscoveryHead, marketplaceCategoryHref, marketplaceDiscoveryFilters, marketplaceDiscoveryHref, NearMe, sortByDistance, useNearMe } from "@/components/public/MarketplaceDiscovery";
 import { usePublicMeta } from "@/components/public/PublicMeta";
 import { usePublicLocale } from "@/contexts/PublicLocaleContext";
 import { trpc } from "@/lib/trpc";
@@ -78,7 +78,8 @@ export default function MarketplaceDirectory() {
     return () => window.clearTimeout(timer);
   }, [searchDraft, areaDraft, search, area, categorySlug, setLocation]);
 
-  const input = useMemo(() => ({ limit, offset: 0, categorySlug, search: search.trim() || undefined, area: area.trim() || undefined }), [limit, categorySlug, search, area]);
+  const near = useNearMe();
+  const input = useMemo(() => ({ limit: near.point ? PAGE_MAX : limit, offset: 0, categorySlug, search: search.trim() || undefined, area: area.trim() || undefined }), [limit, near.point, categorySlug, search, area]);
   const directory = trpc.marketplace.directory.useQuery(input, { placeholderData: keepPreviousData });
   const submitNow = () => {
     const nextSearch = searchDraft.trim();
@@ -88,6 +89,8 @@ export default function MarketplaceDirectory() {
     setLocation(marketplaceDiscoveryHref("/salons", categorySlug, nextSearch, nextArea));
   };
   const chooseCategory = (nextCategory?: string) => {
+    // A category has its own indexable page; /salons?category= still works for old links.
+    if (nextCategory) { setLocation(marketplaceCategoryHref(nextCategory)); return; }
     setCategorySlug(nextCategory);
     if (nextCategory) setVertical(verticalForCategory(nextCategory));
     setLocation(marketplaceDiscoveryHref("/salons", nextCategory, searchDraft, area));
@@ -106,17 +109,20 @@ export default function MarketplaceDirectory() {
   const items = allItems.filter(item => listingMatchesVertical(item, vertical));
   // Paid placements first, then new listings, then the rest; each card discloses its own placement.
   const freshItems = newestListings(items.filter(item => !item.promotion));
-  const ordered = [
+  const featured = [
     ...items.filter(item => item.promotion?.tier === "VIP"),
     ...items.filter(item => item.promotion?.tier === "RECOMMENDED"),
     ...freshItems,
     ...items.filter(item => !item.promotion && !freshItems.includes(item)),
   ];
+  // "Near me" replaces that order: listings with a consented map point by distance, the rest after them. The position never leaves the browser.
+  const ordered: Listing[] = near.point ? sortByDistance(featured, near.point) : featured;
+  const placedCount = near.point ? ordered.filter(item => item.distanceKm != null).length : 0;
   const queryFilters = Boolean(categorySlug || search.trim() || area.trim());
   const hasFilters = queryFilters || vertical !== null;
   const mapHref = marketplaceDiscoveryHref("/salons/map", categorySlug, search, area);
   const verticalName = vertical ? verticalLabel(vertical, locale) : null;
-  const canShowMore = (directory.data?.total ?? 0) > allItems.length && limit < PAGE_MAX;
+  const canShowMore = (directory.data?.total ?? 0) > allItems.length && limit < PAGE_MAX && !near.point;
 
   return <div className="cw">
     <CatalogHeader />
@@ -144,6 +150,8 @@ export default function MarketplaceDirectory() {
         hasFilters={hasFilters}
         onClear={clearFilters}
       />
+
+      <NearMe near={near} placed={placedCount} rest={ordered.length - placedCount} />
 
       <section className="cw-container pg-results" aria-label={text.heroTitle}>
         {directory.isLoading ? <SalonLoading label={text.loading} count={8} />

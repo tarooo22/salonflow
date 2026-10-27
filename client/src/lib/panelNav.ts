@@ -105,3 +105,24 @@ export function isPanelNavActive(item: Pick<PanelNavItem, "href" | "also">, loca
   const path = location.split(/[?#]/)[0];
   return [item.href, ...(item.also ?? [])].some(href => path === href || path.startsWith(`${href}/`));
 }
+
+/** Pages a MANAGER may open although the rail does not link them (the pages themselves allow it). */
+const EXTRA_ROUTES: Partial<Record<PanelRole, readonly string[]>> = { MANAGER: ["/app/services"] };
+const ROLES: readonly PanelRole[] = ["OWNER", "MANAGER", "RECEPTIONIST", "STAFF"];
+const matchesRoute = (path: string, href: string) => path === href || path.startsWith(`${href}/`);
+const routesOf = (role: PanelRole) => [
+  ...panelNav(role).groups.filter(group => group.key !== "billing" && group.key !== "platform").flatMap(group => group.items.flatMap(item => [item.href, ...(item.also ?? [])])),
+  ...(EXTRA_ROUTES[role] ?? []),
+];
+
+/**
+ * Whether this role can use the page. Only the role-dependent business pages (the ones the rail shows
+ * for some roles and not others) are restricted; settings, billing, setup, trial and platform pages
+ * have their own guards. Unknown role (still loading, or no workspace yet) never blocks.
+ */
+export function isRouteAllowed(role: PanelRole | null | undefined, location: string) {
+  if (!role) return true;
+  const path = location.split(/[?#]/)[0];
+  const gated = ROLES.some(candidate => routesOf(candidate).some(href => matchesRoute(path, href)));
+  return !gated || routesOf(role).some(href => matchesRoute(path, href));
+}

@@ -6,7 +6,7 @@ import { requireOrganizationRole } from "../access";
 import { requireDb } from "../db";
 import { normalizeEmail, normalizeGeorgianPhone } from "../lib/normalization";
 import { claimTrialForOrganization, requireApprovedTrialForWorkspaceCreation } from "../lib/trialAccess";
-import { locationCreateSchema, locationSettingsUpdateSchema, opaqueIdSchema, organizationCreateSchema, organizationScopeSchema, organizationSetVerticalSchema, workspaceSetupSchema } from "../../shared/validation";
+import { locationCreateSchema, locationOpeningHoursSetSchema, locationSettingsUpdateSchema, opaqueIdSchema, organizationCreateSchema, organizationScopeSchema, organizationSetVerticalSchema, workspaceSetupSchema } from "../../shared/validation";
 import { protectedProcedure, router } from "../_core/trpc";
 
 export const organizationRouter = router({
@@ -176,5 +176,28 @@ export const organizationRouter = router({
       .innerJoin(locations, eq(locations.id, locationOpeningHours.locationId))
       .where(and(eq(locationOpeningHours.locationId, input.locationId), eq(locations.organizationId, input.organizationId)))
       .orderBy(asc(locationOpeningHours.weekday));
+  }),
+
+  /** Replaces the location's weekly opening hours (closed days have no row). OWNER/MANAGER; the location must belong to the organization and be ACTIVE. */
+  setLocationOpeningHours: protectedProcedure.input(locationOpeningHoursSetSchema).mutation(async ({ ctx, input }) => {
+    await requireOrganizationRole(ctx.user, input.organizationId, ["OWNER", "MANAGER"]);
+    const db = await requireDb();
+    const openDays = input.days.filter(day => day.open).sort((a, b) => a.weekday - b.weekday);
+    await db.transaction(async tx => {
+      // Locking the location row serialises two editors saving at once.
+      const [location] = await tx.select({ id: locations.id }).from(locations)
+        .where(and(eq(locations.id, input.locationId), eq(locations.organizationId, input.organizationId), eq(locations.status, "ACTIVE"))).limit(1).for("update");
+      if (!location) throw new TRPCError({ code: "NOT_FOUND", message: "ფილიალი ვერ მოიძებნა ან აქტიური არ არის." });
+      const before = await tx.select({ weekday: locationOpeningHours.weekday, opensAt: locationOpeningHours.startLocalTime, closesAt: locationOpeningHours.endLocalTime }).from(locationOpeningHours)
+        .where(eq(locationOpeningHours.locationId, input.locationId)).orderBy(asc(locationOpeningHours.weekday));
+      await tx.delete(locationOpeningHours).where(eq(locationOpeningHours.locationId, input.locationId));
+      await tx.insert(locationOpeningHours).values(openDays.map(day => ({ id: nanoid(21), locationId: input.locationId, weekday: day.weekday, startLocalTime: `${day.startLocalTime}:00`, endLocalTime: `${day.endLocalTime}:00` })));
+      await tx.insert(auditLogs).values({
+        id: nanoid(21), organizationId: input.organizationId, actorUserId: ctx.user.id,
+        action: "LOCATION_OPENING_HOURS_CHANGED", entityType: "location", entityId: input.locationId,
+        beforeState: { days: before }, afterState: { days: openDays.map(day => ({ weekday: day.weekday, opensAt: day.startLocalTime, closesAt: day.endLocalTime })) },
+      });
+    });
+    return { success: true, openDays: openDays.length };
   }),
 });

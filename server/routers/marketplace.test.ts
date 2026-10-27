@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canTransitionMarketplaceListing, isPromotionVisible, marketplaceDirectoryPublicListing, marketplaceLaunchReadiness, marketplacePromotionLifecycleStatus, marketplacePublicMapPoint, normalizeMarketplaceGeocodeCandidates } from "./marketplace";
+import { canTransitionMarketplaceListing, directoryNamePatterns, escapeLikePattern, isPromotionVisible, marketplaceDirectoryPublicListing, marketplaceLaunchReadiness, marketplacePromotionLifecycleStatus, marketplacePublicMapPoint, normalizeMarketplaceGeocodeCandidates } from "./marketplace";
 
 describe("Marketplace governance helpers", () => {
   it("allows owners to submit only editable listing states", () => {
@@ -65,5 +65,28 @@ describe("Marketplace governance helpers", () => {
     expect(incomplete.items.find(item => item.key === "map")?.complete).toBe(true);
     const complete = marketplaceLaunchReadiness({ hasCoverImage: true, hasCoverAlt: true, hasPublicDescription: true, hasOnlineServices: true, hasCategoryLinks: true, bookingEnabled: true, mapVisibility: true, hasConfirmedMapPoint: true });
     expect(complete.readyForReview).toBe(true);
+  });
+});
+
+describe("Marketplace directory search patterns", () => {
+  it("escapes LIKE wildcards and backslashes so they match literally", () => {
+    expect(escapeLikePattern("100%_off\\")).toBe("100\\%\\_off\\\\");
+    expect(directoryNamePatterns("50%")).toEqual(["%50\\%%"]);
+  });
+
+  it("matches the phrase, plus a four-letter Georgian stem for a single longer word", () => {
+    expect(directoryNamePatterns("თმა")).toEqual(["%თმა%"]);
+    expect(directoryNamePatterns("ფრჩხილები")).toEqual(["%ფრჩხილები%", "ფრჩხ%", "% ფრჩხ%"]);
+    expect(directoryNamePatterns("მანიკიური")).toContain("მანი%");
+  });
+
+  it("does not stem multi-word phrases and ignores blank input", () => {
+    expect(directoryNamePatterns("თმის შეჭრა")).toEqual(["%თმის შეჭრა%"]);
+    expect(directoryNamePatterns("   ")).toEqual([]);
+  });
+
+  it("names the photos-and-description page in the cover readiness hint", () => {
+    const readiness = marketplaceLaunchReadiness({ hasCoverImage: false, hasCoverAlt: false, hasPublicDescription: false, hasOnlineServices: false, hasCategoryLinks: false, bookingEnabled: false, mapVisibility: false, hasConfirmedMapPoint: false });
+    expect(readiness.items.find(item => item.key === "cover")?.action).toContain("„ფოტოები და აღწერა“");
   });
 });

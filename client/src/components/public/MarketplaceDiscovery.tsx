@@ -1,11 +1,12 @@
 import { Ring } from "@/components/brand/Ring";
 import "@/components/catalog/discovery.css";
-import { cssVars, type CatalogCategory as Category } from "@/components/catalog/Tickets";
+import { cssVars, type CatalogCategory as Category, type CatalogListing } from "@/components/catalog/Tickets";
 import { type PublicLocale, usePublicLocale } from "@/contexts/PublicLocaleContext";
 import { trpc } from "@/lib/trpc";
 import { VERTICALS, verticalForCategory, verticalLabel, type Vertical } from "@/lib/verticals";
-import { Check, MapPin, Search, X } from "lucide-react";
-import { type FormEvent, type ReactNode, useMemo } from "react";
+import { Check, LocateFixed, MapPin, Search, X } from "lucide-react";
+import { type FormEvent, type ReactNode, useCallback, useMemo, useRef, useState } from "react";
+import { categoryLandingPath } from "@shared/categoryLanding";
 
 export const DISCOVERY_CITIES = ["თბილისი", "ბათუმი", "ქუთაისი", "რუსთავი", "ზუგდიდი", "თელავი", "გორი", "ფოთი"];
 
@@ -26,6 +27,11 @@ export function marketplaceDiscoveryHref(path: "/salons" | "/salons/map", catego
   if (area?.trim()) params.set("area", area.trim());
   const query = params.toString();
   return query ? `${path}?${query}` : path;
+}
+
+/** Public category landing page (replaces the ?category= query for links). */
+export function marketplaceCategoryHref(slug: string) {
+  return categoryLandingPath(slug);
 }
 
 export function marketplaceDiscoveryFilters(queryString: string) {
@@ -134,4 +140,70 @@ export function DiscoveryFilters(props: DiscoveryFiltersProps) {
       {hasFilters ? <button type="button" className="cw-linkbtn" onClick={onClear}><X className="size-4" aria-hidden="true" />{text.clearFilters}</button> : null}
     </div> : null}
   </>;
+}
+
+// ---- "Near me" -------------------------------------------------------------------------------------------------
+// The position lives only in this component's memory: it is never sent to the server, stored or logged.
+
+export type NearMePoint = { latitude: number; longitude: number };
+
+/** Great-circle distance in kilometres. */
+export function distanceKm(from: NearMePoint, to: { latitudeE6: number; longitudeE6: number }) {
+  const rad = Math.PI / 180;
+  const dLat = (to.latitudeE6 / 1e6 - from.latitude) * rad;
+  const dLng = (to.longitudeE6 / 1e6 - from.longitude) * rad;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(from.latitude * rad) * Math.cos((to.latitudeE6 / 1e6) * rad) * Math.sin(dLng / 2) ** 2;
+  return 6371 * 2 * Math.asin(Math.min(1, Math.sqrt(a)));
+}
+
+/** Listings with a map point first, nearest first, each carrying distanceKm; the rest keep their order after them. */
+export function sortByDistance<T extends Pick<CatalogListing, "mapPoint">>(items: T[], from: NearMePoint): Array<T & { distanceKm: number | null }> {
+  const withDistance = items.map(item => ({ ...item, distanceKm: item.mapPoint ? distanceKm(from, item.mapPoint) : null }));
+  return [...withDistance.filter(item => item.distanceKm !== null).sort((a, b) => a.distanceKm! - b.distanceKm!), ...withDistance.filter(item => item.distanceKm === null)];
+}
+
+export type NearMeStatus = "idle" | "asking" | "on" | "denied" | "unsupported" | "error";
+
+/** Asks for the browser position only when `request` is called (a click). */
+export function useNearMe() {
+  const [status, setStatus] = useState<NearMeStatus>("idle");
+  const [point, setPoint] = useState<NearMePoint | null>(null);
+  const pending = useRef(false);
+  const request = useCallback(() => {
+    if (pending.current) return;
+    if (typeof navigator === "undefined" || !navigator.geolocation) { setStatus("unsupported"); return; }
+    pending.current = true;
+    setStatus("asking");
+    navigator.geolocation.getCurrentPosition(
+      position => { pending.current = false; setPoint({ latitude: position.coords.latitude, longitude: position.coords.longitude }); setStatus("on"); },
+      error => { pending.current = false; setPoint(null); setStatus(error.code === 1 ? "denied" : "error"); },
+      { enableHighAccuracy: false, timeout: 10_000, maximumAge: 300_000 },
+    );
+  }, []);
+  const clear = useCallback(() => { setPoint(null); setStatus("idle"); }, []);
+  return { status, point, request, clear };
+}
+
+const nearMeUi = {
+  ka: { button: "ჩემთან ახლოს", asking: "მდებარეობა იძებნება…", off: "ახლო ადგილების გამორთვა", privacy: "მდებარეობა მხოლოდ ამ ძიებისთვის გამოიყენება და არსად ინახება.", denied: "მდებარეობის გამოყენება დაბლოკილია. ბრაუზერის პარამეტრებში ჩართე ან მოძებნე ქალაქის მიხედვით.", unsupported: "ეს ბრაუზერი მდებარეობას ვერ ადგენს. მოძებნე ქალაქის მიხედვით.", error: "მდებარეობა ვერ დადგინდა. სცადე თავიდან.", on: (placed: number, rest: number) => rest ? `ადგილები დალაგებულია შენგან დაშორების მიხედვით. ${rest} ადგილს რუკაზე მდებარეობა არ აქვს და სიის ბოლოშია.` : "ადგილები დალაგებულია შენგან დაშორების მიხედვით.", none: "ამ სიაში რუკაზე მდებარეობის მქონე ადგილი არ არის." },
+  en: { button: "Near me", asking: "Finding your location…", off: "Turn off near me", privacy: "Your location is used only for this search and is never stored.", denied: "Location access was not allowed. Turn it on in your browser settings or search by city.", unsupported: "This browser cannot find your location. Search by city instead.", error: "Your location could not be found. Try again.", on: (placed: number, rest: number) => rest ? `Sorted by distance: ${placed}. ${rest} places have no map location and are listed last.` : `Sorted by distance: ${placed}.`, none: "No places with a map location were found nearby." },
+  ru: { button: "Рядом со мной", asking: "Определяем местоположение…", off: "Выключить «рядом со мной»", privacy: "Местоположение используется только для этого поиска и нигде не сохраняется.", denied: "Доступ к местоположению не разрешён. Включите его в настройках браузера или ищите по городу.", unsupported: "Этот браузер не определяет местоположение. Ищите по городу.", error: "Не удалось определить местоположение. Попробуйте ещё раз.", on: (placed: number, rest: number) => rest ? `Отсортировано по расстоянию: ${placed}. У мест без точки на карте (${rest}) расстояния нет, они в конце списка.` : `Отсортировано по расстоянию: ${placed}.`, none: "Рядом нет мест с точкой на карте." },
+} as const;
+
+/** The "near me" button, its privacy line and the inline result message. `placed`/`rest` count listings with / without coordinates. */
+export function NearMe({ near, placed, rest }: { near: ReturnType<typeof useNearMe>; placed: number; rest: number }) {
+  const text = nearMeUi[usePublicLocale().locale];
+  const on = near.status === "on";
+  const message = near.status === "denied" ? text.denied : near.status === "unsupported" ? text.unsupported : near.status === "error" ? text.error : on ? (placed ? text.on(placed, rest) : text.none) : null;
+  return <div className="cw-container nm">
+    <div className="nm-row">
+      <button type="button" className="cw-chip nm-btn" aria-pressed={on} disabled={near.status === "asking"} onClick={on ? near.clear : near.request} data-conversion-event="DIRECTORY_NEAR_ME">
+        {on ? <Check className="size-4" aria-hidden="true" /> : <LocateFixed className="size-4" aria-hidden="true" />}
+        {near.status === "asking" ? text.asking : text.button}
+        {on ? <span className="sr-only"> — {text.off}</span> : null}
+      </button>
+      <p className="nm-note">{text.privacy}</p>
+    </div>
+    {message ? <p className={`nm-msg${on ? "" : " nm-msg--warn"}`} role={on ? "status" : "alert"}>{message}</p> : null}
+  </div>;
 }

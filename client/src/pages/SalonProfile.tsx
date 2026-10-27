@@ -1,7 +1,7 @@
 import { CatalogFooter, CatalogHeader } from "@/components/catalog/CatalogChrome";
 import { ProductGrid } from "@/components/catalog/Commerce";
 import { HeroIn } from "@/components/catalog/HomeMotion";
-import { cssVars } from "@/components/catalog/Tickets";
+import { businessAndBranch, cssVars } from "@/components/catalog/Tickets";
 import "@/components/catalog/profile.css";
 import { DATE_NAMES, addDaysKey, schemaWeekdayOf } from "@/components/public/BookingPrimitives";
 import { usePublicMeta } from "@/components/public/PublicMeta";
@@ -150,7 +150,7 @@ export default function SalonProfile() {
   const marketplace = trpc.marketplace.listingBySlug.useQuery(slug, { enabled: Boolean(slug) });
 
   usePublicMeta({
-    title: profile.data ? `${profile.data.salon.name} | ${BRAND.name}` : `ბიზნესის პროფილი | ${BRAND.name}`,
+    title: profile.data ? `${businessAndBranch(profile.data.salon.organizationName, profile.data.salon.name).primary} | ${BRAND.name}` : `ბიზნესის პროფილი | ${BRAND.name}`,
     description: profile.data?.salon.publicDescription || "დამტკიცებული ბიზნესის საჯარო პროფილი: მომსახურებები, გუნდი, სამუშაო საათები და ონლაინ ჩაწერა.",
     canonicalPath: `/salon/${slug}`,
   });
@@ -240,7 +240,8 @@ function ProfileView({ data, slug, ui, locale, categories, promotion, approved }
   // With nothing chosen the booking button waits for a service; a business without public services still links to the flow.
   const needsService = services.length > 0 && chosen.length === 0;
 
-  const mark = salon.name.trim().charAt(0).toLocaleUpperCase() || "•";
+  const title = businessAndBranch(salon.organizationName, salon.name);
+  const mark = title.primary.charAt(0).toLocaleUpperCase() || "•";
   const tabIds = useId();
   const tabKeys: TabKey[] = products.length ? ["services", "team", "hours", "products"] : ["services", "team", "hours"];
   const [tab, setTab] = useState<TabKey>("services");
@@ -276,7 +277,7 @@ function ProfileView({ data, slug, ui, locale, categories, promotion, approved }
     </div>
 
     <section className="cw-container cwp-intro" aria-labelledby="profile-title">
-      <HeroIn><h1 id="profile-title" className="cwp-title">{salon.name}</h1></HeroIn>
+      <HeroIn><h1 id="profile-title" className="cwp-title">{title.primary}</h1>{title.secondary ? <p className="cwp-muted mt-1 text-base">{title.secondary}</p> : null}</HeroIn>
       <div className="cwp-badges">
         {status && statusText ? <span className="cwp-status" data-open={status.open}><Clock className="size-4 shrink-0" aria-hidden="true" />{statusText}</span> : null}
         {approved ? <span className="cwp-badge"><ShieldCheck className="size-4" aria-hidden="true" />{ui.verified}</span> : null}

@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const state = vi.hoisted(() => ({ performance: null as unknown, workingHours: null as unknown, exceptions: null as unknown }));
-const mutation = { mutate: vi.fn(), isPending: false, error: null };
+const mutation = { mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false, error: null };
 const organization = { id: "organization_001", name: "სილამაზის სივრცე" };
 const membership = { id: "membership_001", role: "OWNER" };
 const profile = { id: "staff_profile_00001", publicDisplayName: "ლელა ბერიძე", publicBio: null, onlineBookingVisible: true, color: "#17826A", jobTitle: "სტილისტი", specialty: null, experienceYears: null, avatarKey: null, avatarAltKa: null };
@@ -22,7 +22,7 @@ vi.mock("@/lib/trpc", () => ({
       listScheduleExceptions: { useQuery: () => state.exceptions },
       performance: { useQuery: () => state.performance },
       createProfile: { useMutation: () => mutation }, createMember: { useMutation: () => mutation }, updateSelfProfile: { useMutation: () => mutation }, addWorkingHours: { useMutation: () => mutation }, updateWorkingHours: { useMutation: () => mutation }, addScheduleException: { useMutation: () => mutation }, updateScheduleException: { useMutation: () => mutation },
-      deleteWorkingHours: { useMutation: () => mutation }, deleteScheduleException: { useMutation: () => mutation },
+      deleteWorkingHours: { useMutation: () => mutation }, setOnlineBookingVisible: { useMutation: () => mutation }, deleteScheduleException: { useMutation: () => mutation },
     },
   },
 }));

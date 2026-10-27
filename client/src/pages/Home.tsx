@@ -3,7 +3,7 @@ import { CatalogFooter, CatalogHeader } from "@/components/catalog/CatalogChrome
 import { RevealGroup, RevealItem } from "@/components/catalog/HomeMotion";
 import { ProductCard, VacancyTicket } from "@/components/catalog/Commerce";
 import { categoryIcon, cssVars, EmptyCatalog, listingMatchesVertical, newestListings, CarouselArrows, SalonGrid, SalonLoading, useScrollRow, ui as ticketsUi, type CatalogCategory as Category, type CatalogListing as Listing } from "@/components/catalog/Tickets";
-import { marketplaceDiscoveryHref } from "@/components/public/MarketplaceDiscovery";
+import { marketplaceCategoryHref, marketplaceDiscoveryHref } from "@/components/public/MarketplaceDiscovery";
 import { usePublicMeta } from "@/components/public/PublicMeta";
 import { usePublicLocale } from "@/contexts/PublicLocaleContext";
 import { trpc } from "@/lib/trpc";
@@ -264,7 +264,7 @@ function Categories({ vertical, categories }: { vertical: Vertical | null; categ
       {shown.map(category => {
         const Icon = categoryIcon(category.iconKey);
         return <RevealItem as="li" key={category.id}>
-          <Link href={marketplaceDiscoveryHref("/salons", category.slug)} className="hp-tile">
+          <Link href={marketplaceCategoryHref(category.slug)} className="hp-tile">
             <span className="hp-icon"><Icon className="size-[26px]" aria-hidden="true" /><Ring variant="square" /></span>
             <span className="hp-name">{category.nameKa}</span>
           </Link>
@@ -315,11 +315,12 @@ function Listings({ items, loading, failed, onRetry, vertical }: { items: Listin
   </>;
 }
 
-function HowItWorks() {
+/** The 3-step booking explainer. Other pages (category landings) pass their own heading. */
+export function HowItWorks({ title }: { title?: string }) {
   const text = ui[usePublicLocale().locale];
   return <Zone labelledBy="hm-how-title">
     <RevealGroup>
-      <RevealItem><h2 id="hm-how-title" className="cw-h2">{text.howTitle}</h2></RevealItem>
+      <RevealItem><h2 id="hm-how-title" className="cw-h2">{title ?? text.howTitle}</h2></RevealItem>
       <RevealItem><p className="cw-lede mt-2">{text.howLede}</p></RevealItem>
     </RevealGroup>
     <RevealGroup as="ul" className="hm-steps">

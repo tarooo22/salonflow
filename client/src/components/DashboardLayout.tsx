@@ -29,7 +29,7 @@ import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 import { trpc } from "@/lib/trpc";
-import { isBillingVisible, isPanelNavActive, panelNav, panelTabBar, type PanelNavItem } from "@/lib/panelNav";
+import { isBillingVisible, isPanelNavActive, isRouteAllowed, panelNav, panelTabBar, type PanelNavItem } from "@/lib/panelNav";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { GuidedHelpTour } from "@/components/workspace/GuidedHelpTour";
 import { CommandPalette } from "@/components/workspace/CommandPalette";
@@ -171,6 +171,9 @@ function DashboardLayoutContent({
     document.documentElement.dataset.reduceMotion = String(reduceMotion);
     return () => { delete document.documentElement.dataset.reduceMotion; };
   }, [reduceMotion]);
+  const routeAllowed = isRouteAllowed(role, location);
+  // A role opening a business page it cannot use goes back to its home instead of waiting on data that never comes.
+  useEffect(() => { if (!routeAllowed) setLocation("/app/today", { replace: true }); }, [routeAllowed, setLocation]);
   useEffect(() => { if (workspaceLocked && location !== "/app/today" && location !== "/app/billing" && user?.role !== "admin") setLocation("/app/today"); }, [location, setLocation, user?.role, workspaceLocked]);
   // A collapsed group opens by itself when one of its pages is the current one (not remembered: only a click is).
   useEffect(() => {
@@ -333,7 +336,7 @@ function DashboardLayoutContent({
             <div className="flex items-center gap-2"><button type="button" onClick={() => setCommandOpen(true)} className="cwk-topbtn" aria-label="სწრაფი ძიება"><Search className="size-4" /></button><button type="button" onClick={() => setHelpOpen(true)} className="cwk-topbtn" aria-label="სამუშაო სივრცის დახმარება"><CircleHelp className="size-4" /></button></div>
           </div>
         )}
-        <main key={location} className="cwk-main sf-motion-enter flex-1 p-3 pb-24 sm:p-5 sm:pb-5 xl:p-6">{children}</main>
+        <div key={location} className="cwk-main sf-motion-enter flex-1 p-3 pb-24 sm:p-5 sm:pb-5 xl:p-6">{routeAllowed ? children : null}</div>
         {isMobile ? <nav aria-label="სწრაფი ნავიგაცია" className="cwk-tabbar fixed inset-x-0 bottom-0 z-40 grid gap-0 px-1 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2" style={{ gridTemplateColumns: `repeat(${tabItems.length + 1}, minmax(0, 1fr))` }}>
           {tabItems.map(item => { const isActive = isPanelNavActive(item, location); return <button key={item.key} type="button" onClick={() => setLocation(item.href)} aria-current={isActive ? "page" : undefined} title={item.label} className="cwk-tab">{item.icon ? <item.icon className="size-[22px]" aria-hidden="true" /> : null}<span className="cwk-tab-label">{item.label}</span></button>; })}
           <button type="button" onClick={() => setMoreSheetOpen(true)} aria-haspopup="dialog" aria-expanded={moreSheetOpen} data-active={sheetItems.some(item => isPanelNavActive(item, location)) ? "true" : undefined} className="cwk-tab"><MoreHorizontal className="size-[22px]" aria-hidden="true" /><span className="cwk-tab-label">მეტი</span></button>

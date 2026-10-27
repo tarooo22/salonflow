@@ -13,6 +13,7 @@ import { BRAND } from "@shared/brand";
 import { MAX_SELECTED_SERVICES } from "@shared/validation";
 import { dateKeyInTimeZone } from "@shared/timezones";
 import { AnimatePresence, motion, useReducedMotionConfig } from "framer-motion";
+import { normalizeGeorgianPhone } from "../../../server/lib/normalization";
 import { CalendarClock, CalendarPlus, ChevronDown, ChevronLeft, CircleAlert, Clock, Link2, Mail, MapPin, Phone, RefreshCw, Share2, Sparkles, X } from "lucide-react";
 import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useRoute, useSearch } from "wouter";
@@ -46,6 +47,7 @@ export const flowUi = {
       timeUnconfirmed: { title: "ეს დრო ჯერ არ დადასტურებულა", description: "აირჩიე სხვა დრო ან დაელოდე ხელმისაწვდომობის შემოწმების დასრულებას." },
       firstName: { title: "მიუთითე სახელი", description: "სახელი საჭიროა ჯავშნის მოთხოვნის დასადასტურებლად." },
       phone: { title: "მიუთითე მობილურის ნომერი", description: "მობილურის ნომერი საჭიროა, რომ სალონმა შენს მოთხოვნაზე დაგიკავშირდეს." },
+      phoneInvalid: { title: "შეიყვანე სწორი მობილურის ნომერი, მაგ. 555 12 34 56", description: "ნომერი უნდა იყოს ქართული მობილური: 9 ციფრი, იწყება 5-ით." },
       terms: { title: "დაადასტურე ჯავშნის პირობები", description: "გაგრძელებამდე საჭიროა მონაცემების დამუშავებაზე თანხმობა." },
       submit: { title: "ჯავშნის მოთხოვნა ვერ გაიგზავნა", description: "მონაცემები არ დაგვიკარგავს. შეამოწმე კავშირი და სცადე ხელახლა." },
       network: { title: "ჯავშანი ვერ გაიგზავნა: კავშირი გაწყდა.", description: "შეყვანილი მონაცემები შენახულია." },
@@ -55,7 +57,7 @@ export const flowUi = {
     noService: "სერვისი არ არის არჩეული", pickService: "აირჩიე სერვისი", from: (price: string) => `${price}-დან`, pickTime: "აირჩიე დრო", next: "გაგრძელება", checkingShort: "მოწმდება…", send: "ჯავშნის გაგზავნა", sending: "იგზავნება…",
     staffHours: "ხელმისაწვდომი სპეციალისტების საათები", noHours: "სამუშაო საათები ჯერ არ არის მითითებული. დროის არჩევისას ხელმისაწვდომობა მაინც ავტომატურად შემოწმდება.", dayFallback: "დღე",
     noServicesTitle: "ონლაინ სერვისი ჯერ არ არის", noServicesText: "ამ ფილიალში ონლაინ ჩასაწერი სერვისები ჯერ არ არის. დაუკავშირდი სალონს.", choose: (name: string) => `${name} არჩევა`, minutes: "წთ",
-    noStaffTitle: "სპეციალისტი ვერ მოიძებნა", noStaffText: "ამ სერვისების ერთად შესრულება ონლაინ ვერ ხერხდება. სცადე სერვისების ცალ-ცალკე დაჯავშნა.", changeServices: "სერვისების შეცვლა", specialist: "სპეციალისტი", pickSpecialist: "აირჩიე სპეციალისტი",
+    noStaffTitle: "სპეციალისტი ვერ მოიძებნა", noStaffText: "ამ სერვისების ერთად შესრულება ონლაინ ვერ ხერხდება. სცადე სერვისების ცალ-ცალკე დაჯავშნა.", noOnlineTitle: "ამ სალონში ონლაინ ჩაწერა ჯერ არ არის ხელმისაწვდომი.", changeServices: "სერვისების შეცვლა", specialist: "სპეციალისტი", pickSpecialist: "აირჩიე სპეციალისტი",
     anyStaffLabel: "ნებისმიერი თავისუფალი სპეციალისტის არჩევა", anyStaffMeta: "უახლოესი თავისუფალი დრო", nearestShort: "უახლოესი: ",
     duration: "ხანგრძლივობა: ", closedDay: "ამ დღეს დაკეტილია.", slotsLoading: "თავისუფალი დრო იტვირთება…", slotsFailed: "თავისუფალი დრო ვერ ჩაიტვირთა.", slotsLabel: "თავისუფალი დრო",
     morning: "დილა", afternoon: "შუადღე", evening: "საღამო",
@@ -81,6 +83,7 @@ export const flowUi = {
       timeUnconfirmed: { title: "This time has not been confirmed yet", description: "Choose another time or wait for the availability check to finish." },
       firstName: { title: "Enter your first name", description: "Your name is needed to confirm the booking request." },
       phone: { title: "Enter your mobile number", description: "A mobile number is needed so the salon can contact you about your request." },
+      phoneInvalid: { title: "Enter a valid mobile number, e.g. 555 12 34 56", description: "Use a Georgian mobile number: 9 digits starting with 5." },
       terms: { title: "Accept the booking terms", description: "Consent to data processing is required before you continue." },
       submit: { title: "The booking request could not be sent", description: "We have not lost your data. Check your connection and try again." },
       network: { title: "Booking not sent: connection lost.", description: "Your details are saved." },
@@ -90,7 +93,7 @@ export const flowUi = {
     noService: "No service selected", pickService: "Choose a service", from: (price: string) => `From ${price}`, pickTime: "Choose a time", next: "Continue", checkingShort: "Checking…", send: "Send booking", sending: "Sending…",
     staffHours: "Specialists' available hours", noHours: "Working hours have not been set yet. Availability is still checked automatically when you choose a time.", dayFallback: "Day",
     noServicesTitle: "No online services yet", noServicesText: "This location has no services available for online booking yet. Please contact the salon.", choose: (name: string) => `Select ${name}`, minutes: "min",
-    noStaffTitle: "No specialist found", noStaffText: "These services cannot be done together online. Try booking them separately.", changeServices: "Change services", specialist: "Specialist", pickSpecialist: "Choose a specialist",
+    noStaffTitle: "No specialist found", noStaffText: "These services cannot be done together online. Try booking them separately.", noOnlineTitle: "Online booking is not available at this salon yet.", changeServices: "Change services", specialist: "Specialist", pickSpecialist: "Choose a specialist",
     anyStaffLabel: "Select any available specialist", anyStaffMeta: "Nearest free time", nearestShort: "Nearest: ",
     duration: "Duration: ", closedDay: "Closed on this day.", slotsLoading: "Loading free times…", slotsFailed: "Free times could not be loaded.", slotsLabel: "Free times",
     morning: "Morning", afternoon: "Afternoon", evening: "Evening",
@@ -116,6 +119,7 @@ export const flowUi = {
       timeUnconfirmed: { title: "Это время ещё не подтверждено", description: "Выберите другое время или дождитесь завершения проверки доступности." },
       firstName: { title: "Укажите имя", description: "Имя необходимо для подтверждения запроса на запись." },
       phone: { title: "Укажите номер мобильного телефона", description: "Номер нужен, чтобы салон мог связаться с вами по вашему запросу." },
+      phoneInvalid: { title: "Введите корректный номер мобильного, например 555 12 34 56", description: "Нужен грузинский мобильный номер: 9 цифр, начинается с 5." },
       terms: { title: "Подтвердите условия записи", description: "Перед продолжением необходимо согласие на обработку данных." },
       submit: { title: "Не удалось отправить запрос на запись", description: "Ваши данные не потеряны. Проверьте подключение и попробуйте снова." },
       network: { title: "Запись не отправлена: соединение потеряно.", description: "Введённые данные сохранены." },
@@ -125,7 +129,7 @@ export const flowUi = {
     noService: "Услуга не выбрана", pickService: "Выберите услугу", from: (price: string) => `от ${price}`, pickTime: "Выберите время", next: "Продолжить", checkingShort: "Проверка…", send: "Отправить запись", sending: "Отправка…",
     staffHours: "Доступные часы специалистов", noHours: "Часы работы пока не указаны. Доступность всё равно проверяется автоматически при выборе времени.", dayFallback: "День",
     noServicesTitle: "Онлайн-услуг пока нет", noServicesText: "В этом филиале пока нет услуг для онлайн-записи. Свяжитесь с салоном.", choose: (name: string) => `Выбрать: ${name}`, minutes: "мин",
-    noStaffTitle: "Специалист не найден", noStaffText: "Эти услуги нельзя выполнить вместе онлайн. Попробуйте записаться на них по отдельности.", changeServices: "Изменить услуги", specialist: "Специалист", pickSpecialist: "Выберите специалиста",
+    noStaffTitle: "Специалист не найден", noStaffText: "Эти услуги нельзя выполнить вместе онлайн. Попробуйте записаться на них по отдельности.", noOnlineTitle: "Онлайн-запись в этом салоне пока недоступна.", changeServices: "Изменить услуги", specialist: "Специалист", pickSpecialist: "Выберите специалиста",
     anyStaffLabel: "Выбрать любого свободного специалиста", anyStaffMeta: "Ближайшее свободное время", nearestShort: "Ближайшее: ",
     duration: "Длительность: ", closedDay: "В этот день закрыто.", slotsLoading: "Загрузка свободного времени…", slotsFailed: "Не удалось загрузить свободное время.", slotsLabel: "Свободное время",
     morning: "Утро", afternoon: "День", evening: "Вечер",
@@ -164,6 +168,7 @@ export function getBookingValidationIssue(input: { step: number; serviceId?: str
   if (input.step === 2 && input.available !== true) return { kind: "time", ...issues.timeUnconfirmed };
   if (input.step === 3 && !input.firstName.trim()) return { kind: "contact", ...issues.firstName };
   if (input.step === 3 && !input.phone.trim()) return { kind: "contact", ...issues.phone };
+  if (input.step === 3 && !normalizeGeorgianPhone(input.phone)) return { kind: "contact", ...issues.phoneInvalid };
   if (input.step === 3 && !input.termsAccepted) return { kind: "contact", ...issues.terms };
   return null;
 }
@@ -282,8 +287,8 @@ export default function BookingFlow() {
 
   const availabilityInput = useMemo(() => ({ slug, serviceId: serviceId ?? "pending-service", staffProfileId: staffId ?? "pending-specialist", startsAt: startsAt ?? new Date(0) }), [slug, serviceId, staffId, startsAt]);
   const multiAvailabilityInput = useMemo(() => ({ slug, serviceIds: isMultiService ? serviceIds : ["pending_service_001", "pending_service_002"], staffProfileId: staffId ?? "pending-specialist", startsAt: startsAt ?? new Date(0) }), [slug, serviceIds, isMultiService, staffId, startsAt]);
-  const singleAvailability = trpc.public.checkAvailability.useQuery(availabilityInput, { enabled: Boolean(serviceId && staffId && startsAt && step >= 2 && !isMultiService) });
-  const multiAvailability = trpc.public.checkMultiAvailability.useQuery(multiAvailabilityInput, { enabled: Boolean(isMultiService && staffId && startsAt && step >= 2) });
+  const singleAvailability = trpc.public.checkAvailability.useQuery(availabilityInput, { networkMode: "always", enabled: Boolean(serviceId && staffId && startsAt && step >= 2 && !isMultiService) });
+  const multiAvailability = trpc.public.checkMultiAvailability.useQuery(multiAvailabilityInput, { networkMode: "always", enabled: Boolean(isMultiService && staffId && startsAt && step >= 2) });
   const availability = isMultiService ? multiAvailability : singleAvailability;
   // Device-local "my bookings" entry: salon, service names and start time only, never the manage token or link.
   const rememberOnDevice = () => {
@@ -302,8 +307,8 @@ export default function BookingFlow() {
     if (isSlotTakenError(error)) { setInteractionError(null); setSlotTaken(true); goTo(2, true); void (isMultiService ? multiAvailability : singleAvailability).refetch(); return; }
     setInteractionError({ kind: "submit", ...(isNetworkError(error) ? text.issues.network : text.issues.submit) });
   };
-  const commitBooking = trpc.public.commitBooking.useMutation({ onSuccess: onCommitSuccess, onError: onCommitError });
-  const commitMultiBooking = trpc.public.commitMultiBooking.useMutation({ onSuccess: onCommitSuccess, onError: onCommitError });
+  const commitBooking = trpc.public.commitBooking.useMutation({ networkMode: "always", onSuccess: onCommitSuccess, onError: onCommitError });
+  const commitMultiBooking = trpc.public.commitMultiBooking.useMutation({ networkMode: "always", onSuccess: onCommitSuccess, onError: onCommitError });
   const submitting = commitBooking.isPending || commitMultiBooking.isPending;
   const totalMinutes = selectedServices.reduce((sum, service) => sum + service.defaultDurationMinutes, 0);
   const totalTetri = selectedServices.reduce((sum, service) => sum + service.priceTetri, 0);
@@ -362,6 +367,8 @@ export default function BookingFlow() {
   const currentValidation = () => getBookingValidationIssue({ step, serviceId, staffProfileId: staffId, startsAt, available: slotTaken ? false : availability.data?.available, firstName, phone, termsAccepted, locale });
   const submitBooking = () => {
     if (!serviceId || !staffId || !startsAt) return;
+    // Never queue a booking while offline: it would be replayed later without the customer seeing it. The idempotency key stays for the retry.
+    if (typeof navigator !== "undefined" && navigator.onLine === false) { setInteractionError({ kind: "submit", ...text.issues.network }); return; }
     const sharedPayload = { slug, staffProfileId: staffId, startsAt, firstName, lastName: lastName || undefined, phone, email: email || undefined, customerNote: customerNote || undefined, bookingTermsConsent: true as const, idempotencyKey };
     if (isMultiService) commitMultiBooking.mutate({ ...sharedPayload, serviceIds });
     else commitBooking.mutate({ ...sharedPayload, serviceId });
@@ -386,6 +393,10 @@ export default function BookingFlow() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [advanceWhenChecked, availability.isLoading]);
 
+  // The catalog may carry the organization name; show it next to the branch name when it differs.
+  const organizationName = (catalog.data as { organizationName?: string | null } | null | undefined)?.organizationName?.trim();
+  const branchName = catalog.data?.location.name ?? "";
+  const businessTitle = organizationName && organizationName !== branchName ? `${organizationName} · ${branchName}` : branchName;
   const profileHref = catalog.data ? `/salon/${slug}` : "/salons";
   const available = catalog.data?.onlineBookingAvailable !== false;
   const fromFlow = typeof window !== "undefined" && Boolean((window.history.state as { cwbFlow?: boolean } | null)?.cwbFlow);
@@ -432,7 +443,7 @@ export default function BookingFlow() {
 
         {catalog.data && available ? <>
           <BookingRail steps={[...text.steps]} current={step} label={text.progress} />
-          <BookingBusinessStrip name={catalog.data.location.name} address={catalog.data.location.address} action={<button type="button" className="cwb-more-btn" aria-expanded={moreOpen} aria-controls={moreId} onClick={() => setMoreOpen(open => !open)}><Clock className="size-4 shrink-0" aria-hidden="true" /><span>{text.hoursAndContact}</span><ChevronDown className="cwb-more-chevron size-4 shrink-0" aria-hidden="true" /></button>} />
+          <BookingBusinessStrip name={businessTitle} address={catalog.data.location.address} action={<button type="button" className="cwb-more-btn" aria-expanded={moreOpen} aria-controls={moreId} onClick={() => setMoreOpen(open => !open)}><Clock className="size-4 shrink-0" aria-hidden="true" /><span>{text.hoursAndContact}</span><ChevronDown className="cwb-more-chevron size-4 shrink-0" aria-hidden="true" /></button>} />
           {moreOpen ? <div id={moreId} className="cwb-more"><LocationContext location={catalog.data.location} /></div> : null}
           {interactionError ? <div className="cwb-pad"><BookingErrorNotice issue={interactionError} errorRef={errorRef} onRetry={interactionError.kind === "submit" ? submitBooking : undefined} /></div> : null}
           <AnimatePresence mode="wait" initial={false}>
@@ -440,8 +451,8 @@ export default function BookingFlow() {
             <BookingStepHeader title={text.stepCopy[step]!.title} description={text.stepCopy[step]!.lede} headingRef={focusStepTitle} />
             <div className="mt-4">
               {step === 0 ? <ServiceStep catalog={catalog.data.catalog} selectedIds={serviceIds} onSelect={selectService} /> : null}
-              {step === 1 ? <StaffStep team={eligibleTeam} selectedId={staffId} onSelect={selectStaff} onEditServices={() => goTo(0)} slug={slug} serviceIds={serviceIds} timezone={catalog.data.location.timezone} /> : null}
-              {step === 2 ? <TimeStep slug={slug} serviceId={serviceId} serviceIds={serviceIds} multiService={isMultiService} staffId={staffId} staffLabel={staffLabel} selectedStaff={selectedStaff} eligibleCount={eligibleTeam.length} onChangeStaff={() => goTo(1)} onEditServices={() => goTo(0)} workingHours={catalog.data.location.workingHours} timezone={catalog.data.location.timezone} dateTime={dateTime} durationMinutes={totalMinutes} onChange={selectDateTime} availability={availability} slotTaken={slotTaken} /> : null}
+              {step === 1 ? <StaffStep noOnlineTeam={catalog.data.team.length === 0} team={eligibleTeam} selectedId={staffId} onSelect={selectStaff} onEditServices={() => goTo(0)} slug={slug} serviceIds={serviceIds} timezone={catalog.data.location.timezone} /> : null}
+              {step === 2 ? <TimeStep noOnlineTeam={catalog.data.team.length === 0} slug={slug} serviceId={serviceId} serviceIds={serviceIds} multiService={isMultiService} staffId={staffId} staffLabel={staffLabel} selectedStaff={selectedStaff} eligibleCount={eligibleTeam.length} onChangeStaff={() => goTo(1)} onEditServices={() => goTo(0)} workingHours={catalog.data.location.workingHours} timezone={catalog.data.location.timezone} dateTime={dateTime} durationMinutes={totalMinutes} onChange={selectDateTime} availability={availability} slotTaken={slotTaken} /> : null}
               {step === 3 ? <DetailsStep review={summary("details")} contactError={interactionError?.kind === "contact"} firstName={firstName} lastName={lastName} phone={phone} email={email} customerNote={customerNote} termsAccepted={termsAccepted} onFirstName={value => { setFirstName(value); clearIssue("contact"); }} onLastName={setLastName} onPhone={value => { setPhone(value); clearIssue("contact"); }} onEmail={setEmail} onNote={setCustomerNote} onTerms={value => { setTermsAccepted(value); clearIssue("contact"); }} /> : null}
             </div>
           </motion.div>
@@ -568,9 +579,10 @@ const NEAREST_MAX_TEAM = 8;
 
 // The specialist step: "any available" first (the system chooses), then one photo card per eligible specialist.
 // Pass slug, serviceIds and timezone to show each specialist's nearest free time (skipped for larger teams).
-export function StaffStep({ team, selectedId, onSelect, onEditServices, slug, serviceIds, timezone }: { team: BookingTeamMember[]; selectedId?: string; onSelect: (id: string) => void; onEditServices?: () => void; slug?: string; serviceIds?: string[]; timezone?: string }) {
+export function StaffStep({ noOnlineTeam, team, selectedId, onSelect, onEditServices, slug, serviceIds, timezone }: { noOnlineTeam?: boolean; team: BookingTeamMember[]; selectedId?: string; onSelect: (id: string) => void; onEditServices?: () => void; slug?: string; serviceIds?: string[]; timezone?: string }) {
   const text = flowUi[usePublicLocale().locale];
   const today = useMemo(() => timezone ? dateKeyInTimeZone(new Date(), timezone) : "", [timezone]);
+  if (noOnlineTeam) return <div className="cwb-empty" role="status"><strong>{text.noOnlineTitle}</strong></div>;
   if (!team.length) return <div className="cwb-empty"><strong>{text.noStaffTitle}</strong>{text.noStaffText}{onEditServices ? <div className="mt-3"><button type="button" className="cwb-btn cwb-btn-line cwb-btn-sm" onClick={onEditServices}>{text.changeServices}</button></div> : null}</div>;
   const showNearest = Boolean(slug && serviceIds?.length && today && team.length <= NEAREST_MAX_TEAM);
   return <div className="cwb-staff-grid" role="radiogroup" aria-label={text.specialist} onKeyDown={moveRadioFocus}>
@@ -583,7 +595,7 @@ const DAYS_AHEAD = 14;
 
 type SlotsQuery = { isLoading: boolean; isError: boolean; data?: { slots: Array<{ startsAt: string; label: string }> }; refetch: (options?: { cancelRefetch?: boolean }) => unknown };
 
-function TimeStep({ slug, serviceId, serviceIds, multiService, staffId, staffLabel, selectedStaff, eligibleCount, onChangeStaff, onEditServices, workingHours, timezone, dateTime, durationMinutes, onChange, availability, slotTaken }: { slug: string; serviceId?: string; serviceIds: string[]; multiService: boolean; staffId?: string; staffLabel?: string; selectedStaff?: BookingTeamMember; eligibleCount: number; onChangeStaff: () => void; onEditServices: () => void; workingHours: Array<{ weekday: number }>; timezone: string; dateTime: string; durationMinutes: number; onChange: (value: string) => void; availability: { isLoading: boolean; isError: boolean; data?: { available: boolean; reason?: string } }; slotTaken: boolean }) {
+function TimeStep({ noOnlineTeam, slug, serviceId, serviceIds, multiService, staffId, staffLabel, selectedStaff, eligibleCount, onChangeStaff, onEditServices, workingHours, timezone, dateTime, durationMinutes, onChange, availability, slotTaken }: { noOnlineTeam?: boolean; slug: string; serviceId?: string; serviceIds: string[]; multiService: boolean; staffId?: string; staffLabel?: string; selectedStaff?: BookingTeamMember; eligibleCount: number; onChangeStaff: () => void; onEditServices: () => void; workingHours: Array<{ weekday: number }>; timezone: string; dateTime: string; durationMinutes: number; onChange: (value: string) => void; availability: { isLoading: boolean; isError: boolean; data?: { available: boolean; reason?: string } }; slotTaken: boolean }) {
   const { locale } = usePublicLocale();
   const text = flowUi[locale];
   const openWeekdays = useMemo(() => new Set(workingHours.map(hour => hour.weekday)), [workingHours]);
@@ -647,6 +659,7 @@ function TimeStep({ slug, serviceId, serviceIds, multiService, staffId, staffLab
 
   // Suggestion chip: the first free time overall, when it is not on the day being looked at.
   const suggestion = firstFree && firstFree.date !== selectedDate && !dateTime ? firstFree : undefined;
+  if (noOnlineTeam) return <div className="cwb-empty" role="status"><strong>{text.noOnlineTitle}</strong></div>;
   if (eligibleCount === 0 || !staffId) return <div className="cwb-empty"><strong>{text.noStaffTitle}</strong>{text.noStaffText}<div className="mt-3"><button type="button" className="cwb-btn cwb-btn-line cwb-btn-sm" onClick={onEditServices}>{text.changeServices}</button></div></div>;
 
   return <div className="grid gap-4">
@@ -695,7 +708,10 @@ function DetailsStep({ review, contactError, firstName, lastName, phone, email, 
   const [moreOpen, setMoreOpen] = useState(() => Boolean(lastName || email || customerNote));
   const moreId = useId();
   const nameInvalid = contactError && !firstName.trim();
-  const phoneInvalid = contactError && !phone.trim();
+  const [phoneTouched, setPhoneTouched] = useState(false);
+  const phoneEmpty = !phone.trim();
+  const phoneBad = !phoneEmpty && !normalizeGeorgianPhone(phone);
+  const phoneInvalid = (contactError && phoneEmpty) || (phoneBad && (phoneTouched || contactError));
   const termsInvalid = contactError && !termsAccepted;
   return <div className="grid gap-5">
     <div className="cwb-review-card">{review}</div>
@@ -709,10 +725,10 @@ function DetailsStep({ review, contactError, firstName, lastName, phone, email, 
         <label className="cwb-label" htmlFor="booking-phone">{text.phone}</label>
         <div className="cwb-affix" data-invalid={phoneInvalid}>
           <span className="cwb-affix-prefix" aria-hidden="true">+995</span>
-          <input id="booking-phone" className="cwb-input" type="tel" value={phone} onChange={event => onPhone(event.target.value)} autoComplete="tel-national" inputMode="tel" placeholder={text.phonePlaceholder} aria-required="true" aria-invalid={phoneInvalid} aria-describedby={phoneInvalid ? "booking-phone-help booking-phone-error" : "booking-phone-help"} />
+          <input id="booking-phone" className="cwb-input" type="tel" value={phone} onChange={event => onPhone(event.target.value)} onBlur={() => setPhoneTouched(true)} autoComplete="tel-national" inputMode="tel" placeholder={text.phonePlaceholder} aria-required="true" aria-invalid={phoneInvalid} aria-describedby={phoneInvalid ? "booking-phone-help booking-phone-error" : "booking-phone-help"} />
         </div>
         <p id="booking-phone-help" className="cwb-hint">{text.phoneHelp}</p>
-        {phoneInvalid ? <FieldError id="booking-phone-error">{text.issues.phone.title}</FieldError> : null}
+        {phoneInvalid ? <FieldError id="booking-phone-error">{phoneBad ? text.issues.phoneInvalid.title : text.issues.phone.title}</FieldError> : null}
       </div>
       <div>
         <button type="button" className="cwb-more-btn cwb-disclosure" aria-expanded={moreOpen} aria-controls={moreId} onClick={() => setMoreOpen(open => !open)}><span>{text.moreDetails}</span><ChevronDown className="cwb-more-chevron size-4 shrink-0" aria-hidden="true" /></button>
@@ -761,7 +777,7 @@ export function BookingConfirmation({ slug, confirmationToken, assignedStaffName
   useEffect(() => { titleRef.current?.focus(); }, []);
   const start = bookingMoment(startsAt, timeZone, locale);
   const end = bookingMoment(endsAt, timeZone, locale);
-  const calendarDescription = locale === "en" ? `${BRAND.name} booking. Status: awaiting salon confirmation.${assignedStaffName ? ` Specialist: ${assignedStaffName}.` : ""}` : locale === "ru" ? `Запись ${BRAND.name}. Статус: ожидает подтверждения салоном.${assignedStaffName ? ` Специалист: ${assignedStaffName}.` : ""}` : `${BRAND.nameKa} ჯავშანი. სტატუსი: სალონის დადასტურებას ელოდება.${assignedStaffName ? ` სპეციალისტი: ${assignedStaffName}.` : ""}`;
+  const calendarDescription = locale === "en" ? `Booking at ${locationName}. Status: awaiting salon confirmation.${assignedStaffName ? ` Specialist: ${assignedStaffName}.` : ""}` : locale === "ru" ? `Запись в «${locationName}». Статус: ожидает подтверждения салоном.${assignedStaffName ? ` Специалист: ${assignedStaffName}.` : ""}` : `ჯავშანი ${locationName}-ში. სტატუსი: სალონის დადასტურებას ელოდება.${assignedStaffName ? ` სპეციალისტი: ${assignedStaffName}.` : ""}`;
   const saveToCalendar = () => downloadBookingCalendar({ startsAt, endsAt, title: `${serviceName} — ${locationName}`, location: locationAddress ?? locationName, description: calendarDescription });
   const mapsUrl = locationAddress ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${locationName}, ${locationAddress}`)}` : null;
   const notify = (message: string) => { setAnnouncement(message); toast.success(message); };

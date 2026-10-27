@@ -33,6 +33,7 @@ const Media = lazy(() => import("./pages/Media"));
 const ClientGallery = lazy(() => import("./pages/ClientGallery"));
 const MarketplaceSetup = lazy(() => import("./pages/MarketplaceSetup"));
 const MarketplaceDirectory = lazy(() => import("./pages/MarketplaceDirectory"));
+const MarketplaceCategory = lazy(() => import("./pages/MarketplaceCategory"));
 const Vacancies = lazy(() => import("./pages/Vacancies"));
 const VacancyDetail = lazy(() => import("./pages/VacancyDetail"));
 const Products = lazy(() => import("./pages/Products"));
@@ -77,6 +78,7 @@ function Router() {
       <Route path={"/manage-booking/:token"} component={ManageBooking} />
       <Route path={"/waitlist/:slug"} component={Waitlist} />
       <Route path={"/salons/map"} component={MarketplaceMap} />
+      <Route path={"/salons/c/:slug"} component={MarketplaceCategory} />
       <Route path={"/salons"} component={MarketplaceDirectory} />
       <Route path={"/salon/:slug"} component={SalonProfile} />
       <Route path={"/saved"} component={Saved} />

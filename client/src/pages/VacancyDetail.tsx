@@ -8,6 +8,7 @@ import { trpc } from "@/lib/trpc";
 import { verticalForCategory, verticalLabel } from "@/lib/verticals";
 import { BRAND } from "@shared/brand";
 import { ArrowLeft, Mail, MapPin, Phone } from "lucide-react";
+import { formatPhoneDisplay } from "@/lib/phone";
 import { Link, useRoute } from "wouter";
 
 export const ui = {
@@ -82,7 +83,7 @@ export default function VacancyDetail() {
               <h2 className="cwx-section-title">{text.contact}</h2>
               <p className="cwx-note">{text.contactLede}</p>
               <div className="cwx-actions">
-                {item.contactPhone ? <a href={`tel:${item.contactPhone.replace(/[^\d+]/g, "")}`} className="mkt-btn mkt-btn-primary"><Phone className="size-5" aria-hidden="true" /><span className="tabular-nums">{item.contactPhone}</span></a> : null}
+                {item.contactPhone ? <a href={`tel:${item.contactPhone.replace(/[^\d+]/g, "")}`} className="mkt-btn mkt-btn-primary"><Phone className="size-5" aria-hidden="true" /><span className="tabular-nums">{formatPhoneDisplay(item.contactPhone)}</span></a> : null}
                 {item.contactEmail ? <a href={`mailto:${item.contactEmail}`} className="mkt-btn mkt-btn-secondary cwx-truncate"><Mail className="size-5 shrink-0" aria-hidden="true" /><span className="cwx-truncate">{item.contactEmail}</span></a> : null}
                 <Link href={`/salon/${item.locationPublicSlug}`} className="mkt-btn mkt-btn-secondary">{text.businessPage}</Link>
               </div>
