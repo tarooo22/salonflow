@@ -11,7 +11,7 @@ export default defineRailway(() => {
     healthcheck: "/health",
     healthcheckTimeout: 300,
     replicas: { "us-west2": 1 },
-    deploy: { limitOverride: { containers: { cpu: 1, memoryBytes: 1000000000 } }, sleepApplication: true },
+    deploy: { limitOverride: { containers: { cpu: 1, memoryBytes: 1000000000 } }, sleepApplication: false },
   });
 
   return project("protective-caring", {
