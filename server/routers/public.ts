@@ -237,7 +237,11 @@ export const publicRouter = router({
     if (!location) return null;
     const onlineBookingAvailable = await isOrganizationTrialPublicBookingActive(location.organizationId);
     if (!onlineBookingAvailable) return { location: { publicSlug: location.publicSlug, name: location.name, organizationName, timezone: location.timezone, address: location.address, phone: location.phone, email: location.email, publicDescription: location.publicDescription, cancellationCutoffMinutes: location.cancellationCutoffMinutes, workingHours: [] }, catalog: [], team: [], onlineBookingAvailable: false as const, bookingUnavailableReason: "TRIAL_EXPIRED" as const };
-    const catalog = await db.select({ service: services, category: serviceCategories }).from(services)
+    // Public fields only: no organizationId, internal status or timestamps.
+    const catalog = await db.select({
+      service: { id: services.id, categoryId: services.categoryId, nameKa: services.nameKa, publicDescriptionKa: services.publicDescriptionKa, defaultDurationMinutes: services.defaultDurationMinutes, priceTetri: services.priceTetri, isFromPrice: services.isFromPrice },
+      category: { id: serviceCategories.id, nameKa: serviceCategories.nameKa, color: serviceCategories.color },
+    }).from(services)
       .innerJoin(serviceCategories, eq(services.categoryId, serviceCategories.id))
       .where(and(eq(services.organizationId, location.organizationId), eq(services.status, "ACTIVE"), eq(services.onlineBookingEnabled, true)))
       .orderBy(asc(serviceCategories.sortOrder), asc(services.sortOrder));
