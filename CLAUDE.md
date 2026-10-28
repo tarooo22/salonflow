@@ -9,7 +9,7 @@ Booking platform for salons and other service businesses (Georgia). Customers fi
 - **Shared** `shared/`: code used by both sides (validation, money, timezones, types).
 - **DB**: MySQL + Drizzle ORM. Schema `drizzle/schema.ts`, migrations `drizzle/*.sql`. Local MySQL in `docker-compose.yml`.
 - **Auth**: local accounts, JWT (jose) in cookies; org roles in `server/access.ts`.
-- **Deploy**: Railway (`railway.json`), auto-deploys on push to `main`. Prod: https://salonflow-production-c542.up.railway.app. Guide: `docs/RAILWAY_DEPLOYMENT.md`.
+- **Deploy**: Railway (`.railway/railway.ts`, Infrastructure as Code: edit it, then `railway config plan` / `railway config apply`), auto-deploys on push to `main`. Prod: https://salonflow-production-c542.up.railway.app. Guide: `docs/RAILWAY_DEPLOYMENT.md`.
 - Package manager is **pnpm**. Never use npm/yarn here.
 
 The tRPC router types *are* the API contract: the client imports them, so `pnpm check` catches client/server mismatches. There is no separate API spec.

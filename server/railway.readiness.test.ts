@@ -3,10 +3,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const projectRoot = resolve(import.meta.dirname, "..");
-const railwayConfig = JSON.parse(readFileSync(resolve(projectRoot, "railway.json"), "utf8")) as {
-  build: { builder: string; buildCommand: string };
-  deploy: { startCommand: string; healthcheckPath: string };
-};
+const railwayConfig = readFileSync(resolve(projectRoot, ".railway/railway.ts"), "utf8");
 const entrypoint = readFileSync(resolve(projectRoot, "server/_core/index.ts"), "utf8");
 const packageJson = JSON.parse(readFileSync(resolve(projectRoot, "package.json"), "utf8")) as {
   scripts: Record<string, string>;
@@ -14,10 +11,10 @@ const packageJson = JSON.parse(readFileSync(resolve(projectRoot, "package.json")
 
 describe("Railway deployment readiness", () => {
   it("keeps Railway config aligned with the production build and start scripts", () => {
-    expect(railwayConfig.build.builder).toBe("RAILPACK");
-    expect(railwayConfig.build.buildCommand).toBe("pnpm run build");
-    expect(railwayConfig.deploy.startCommand).toBe("pnpm run start");
-    expect(railwayConfig.deploy.healthcheckPath).toBe("/health");
+    expect(railwayConfig).toContain('builder: "RAILPACK"');
+    expect(railwayConfig).toContain('buildCommand: "pnpm run build"');
+    expect(railwayConfig).toContain('start: "pnpm run start"');
+    expect(railwayConfig).toContain('healthcheck: "/health"');
     expect(packageJson.scripts.build).toContain("vite build");
     expect(packageJson.scripts.start).toContain("node dist/index.js");
   });

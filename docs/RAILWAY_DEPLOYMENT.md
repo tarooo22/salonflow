@@ -2,14 +2,14 @@
 
 ## Scope
 
-SalonFlow can be deployed to Railway as a single Node.js service. The repository already contains a production build and start contract: `pnpm run build` creates the Vite frontend and bundled Express server, while `pnpm run start` runs `dist/index.js` in production mode. The added `railway.json` selects Railway Railpack, explicitly runs the existing build and start scripts, and checks `/health` after startup.
+SalonFlow can be deployed to Railway as a single Node.js service. The repository already contains a production build and start contract: `pnpm run build` creates the Vite frontend and bundled Express server, while `pnpm run start` runs `dist/index.js` in production mode. `.railway/railway.ts` (Railway Infrastructure as Code, which replaced `railway.json` on 2026-10-28) selects Railway Railpack, explicitly runs the existing build and start scripts, and checks `/health` after startup.
 
 This preparation is additive. The Manus-hosted deployment remains unchanged, and no database schema, authentication, booking, billing, role, or organization-scope behavior was modified.
 
 ## Railway service setup
 
 1. Create a Railway project and add a service from the connected GitHub repository.
-2. Deploy the `main` branch. Railway will detect `railway.json` and use the repository's Railpack configuration.
+2. Deploy the `main` branch. Service settings come from `.railway/railway.ts`; after editing it run `railway config plan`, then `railway config apply` (on Windows first set `$env:_` to the CLI's `railway.exe` path, or the SDK version check fails).
 3. Do not add a Dockerfile for this project. It is a plain Node.js application and Railway's native Node builder is sufficient; keeping the repository Dockerfile-free also avoids overriding Manus WebDev's managed build contract.
 4. Add the required variables listed below before the first production deployment.
 5. Add a Railway MySQL-compatible database or connect the existing TiDB/MySQL database. Set `DATABASE_URL` to the connection string supplied by that database.

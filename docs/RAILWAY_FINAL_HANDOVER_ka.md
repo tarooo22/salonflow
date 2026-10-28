@@ -44,7 +44,7 @@ WHERE table_schema = DATABASE()
 
 ### 2. Railway redeploy
 
-Migration-ის წარმატებით დასრულების შემდეგ Railway service-ზე შეასრულეთ **Redeploy** ან დააჭირეთ **Deploy latest**. `railway.json` უკვე უთითებს არსებულ build/start კონტრაქტს და healthcheck-ს.
+Migration-ის წარმატებით დასრულების შემდეგ Railway service-ზე შეასრულეთ **Redeploy** ან დააჭირეთ **Deploy latest**. `.railway/railway.ts` უკვე უთითებს არსებულ build/start კონტრაქტს და healthcheck-ს.
 
 ### 3. საბოლოო smoke test
 
