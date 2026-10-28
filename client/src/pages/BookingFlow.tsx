@@ -394,7 +394,7 @@ export default function BookingFlow() {
   }, [advanceWhenChecked, availability.isLoading]);
 
   // The catalog may carry the organization name; show it next to the branch name when it differs.
-  const organizationName = (catalog.data as { organizationName?: string | null } | null | undefined)?.organizationName?.trim();
+  const organizationName = catalog.data?.location.organizationName?.trim();
   const branchName = catalog.data?.location.name ?? "";
   const businessTitle = organizationName && organizationName !== branchName ? `${organizationName} · ${branchName}` : branchName;
   const profileHref = catalog.data ? `/salon/${slug}` : "/salons";
